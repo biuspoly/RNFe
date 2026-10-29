@@ -1,0 +1,3 @@
+# As tabelas fiscais são geradas no Windows e pelo robô no Linux: fim de linha sempre LF, para uma não
+# parecer diferente da outra.
+*.csv text eol=lf

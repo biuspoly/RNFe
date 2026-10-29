@@ -255,9 +255,19 @@ csosn_do_sped = function(cst_tres_digitos) {
   csosn[!duplicated(csosn$codigo), ]
 }
 
+# O arquivo tem de sair igual no Windows e no Linux (onde o robô roda), senão o robô veria mudança toda
+# semana: quebra de linha dentro de uma célula (a planilha da Reforma tem uma) vira espaço, e o fim de linha
+# é sempre "\n" (a conexão binária impede o Windows de trocar por "\r\n").
 gravar_tabela = function(tabela, nome) {
   rownames(tabela) = NULL
-  utils::write.csv(tabela, file.path(PASTA_DAS_TABELAS, paste0(nome, ".csv")), row.names = FALSE, na = "", fileEncoding = "UTF-8")
+  for (nome_da_coluna in names(tabela)) {
+    if (is.character(tabela[[nome_da_coluna]])) {
+      tabela[[nome_da_coluna]] = gsub("\\s*[\r\n]+\\s*", " ", tabela[[nome_da_coluna]])
+    }
+  }
+  arquivo = file(file.path(PASTA_DAS_TABELAS, paste0(nome, ".csv")), open = "wb")
+  utils::write.csv(tabela, arquivo, row.names = FALSE, na = "", eol = "\n")
+  close(arquivo)
   cat(sprintf("%-12s %4d linhas\n", nome, nrow(tabela)))
 }
 
