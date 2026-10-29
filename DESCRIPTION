@@ -6,8 +6,10 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e e MDF-e), já com o
     CNPJ alfanumérico da Nota Técnica Conjunta 2025.001, e lê o XML da NF-e e
     da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos), já com
-    os campos da Reforma Tributária (IBS e CBS). Pacote em construção: as
-    tabelas fiscais vêm nas próximas versões.
+    os campos da Reforma Tributária (IBS e CBS) e o nome de cada CFOP e CST
+    como a tabela oficial registrava na data da nota. Traz as tabelas fiscais
+    (CFOP, origem, CST do ICMS, CSOSN e CST do IPI, do PIS e da COFINS) copiadas
+    do Portal da NF-e e do SPED, com a vigência de cada código.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNfe
 BugReports: https://github.com/biuspoly/RNfe/issues

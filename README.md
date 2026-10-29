@@ -2,8 +2,8 @@
 
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e) no **R**.
 
-> **Em construção.** Esta versão traz a chave de acesso e a leitura do XML da NF-e e da NFC-e. As tabelas
-> fiscais (CFOP, CST, NCM...) vêm a seguir; o plano está em
+> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e e da NFC-e e as tabelas
+> fiscais menores (CFOP e CSTs). NCM, CEST e as tabelas da Reforma vêm a seguir; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -45,8 +45,21 @@ lida$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
 ```
 
 Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/2026), já com os campos da Reforma
-Tributária. Conferido com 10 mil notas reais (que não estão no repositório): os campos comparados bateram em
-todas.
+Tributária. Ao lado de cada código do item vem o nome dele (`cfop_titulo`, `cst_icms_descricao`...), como a
+tabela oficial registrava na data da nota. Conferido com 10 mil notas reais (que não estão no repositório):
+os campos comparados bateram em todas, e todos os códigos dos 46 mil itens acharam o nome.
+
+## Tabelas fiscais
+
+```r
+tabela_fiscal("cfop")        # título, nota explicativa e indicadores de cada CFOP
+tabela_fiscal("cst_icms")    # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
+tabela_fiscal("fontes")      # de onde veio cada tabela, com a versão e a data
+```
+
+Cada linha tem o `inicio` e o `fim` da vigência. O CFOP vem da tabela do Portal da NF-e (Informe Técnico
+2023.002); os CSTs, das tabelas do SPED Fiscal, da Receita. `ferramentas/gerar_tabelas.R` baixa as duas
+fontes e refaz as cópias.
 
 ## De onde vêm as regras
 

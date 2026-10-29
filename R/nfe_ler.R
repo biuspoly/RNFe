@@ -150,6 +150,18 @@ percentual_devolvido      impostoDevol/pDevol                        numero
 valor_ipi_devolvido       impostoDevol/IPI/vIPIDevol                 numero
 ")
 
+# O nome de cada código do item, ao lado dele, como a tabela fiscal registrava na data de emissão da nota.
+DESCRICOES_DOS_ITENS = ler_campos("
+coluna_do_codigo coluna_nova          tabela     texto
+cfop             cfop_titulo          cfop       titulo
+origem           origem_descricao     origem     descricao
+cst_icms         cst_icms_descricao   cst_icms   descricao
+csosn            csosn_descricao      csosn      descricao
+cst_ipi          cst_ipi_descricao    cst_ipi    descricao
+cst_pis          cst_pis_descricao    cst_pis    descricao
+cst_cofins       cst_cofins_descricao cst_cofins descricao
+")
+
 # A partir de cada dup (cobr/dup).
 CAMPOS_DA_PARCELA = ler_campos("
 coluna     caminho tipo
@@ -196,7 +208,11 @@ autorizacao      card/cAut  texto
 #' Uma linha por item: `chave`, `item` (`nItem`),
 #' `r documentar_campos(CAMPOS_DO_ITEM)`.
 #' O `*` é o grupo do ICMS, do IPI, do PIS ou da COFINS que o item tiver (por
-#' exemplo, `ICMS00` ou `ICMSSN102`).
+#' exemplo, `ICMS00` ou `ICMSSN102`). Ao lado de cada código vem o nome dele,
+#' como a tabela fiscal registrava na data de emissão da nota (veja
+#' [tabela_fiscal()]): `cfop_titulo`, `origem_descricao`, `cst_icms_descricao`,
+#' `csosn_descricao`, `cst_ipi_descricao`, `cst_pis_descricao` e
+#' `cst_cofins_descricao`.
 #'
 #' @section impostos:
 #' Todos os campos dos impostos de cada item, um por linha: `chave`, `item`,
@@ -247,7 +263,25 @@ nfe_ler = function(arquivos) {
   resultado$notas = converter_datas(resultado$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
   resultado$parcelas = converter_datas(resultado$parcelas, CAMPOS_DA_PARCELA)
   resultado$pagamentos = converter_datas(resultado$pagamentos, CAMPOS_DO_PAGAMENTO)
+  resultado$itens = acrescentar_descricoes(resultado$itens, resultado$notas)
   resultado
+}
+
+acrescentar_descricoes = function(itens, notas) {
+  data_de_cada_item = notas$data_emissao[match(itens$chave, notas$chave)]
+  for (numero_da_linha in seq_len(nrow(DESCRICOES_DOS_ITENS))) {
+    descricao = DESCRICOES_DOS_ITENS[numero_da_linha, ]
+    textos = descricao_na_data(descricao$tabela, itens[[descricao$coluna_do_codigo]], data_de_cada_item, descricao$texto)
+    itens = inserir_coluna_depois(itens, descricao$coluna_nova, textos, descricao$coluna_do_codigo)
+  }
+  itens
+}
+
+inserir_coluna_depois = function(tabela, nome_da_coluna, valores, depois_de) {
+  tabela[[nome_da_coluna]] = valores
+  outras_colunas = setdiff(names(tabela), nome_da_coluna)
+  ordem = append(outras_colunas, nome_da_coluna, after = match(depois_de, outras_colunas))
+  tabela[, ordem]
 }
 
 # Junta a mesma tabela de todos os arquivos numa só. Cada arquivo traz as colunas numa lista, e o

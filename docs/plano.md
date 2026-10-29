@@ -19,7 +19,7 @@ Cada etapa já é útil sozinha.
 |---|---|---|---|
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
-| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | |
+| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | CFOP e CSTs prontos; faltam NCM, CEST e Reforma |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
@@ -71,6 +71,10 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   de propósito.
 - `chave_digito()` aceita a chave inteira, não só as 43 primeiras posições: foi assim que o usuário a usou no
   primeiro teste, e o `NA` que voltava não explicava nada.
+- `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
+  conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
+  significado de cada código muda de documento para documento e fica para quando for conferido no manual de
+  cada um.
 
 ## Etapa 1, leitura do XML: o que se decidiu
 
@@ -100,7 +104,28 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - O código segue o jeito do usuário (pedido de 29/10/2026: "sem variáveis genéricas, como se fosse eu
   criando as funções, algo fácil de entender"): nomes que dizem o que a coisa é, `for` em vez de função
   dentro de função, `if`/`else` por extenso.
-- `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
-  conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
-  significado de cada código muda de documento para documento e fica para quando for conferido no manual de
-  cada um.
+
+## Etapa 1, tabelas fiscais menores: o que se decidiu
+
+- **Fontes:** as duas são oficiais e baixadas por `ferramentas/gerar_tabelas.R`.
+  - O **CFOP** vem da Tabela de CFOP do Portal da NF-e (Informe Técnico 2023.002 v2.10, de 04/09/2026). Ela
+    traz o título e a nota explicativa literais do Convênio SINIEF s/nº de 1970, o início de vigência e os
+    indicadores.
+  - Os **CSTs** vêm das tabelas externas do SPED Fiscal, pelo serviço público do próprio SPED
+    (`WsConsulta.asmx` e `obterTabela.ashx`), o mesmo que o programa validador usa. Cada código vem com
+    início e fim, e é procurado pelo tipo, não por um número fixo.
+- **Correções sobre o SPED**, cada uma com prova:
+  - A tabela A (origem) parou em 2012 e não tem a origem 8 (desde 01/08/2013).
+  - A tabela B (CST de 2 dígitos) parou em 2009 e não tem os quatro de combustível monofásico (02, 15, 53, 61,
+    desde 01/04/2023).
+  - Os dois casos vêm da tabela de CST de três dígitos do SPED, que está em dia.
+  - O CSOSN vai **sem datas**. Na EFD ele divide o campo com o CST, e o SPED "encerrou" o 300, o 400 e o 500
+    em 2012 e o 102 e o 202 em 2023 só porque passaram a coincidir com CSTs novos. O schema da NF-e PL_010g
+    ainda aceita todos.
+- **Codificação:** os arquivos do SPED são **Windows-1252**, não Latin-1. Lidos como Latin-1, o travessão
+  (byte 0x96) do CST 51 do PIS virava um caractere invisível.
+- **Antes de 2009**, quando o SPED Fiscal começou, a descrição fica vazia: o pacote não chuta a da época.
+- **CFOP revogado:** a tabela de CFOP da NF-e só tem os códigos vigentes, então um CFOP revogado fica sem
+  título. O SPED tem o histórico (649 linhas, de 2022) e pode entrar depois, se fizer falta.
+- **Conferência com notas reais:** nas 10 mil notas reais (46.593 itens, de 2021 a 2026), todos os códigos
+  acharam o nome. Pôr os nomes custa menos de 1 s para 46 mil itens.

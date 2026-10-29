@@ -1,0 +1,56 @@
+# Os textos e as datas esperados foram lidos direto dos arquivos oficiais baixados (a planilha de CFOP do
+# Portal da NF-e e as tabelas do SPED), não das cópias que vão no pacote.
+
+test_that("cada tabela tem as colunas e os tipos certos", {
+  for (nome in c("origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins")) {
+    tabela = tabela_fiscal(nome)
+    expect_identical(names(tabela), c("codigo", "descricao", "inicio", "fim"))
+    expect_s3_class(tabela$inicio, "Date")
+    expect_s3_class(tabela$fim, "Date")
+    expect_false(any(is.na(tabela$codigo) | is.na(tabela$descricao)))
+  }
+  cfop = tabela_fiscal("cfop")
+  expect_identical(names(cfop)[1:5], c("codigo", "titulo", "nota_explicativa", "inicio", "fim"))
+  expect_type(cfop$devolucao, "integer")
+  expect_false(any(duplicated(cfop$codigo)))
+  expect_error(tabela_fiscal("ncm"), "Tabela desconhecida")
+})
+
+test_that("CFOP como na tabela oficial da NF-e", {
+  cfop = tabela_fiscal("cfop")
+  linha_6404 = cfop[cfop$codigo == "6404", ]
+  expect_identical(linha_6404$titulo, "Venda de mercadoria sujeita ao regime de substitui\u00e7\u00e3o tribut\u00e1ria, cujo imposto j\u00e1 tenha sido retido anteriormente.")
+  expect_identical(linha_6404$inicio, as.Date("2006-01-01"))
+  expect_true(is.na(linha_6404$fim))
+  expect_match(cfop$titulo[cfop$codigo == "5102"], "^Venda de mercadoria adquirida ou recebida de terceiros, ou qualquer venda de mercadoria efetuada pelo MEI")
+})
+
+test_that("as corre\u00e7\u00f5es sobre as tabelas do SPED: origem 8, CST de combust\u00edvel e CSOSN sem datas", {
+  origem = tabela_fiscal("origem")
+  expect_identical(origem$inicio[origem$codigo == "8"], as.Date("2013-08-01"))
+  expect_identical(sort(unique(origem$codigo)), as.character(0:8))
+  cst_icms = tabela_fiscal("cst_icms")
+  expect_identical(cst_icms$inicio[cst_icms$codigo == "61"], as.Date("2023-04-01"))
+  expect_identical(cst_icms$descricao[cst_icms$codigo == "61"], "Tributa\u00e7\u00e3o monof\u00e1sica sobre combust\u00edveis cobrada anteriormente")
+  csosn = tabela_fiscal("csosn")
+  expect_identical(csosn$codigo, c("101", "102", "103", "201", "202", "203", "300", "400", "500", "900"))
+  expect_true(all(is.na(csosn$inicio) & is.na(csosn$fim)))
+  # Windows-1252, não Latin-1: o travessão do CST 51 do PIS é o byte 0x96 no arquivo do SPED.
+  expect_match(tabela_fiscal("cst_pis")$descricao[tabela_fiscal("cst_pis")$codigo == "51"], "Cr\u00e9dito \u2013 Vinculada", fixed = TRUE)
+})
+
+test_that("a descri\u00e7\u00e3o muda com a data da nota", {
+  datas = as.Date(c("2012-06-01", "2013-06-01", "2008-12-31"))
+  expect_identical(
+    descricao_na_data("origem", c("0", "0", "0"), datas),
+    c("Nacional", "Nacional, exceto as indicadas nos c\u00f3digos 3 a 5", NA)
+  )
+  expect_identical(descricao_na_data("origem", "8", as.Date("2013-07-31")), NA_character_)
+  expect_identical(
+    descricao_na_data("cst_pis", c("01", "01"), as.Date(c("2009-12-15", "2009-12-16"))),
+    c("Opera\u00e7\u00e3o Tribut\u00e1vel - Base de C\u00e1lculo = Valor da Opera\u00e7\u00e3o Al\u00edquota Normal (Cumulativo/N\u00e3o Cumulativo)",
+      "Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota B\u00e1sica")
+  )
+  expect_identical(descricao_na_data("csosn", "102", as.Date("2026-10-20")), "Tributada pelo Simples Nacional sem permiss\u00e3o de cr\u00e9dito")
+  expect_identical(descricao_na_data("cst_icms", c("99", NA), as.Date(c("2026-01-01", "2026-01-01"))), c(NA_character_, NA_character_))
+})

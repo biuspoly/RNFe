@@ -83,6 +83,19 @@ test_that("os itens, com os impostos em colunas", {
   expect_equal(itens$valor_cbs, c(0.45, 0.54))
 })
 
+test_that("ao lado de cada c\u00f3digo do item, o nome dele na data da nota", {
+  itens = nfe_ler(c(NOTA_SP, NOTA_CE))$itens
+  expect_identical(match("cfop_titulo", names(itens)), match("cfop", names(itens)) + 1L)
+  expect_identical(itens$cfop_titulo[2], "Venda de mercadoria sujeita ao regime de substitui\u00e7\u00e3o tribut\u00e1ria, cujo imposto j\u00e1 tenha sido retido anteriormente.")
+  expect_match(itens$cfop_titulo[3], "^Venda de mercadoria adquirida ou recebida de terceiros")
+  expect_identical(itens$origem_descricao[1], "Nacional, exceto as indicadas nos c\u00f3digos 3 a 5")
+  expect_identical(itens$cst_icms_descricao, c("Tributada integralmente", "ICMS cobrado anteriormente por substitui\u00e7\u00e3o tribut\u00e1ria", NA))
+  expect_identical(itens$csosn_descricao, c(NA, NA, "Tributada pelo Simples Nacional sem permiss\u00e3o de cr\u00e9dito"))
+  expect_identical(itens$cst_ipi_descricao, c("Sa\u00edda tributada", NA, NA))
+  expect_identical(itens$cst_pis_descricao, c("Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota B\u00e1sica", "Opera\u00e7\u00e3o Tribut\u00e1vel Monof\u00e1sica - Revenda a Al\u00edquota Zero", "Outras Opera\u00e7\u00f5es"))
+  expect_identical(itens$cst_cofins_descricao, itens$cst_pis_descricao)
+})
+
 test_that("os itens somam os totais da nota", {
   lida = nfe_ler(NOTA_SP)
   expect_equal(sum(lida$itens$valor_produto), lida$notas$valor_produtos)
