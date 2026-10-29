@@ -4,4 +4,5 @@
 ^CLAUDE\.md$
 ^docs$
 ^ferramentas$
+^\.github$
 ^cran-comments\.md$

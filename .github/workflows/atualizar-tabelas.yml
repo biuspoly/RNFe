@@ -1,0 +1,60 @@
+# Toda segunda-feira, baixa as tabelas fiscais das fontes oficiais (ferramentas/gerar_tabelas.R). Se alguma
+# mudou de verdade (a data de download em fontes.csv não conta), grava as novas num ramo e abre um aviso
+# (issue) com o resumo e o link para comparar: quem junta ao pacote é uma pessoa, depois de conferir.
+# Um aviso e não um pull request porque o repositório não deixa o Actions abrir pull request.
+
+name: Atualizar as tabelas fiscais
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Instalar os pacotes da ferramenta
+        run: Rscript -e 'install.packages(c("httr2", "xml2", "readxl", "jsonlite"))'
+
+      - name: Guardar as tabelas de antes
+        run: cp -r inst/extdata/tabelas "$RUNNER_TEMP/tabelas_de_antes"
+
+      - name: Baixar as tabelas das fontes oficiais
+        run: Rscript ferramentas/gerar_tabelas.R
+
+      - name: Ver se alguma tabela mudou
+        id: mudancas
+        run: |
+          if git diff --quiet -- inst/extdata/tabelas ':!inst/extdata/tabelas/fontes.csv' && [ -z "$(git status --porcelain inst/extdata/tabelas | grep -v fontes.csv)" ]; then
+            echo "mudou=nao" >> "$GITHUB_OUTPUT"
+            echo "Nenhuma tabela mudou."
+          else
+            echo "mudou=sim" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Gravar num ramo e abrir o aviso
+        if: steps.mudancas.outputs.mudou == 'sim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ramo="tabelas-$(date +%Y-%m-%d)"
+          Rscript ferramentas/resumir_mudancas.R "$RUNNER_TEMP/tabelas_de_antes" inst/extdata/tabelas > "$RUNNER_TEMP/resumo.md"
+          printf '\nPara comparar e juntar: https://github.com/%s/compare/main...%s\n' "$GITHUB_REPOSITORY" "$ramo" >> "$RUNNER_TEMP/resumo.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$ramo"
+          git add inst/extdata/tabelas
+          git commit -m "tabelas fiscais atualizadas pelas fontes oficiais em $(date +%d/%m/%Y)"
+          git push origin "$ramo"
+          gh issue create --title "Tabelas fiscais mudaram ($(date +%d/%m/%Y))" --body-file "$RUNNER_TEMP/resumo.md"
