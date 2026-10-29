@@ -14,23 +14,23 @@ alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
 \usage{
 chave_valida(chave)
 
-chave_digito(primeiras_43)
+chave_digito(chave)
 
 chave_decompor(chave)
 }
 \arguments{
-\item{chave}{A chave de acesso (um vetor de texto).}
-
-\item{primeiras_43}{As 43 primeiras posições da chave, sem o dígito.}
+\item{chave}{A chave de acesso (um vetor de texto). Em \code{chave_digito()}, com
+44 posições ou só as 43 primeiras.}
 }
 \value{
 \code{chave_valida()}: um vetor lógico. \code{chave_digito()}: um vetor de
-inteiros, \code{NA} quando o texto não tem o formato das 43 posições.
+inteiros, \code{NA} quando o texto não tem o formato de chave.
 \code{chave_decompor()}: um \code{data.frame} com \code{chave}, \code{valida}, \code{problema},
-\code{codigo_uf}, \code{uf}, \code{ano}, \code{mes}, \code{documento_emitente}, \code{tipo_documento}
-(\code{"CNPJ"} ou \code{"CPF"}), \code{modelo}, \code{documento} (\code{"NF-e"}, \code{"NFC-e"},
-\code{"CT-e"}, \code{"CT-e OS"} ou \code{"MDF-e"}; \code{NA} para outro modelo), \code{serie},
-\code{numero}, \code{forma_emissao}, \code{codigo_numerico} e \code{digito}.
+\code{codigo_uf}, \code{uf}, \code{ano}, \code{mes}, \code{documento_emitente} (o CNPJ ou CPF da
+chave; na NF-e avulsa, o do órgão do Fisco), \code{tipo_documento} (\code{"CNPJ"} ou
+\code{"CPF"}), \code{modelo}, \code{documento} (\code{"NF-e"}, \code{"NFC-e"}, \code{"CT-e"},
+\code{"CT-e OS"} ou \code{"MDF-e"}; \code{NA} para outro modelo), \code{serie}, \code{numero},
+\code{forma_emissao}, \code{codigo_numerico} e \code{digito}.
 }
 \description{
 A chave de 44 posições que identifica uma NF-e, NFC-e, CT-e ou MDF-e. Ela
@@ -40,17 +40,22 @@ frente), o modelo (2), a série (3), o número (9), a forma de emissão (1), um
 código numérico (8) e o dígito verificador (1).
 }
 \details{
+Na NF-e avulsa, emitida pelo Fisco (\code{procEmi} 1 no XML), as posições do CNPJ
+trazem o CNPJ do órgão que a emitiu, que vem no grupo \code{avulsa} do XML, e não
+o do emitente.
+
 Desde 06/07/2026 o CNPJ pode ter letras nas 12 primeiras posições (CNPJ
 alfanumérico). No cálculo dos dígitos, cada caractere vale o seu código ASCII
 menos 48: os números continuam valendo o mesmo e as letras valem A = 17,
 B = 18 e assim por diante.
 \itemize{
 \item \code{chave_valida()}: \code{TRUE} quando a chave tem o formato certo, a UF existe, o
-mês vai de 1 a 12, o CNPJ (ou CPF) do emitente confere e o dígito
-verificador também.
+mês vai de 1 a 12, o CNPJ (ou CPF) da chave confere e o dígito verificador
+também.
 \item \code{chave_decompor()}: as partes da chave, uma linha por chave, com o que está
 errado em \code{problema}.
-\item \code{chave_digito()}: o dígito verificador das 43 primeiras posições.
+\item \code{chave_digito()}: o dígito verificador que a chave deveria ter, calculado
+das 43 primeiras posições. Aceita a chave com ou sem o dígito.
 }
 
 Espaços, pontos e o prefixo do atributo \code{Id} do XML (\code{NFe}, \code{CTe}, \code{MDFe})
@@ -60,7 +65,7 @@ são ignorados, e letras minúsculas viram maiúsculas.
 chave = "35261011444777000161550010000001231123456783"
 chave_valida(chave)
 chave_decompor(chave)
-chave_digito(substr(chave, 1, 43))
+chave_digito(chave)
 
 # CNPJ alfanumérico (o exemplo da Receita Federal, 12.ABC.345/01DE-35)
 chave_decompor("35261012ABC34501DE35550010000001231123456784")

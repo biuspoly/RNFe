@@ -58,8 +58,18 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   foram calculados com a tradução literal dos anexos I (JavaScript) e II (VB.NET) da NT.
 - A NT diz que algumas letras (I, O, U, Q, F) talvez não sejam aceitas no CNPJ, mas que isso "precisa ser
   confirmado": o pacote ainda aceita todas.
-- A chave só é válida quando o CNPJ (ou o CPF, com três zeros na frente) do emitente também confere, como a
+- A chave só é válida quando o CNPJ (ou o CPF, com três zeros na frente) da chave também confere, como a
   SEFAZ faz.
+- Conferida em 29/10/2026 com 135.049 chaves reais (120.522 NF-e e 14.527 CT-e), que não entram no
+  repositório: todas válidas, e número, série, ano, mês e modelo iguais aos do XML em todas. As 127 em que o
+  CNPJ da chave não era o do emitente eram NF-e avulsas (`procEmi` 1): ali a chave traz o CNPJ do órgão do
+  Fisco, o do grupo `avulsa`. Nenhuma tinha CNPJ com letras, então essa parte só foi conferida com o exemplo
+  da Receita e os anexos da NT.
+- O cálculo é feito em todas as chaves de uma vez: as 135 mil levam uns 2 s (a primeira versão, chave por
+  chave, levava 2 min). A versão nova deu resultado idêntico ao da antiga nessas chaves e em 4 mil estragadas
+  de propósito.
+- `chave_digito()` aceita a chave inteira, não só as 43 primeiras posições: foi assim que o usuário a usou no
+  primeiro teste, e o `NA` que voltava não explicava nada.
 - `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
   conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
   significado de cada código muda de documento para documento e fica para quando for conferido no manual de

@@ -10,6 +10,15 @@ CHAVES_VALIDAS = c(NFE_SP, NFE_CNPJ_COM_LETRAS, NFCE_CE_CONTINGENCIA, CTE_RS_EMI
 test_that("chaves certas passam", {
   expect_identical(chave_valida(CHAVES_VALIDAS), rep(TRUE, 5))
   expect_identical(chave_digito(substr(CHAVES_VALIDAS, 1, 43)), c(3L, 4L, 8L, 7L, 1L))
+  expect_identical(chave_digito(CHAVES_VALIDAS), c(3L, 4L, 8L, 7L, 1L))
+  expect_identical(chave_digito(paste0(substr(NFE_SP, 1, 43), "9")), 3L)
+})
+
+test_that("v\u00e1rias chaves de uma vez d\u00e3o o mesmo que uma por uma", {
+  chaves = c(CHAVES_VALIDAS, paste0(substr(NFE_SP, 1, 43), "4"), "123", NA)
+  juntas = chave_decompor(chaves)
+  uma_por_uma = do.call(rbind, lapply(chaves, chave_decompor))
+  expect_identical(juntas, uma_por_uma)
 })
 
 test_that("as partes da chave", {

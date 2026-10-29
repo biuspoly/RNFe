@@ -6,6 +6,8 @@ TAMANHO_DA_CHAVE = 44
 # Letras só nas 12 primeiras posições do CNPJ (NT 2025.001, item 5).
 FORMATO_DA_CHAVE = "^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$"
 FORMATO_SEM_DIGITO = "^[0-9]{6}[A-Z0-9]{12}[0-9]{25}$"
+# Pesos de 2 a 9 a partir da última posição, recomeçando no 2.
+PESOS_DA_CHAVE = rev(rep(2:9, length.out = 43))
 PESOS_DO_CNPJ = c(6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
 # Código do IBGE de cada UF.
 UF_PELO_CODIGO = c(
@@ -24,30 +26,36 @@ DOCUMENTO_PELO_MODELO = c("55" = "NF-e", "65" = "NFC-e", "57" = "CT-e", "67" = "
 #' frente), o modelo (2), a série (3), o número (9), a forma de emissão (1), um
 #' código numérico (8) e o dígito verificador (1).
 #'
+#' Na NF-e avulsa, emitida pelo Fisco (`procEmi` 1 no XML), as posições do CNPJ
+#' trazem o CNPJ do órgão que a emitiu, que vem no grupo `avulsa` do XML, e não
+#' o do emitente.
+#'
 #' Desde 06/07/2026 o CNPJ pode ter letras nas 12 primeiras posições (CNPJ
 #' alfanumérico). No cálculo dos dígitos, cada caractere vale o seu código ASCII
 #' menos 48: os números continuam valendo o mesmo e as letras valem A = 17,
 #' B = 18 e assim por diante.
 #'
 #' - `chave_valida()`: `TRUE` quando a chave tem o formato certo, a UF existe, o
-#'   mês vai de 1 a 12, o CNPJ (ou CPF) do emitente confere e o dígito
-#'   verificador também.
+#'   mês vai de 1 a 12, o CNPJ (ou CPF) da chave confere e o dígito verificador
+#'   também.
 #' - `chave_decompor()`: as partes da chave, uma linha por chave, com o que está
 #'   errado em `problema`.
-#' - `chave_digito()`: o dígito verificador das 43 primeiras posições.
+#' - `chave_digito()`: o dígito verificador que a chave deveria ter, calculado
+#'   das 43 primeiras posições. Aceita a chave com ou sem o dígito.
 #'
 #' Espaços, pontos e o prefixo do atributo `Id` do XML (`NFe`, `CTe`, `MDFe`)
 #' são ignorados, e letras minúsculas viram maiúsculas.
 #'
-#' @param chave A chave de acesso (um vetor de texto).
-#' @param primeiras_43 As 43 primeiras posições da chave, sem o dígito.
+#' @param chave A chave de acesso (um vetor de texto). Em `chave_digito()`, com
+#'   44 posições ou só as 43 primeiras.
 #' @return `chave_valida()`: um vetor lógico. `chave_digito()`: um vetor de
-#'   inteiros, `NA` quando o texto não tem o formato das 43 posições.
+#'   inteiros, `NA` quando o texto não tem o formato de chave.
 #'   `chave_decompor()`: um `data.frame` com `chave`, `valida`, `problema`,
-#'   `codigo_uf`, `uf`, `ano`, `mes`, `documento_emitente`, `tipo_documento`
-#'   (`"CNPJ"` ou `"CPF"`), `modelo`, `documento` (`"NF-e"`, `"NFC-e"`,
-#'   `"CT-e"`, `"CT-e OS"` ou `"MDF-e"`; `NA` para outro modelo), `serie`,
-#'   `numero`, `forma_emissao`, `codigo_numerico` e `digito`.
+#'   `codigo_uf`, `uf`, `ano`, `mes`, `documento_emitente` (o CNPJ ou CPF da
+#'   chave; na NF-e avulsa, o do órgão do Fisco), `tipo_documento` (`"CNPJ"` ou
+#'   `"CPF"`), `modelo`, `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`,
+#'   `"CT-e OS"` ou `"MDF-e"`; `NA` para outro modelo), `serie`, `numero`,
+#'   `forma_emissao`, `codigo_numerico` e `digito`.
 #' @source Manual de Orientação do Contribuinte da NF-e (composição da chave) e
 #'   Nota Técnica Conjunta 2025.001, versão 1.00 de 25/04/2025 (CNPJ
 #'   alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
@@ -55,7 +63,7 @@ DOCUMENTO_PELO_MODELO = c("55" = "NF-e", "65" = "NFC-e", "57" = "CT-e", "67" = "
 #' chave = "35261011444777000161550010000001231123456783"
 #' chave_valida(chave)
 #' chave_decompor(chave)
-#' chave_digito(substr(chave, 1, 43))
+#' chave_digito(chave)
 #'
 #' # CNPJ alfanumérico (o exemplo da Receita Federal, 12.ABC.345/01DE-35)
 #' chave_decompor("35261012ABC34501DE35550010000001231123456784")
@@ -70,22 +78,72 @@ chave_valida = function(chave) {
 
 #' @rdname chave
 #' @export
-chave_digito = function(primeiras_43) {
-  primeiras_43 = toupper(as.character(primeiras_43))
-  digitos = vapply(primeiras_43, function(texto) {
-    if (is.na(texto) || !grepl(FORMATO_SEM_DIGITO, texto)) {
-      return(NA_integer_)
-    }
-    digito_da_chave(texto)
-  }, integer(1), USE.NAMES = FALSE)
+chave_digito = function(chave) {
+  chave = limpar_chave(chave)
+  inteira = !is.na(chave) & grepl(FORMATO_DA_CHAVE, chave)
+  sem_digito = !is.na(chave) & grepl(FORMATO_SEM_DIGITO, chave)
+  chave[inteira] = substr(chave[inteira], 1, 43)
+  digitos = rep(NA_integer_, length(chave))
+  digitos[inteira | sem_digito] = digitos_das_chaves(chave[inteira | sem_digito])
   digitos
 }
 
 #' @rdname chave
 #' @export
 chave_decompor = function(chave) {
-  linhas = lapply(limpar_chave(chave), decompor_uma_chave)
-  do.call(rbind, c(list(linha_de_chave(NA_character_)[0, ]), linhas))
+  chave = limpar_chave(chave)
+  no_formato = !is.na(chave) & grepl(FORMATO_DA_CHAVE, chave)
+  pedaco = function(inicio, fim) {
+    partes = rep(NA_character_, length(chave))
+    partes[no_formato] = substr(chave[no_formato], inicio, fim)
+    partes
+  }
+  codigo_uf = pedaco(1, 2)
+  mes = as.integer(pedaco(5, 6))
+  documento_emitente = pedaco(7, 20)
+  modelo = pedaco(21, 22)
+  digito = as.integer(pedaco(44, 44))
+  tipo_documento = tipo_do_documento(documento_emitente)
+  digito_certo = rep(NA_integer_, length(chave))
+  digito_certo[no_formato] = digitos_das_chaves(substr(chave[no_formato], 1, 43))
+
+  problema = rep(NA_character_, length(chave))
+  problema[!no_formato] = vapply(chave[!no_formato], problema_de_formato, character(1), USE.NAMES = FALSE)
+  problema = juntar_problema(
+    problema, no_formato & !(codigo_uf %in% names(UF_PELO_CODIGO)),
+    paste0("c\u00f3digo de UF desconhecido: ", codigo_uf)
+  )
+  problema = juntar_problema(
+    problema, no_formato & (mes < 1 | mes > 12),
+    paste0("m\u00eas de emiss\u00e3o inv\u00e1lido: ", mes)
+  )
+  problema = juntar_problema(
+    problema, no_formato & is.na(tipo_documento),
+    "o CNPJ (ou CPF) do emitente n\u00e3o confere"
+  )
+  problema = juntar_problema(
+    problema, no_formato & digito != digito_certo,
+    paste0("o d\u00edgito verificador n\u00e3o confere: \u00e9 ", digito, ", deveria ser ", digito_certo)
+  )
+
+  data.frame(
+    chave = chave,
+    valida = no_formato & is.na(problema),
+    problema = problema,
+    codigo_uf = codigo_uf,
+    uf = unname(UF_PELO_CODIGO[codigo_uf]),
+    ano = 2000L + as.integer(pedaco(3, 4)),
+    mes = mes,
+    documento_emitente = documento_emitente,
+    tipo_documento = tipo_documento,
+    modelo = modelo,
+    documento = unname(DOCUMENTO_PELO_MODELO[modelo]),
+    serie = as.integer(pedaco(23, 25)),
+    numero = as.integer(pedaco(26, 34)),
+    forma_emissao = as.integer(pedaco(35, 35)),
+    codigo_numerico = pedaco(36, 43),
+    digito = digito
+  )
 }
 
 limpar_chave = function(chave) {
@@ -93,44 +151,6 @@ limpar_chave = function(chave) {
   chave = gsub("[^A-Z0-9]", "", chave)
   # A chave sempre começa por 6 números; letras antes disso são o prefixo do Id do XML.
   sub("^[A-Z]+", "", chave)
-}
-
-decompor_uma_chave = function(chave) {
-  if (is.na(chave) || !grepl(FORMATO_DA_CHAVE, chave)) {
-    return(linha_de_chave(chave, problema = problema_de_formato(chave)))
-  }
-  partes = list(
-    codigo_uf = substr(chave, 1, 2),
-    ano = 2000L + as.integer(substr(chave, 3, 4)),
-    mes = as.integer(substr(chave, 5, 6)),
-    documento_emitente = substr(chave, 7, 20),
-    modelo = substr(chave, 21, 22),
-    serie = as.integer(substr(chave, 23, 25)),
-    numero = as.integer(substr(chave, 26, 34)),
-    forma_emissao = as.integer(substr(chave, 35, 35)),
-    codigo_numerico = substr(chave, 36, 43),
-    digito = as.integer(substr(chave, 44, 44))
-  )
-  partes$tipo_documento = tipo_do_documento(partes$documento_emitente)
-
-  problemas = character()
-  if (!(partes$codigo_uf %in% names(UF_PELO_CODIGO))) {
-    problemas = c(problemas, paste0("c\u00f3digo de UF desconhecido: ", partes$codigo_uf))
-  }
-  if (partes$mes < 1 || partes$mes > 12) {
-    problemas = c(problemas, paste0("m\u00eas de emiss\u00e3o inv\u00e1lido: ", partes$mes))
-  }
-  if (is.na(partes$tipo_documento)) {
-    problemas = c(problemas, "o CNPJ (ou CPF) do emitente n\u00e3o confere")
-  }
-  digito_certo = digito_da_chave(substr(chave, 1, 43))
-  if (partes$digito != digito_certo) {
-    problemas = c(problemas, paste0(
-      "o d\u00edgito verificador n\u00e3o confere: \u00e9 ", partes$digito, ", deveria ser ", digito_certo
-    ))
-  }
-  problema = if (length(problemas) == 0) NA_character_ else paste(problemas, collapse = "; ")
-  linha_de_chave(chave, problema, partes)
 }
 
 problema_de_formato = function(chave) {
@@ -143,88 +163,67 @@ problema_de_formato = function(chave) {
   "letra fora do CNPJ: s\u00f3 as posi\u00e7\u00f5es 7 a 18 podem ter letras"
 }
 
-linha_de_chave = function(chave, problema = NA_character_, partes = list()) {
-  valor = function(nome, vazio) {
-    if (is.null(partes[[nome]])) vazio else partes[[nome]]
-  }
-  codigo_uf = valor("codigo_uf", NA_character_)
-  modelo = valor("modelo", NA_character_)
-  data.frame(
-    chave = chave,
-    valida = length(partes) > 0 && is.na(problema),
-    problema = problema,
-    codigo_uf = codigo_uf,
-    uf = unname(UF_PELO_CODIGO[codigo_uf]),
-    ano = valor("ano", NA_integer_),
-    mes = valor("mes", NA_integer_),
-    documento_emitente = valor("documento_emitente", NA_character_),
-    tipo_documento = valor("tipo_documento", NA_character_),
-    modelo = modelo,
-    documento = unname(DOCUMENTO_PELO_MODELO[modelo]),
-    serie = valor("serie", NA_integer_),
-    numero = valor("numero", NA_integer_),
-    forma_emissao = valor("forma_emissao", NA_integer_),
-    codigo_numerico = valor("codigo_numerico", NA_character_),
-    digito = valor("digito", NA_integer_)
-  )
+# Acrescenta o texto ao problema de cada chave marcada em `onde`, separado por "; ".
+juntar_problema = function(problema, onde, texto) {
+  onde = onde %in% TRUE
+  texto = rep_len(texto, length(problema))
+  ja_tem = onde & !is.na(problema)
+  so_este = onde & is.na(problema)
+  problema[ja_tem] = paste0(problema[ja_tem], "; ", texto[ja_tem])
+  problema[so_este] = texto[so_este]
+  problema
 }
 
-# Cada caractere vale o código ASCII menos 48 (NT 2025.001): "0" a "9" valem 0 a 9, "A" vale 17.
-valores_dos_caracteres = function(texto) {
-  utf8ToInt(texto) - 48L
+# Uma linha por texto, uma coluna por caractere (todos os textos com a mesma largura). Cada
+# caractere vale o código ASCII menos 48 (NT 2025.001): "0" a "9" valem 0 a 9, "A" vale 17.
+valores_dos_caracteres = function(textos, largura) {
+  matrix(utf8ToInt(paste(textos, collapse = "")) - 48L, ncol = largura, byrow = TRUE)
 }
 
+# Resto 0 ou 1 dá dígito 0.
 digito_modulo_11 = function(soma) {
   resto = soma %% 11
-  if (resto < 2) {
-    return(0L)
-  }
-  as.integer(11 - resto)
+  digito = as.integer(11 - resto)
+  digito[resto < 2] = 0L
+  digito
 }
 
-# Pesos de 2 a 9 a partir da última posição, recomeçando no 2; resto 0 ou 1 dá dígito 0.
-digito_da_chave = function(primeiras_43) {
-  valores = rev(valores_dos_caracteres(primeiras_43))
-  pesos = rep(2:9, length.out = length(valores))
-  digito_modulo_11(sum(valores * pesos))
-}
-
-digitos_do_cnpj = function(primeiros_12) {
-  valores = valores_dos_caracteres(primeiros_12)
-  primeiro = digito_modulo_11(sum(valores * PESOS_DO_CNPJ[2:13]))
-  segundo = digito_modulo_11(sum(c(valores, primeiro) * PESOS_DO_CNPJ))
-  paste0(primeiro, segundo)
-}
-
-digitos_do_cpf = function(primeiros_9) {
-  valores = valores_dos_caracteres(primeiros_9)
-  primeiro = digito_modulo_11(sum(valores * 10:2))
-  segundo = digito_modulo_11(sum(c(valores, primeiro) * 11:2))
-  paste0(primeiro, segundo)
+digitos_das_chaves = function(primeiras_43) {
+  valores = valores_dos_caracteres(primeiras_43, 43)
+  digito_modulo_11(as.vector(valores %*% PESOS_DA_CHAVE))
 }
 
 cnpj_confere = function(cnpj) {
-  if (!grepl("^[A-Z0-9]{12}[0-9]{2}$", cnpj) || cnpj == strrep("0", 14)) {
-    return(FALSE)
+  confere = rep(FALSE, length(cnpj))
+  no_formato = !is.na(cnpj) & grepl("^[A-Z0-9]{12}[0-9]{2}$", cnpj) & cnpj != strrep("0", 14)
+  if (any(no_formato)) {
+    valores = valores_dos_caracteres(substr(cnpj[no_formato], 1, 12), 12)
+    primeiro = digito_modulo_11(as.vector(valores %*% PESOS_DO_CNPJ[2:13]))
+    segundo = digito_modulo_11(as.vector(cbind(valores, primeiro) %*% PESOS_DO_CNPJ))
+    confere[no_formato] = substr(cnpj[no_formato], 13, 14) == paste0(primeiro, segundo)
   }
-  substr(cnpj, 13, 14) == digitos_do_cnpj(substr(cnpj, 1, 12))
+  confere
 }
 
 cpf_confere = function(cpf) {
+  confere = rep(FALSE, length(cpf))
   # Números com os 11 dígitos iguais passam no cálculo, mas não são CPF.
-  if (!grepl("^[0-9]{11}$", cpf) || length(unique(strsplit(cpf, "")[[1]])) == 1) {
-    return(FALSE)
+  no_formato = !is.na(cpf) & grepl("^[0-9]{11}$", cpf) & !grepl("^(.)\\1{10}$", cpf, perl = TRUE)
+  if (any(no_formato)) {
+    valores = valores_dos_caracteres(substr(cpf[no_formato], 1, 9), 9)
+    primeiro = digito_modulo_11(as.vector(valores %*% (10:2)))
+    segundo = digito_modulo_11(as.vector(cbind(valores, primeiro) %*% (11:2)))
+    confere[no_formato] = substr(cpf[no_formato], 10, 11) == paste0(primeiro, segundo)
   }
-  substr(cpf, 10, 11) == digitos_do_cpf(substr(cpf, 1, 9))
+  confere
 }
 
-# Na chave, o CPF ocupa as 14 posições do CNPJ com três zeros na frente.
+# Na chave, o CPF ocupa as 14 posições do CNPJ com três zeros na frente. Se o número servir
+# como CNPJ, fica CNPJ.
 tipo_do_documento = function(documento) {
-  if (cnpj_confere(documento)) {
-    return("CNPJ")
-  }
-  if (startsWith(documento, "000") && cpf_confere(substr(documento, 4, 14))) {
-    return("CPF")
-  }
-  NA_character_
+  tipo = rep(NA_character_, length(documento))
+  e_cpf = !is.na(documento) & startsWith(documento, "000") & cpf_confere(substr(documento, 4, 14))
+  tipo[e_cpf] = "CPF"
+  tipo[cnpj_confere(documento)] = "CNPJ"
+  tipo
 }
