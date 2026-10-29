@@ -1,7 +1,8 @@
 # Plano do RNfe
 
-Situação em 29/10/2026: **etapa 1 começada**, com a chave de acesso pronta. Repositório privado, ainda não
-publicado.
+Situação em 29/10/2026: **etapa 1 em andamento**: a chave de acesso e a leitura do XML da NF-e/NFC-e
+prontas e conferidas com notas reais; faltam a velocidade da leitura e as tabelas fiscais. Repositório
+público no GitHub; o pacote ainda não foi ao CRAN.
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
 vai como contribuição para ele. O pacote é um dos quatro do plano "Portar para o R" (os outros: financeiro,
@@ -17,7 +18,7 @@ Cada etapa já é útil sozinha.
 | Etapa | O que o pacote passa a fazer | Precisa de certificado? | Situação |
 |---|---|---|---|
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
-| 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | a seguir |
+| 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta; falta a velocidade |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
@@ -70,6 +71,29 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   de propósito.
 - `chave_digito()` aceita a chave inteira, não só as 43 primeiras posições: foi assim que o usuário a usou no
   primeiro teste, e o `NA` que voltava não explicava nada.
+
+## Etapa 1, leitura do XML: o que se decidiu
+
+- `nfe_ler()` segue o schema oficial do pacote de liberação PL_010g v1.03 (Portal da NF-e, 26/10/2026, NT
+  2026.006 e NT 2026.008), que já traz o IBS, a CBS e o Imposto Seletivo. Devolve `notas`, `itens`,
+  `impostos`, `parcelas`, `pagamentos` e `arquivos`, ligadas pela chave. Cada coluna aponta para um caminho do
+  leiaute (as tabelas `CAMPOS_*` em `R/nfe_ler.R`, que também geram a ajuda).
+- Os impostos principais vão em colunas de `itens`; `impostos` traz todos os campos de imposto de cada item,
+  um por linha, para nada se perder (monofásico, diferimento, crédito presumido...).
+- Arquivo que não dá para ler não para os outros: vai para `arquivos` com o motivo (não encontrado, XML
+  quebrado, não é NF-e, só o resumo `resNFe`). Nunca vira nota vazia.
+- As notas de exemplo (`inst/exemplos`) foram escritas à mão e passam no schema oficial
+  (`ferramentas/validar_notas_de_teste.R`). Para ter certeza de que o validador confere de verdade, ele
+  reprovou cinco versões estragadas de propósito (campo obrigatório faltando, CST inválido, vírgula no valor,
+  campo fora de ordem, letra fora do CNPJ na chave). A segunda nota tem emitente com CNPJ alfanumérico.
+- Conferida em 29/10/2026 com 10.000 notas reais sorteadas (que não entram no repositório), contra o que
+  outro sistema já tinha tirado dos mesmos XMLs: número, série, emitente, destinatário, totais e, nos 46.018
+  itens, código, descrição, NCM, CFOP, CEST, quantidades, valores, origem, CST/CSOSN, bases, alíquotas e
+  valores de ICMS, ICMS ST, IPI, PIS e COFINS bateram em 100%. As diferenças foram todas do outro lado
+  (campo vazio lá, preenchido aqui). Em 10 notas, a soma dos itens difere do total da nota em R$ 0,01: é o
+  arredondamento de quem emitiu, e o pacote mostra o que está no XML.
+- **A melhorar:** 27,7 ms por arquivo. Metade do tempo vai em montar um `data.frame` por arquivo e em o
+  `xml2` procurar namespaces a cada busca (o documento já está sem eles).
 - `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
   conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
   significado de cada código muda de documento para documento e fica para quando for conferido no manual de

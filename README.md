@@ -2,8 +2,8 @@
 
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e) no **R**.
 
-> **Em construção.** Esta versão traz a chave de acesso. A leitura do XML da nota e as tabelas fiscais
-> (CFOP, CST, NCM...) vêm a seguir; o plano está em
+> **Em construção.** Esta versão traz a chave de acesso e a leitura do XML da NF-e e da NFC-e. As tabelas
+> fiscais (CFOP, CST, NCM...) vêm a seguir; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -31,6 +31,22 @@ ignorados. Na NF-e avulsa, emitida pelo Fisco, o CNPJ da chave é o do órgão q
 
 Conferido com 135 mil chaves reais de NF-e e CT-e (que não estão no repositório): todas válidas, e as partes
 iguais às do XML de cada nota. As 135 mil são desmontadas em uns 2 segundos.
+
+## Ler o XML da NF-e e da NFC-e
+
+```r
+lida = nfe_ler(c("nota1.xml", "nota2.xml"))   # ou o próprio texto do XML
+lida$notas        # uma linha por nota: emitente, destinatário, totais (com IBS e CBS), protocolo
+lida$itens        # uma linha por item: produto, CFOP, NCM e os impostos principais em colunas
+lida$impostos     # todos os campos de imposto de cada item, um por linha
+lida$parcelas     # as duplicatas
+lida$pagamentos   # as formas de pagamento
+lida$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/2026), já com os campos da Reforma
+Tributária. Conferido com 10 mil notas reais (que não estão no repositório): os campos comparados bateram em
+todas.
 
 ## De onde vêm as regras
 

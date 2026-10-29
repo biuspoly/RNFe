@@ -3,3 +3,4 @@
 export(chave_decompor)
 export(chave_digito)
 export(chave_valida)
+export(nfe_ler)

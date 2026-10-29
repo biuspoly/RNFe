@@ -4,14 +4,19 @@ Version: 0.0.0.9000
 Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role = c("aut", "cre"))
 Description: Confere e desmonta a chave de acesso de 44 posições dos documentos
     fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e e MDF-e), já com o
-    CNPJ alfanumérico da Nota Técnica Conjunta 2025.001. Pacote em construção:
-    a leitura do XML da nota e as tabelas fiscais vêm nas próximas versões.
+    CNPJ alfanumérico da Nota Técnica Conjunta 2025.001, e lê o XML da NF-e e
+    da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos), já com
+    os campos da Reforma Tributária (IBS e CBS). Pacote em construção: as
+    tabelas fiscais vêm nas próximas versões.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNfe
 BugReports: https://github.com/biuspoly/RNfe/issues
 Encoding: UTF-8
 Language: pt-BR
 Depends: R (>= 4.1.0)
+Imports:
+    utils,
+    xml2
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
