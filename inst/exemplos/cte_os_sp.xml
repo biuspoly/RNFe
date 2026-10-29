@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CT-e OS fictício para os testes do RNfe: fretamento de pessoas, CNPJs de exemplo, ambiente de
+     homologação e assinatura de mentira. -->
+<cteOSProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+  <CTeOS versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+    <infCte versao="4.00" Id="CTe35261011444777000161670010000000091246813571">
+      <ide>
+        <cUF>35</cUF>
+        <cCT>24681357</cCT>
+        <CFOP>5353</CFOP>
+        <natOp>PRESTACAO DE SERVICO DE TRANSPORTE DE PESSOAS</natOp>
+        <mod>67</mod>
+        <serie>1</serie>
+        <nCT>9</nCT>
+        <dhEmi>2026-10-20T08:00:00-03:00</dhEmi>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>1</cDV>
+        <tpAmb>2</tpAmb>
+        <tpCTe>0</tpCTe>
+        <procEmi>0</procEmi>
+        <verProc>RNfe-testes</verProc>
+        <cMunEnv>3550308</cMunEnv>
+        <xMunEnv>SÃO PAULO</xMunEnv>
+        <UFEnv>SP</UFEnv>
+        <modal>01</modal>
+        <tpServ>6</tpServ>
+        <indIEToma>1</indIEToma>
+        <cMunIni>3550308</cMunIni>
+        <xMunIni>SÃO PAULO</xMunIni>
+        <UFIni>SP</UFIni>
+        <cMunFim>3509502</cMunFim>
+        <xMunFim>CAMPINAS</xMunFim>
+        <UFFim>SP</UFFim>
+      </ide>
+      <compl>
+        <xObs>CT-E OS DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</xObs>
+        <ObsCont xCampo="CONTRATO">
+          <xTexto>CONTRATO DE TESTE 123</xTexto>
+        </ObsCont>
+      </compl>
+      <emit>
+        <CNPJ>11444777000161</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>FRETAMENTO DE TESTE LTDA</xNome>
+        <enderEmit>
+          <xLgr>RUA DO FRETAMENTO</xLgr>
+          <nro>300</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderEmit>
+        <CRT>3</CRT>
+      </emit>
+      <toma>
+        <CNPJ>11222333000181</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>CT-E EMITIDO EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL</xNome>
+        <enderToma>
+          <xLgr>RUA DE TESTE</xLgr>
+          <nro>100</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderToma>
+      </toma>
+      <vPrest>
+        <vTPrest>1000.00</vTPrest>
+        <vRec>1000.00</vRec>
+        <Comp>
+          <xNome>FRETAMENTO</xNome>
+          <vComp>1000.00</vComp>
+        </Comp>
+      </vPrest>
+      <imp>
+        <ICMS>
+          <ICMS00>
+            <CST>00</CST>
+            <vBC>1000.00</vBC>
+            <pICMS>12.00</pICMS>
+            <vICMS>120.00</vICMS>
+          </ICMS00>
+        </ICMS>
+        <infTribFed>
+          <vPIS>6.50</vPIS>
+          <vCOFINS>30.00</vCOFINS>
+          <vIR>15.00</vIR>
+          <vCSLL>10.00</vCSLL>
+        </infTribFed>
+      </imp>
+      <infCTeNorm>
+        <infServico>
+          <xDescServ>FRETAMENTO EVENTUAL</xDescServ>
+          <infQ>
+            <qCarga>40.0000</qCarga>
+          </infQ>
+        </infServico>
+        <infModal versaoModal="4.00">
+          <rodoOS>
+            <TAF>123456789012</TAF>
+          </rodoOS>
+        </infModal>
+        <cobr>
+          <fat>
+            <nFat>9</nFat>
+            <vOrig>1000.00</vOrig>
+            <vLiq>1000.00</vLiq>
+          </fat>
+          <dup>
+            <nDup>001</nDup>
+            <dVenc>2026-11-20</dVenc>
+            <vDup>1000.00</vDup>
+          </dup>
+        </cobr>
+      </infCTeNorm>
+    </infCte>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#CTe35261011444777000161670010000000091246813571">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </CTeOS>
+  <protCTe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <chCTe>35261011444777000161670010000000091246813571</chCTe>
+      <dhRecbto>2026-10-20T08:00:45-03:00</dhRecbto>
+      <nProt>135260000054321</nProt>
+      <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso do CT-e</xMotivo>
+    </infProt>
+  </protCTe>
+</cteOSProc>

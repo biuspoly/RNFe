@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CT-e fictício para os testes do RNfe: subcontratação por emitente do Simples Nacional, tomador
+     pessoa física (toma4), documento transportado que não é NF-e, documentos de transporte anterior
+     (um CT-e, o de cte_proc_sp.xml, e um em papel), sem protocolo e com assinatura de mentira. -->
+<CTe xmlns="http://www.portalfiscal.inf.br/cte">
+  <infCte versao="4.00" Id="CTe23261011444777000161570020000000771135724689">
+    <ide>
+      <cUF>23</cUF>
+      <cCT>13572468</cCT>
+      <CFOP>5353</CFOP>
+      <natOp>PRESTACAO DE SERVICO DE TRANSPORTE</natOp>
+      <mod>57</mod>
+      <serie>2</serie>
+      <nCT>77</nCT>
+      <dhEmi>2026-10-22T09:15:00-03:00</dhEmi>
+      <tpImp>1</tpImp>
+      <tpEmis>1</tpEmis>
+      <cDV>9</cDV>
+      <tpAmb>2</tpAmb>
+      <tpCTe>0</tpCTe>
+      <procEmi>0</procEmi>
+      <verProc>RNfe-testes</verProc>
+      <cMunEnv>2304400</cMunEnv>
+      <xMunEnv>FORTALEZA</xMunEnv>
+      <UFEnv>CE</UFEnv>
+      <modal>01</modal>
+      <tpServ>1</tpServ>
+      <cMunIni>2304400</cMunIni>
+      <xMunIni>FORTALEZA</xMunIni>
+      <UFIni>CE</UFIni>
+      <cMunFim>2304400</cMunFim>
+      <xMunFim>FORTALEZA</xMunFim>
+      <UFFim>CE</UFFim>
+      <retira>1</retira>
+      <indIEToma>9</indIEToma>
+      <toma4>
+        <toma>4</toma>
+        <CPF>12345678909</CPF>
+        <xNome>TOMADOR DE TESTE</xNome>
+        <enderToma>
+          <xLgr>RUA DO TOMADOR</xLgr>
+          <nro>10</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>2304400</cMun>
+          <xMun>FORTALEZA</xMun>
+          <UF>CE</UF>
+        </enderToma>
+      </toma4>
+    </ide>
+    <emit>
+      <CNPJ>11444777000161</CNPJ>
+      <IE>123456789</IE>
+      <xNome>TRANSPORTES DE TESTE ME</xNome>
+      <enderEmit>
+        <xLgr>RUA DE TESTE</xLgr>
+        <nro>S/N</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>2304400</cMun>
+        <xMun>FORTALEZA</xMun>
+        <UF>CE</UF>
+      </enderEmit>
+      <CRT>1</CRT>
+    </emit>
+    <rem>
+      <CNPJ>12ABC34501DE35</CNPJ>
+      <IE>123456789</IE>
+      <xNome>COMERCIO DE TESTE ME</xNome>
+      <enderReme>
+        <xLgr>RUA DE TESTE</xLgr>
+        <nro>S/N</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>2304400</cMun>
+        <xMun>FORTALEZA</xMun>
+        <UF>CE</UF>
+      </enderReme>
+    </rem>
+    <dest>
+      <CPF>12345678909</CPF>
+      <xNome>CT-E EMITIDO EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL</xNome>
+      <enderDest>
+        <xLgr>RUA DO CLIENTE</xLgr>
+        <nro>10</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>2304400</cMun>
+        <xMun>FORTALEZA</xMun>
+        <UF>CE</UF>
+      </enderDest>
+    </dest>
+    <vPrest>
+      <vTPrest>80.00</vTPrest>
+      <vRec>80.00</vRec>
+      <Comp>
+        <xNome>FRETE VALOR</xNome>
+        <vComp>80.00</vComp>
+      </Comp>
+    </vPrest>
+    <imp>
+      <ICMS>
+        <ICMSSN>
+          <CST>90</CST>
+          <indSN>1</indSN>
+        </ICMSSN>
+      </ICMS>
+    </imp>
+    <infCTeNorm>
+      <infCarga>
+        <vCarga>35.00</vCarga>
+        <proPred>REFRIGERANTES</proPred>
+        <infQ>
+          <cUnid>03</cUnid>
+          <tpMed>CAIXAS</tpMed>
+          <qCarga>3.0000</qCarga>
+        </infQ>
+      </infCarga>
+      <infDoc>
+        <infOutros>
+          <tpDoc>99</tpDoc>
+          <descOutros>PEDIDO DE TESTE</descOutros>
+          <nDoc>123</nDoc>
+          <dEmi>2026-10-20</dEmi>
+          <vDocFisc>35.00</vDocFisc>
+        </infOutros>
+      </infDoc>
+      <docAnt>
+        <emiDocAnt>
+          <CNPJ>12ABC34501DE35</CNPJ>
+          <IE>123456789012</IE>
+          <UF>SP</UF>
+          <xNome>TRANSPORTADORA DE TESTE LTDA</xNome>
+          <idDocAnt>
+            <idDocAntEle>
+              <chCTe>35261012ABC34501DE35570010000005551876543210</chCTe>
+            </idDocAntEle>
+          </idDocAnt>
+          <idDocAnt>
+            <idDocAntPap>
+              <tpDoc>07</tpDoc>
+              <serie>1</serie>
+              <nDoc>4567</nDoc>
+              <dEmi>2026-10-14</dEmi>
+            </idDocAntPap>
+          </idDocAnt>
+        </emiDocAnt>
+      </docAnt>
+      <infModal versaoModal="4.00">
+        <rodo>
+          <RNTRC>87654321</RNTRC>
+        </rodo>
+      </infModal>
+    </infCTeNorm>
+  </infCte>
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <Reference URI="#CTe23261011444777000161570020000000771135724689">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+    <KeyInfo>
+      <X509Data>
+        <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+      </X509Data>
+    </KeyInfo>
+  </Signature>
+</CTe>

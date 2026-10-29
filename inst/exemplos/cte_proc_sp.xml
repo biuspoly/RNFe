@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CT-e fictício para os testes do RNfe: CNPJs de exemplo, ambiente de homologação e assinatura de mentira.
+     Transporta as duas NF-e de exemplo do pacote (nfe_proc_sp.xml e nfe_ce_simples_cpf.xml). -->
+<cteProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+  <CTe xmlns="http://www.portalfiscal.inf.br/cte">
+    <infCte versao="4.00" Id="CTe35261012ABC34501DE35570010000005551876543210">
+      <ide>
+        <cUF>35</cUF>
+        <cCT>87654321</cCT>
+        <CFOP>6353</CFOP>
+        <natOp>PRESTACAO DE SERVICO DE TRANSPORTE</natOp>
+        <mod>57</mod>
+        <serie>1</serie>
+        <nCT>555</nCT>
+        <dhEmi>2026-10-15T14:00:00-03:00</dhEmi>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>0</cDV>
+        <tpAmb>2</tpAmb>
+        <tpCTe>0</tpCTe>
+        <procEmi>0</procEmi>
+        <verProc>RNfe-testes</verProc>
+        <cMunEnv>3550308</cMunEnv>
+        <xMunEnv>SÃO PAULO</xMunEnv>
+        <UFEnv>SP</UFEnv>
+        <modal>01</modal>
+        <tpServ>0</tpServ>
+        <cMunIni>3550308</cMunIni>
+        <xMunIni>SÃO PAULO</xMunIni>
+        <UFIni>SP</UFIni>
+        <cMunFim>3304557</cMunFim>
+        <xMunFim>RIO DE JANEIRO</xMunFim>
+        <UFFim>RJ</UFFim>
+        <retira>1</retira>
+        <indIEToma>1</indIEToma>
+        <toma3>
+          <toma>0</toma>
+        </toma3>
+      </ide>
+      <compl>
+        <xObs>CT-E DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</xObs>
+      </compl>
+      <emit>
+        <CNPJ>12ABC34501DE35</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>TRANSPORTADORA DE TESTE LTDA</xNome>
+        <enderEmit>
+          <xLgr>RUA DA TRANSPORTADORA</xLgr>
+          <nro>500</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderEmit>
+        <CRT>3</CRT>
+      </emit>
+      <rem>
+        <CNPJ>11222333000181</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>EMPRESA DE TESTE LTDA</xNome>
+        <enderReme>
+          <xLgr>RUA DE TESTE</xLgr>
+          <nro>100</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderReme>
+      </rem>
+      <dest>
+        <CNPJ>11444777000161</CNPJ>
+        <IE>12345678</IE>
+        <xNome>CT-E EMITIDO EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL</xNome>
+        <enderDest>
+          <xLgr>AVENIDA DE TESTE</xLgr>
+          <nro>200</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3304557</cMun>
+          <xMun>RIO DE JANEIRO</xMun>
+          <CEP>20010000</CEP>
+          <UF>RJ</UF>
+        </enderDest>
+      </dest>
+      <vPrest>
+        <vTPrest>350.00</vTPrest>
+        <vRec>350.00</vRec>
+        <Comp>
+          <xNome>FRETE PESO</xNome>
+          <vComp>300.00</vComp>
+        </Comp>
+        <Comp>
+          <xNome>PEDAGIO</xNome>
+          <vComp>50.00</vComp>
+        </Comp>
+      </vPrest>
+      <imp>
+        <ICMS>
+          <ICMS00>
+            <CST>00</CST>
+            <vBC>350.00</vBC>
+            <pICMS>12.00</pICMS>
+            <vICMS>42.00</vICMS>
+          </ICMS00>
+        </ICMS>
+        <IBSCBS>
+          <CST>000</CST>
+          <cClassTrib>000001</cClassTrib>
+          <gIBSCBS>
+            <vBC>350.00</vBC>
+            <gIBSUF>
+              <pIBSUF>0.10</pIBSUF>
+              <vIBSUF>0.35</vIBSUF>
+            </gIBSUF>
+            <gIBSMun>
+              <pIBSMun>0.00</pIBSMun>
+              <vIBSMun>0.00</vIBSMun>
+            </gIBSMun>
+            <vIBS>0.35</vIBS>
+            <gCBS>
+              <pCBS>0.90</pCBS>
+              <vCBS>3.15</vCBS>
+            </gCBS>
+          </gIBSCBS>
+        </IBSCBS>
+      </imp>
+      <infCTeNorm>
+        <infCarga>
+          <vCarga>150.00</vCarga>
+          <proPred>BEBIDAS</proPred>
+          <infQ>
+            <cUnid>01</cUnid>
+            <tpMed>PESO BRUTO</tpMed>
+            <qCarga>120.5000</qCarga>
+          </infQ>
+          <infQ>
+            <cUnid>03</cUnid>
+            <tpMed>CAIXAS</tpMed>
+            <qCarga>34.0000</qCarga>
+          </infQ>
+        </infCarga>
+        <infDoc>
+          <infNFe>
+            <chave>35261011222333000181550010000010011123456785</chave>
+          </infNFe>
+          <infNFe>
+            <chave>23261012ABC34501DE35550020000000421876543213</chave>
+          </infNFe>
+        </infDoc>
+        <infModal versaoModal="4.00">
+          <rodo>
+            <RNTRC>12345678</RNTRC>
+          </rodo>
+        </infModal>
+      </infCTeNorm>
+    </infCte>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#CTe35261012ABC34501DE35570010000005551876543210">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </CTe>
+  <protCTe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <chCTe>35261012ABC34501DE35570010000005551876543210</chCTe>
+      <dhRecbto>2026-10-15T14:01:30-03:00</dhRecbto>
+      <nProt>135260000098765</nProt>
+      <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso do CT-e</xMotivo>
+    </infProt>
+  </protCTe>
+</cteProc>

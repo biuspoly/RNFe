@@ -1,7 +1,8 @@
 # Plano do RNfe
 
 Situação em 29/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
-fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 começando.**
+fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 em andamento:** a
+leitura do CT-e e do CT-e OS está pronta e conferida com 14.370 CT-e reais; faltam o MDF-e e a NFS-e Nacional.
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -20,7 +21,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | em andamento |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | CT-e e CT-e OS prontos; faltam MDF-e e NFS-e |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
@@ -38,7 +39,8 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | O que | PyNFe | brans-nfe | BrazilFiscalReport | RNfe |
 |---|---|---|---|---|
 | Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
-| Ler CT-e, MDF-e e NFS-e Nacional em tabelas | não | não | não | etapa 2 |
+| Ler CT-e e CT-e OS em tabelas | não | não | não | pronto (etapa 2) |
+| Ler MDF-e e NFS-e Nacional em tabelas | não | não | não | etapa 2 |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
@@ -113,8 +115,11 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   um por linha, para nada se perder (monofásico, diferimento, crédito presumido...).
 - Arquivo que não dá para ler não para os outros: vai para `arquivos` com o motivo (não encontrado, XML
   quebrado, não é NF-e, só o resumo `resNFe`). Nunca vira nota vazia.
+- Só o `infNFe` de dentro do `NFe` é nota: o CT-e e o MDF-e também têm `infNFe`, com a chave das notas que
+  citam. Até 29/10/2026 um CT-e passado ao `nfe_ler()` virava duas notas vazias; achado ao escrever o
+  `cte_ler()`, corrigido e conferido de novo com 10 mil NF-e reais (uma nota por arquivo, a chave certa).
 - As notas de exemplo (`inst/exemplos`) foram escritas à mão e passam no schema oficial
-  (`ferramentas/validar_notas_de_teste.R`). Para ter certeza de que o validador confere de verdade, ele
+  (`ferramentas/validar_exemplos.R`). Para ter certeza de que o validador confere de verdade, ele
   reprovou cinco versões estragadas de propósito (campo obrigatório faltando, CST inválido, vírgula no valor,
   campo fora de ordem, letra fora do CNPJ na chave). A segunda nota tem emitente com CNPJ alfanumérico.
 - Conferida em 29/10/2026 com 10.000 notas reais sorteadas (que não entram no repositório), contra o que
@@ -173,6 +178,44 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - O Excel guardava alguns CST como número (400 em vez de "400"); voltam com três dígitos.
   - Nota anterior a 2026 com o grupo IBSCBS (fase de testes) fica sem o nome da classificação. Em 10 mil notas
     reais foram 5 itens.
+
+## Etapa 2, leitura do CT-e: o que se decidiu
+
+- `cte_ler()` lê o CT-e (modelo 57) e o CT-e OS (modelo 67), leiautes 3.00 e 4.00, pelo schema oficial do
+  pacote PL_CTe_400 NT 2026.004 RTC 1.00 (Portal do CT-e, republicado em 16/10/2026), que já traz o IBS e a
+  CBS. Devolve `ctes`, `componentes`, `documentos`, `cargas`, `impostos`, `parcelas`, `observacoes` e
+  `arquivos`, ligadas pela chave, no mesmo molde do `nfe_ler()`. O que as duas leituras fazem igual está em
+  `R/ler_xml.R`.
+- **O CT-e OS entrou junto** porque usa o mesmo `infCte` e quase os mesmos grupos; muda o tomador (grupo
+  `toma`), o serviço (`infServico`) e os tributos federais (`infTribFed`). A GTV-e e o CT-e simplificado
+  também usam `infCte`, com outro conteúdo, e ficam de fora; o simplificado avisa que ainda não é lido.
+- **O tomador sai pronto.** No `toma3` o XML só diz o papel (0 remetente, 1 expedidor, 2 recebedor,
+  3 destinatário, como está no schema) e o pacote copia os dados dessa pessoa; no `toma4` e no CT-e OS os
+  dados vêm do próprio grupo.
+- **`documentos` junta tudo o que o CT-e cita**, com o grupo de origem em `tipo`: os transportados (NF-e,
+  nota em papel, outros, DC-e), os de transporte anterior (com o emitente), o CT-e complementado, o
+  substituído, o multimodal e, no CT-e OS, os referenciados e as GTV-e.
+- O `ICMSOutraUF` vai nas mesmas colunas de base, alíquota e valor do ICMS, e `grupo_icms` diz de qual grupo
+  veio. O CST do ICMS fica sem nome ao lado: a tabela do pacote é a da NF-e, que não tem o CST 45 do CT-e.
+- **Exemplos:** três CT-e escritos à mão (com protocolo e IBS/CBS; subcontratação do Simples Nacional com
+  tomador no `toma4` e documentos de transporte anterior; CT-e OS de fretamento) passam no schema oficial.
+  `ferramentas/validar_exemplos.R` agora confere NF-e e CT-e. O `infModal` do CT-e aceita qualquer conteúdo
+  sem conferir, então o modal (`rodo`, `rodoOS`) é validado à parte: um RNTRC de 4 dígitos passava no schema
+  principal e foi reprovado no do modal. O validador também reprovou um CT-e sem `vRec` e um com `toma` 5.
+- **Conferido em 29/10/2026 com os 14.370 CT-e reais** do app Fiscal (5.569 na versão 3.00, 8.801 na 4.00,
+  29 deles CT-e OS), que não entram no repositório. Todos foram lidos, por dois lados:
+  - contra o que o app Fiscal tirou dos mesmos XMLs: número, série, protocolo, situação, natureza, emitente,
+    remetente, destinatário, tomador, valor da prestação e da carga, início, fim e as 16.877 ligações
+    CT-e → NF-e bateram. As diferenças foram todas do lado do Fiscal, que só lê CNPJ: 1 emitente, 23
+    remetentes, 429 destinatários e 8 tomadores com CPF, e os 29 tomadores do CT-e OS, que ele não lê;
+  - contra um segundo leitor do XML (ElementTree, em Python, sem XPath): modelo, CFOP, papel e documento do
+    tomador, emissão e autorização (o instante), valor a receber, grupo e valor do ICMS, CST e valor da CBS,
+    e as contagens e somas de campos de imposto, componentes, cargas, documentos (por tipo), parcelas e
+    observações bateram em todos.
+  - CFOP e CST do IBS/CBS acharam o nome em todos. 72 CT-e de outubro a dezembro de 2025 com o grupo IBSCBS
+    ficam sem o nome da classificação, que vale desde 01/01/2026; o CST do IBS/CBS tem nome porque a aba de
+    CST da tabela oficial não tem datas de vigência.
+- Velocidade: 6,9 ms por CT-e (99 s para os 14.370).
 
 ## O robô das tabelas
 

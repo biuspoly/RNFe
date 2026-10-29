@@ -3,5 +3,6 @@
 export(chave_decompor)
 export(chave_digito)
 export(chave_valida)
+export(cte_ler)
 export(nfe_ler)
 export(tabela_fiscal)

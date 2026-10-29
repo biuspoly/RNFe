@@ -12,19 +12,36 @@ documentar_campos = function(campos) {
   paste0("`", campos$coluna, "` (`", campos$caminho, "`)", collapse = ", ")
 }
 
+# A partir do infProt do protocolo de autorização (protNFe, protCTe), que vem junto no nfeProc e no cteProc.
+CAMPOS_DO_PROTOCOLO = ler_campos("
+coluna      caminho   tipo
+protocolo   nProt     texto
+situacao    cStat     inteiro
+motivo      xMotivo   texto
+autorizacao dhRecbto  data_hora
+")
+
+# A partir de cada dup (cobr/dup), igual na NF-e e no CT-e.
+CAMPOS_DA_PARCELA = ler_campos("
+coluna     caminho tipo
+numero     nDup    texto
+vencimento dVenc   data
+valor      vDup    numero
+")
+
 # Lê cada arquivo e devolve, de cada um, as colunas das tabelas (o que `colunas_do_documento` monta), o
-# nome e o problema. `elemento_principal` é o elemento de cada documento no XML (infNFe, infCte) e
+# nome e o problema. `caminho_dos_documentos` acha cada documento no XML ("//infNFe") e
 # `nome_do_documento` vai na mensagem do arquivo que não é desse tipo ("uma NF-e", "um CT-e").
-ler_arquivos_xml = function(arquivos, elemento_principal, nome_do_documento, colunas_do_documento) {
+ler_arquivos_xml = function(arquivos, caminho_dos_documentos, nome_do_documento, colunas_do_documento) {
   arquivos = as.character(arquivos)
   arquivos_lidos = list()
   for (posicao in seq_along(arquivos)) {
-    arquivos_lidos[[posicao]] = ler_um_arquivo(arquivos[posicao], posicao, elemento_principal, nome_do_documento, colunas_do_documento)
+    arquivos_lidos[[posicao]] = ler_um_arquivo(arquivos[posicao], posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento)
   }
   arquivos_lidos
 }
 
-ler_um_arquivo = function(arquivo, posicao, elemento_principal, nome_do_documento, colunas_do_documento) {
+ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento) {
   e_texto_do_xml = !is.na(arquivo) && startsWith(trimws(arquivo), "<")
   if (e_texto_do_xml) {
     nome_do_arquivo = paste0("(texto ", posicao, ")")
@@ -48,7 +65,7 @@ ler_um_arquivo = function(arquivo, posicao, elemento_principal, nome_do_document
 
   if (!is.null(documento)) {
     xml2::xml_ns_strip(documento)
-    if (length(buscar_todos(documento, paste0("//", elemento_principal))) == 0) {
+    if (length(buscar_todos(documento, caminho_dos_documentos)) == 0) {
       problema = problema_sem_documento(documento, nome_do_documento)
       documento = NULL
     }
@@ -64,6 +81,9 @@ problema_sem_documento = function(documento, nome_do_documento) {
   raiz = xml2::xml_name(xml2::xml_root(documento))
   if (raiz == "resNFe") {
     return("\u00e9 o resumo da NF-e (resNFe), sem os itens")
+  }
+  if (raiz %in% c("CTeSimp", "cteSimpProc")) {
+    return("\u00e9 um CT-e simplificado, que ainda n\u00e3o \u00e9 lido")
   }
   paste0("n\u00e3o \u00e9 ", nome_do_documento, " (o XML come\u00e7a por <", raiz, ">)")
 }
@@ -111,14 +131,21 @@ chave_de_cada = function(elementos, elemento_principal) {
   sub("^[A-Za-z]+", "", xml2::xml_attr(documento_de_cada, "Id"))
 }
 
-# Uma coluna por campo, já no tipo certo; as datas ficam como texto até converter_datas().
+# Uma coluna por campo, já no tipo certo; as datas ficam como texto até converter_datas(). O tipo
+# "elemento" guarda o nome do elemento achado (ICMS00, infNFe...), não o texto dele.
 # `posicoes` diz de qual elemento vem cada linha (no protocolo, NA é o documento que veio sem ele).
 valores_dos_campos = function(elementos, campos, posicoes = seq_along(elementos)) {
   colunas = list()
   for (numero_do_campo in seq_len(nrow(campos))) {
-    textos = texto_de_cada(elementos, campos$caminho[numero_do_campo])[posicoes]
+    caminho = campos$caminho[numero_do_campo]
     nome_da_coluna = campos$coluna[numero_do_campo]
     tipo = campos$tipo[numero_do_campo]
+    if (tipo == "elemento") {
+      elemento_de_cada = xml2::xml_find_first(elementos, caminho, ns = SEM_NAMESPACE)
+      colunas[[nome_da_coluna]] = xml2::xml_name(elemento_de_cada)[posicoes]
+      next
+    }
+    textos = texto_de_cada(elementos, caminho)[posicoes]
     if (tipo == "inteiro") {
       colunas[[nome_da_coluna]] = as.integer(textos)
     } else if (tipo == "numero") {

@@ -1,5 +1,5 @@
 # Os valores esperados são os escritos à mão nas notas de inst/exemplos (validadas contra o schema
-# oficial com ferramentas/validar_notas_de_teste.R).
+# oficial com ferramentas/validar_exemplos.R).
 NOTA_SP = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
 NOTA_CE = system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNfe")
 CHAVE_SP = "35261011222333000181550010000010011123456785"
@@ -188,6 +188,12 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", 
   expect_identical(problemas[4], "n\u00e3o \u00e9 uma NF-e (o XML come\u00e7a por <cteProc>)")
   expect_identical(problemas[5], "\u00e9 o resumo da NF-e (resNFe), sem os itens")
   expect_identical(problemas[6], "vazio")
+})
+
+test_that("o CT-e cita NF-e (infNFe), mas n\u00e3o \u00e9 lido como nota", {
+  lida = nfe_ler(system.file("exemplos", "cte_proc_sp.xml", package = "RNfe"))
+  expect_identical(nrow(lida$notas), 0L)
+  expect_identical(lida$arquivos$problema, "n\u00e3o \u00e9 uma NF-e (o XML come\u00e7a por <cteProc>)")
 })
 
 test_that("sem arquivo nenhum, as tabelas v\u00eam vazias com as colunas certas", {

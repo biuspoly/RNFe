@@ -2,9 +2,9 @@
 
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e) no **R**.
 
-> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e e da NFC-e e as tabelas
-> fiscais (CFOP, NCM, CSTs e as da Reforma). O CEST vem a seguir; o plano está em
-> [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
+> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e e do
+> CT-e OS e as tabelas fiscais (CFOP, NCM, CSTs e as da Reforma). O MDF-e e a NFS-e Nacional vêm a seguir; o
+> plano está em [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
 
@@ -49,6 +49,26 @@ Tributária. Ao lado de cada código do item vem o nome dele (`cfop_titulo`, `cs
 tabela oficial registrava na data da nota. Conferido com 10 mil notas reais (que não estão no repositório):
 os campos comparados bateram em todas, e todos os códigos dos 46 mil itens acharam o nome.
 
+## Ler o XML do CT-e e do CT-e OS
+
+```r
+lido = cte_ler(c("cte1.xml", "cte2.xml"))   # ou o próprio texto do XML
+lido$ctes          # uma linha por CT-e: pessoas, tomador, prestação, ICMS, IBS e CBS, carga, protocolo
+lido$componentes   # os componentes do valor da prestação (frete peso, pedágio...)
+lido$documentos    # o que o CT-e cita: NF-e transportadas, transporte anterior, CT-e complementado...
+lido$cargas        # as quantidades da carga (peso, caixas...)
+lido$impostos      # todos os campos de imposto, um por linha
+lido$parcelas      # as duplicatas
+lido$observacoes   # os campos de uso livre (ObsCont e ObsFisco)
+lido$arquivos      # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), nos leiautes 3.00 e 4.00, pelo schema oficial mais recente
+(PL_CTe_400 NT 2026.004, republicado em 16/10/2026). O tomador vem pronto: quando o XML só diz o papel dele
+(remetente, expedidor, recebedor ou destinatário), os dados dessa pessoa são copiados para as colunas
+`tomador_`. Conferido com 14 mil CT-e reais (que não estão no repositório), contra outro sistema e contra um
+segundo leitor do XML: os campos e as contagens comparados bateram em todos.
+
 ## Tabelas fiscais
 
 ```r
@@ -67,8 +87,9 @@ baixa tudo e refaz as cópias.
 
 Das especificações públicas do [Portal Nacional da NF-e](https://www.nfe.fazenda.gov.br/portal/): o Manual de
 Orientação do Contribuinte (a composição da chave) e a Nota Técnica Conjunta 2025.001, versão 1.00 (o CNPJ
-alfanumérico na chave e no cálculo dos dígitos: cada caractere vale o código ASCII menos 48). Nada aqui
-consulta a SEFAZ.
+alfanumérico na chave e no cálculo dos dígitos: cada caractere vale o código ASCII menos 48). A leitura dos
+XMLs segue os schemas oficiais do Portal da NF-e e do
+[Portal Nacional do CT-e](https://www.cte.fazenda.gov.br/portal/). Nada aqui consulta a SEFAZ.
 
 Nos exemplos e nos testes, só CNPJs e CPFs fictícios; o 12.ABC.345/01DE-35 é o exemplo da Receita Federal.
 

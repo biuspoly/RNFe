@@ -4,6 +4,10 @@
 #' @include ler_xml.R
 NULL
 
+# O infNFe da nota fica sempre dentro do NFe. O CT-e e o MDF-e também têm infNFe, com a chave das notas que
+# citam, e não são notas.
+CAMINHO_DAS_NOTAS = "//NFe/infNFe"
+
 # Coluna, caminho a partir do infNFe e tipo. "a|b" pega o que existir (o leiaute deixa um ou outro).
 CAMPOS_DA_NOTA = ler_campos("
 coluna                        caminho                                     tipo
@@ -74,15 +78,6 @@ fatura_valor_liquido          cobr/fat/vLiq                               numero
 valor_troco                   pag/vTroco                                  numero
 informacoes_complementares    infAdic/infCpl                              texto
 informacoes_fisco             infAdic/infAdFisco                          texto
-")
-
-# A partir do infProt do protocolo de autorização (protNFe), que vem junto no nfeProc.
-CAMPOS_DO_PROTOCOLO = ler_campos("
-coluna      caminho   tipo
-protocolo   nProt     texto
-situacao    cStat     inteiro
-motivo      xMotivo   texto
-autorizacao dhRecbto  data_hora
 ")
 
 # A partir do det. Os impostos principais em colunas; todos os campos estão na tabela impostos.
@@ -158,14 +153,6 @@ cst_pis               cst_pis_descricao          cst_pis               descricao
 cst_cofins            cst_cofins_descricao       cst_cofins            descricao
 cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
 classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
-")
-
-# A partir de cada dup (cobr/dup).
-CAMPOS_DA_PARCELA = ler_campos("
-coluna     caminho tipo
-numero     nDup    texto
-vencimento dVenc   data
-valor      vDup    numero
 ")
 
 # A partir de cada detPag (pag/detPag).
@@ -246,7 +233,7 @@ autorizacao      card/cAut  texto
 #' lida$itens[, c("item", "descricao", "cfop", "cst_icms", "valor_icms", "valor_cbs")]
 #' @export
 nfe_ler = function(arquivos) {
-  arquivos_lidos = ler_arquivos_xml(arquivos, "infNFe", "uma NF-e", colunas_da_nfe)
+  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS, "uma NF-e", colunas_da_nfe)
   colunas_vazias = colunas_da_nfe(NULL, NA_character_)
 
   resultado = list(
@@ -271,7 +258,7 @@ colunas_da_nfe = function(documento, nome_do_arquivo) {
   if (is.null(documento)) {
     documento = xml2::read_xml("<vazio/>")
   }
-  notas = buscar_todos(documento, "//infNFe")
+  notas = buscar_todos(documento, CAMINHO_DAS_NOTAS)
   protocolos = buscar_todos(documento, "//protNFe/infProt")
   itens = buscar_todos(notas, "det")
   campos_dos_impostos = buscar_todos(itens, "imposto//*[not(*)]")
