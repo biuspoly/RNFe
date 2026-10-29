@@ -147,6 +147,25 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - Nota anterior a 2026 com o grupo IBSCBS (fase de testes) fica sem o nome da classificação. Em 10 mil notas
     reais foram 5 itens.
 
+## O robô das tabelas
+
+- `.github/workflows/atualizar-tabelas.yml` roda toda segunda às 9h UTC (6h em Brasília), e também à mão. Ele
+  roda `ferramentas/gerar_tabelas.R` e compara o resultado com as tabelas do pacote; a data de download, em
+  `fontes.csv`, não conta.
+- Quando algo mudou, grava as tabelas num ramo `tabelas-AAAA-MM-DD` e abre um aviso (issue) com o resumo de
+  `ferramentas/resumir_mudancas.R`: códigos novos, que saíram e linhas alteradas, tabela por tabela, mais o
+  link para comparar. Quem junta ao pacote é uma pessoa, depois de conferir.
+- É um aviso e não um pull request porque o repositório não deixa o Actions abrir pull request
+  (`can_approve_pull_request_reviews: false`). Mudar isso é uma configuração de segurança do usuário.
+- **Testado em 29/10/2026:** os sites do Portal da NF-e, do SPED e do Siscomex respondem aos servidores do
+  GitHub, e uma execução leva uns 50 s.
+- **Aviso falso no primeiro teste:** uma célula da tabela da Reforma tem quebra de linha dentro do texto, que
+  o Windows gravava como `\r\r\n` e o Linux como `\r\n`. Desde então o gerador troca quebra dentro da célula
+  por espaço e grava sempre com `\n`, e o `.gitattributes` guarda os CSV com LF. Na execução seguinte o robô
+  não achou mudança, e o aviso falso foi fechado com a explicação.
+- **Falta a terceira camada:** o pacote buscar sozinho, no computador de quem usa, a tabela mais nova do
+  repositório.
+
 ## CEST: adiado (decisão do usuário, 29/10/2026)
 
 Nenhuma fonte oficial dá a descrição atual do CEST sem ambiguidade, e o Portal da NF-e não publica tabela de
