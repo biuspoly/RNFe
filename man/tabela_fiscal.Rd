@@ -5,7 +5,10 @@
 \title{Tabelas fiscais}
 \source{
 CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
-2023.002, publicada em 04/09/2026). As outras: as tabelas externas do SPED
+2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
+Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
+01/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
+(29/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
 Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
 combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma
@@ -15,8 +18,9 @@ está em \code{tabela_fiscal("fontes")}.
 tabela_fiscal(nome)
 }
 \arguments{
-\item{nome}{O nome da tabela: \code{"cfop"}, \code{"origem"}, \code{"cst_icms"},
-\code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"} ou \code{"fontes"}.}
+\item{nome}{O nome da tabela: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
+\code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
+\code{"classificacao_ibs_cbs"} ou \code{"fontes"}.}
 }
 \value{
 Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
@@ -37,11 +41,22 @@ os indicadores da tabela da NF-e (1 = sim): \code{permitido_na_nfe},
 \code{remessa}, \code{combustivel} (0, 1 ou 2, como na tabela oficial) e
 \code{exclusivo_ibs_cbs}. A tabela oficial só traz os códigos vigentes: um CFOP
 revogado não está nela.
+\item \code{"ncm"}: a nomenclatura vigente, em todos os níveis (capítulo, posição,
+subposição, item e subitem), com o código sem os pontos, como na NF-e, e o
+ato que criou cada linha (\code{ato_inicio}). Ao ler, ganha a
+\code{descricao_completa}, que junta a descrição da posição com a de cada nível
+abaixo dela (sozinho, o subitem costuma dizer só "-- Outros"). Só traz os
+códigos vigentes, desde a versão atual da NCM (01/04/2022).
 \item \code{"origem"}: a origem da mercadoria (o primeiro dígito do CST do ICMS). Os
 códigos 0 a 2 mudaram de descrição em 2013, quando vieram os de 3 a 8.
 \item \code{"cst_icms"}: o CST do ICMS, de dois dígitos, como vai na NF-e.
 \item \code{"csosn"}: o código do Simples Nacional, sem datas (veja abaixo).
 \item \code{"cst_ipi"}, \code{"cst_pis"} e \code{"cst_cofins"}: o CST de cada um.
+\item \code{"cst_ibs_cbs"}: o CST do IBS e da CBS (Reforma Tributária).
+\item \code{"classificacao_ibs_cbs"}: a classificação tributária do IBS e da CBS
+(\code{cClassTrib}), com o \code{cst} dela, o \code{nome}, a \code{descricao}, o artigo da LC
+214/2025 (\code{artigo_lc_214}), o \code{tipo_aliquota}, os percentuais de redução
+(\code{reducao_ibs} e \code{reducao_cbs}) e se vale na NF-e e na NFC-e.
 \item \code{"fontes"}: de onde veio cada tabela, com a versão e o dia em que foi
 baixada.
 }

@@ -129,3 +129,20 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   título. O SPED tem o histórico (649 linhas, de 2022) e pode entrar depois, se fizer falta.
 - **Conferência com notas reais:** nas 10 mil notas reais (46.593 itens, de 2021 a 2026), todos os códigos
   acharam o nome. Pôr os nomes custa menos de 1 s para 46 mil itens.
+
+## Etapa 1, NCM e tabelas da Reforma: o que se decidiu
+
+- **NCM:** a nomenclatura vigente do Portal Único Siscomex (arquivo público
+  `classif/api/publico/nomenclatura/download/json`), em todos os níveis, com o código sem os pontos.
+  - A descrição completa junta a da posição (4 dígitos) com a de cada nível abaixo dela, porque o subitem
+    sozinho costuma dizer só "-- Outros". Ela é montada ao ler a tabela, não gravada.
+  - O arquivo só traz o que vale hoje, desde a versão atual da NCM (01/04/2022). Uma nota anterior fica sem a
+    descrição.
+  - Um NCM extinto depois de 2022 também fica sem descrição, mesmo em nota da época em que valia. Em 10 mil
+    notas reais foram 76 itens, entre eles códigos que não são NCM ("00", "00000000").
+- **Reforma:** a Tabela de Classificação Tributária do IBS e CBS do Portal da NF-e (Informe Técnico 2025.002
+  v1.70, de 01/10/2026), com a aba de CST (18 códigos) e a de cClassTrib (173 classificações, todas desde
+  01/01/2026).
+  - O Excel guardava alguns CST como número (400 em vez de "400"); voltam com três dígitos.
+  - Nota anterior a 2026 com o grupo IBSCBS (fase de testes) fica sem o nome da classificação. Em 10 mil notas
+    reais foram 5 itens.

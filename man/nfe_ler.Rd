@@ -49,9 +49,11 @@ Uma linha por item: \code{chave}, \code{item} (\code{nItem}),
 O \code{*} é o grupo do ICMS, do IPI, do PIS ou da COFINS que o item tiver (por
 exemplo, \code{ICMS00} ou \code{ICMSSN102}). Ao lado de cada código vem o nome dele,
 como a tabela fiscal registrava na data de emissão da nota (veja
-\code{\link[=tabela_fiscal]{tabela_fiscal()}}): \code{cfop_titulo}, \code{origem_descricao}, \code{cst_icms_descricao},
-\code{csosn_descricao}, \code{cst_ipi_descricao}, \code{cst_pis_descricao} e
-\code{cst_cofins_descricao}.
+\code{\link[=tabela_fiscal]{tabela_fiscal()}}): \code{ncm_descricao} (a descrição completa, da posição até o
+código), \code{cfop_titulo}, \code{origem_descricao}, \code{cst_icms_descricao},
+\code{csosn_descricao}, \code{cst_ipi_descricao}, \code{cst_pis_descricao},
+\code{cst_cofins_descricao}, \code{cst_ibs_cbs_descricao} e
+\code{classificacao_ibs_cbs_nome}.
 }
 
 \section{impostos}{

@@ -3,7 +3,7 @@
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e) no **R**.
 
 > **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e e da NFC-e e as tabelas
-> fiscais menores (CFOP e CSTs). NCM, CEST e as tabelas da Reforma vêm a seguir; o plano está em
+> fiscais (CFOP, NCM, CSTs e as da Reforma). O CEST vem a seguir; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -52,14 +52,16 @@ os campos comparados bateram em todas, e todos os códigos dos 46 mil itens acha
 ## Tabelas fiscais
 
 ```r
-tabela_fiscal("cfop")        # título, nota explicativa e indicadores de cada CFOP
-tabela_fiscal("cst_icms")    # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
-tabela_fiscal("fontes")      # de onde veio cada tabela, com a versão e a data
+tabela_fiscal("cfop")                    # título, nota explicativa e indicadores de cada CFOP
+tabela_fiscal("ncm")                     # a NCM vigente, com a descrição completa de cada código
+tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_cbs"
+tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
+tabela_fiscal("fontes")                  # de onde veio cada tabela, com a versão e a data
 ```
 
-Cada linha tem o `inicio` e o `fim` da vigência. O CFOP vem da tabela do Portal da NF-e (Informe Técnico
-2023.002); os CSTs, das tabelas do SPED Fiscal, da Receita. `ferramentas/gerar_tabelas.R` baixa as duas
-fontes e refaz as cópias.
+Cada linha tem o `inicio` e o `fim` da vigência. As fontes são oficiais: o Portal da NF-e (CFOP e Reforma), o
+Portal Único Siscomex (NCM) e as tabelas do SPED Fiscal, da Receita (CSTs). `ferramentas/gerar_tabelas.R`
+baixa tudo e refaz as cópias.
 
 ## De onde vêm as regras
 

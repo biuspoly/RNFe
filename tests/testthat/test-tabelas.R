@@ -2,7 +2,7 @@
 # Portal da NF-e e as tabelas do SPED), não das cópias que vão no pacote.
 
 test_that("cada tabela tem as colunas e os tipos certos", {
-  for (nome in c("origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins")) {
+  for (nome in c("origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs")) {
     tabela = tabela_fiscal(nome)
     expect_identical(names(tabela), c("codigo", "descricao", "inicio", "fim"))
     expect_s3_class(tabela$inicio, "Date")
@@ -13,7 +13,7 @@ test_that("cada tabela tem as colunas e os tipos certos", {
   expect_identical(names(cfop)[1:5], c("codigo", "titulo", "nota_explicativa", "inicio", "fim"))
   expect_type(cfop$devolucao, "integer")
   expect_false(any(duplicated(cfop$codigo)))
-  expect_error(tabela_fiscal("ncm"), "Tabela desconhecida")
+  expect_error(tabela_fiscal("tabela_que_nao_existe"), "Tabela desconhecida")
 })
 
 test_that("CFOP como na tabela oficial da NF-e", {
@@ -37,6 +37,44 @@ test_that("as corre\u00e7\u00f5es sobre as tabelas do SPED: origem 8, CST de com
   expect_true(all(is.na(csosn$inicio) & is.na(csosn$fim)))
   # Windows-1252, não Latin-1: o travessão do CST 51 do PIS é o byte 0x96 no arquivo do SPED.
   expect_match(tabela_fiscal("cst_pis")$descricao[tabela_fiscal("cst_pis")$codigo == "51"], "Cr\u00e9dito \u2013 Vinculada", fixed = TRUE)
+})
+
+test_that("NCM como no Siscomex, com a descri\u00e7\u00e3o completa", {
+  ncm = tabela_fiscal("ncm")
+  reprodutores = ncm[ncm$codigo == "01012100", ]
+  expect_identical(reprodutores$descricao, "-- Reprodutores de ra\u00e7a pura")
+  expect_identical(reprodutores$inicio, as.Date("2022-04-01"))
+  expect_true(is.na(reprodutores$fim))
+  expect_identical(reprodutores$ato_inicio, "Res Gecex 272/2021")
+  expect_false(any(duplicated(ncm$codigo)))
+  expect_identical(
+    ncm$descricao_completa[ncm$codigo == "22011000"],
+    paste(
+      "\u00c1guas, incluindo as \u00e1guas minerais, naturais ou artificiais, e as \u00e1guas gaseificadas, n\u00e3o adicionadas de a\u00e7\u00facar ou de outros edulcorantes nem aromatizadas; gelo e neve.",
+      "- \u00c1guas minerais e \u00e1guas gaseificadas"
+    )
+  )
+  expect_identical(ncm$descricao_completa[ncm$codigo == "01"], "Animais vivos.")
+  expect_identical(
+    ncm$descricao_completa[ncm$codigo == "01012100"],
+    "Cavalos, asininos e muares, vivos. - Cavalos: -- Reprodutores de ra\u00e7a pura"
+  )
+})
+
+test_that("IBS e CBS como na tabela de classifica\u00e7\u00e3o tribut\u00e1ria do Portal da NF-e", {
+  cst = tabela_fiscal("cst_ibs_cbs")
+  expect_identical(cst$descricao[cst$codigo == "000"], "Tributa\u00e7\u00e3o integral")
+  classificacao = tabela_fiscal("classificacao_ibs_cbs")
+  integral = classificacao[classificacao$codigo == "000001", ]
+  expect_identical(integral$cst, "000")
+  expect_identical(integral$nome, "Situa\u00e7\u00f5es tributadas integralmente pelo IBS e CBS.")
+  expect_identical(integral$inicio, as.Date("2026-01-01"))
+  expect_type(classificacao$reducao_ibs, "double")
+  expect_false(any(duplicated(classificacao$codigo)))
+  # O Excel guardava alguns CST como n\u00famero (400): voltam com tr\u00eas d\u00edgitos.
+  expect_true(all(nchar(classificacao$cst) == 3))
+  expect_true(all(classificacao$cst[startsWith(classificacao$codigo, "400")] == "400"))
+  expect_true(all(classificacao$cst %in% cst$codigo))
 })
 
 test_that("a descri\u00e7\u00e3o muda com a data da nota", {

@@ -94,6 +94,11 @@ test_that("ao lado de cada c\u00f3digo do item, o nome dele na data da nota", {
   expect_identical(itens$cst_ipi_descricao, c("Sa\u00edda tributada", NA, NA))
   expect_identical(itens$cst_pis_descricao, c("Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota B\u00e1sica", "Opera\u00e7\u00e3o Tribut\u00e1vel Monof\u00e1sica - Revenda a Al\u00edquota Zero", "Outras Opera\u00e7\u00f5es"))
   expect_identical(itens$cst_cofins_descricao, itens$cst_pis_descricao)
+  expect_match(itens$ncm_descricao[1], "- \u00c1guas minerais e \u00e1guas gaseificadas$")
+  expect_match(itens$ncm_descricao[2], "^\u00c1guas, incluindo as \u00e1guas minerais e as \u00e1guas gaseificadas, adicionadas de a\u00e7\u00facar")
+  expect_identical(itens$cst_ibs_cbs_descricao, c("Tributa\u00e7\u00e3o integral", "Tributa\u00e7\u00e3o integral", NA))
+  expect_identical(itens$classificacao_ibs_cbs_nome[1], "Situa\u00e7\u00f5es tributadas integralmente pelo IBS e CBS.")
+  expect_true(is.na(itens$classificacao_ibs_cbs_nome[3]))
 })
 
 test_that("os itens somam os totais da nota", {

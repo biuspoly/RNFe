@@ -152,14 +152,17 @@ valor_ipi_devolvido       impostoDevol/IPI/vIPIDevol                 numero
 
 # O nome de cada código do item, ao lado dele, como a tabela fiscal registrava na data de emissão da nota.
 DESCRICOES_DOS_ITENS = ler_campos("
-coluna_do_codigo coluna_nova          tabela     texto
-cfop             cfop_titulo          cfop       titulo
-origem           origem_descricao     origem     descricao
-cst_icms         cst_icms_descricao   cst_icms   descricao
-csosn            csosn_descricao      csosn      descricao
-cst_ipi          cst_ipi_descricao    cst_ipi    descricao
-cst_pis          cst_pis_descricao    cst_pis    descricao
-cst_cofins       cst_cofins_descricao cst_cofins descricao
+coluna_do_codigo      coluna_nova                tabela                texto
+ncm                   ncm_descricao              ncm                   descricao_completa
+cfop                  cfop_titulo                cfop                  titulo
+origem                origem_descricao           origem                descricao
+cst_icms              cst_icms_descricao         cst_icms              descricao
+csosn                 csosn_descricao            csosn                 descricao
+cst_ipi               cst_ipi_descricao          cst_ipi               descricao
+cst_pis               cst_pis_descricao          cst_pis               descricao
+cst_cofins            cst_cofins_descricao       cst_cofins            descricao
+cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
+classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 ")
 
 # A partir de cada dup (cobr/dup).
@@ -210,9 +213,11 @@ autorizacao      card/cAut  texto
 #' O `*` é o grupo do ICMS, do IPI, do PIS ou da COFINS que o item tiver (por
 #' exemplo, `ICMS00` ou `ICMSSN102`). Ao lado de cada código vem o nome dele,
 #' como a tabela fiscal registrava na data de emissão da nota (veja
-#' [tabela_fiscal()]): `cfop_titulo`, `origem_descricao`, `cst_icms_descricao`,
-#' `csosn_descricao`, `cst_ipi_descricao`, `cst_pis_descricao` e
-#' `cst_cofins_descricao`.
+#' [tabela_fiscal()]): `ncm_descricao` (a descrição completa, da posição até o
+#' código), `cfop_titulo`, `origem_descricao`, `cst_icms_descricao`,
+#' `csosn_descricao`, `cst_ipi_descricao`, `cst_pis_descricao`,
+#' `cst_cofins_descricao`, `cst_ibs_cbs_descricao` e
+#' `classificacao_ibs_cbs_nome`.
 #'
 #' @section impostos:
 #' Todos os campos dos impostos de cada item, um por linha: `chave`, `item`,

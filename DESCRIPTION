@@ -8,8 +8,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos), já com
     os campos da Reforma Tributária (IBS e CBS) e o nome de cada CFOP e CST
     como a tabela oficial registrava na data da nota. Traz as tabelas fiscais
-    (CFOP, origem, CST do ICMS, CSOSN e CST do IPI, do PIS e da COFINS) copiadas
-    do Portal da NF-e e do SPED, com a vigência de cada código.
+    (CFOP, NCM, origem, CST do ICMS, CSOSN, CST do IPI, do PIS e da COFINS e o
+    CST e a classificação tributária do IBS e da CBS) copiadas do Portal da
+    NF-e, do Portal Único Siscomex e do SPED, com a vigência de cada código.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNfe
 BugReports: https://github.com/biuspoly/RNfe/issues

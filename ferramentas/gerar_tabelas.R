@@ -1,19 +1,22 @@
 # Baixa as tabelas fiscais das fontes oficiais e grava as cópias que vão dentro do pacote
 # (inst/extdata/tabelas). Uso, na raiz do repositório:
 #   Rscript ferramentas/gerar_tabelas.R
-# Precisa de internet e dos pacotes httr2, xml2 e readxl (só esta ferramenta usa o readxl).
+# Precisa de internet e dos pacotes httr2, xml2, readxl e jsonlite (só esta ferramenta usa os dois últimos).
 #
 # Fontes:
 # - CFOP: a Tabela de CFOP do Portal da NF-e (a do Informe Técnico 2023.002), com o título e a nota
 #   explicativa literais do Convênio SINIEF s/nº de 1970 e o início de vigência de cada código.
 # - Origem, CST do ICMS, CSOSN e CST do IPI, do PIS e da COFINS: as tabelas externas do SPED Fiscal, que a
 #   Receita publica com o início e o fim de cada código, baixadas pelo serviço do próprio SPED.
+# - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e.
+# - NCM: a nomenclatura vigente do Portal Único Siscomex.
 
 PASTA_DAS_TABELAS = "inst/extdata/tabelas"
 ENDERECO_DO_PORTAL = "https://www.nfe.fazenda.gov.br/portal/"
 PAGINA_COM_A_TABELA_DE_CFOP = "listaConteudo.aspx?tipoConteudo=/NJarYc9nus="
 SERVICO_DO_SPED = "http://www.sped.fazenda.gov.br/spedtabelas/WsConsulta/WsConsulta.asmx"
 DOWNLOAD_DO_SPED = "http://www.sped.fazenda.gov.br/spedtabelas/wsconsulta/obterTabela.ashx"
+ENDERECO_DA_NCM = "https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json"
 # O tipo de cada tabela no SPED Fiscal (atributo "tipo" dos metadados).
 TABELAS_DO_SPED = c(
   origem = "SIT_TRIB_ICMS_A",
@@ -85,23 +88,37 @@ data_do_sped = function(texto) {
 
 # ---- Portal da NF-e ----
 
-baixar_tabela_de_cfop = function(pasta_temporaria) {
+# Baixa o arquivo do link mais recente cujo texto começa por `comeco_do_link` e devolve o caminho dele e o
+# texto do link (que traz a data de publicação).
+baixar_do_portal = function(comeco_do_link, pasta_temporaria) {
   # O portal só entrega o arquivo para quem abriu a página antes (cookie de sessão).
   arquivo_de_cookies = file.path(pasta_temporaria, "cookies_do_portal.txt")
   pedido = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, PAGINA_COM_A_TABELA_DE_CFOP)), arquivo_de_cookies)
   pagina = xml2::read_html(httr2::resp_body_string(httr2::req_perform(pedido)))
-  links = xml2::xml_find_all(pagina, "//a[starts-with(normalize-space(.), 'Tabela de CFOP')]")
+  links = xml2::xml_find_all(pagina, paste0("//a[starts-with(normalize-space(.), '", comeco_do_link, "')]"))
   if (length(links) == 0) {
-    stop("A página do portal não tem mais o link 'Tabela de CFOP'", call. = FALSE)
+    stop("A página do portal não tem mais o link '", comeco_do_link, "'", call. = FALSE)
   }
   # O primeiro é o mais recente (a página lista do mais novo para o mais antigo).
   titulo = trimws(xml2::xml_text(links[1]))
   endereco = gsub("+", "%2B", xml2::xml_attr(links[1], "href"), fixed = TRUE)
-  arquivo = file.path(pasta_temporaria, "tabela_de_cfop.xlsx")
+  arquivo = tempfile(tmpdir = pasta_temporaria, fileext = ".xlsx")
   pedido = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, endereco)), arquivo_de_cookies)
   httr2::req_perform(pedido, path = arquivo)
+  list(arquivo = arquivo, titulo = titulo)
+}
 
-  planilha = readxl::read_excel(arquivo, sheet = 1, range = readxl::cell_cols("A:N"))
+conferir_colunas = function(planilha, colunas_esperadas, nome_da_tabela) {
+  faltando = setdiff(colunas_esperadas, names(planilha))
+  if (length(faltando) > 0) {
+    stop("A tabela ", nome_da_tabela, " não tem mais as colunas: ", paste(faltando, collapse = ", "), call. = FALSE)
+  }
+}
+
+baixar_tabela_de_cfop = function(pasta_temporaria) {
+  baixado = baixar_do_portal("Tabela de CFOP", pasta_temporaria)
+  titulo = baixado$titulo
+  planilha = readxl::read_excel(baixado$arquivo, sheet = 1, range = readxl::cell_cols("A:N"))
   nomes_na_planilha = c(
     "CFOP", "Início de vigência", "Fim de vigência", "indNFe", "indComunica", "indTransp", "indDevol",
     "indRetor", "indAnula", "indRemes", "indComb", "indExcIBSCBS", "Título do CFOP", "Descrição (nota explicativa)"
@@ -127,6 +144,64 @@ baixar_tabela_de_cfop = function(pasta_temporaria) {
   )
   cfop = cfop[!is.na(cfop$codigo), ]
   list(tabela = cfop, titulo = titulo)
+}
+
+# A Tabela de Classificação Tributária do IBS e CBS (Informe Técnico 2025.002): a primeira aba tem as
+# classificações (cClassTrib), a segunda os CST. O Excel guarda alguns CST como número (400 em vez de
+# "400"): todo CST volta a ter três dígitos.
+baixar_tabelas_da_reforma = function(pasta_temporaria) {
+  baixado = baixar_do_portal("Tabela de Classificação Tributária do IBS e CBS", pasta_temporaria)
+  classificacoes = readxl::read_excel(baixado$arquivo, sheet = 1)
+  conferir_colunas(classificacoes, c(
+    "CST-IBS/CBS", "cClassTrib", "Nome cClassTrib", "Descrição cClassTrib", "LC 214/25", "Tipo de Alíquota",
+    "pRedIBS", "pRedCBS", "dIniVig", "dFimVig", "indNFe", "indNFCe"
+  ), "de classificação do IBS e CBS")
+  classificacoes = classificacoes[!is.na(classificacoes[["cClassTrib"]]), ]
+  classificacao = data.frame(
+    codigo = classificacoes[["cClassTrib"]],
+    cst = sprintf("%03d", as.integer(classificacoes[["CST-IBS/CBS"]])),
+    nome = trimws(classificacoes[["Nome cClassTrib"]]),
+    descricao = trimws(classificacoes[["Descrição cClassTrib"]]),
+    artigo_lc_214 = trimws(classificacoes[["LC 214/25"]]),
+    tipo_aliquota = trimws(classificacoes[["Tipo de Alíquota"]]),
+    reducao_ibs = as.numeric(classificacoes[["pRedIBS"]]),
+    reducao_cbs = as.numeric(classificacoes[["pRedCBS"]]),
+    inicio = as.Date(classificacoes[["dIniVig"]]),
+    fim = as.Date(classificacoes[["dFimVig"]]),
+    permitido_na_nfe = as.integer(classificacoes[["indNFe"]]),
+    permitido_na_nfce = as.integer(classificacoes[["indNFCe"]])
+  )
+  csts = readxl::read_excel(baixado$arquivo, sheet = 2)
+  conferir_colunas(csts, c("CST-IBS/CBS", "Descrição CST-IBS/CBS"), "de CST do IBS e CBS")
+  csts = csts[!is.na(csts[["CST-IBS/CBS"]]), ]
+  cst = data.frame(
+    codigo = sprintf("%03d", as.integer(csts[["CST-IBS/CBS"]])),
+    descricao = trimws(csts[["Descrição CST-IBS/CBS"]]),
+    inicio = as.Date(NA),
+    fim = as.Date(NA)
+  )
+  list(classificacao = classificacao, cst = cst, titulo = baixado$titulo)
+}
+
+# ---- Siscomex ----
+
+# A nomenclatura vigente, em todos os níveis (capítulo, posição, subposição, item e subitem). O código vai
+# sem os pontos, como na NF-e; a data de fim 31/12/9999 quer dizer "ainda vale".
+baixar_ncm = function() {
+  pedido = httr2::request(ENDERECO_DA_NCM)
+  ncm_do_siscomex = jsonlite::fromJSON(httr2::resp_body_string(httr2::req_perform(pedido)))
+  nomenclaturas = ncm_do_siscomex$Nomenclaturas
+  conferir_colunas(nomenclaturas, c("Codigo", "Descricao", "Data_Inicio", "Data_Fim", "Tipo_Ato_Ini", "Numero_Ato_Ini", "Ano_Ato_Ini"), "NCM")
+  fim = as.Date(nomenclaturas$Data_Fim, format = "%d/%m/%Y")
+  fim[fim == as.Date("9999-12-31")] = NA
+  ncm = data.frame(
+    codigo = gsub(".", "", nomenclaturas$Codigo, fixed = TRUE),
+    descricao = trimws(nomenclaturas$Descricao),
+    inicio = as.Date(nomenclaturas$Data_Inicio, format = "%d/%m/%Y"),
+    fim = fim,
+    ato_inicio = paste0(nomenclaturas$Tipo_Ato_Ini, " ", nomenclaturas$Numero_Ato_Ini, "/", nomenclaturas$Ano_Ato_Ini)
+  )
+  list(tabela = ncm, situacao = ncm_do_siscomex$Data_Ultima_Atualizacao_NCM, ato = ncm_do_siscomex$Ato)
 }
 
 # ---- montar as tabelas do pacote ----
@@ -217,7 +292,24 @@ fontes = rbind(fontes, data.frame(
   baixada_em = baixada_em
 ))
 
+reforma = baixar_tabelas_da_reforma(pasta_temporaria)
+ncm = baixar_ncm()
+fontes = rbind(fontes, data.frame(
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm"),
+  fonte = c(
+    paste0("Portal da NF-e, ", reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
+    paste0("Portal da NF-e, ", reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
+    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm$situacao, ", ", ncm$ato, ")")
+  ),
+  versao = NA,
+  data_da_versao = NA,
+  baixada_em = baixada_em
+))
+
 gravar_tabela(cfop_do_portal$tabela, "cfop")
+gravar_tabela(reforma$cst, "cst_ibs_cbs")
+gravar_tabela(reforma$classificacao, "classificacao_ibs_cbs")
+gravar_tabela(ncm$tabela, "ncm")
 gravar_tabela(origem_com_as_que_faltam(tabelas_do_sped$origem, tabelas_do_sped$cst_icms_tres_digitos), "origem")
 gravar_tabela(cst_icms_com_os_monofasicos(tabelas_do_sped$cst_icms_b, tabelas_do_sped$cst_icms_tres_digitos), "cst_icms")
 gravar_tabela(csosn_do_sped(tabelas_do_sped$cst_icms_tres_digitos), "csosn")
