@@ -1,6 +1,10 @@
 # Leitura do XML da NF-e e da NFC-e (leiaute 4.00) em tabelas. Os caminhos seguem o schema oficial
 # do Portal da NF-e (pacote de liberação PL_010g v1.03, de 26/10/2026, que já traz a Reforma).
 
+# O documento é lido sem namespace (xml_ns_strip). Passar isto em cada busca evita que o xml2 procure
+# os namespaces de novo a cada vez, o que deixava a leitura duas vezes mais lenta.
+SEM_NAMESPACE = character()
+
 ler_campos = function(texto) {
   utils::read.table(text = texto, header = TRUE, stringsAsFactors = FALSE)
 }
@@ -227,21 +231,47 @@ autorizacao      card/cAut  texto
 #' @export
 nfe_ler = function(arquivos) {
   arquivos = as.character(arquivos)
-  partes = lapply(seq_along(arquivos), function(posicao) ler_um_arquivo(arquivos[posicao], posicao))
-  vazias = tabelas_do_documento(NULL, NA_character_)
-  tabelas = lapply(names(vazias), function(nome) {
-    empilhar(c(list(vazias[[nome]]), lapply(partes, function(parte) parte[[nome]])))
-  })
-  names(tabelas) = names(vazias)
-  tabelas$notas = converter_datas(tabelas$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
-  tabelas$parcelas = converter_datas(tabelas$parcelas, CAMPOS_DA_PARCELA)
-  tabelas$pagamentos = converter_datas(tabelas$pagamentos, CAMPOS_DO_PAGAMENTO)
-  tabelas$arquivos = data.frame(
-    arquivo = vapply(partes, function(parte) parte$nome, character(1)),
-    notas = vapply(partes, function(parte) nrow(parte$notas), integer(1)),
-    problema = vapply(partes, function(parte) parte$problema, character(1))
+  arquivos_lidos = list()
+  for (posicao in seq_along(arquivos)) {
+    arquivos_lidos[[posicao]] = ler_um_arquivo(arquivos[posicao], posicao)
+  }
+
+  resultado = list(
+    notas = juntar_tabela(arquivos_lidos, "notas"),
+    itens = juntar_tabela(arquivos_lidos, "itens"),
+    impostos = juntar_tabela(arquivos_lidos, "impostos"),
+    parcelas = juntar_tabela(arquivos_lidos, "parcelas"),
+    pagamentos = juntar_tabela(arquivos_lidos, "pagamentos"),
+    arquivos = resumo_dos_arquivos(arquivos_lidos)
   )
-  tabelas
+  resultado$notas = converter_datas(resultado$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
+  resultado$parcelas = converter_datas(resultado$parcelas, CAMPOS_DA_PARCELA)
+  resultado$pagamentos = converter_datas(resultado$pagamentos, CAMPOS_DO_PAGAMENTO)
+  resultado
+}
+
+# Junta a mesma tabela de todos os arquivos numa só. Cada arquivo traz as colunas numa lista, e o
+# data.frame é montado uma vez, aqui: montar um por arquivo custava uns 3 ms por nota.
+juntar_tabela = function(arquivos_lidos, nome_da_tabela) {
+  colunas = colunas_do_documento(NULL, NA_character_)[[nome_da_tabela]]
+  for (nome_da_coluna in names(colunas)) {
+    valores_de_cada_arquivo = lapply(arquivos_lidos, function(arquivo_lido) arquivo_lido[[nome_da_tabela]][[nome_da_coluna]])
+    colunas[[nome_da_coluna]] = do.call(c, c(list(colunas[[nome_da_coluna]]), valores_de_cada_arquivo))
+  }
+  list2DF(colunas)
+}
+
+resumo_dos_arquivos = function(arquivos_lidos) {
+  quantidade_de_arquivos = length(arquivos_lidos)
+  nome_de_cada = character(quantidade_de_arquivos)
+  notas_de_cada = integer(quantidade_de_arquivos)
+  problema_de_cada = character(quantidade_de_arquivos)
+  for (posicao in seq_len(quantidade_de_arquivos)) {
+    nome_de_cada[posicao] = arquivos_lidos[[posicao]]$nome_do_arquivo
+    notas_de_cada[posicao] = length(arquivos_lidos[[posicao]]$notas$chave)
+    problema_de_cada[posicao] = arquivos_lidos[[posicao]]$problema
+  }
+  data.frame(arquivo = nome_de_cada, notas = notas_de_cada, problema = problema_de_cada)
 }
 
 documentar_campos = function(campos) {
@@ -249,31 +279,39 @@ documentar_campos = function(campos) {
 }
 
 ler_um_arquivo = function(arquivo, posicao) {
-  texto_de_xml = !is.na(arquivo) && startsWith(trimws(arquivo), "<")
-  nome = if (texto_de_xml) paste0("(texto ", posicao, ")") else arquivo
+  e_texto_do_xml = !is.na(arquivo) && startsWith(trimws(arquivo), "<")
+  if (e_texto_do_xml) {
+    nome_do_arquivo = paste0("(texto ", posicao, ")")
+  } else {
+    nome_do_arquivo = arquivo
+  }
+
   documento = NULL
   problema = NA_character_
-  if (is.na(arquivo) || !nzchar(trimws(arquivo))) {
+  if (is.na(arquivo) || trimws(arquivo) == "") {
     problema = "vazio"
-  } else if (!texto_de_xml && !file.exists(arquivo)) {
+  } else if (!e_texto_do_xml && !file.exists(arquivo)) {
     problema = "arquivo n\u00e3o encontrado"
   } else {
-    documento = tryCatch(xml2::read_xml(arquivo), error = function(erro) {
-      problema <<- paste0("n\u00e3o \u00e9 um XML v\u00e1lido: ", conditionMessage(erro))
-      NULL
-    })
+    documento = tryCatch(xml2::read_xml(arquivo), error = function(erro) erro)
+    if (inherits(documento, "error")) {
+      problema = paste0("n\u00e3o \u00e9 um XML v\u00e1lido: ", conditionMessage(documento))
+      documento = NULL
+    }
   }
+
   if (!is.null(documento)) {
     xml2::xml_ns_strip(documento)
-    if (length(xml2::xml_find_all(documento, "//infNFe")) == 0) {
+    if (length(buscar_todos(documento, "//infNFe")) == 0) {
       problema = problema_sem_nota(documento)
       documento = NULL
     }
   }
-  partes = tabelas_do_documento(documento, nome)
-  partes$nome = nome
-  partes$problema = problema
-  partes
+
+  arquivo_lido = colunas_do_documento(documento, nome_do_arquivo)
+  arquivo_lido$nome_do_arquivo = nome_do_arquivo
+  arquivo_lido$problema = problema
+  arquivo_lido
 }
 
 problema_sem_nota = function(documento) {
@@ -284,83 +322,99 @@ problema_sem_nota = function(documento) {
   paste0("n\u00e3o \u00e9 uma NF-e (o XML come\u00e7a por <", raiz, ">)")
 }
 
-# Com documento NULL, devolve as tabelas vazias, já com as colunas e os tipos certos.
-tabelas_do_documento = function(documento, nome) {
+# As colunas das tabelas de um documento, cada uma num vetor. Com documento NULL, vêm vazias, já
+# com os nomes e os tipos certos.
+colunas_do_documento = function(documento, nome_do_arquivo) {
   if (is.null(documento)) {
     documento = xml2::read_xml("<vazio/>")
   }
-  notas = xml2::xml_find_all(documento, "//infNFe")
-  protocolos = xml2::xml_find_all(documento, "//protNFe/infProt")
-  chaves = chave_do_no(notas)
-  protocolo_da_nota = match(chaves, xml2::xml_text(xml2::xml_find_first(protocolos, "chNFe")))
-  itens = xml2::xml_find_all(notas, "det")
-  folhas_dos_impostos = xml2::xml_find_all(itens, "imposto//*[not(*)]")
-  duplicatas = xml2::xml_find_all(notas, "cobr/dup")
-  formas_de_pagamento = xml2::xml_find_all(notas, "pag/detPag")
+  notas = buscar_todos(documento, "//infNFe")
+  protocolos = buscar_todos(documento, "//protNFe/infProt")
+  itens = buscar_todos(notas, "det")
+  campos_dos_impostos = buscar_todos(itens, "imposto//*[not(*)]")
+  duplicatas = buscar_todos(notas, "cobr/dup")
+  formas_de_pagamento = buscar_todos(notas, "pag/detPag")
+
+  chaves = chave_de_cada(notas)
+  # O protocolo é casado com a nota pela chave; nota que veio sem protocolo fica com NA.
+  protocolo_de_cada_nota = match(chaves, texto_de_cada(protocolos, "chNFe"))
 
   list(
-    notas = data.frame(
-      chave = chaves,
-      versao = xml2::xml_attr(notas, "versao"),
-      extrair(notas, CAMPOS_DA_NOTA),
-      extrair(protocolos, CAMPOS_DO_PROTOCOLO, protocolo_da_nota),
-      arquivo = rep(nome, length(notas))
+    notas = c(
+      list(chave = chaves, versao = xml2::xml_attr(notas, "versao")),
+      valores_dos_campos(notas, CAMPOS_DA_NOTA),
+      valores_dos_campos(protocolos, CAMPOS_DO_PROTOCOLO, protocolo_de_cada_nota),
+      list(arquivo = rep(nome_do_arquivo, length(notas)))
     ),
-    itens = data.frame(
-      chave = chave_do_no(itens),
-      item = as.integer(xml2::xml_attr(itens, "nItem")),
-      extrair(itens, CAMPOS_DO_ITEM)
+    itens = c(
+      list(chave = chave_de_cada(itens), item = as.integer(xml2::xml_attr(itens, "nItem"))),
+      valores_dos_campos(itens, CAMPOS_DO_ITEM)
     ),
-    impostos = data.frame(
-      chave = chave_do_no(folhas_dos_impostos),
-      item = as.integer(xml2::xml_attr(xml2::xml_find_first(folhas_dos_impostos, "ancestor::det"), "nItem")),
-      tributo = xml2::xml_name(xml2::xml_find_first(folhas_dos_impostos, "ancestor-or-self::*[parent::imposto]")),
-      # xml_parent() devolve cada pai uma vez só; parent::* devolve um por campo.
-      grupo = xml2::xml_name(xml2::xml_find_first(folhas_dos_impostos, "parent::*")),
-      campo = xml2::xml_name(folhas_dos_impostos),
-      valor = xml2::xml_text(folhas_dos_impostos)
-    ),
-    parcelas = data.frame(chave = chave_do_no(duplicatas), extrair(duplicatas, CAMPOS_DA_PARCELA)),
-    pagamentos = data.frame(chave = chave_do_no(formas_de_pagamento), extrair(formas_de_pagamento, CAMPOS_DO_PAGAMENTO))
+    impostos = colunas_dos_impostos(campos_dos_impostos),
+    parcelas = c(list(chave = chave_de_cada(duplicatas)), valores_dos_campos(duplicatas, CAMPOS_DA_PARCELA)),
+    pagamentos = c(
+      list(chave = chave_de_cada(formas_de_pagamento)),
+      valores_dos_campos(formas_de_pagamento, CAMPOS_DO_PAGAMENTO)
+    )
   )
 }
 
-chave_do_no = function(nos) {
-  nota = xml2::xml_find_first(nos, "ancestor-or-self::infNFe")
-  sub("^NFe", "", xml2::xml_attr(nota, "Id"))
+# Um campo de imposto por linha. O tributo é o grupo logo abaixo de <imposto> (ICMS, PIS, IBSCBS...)
+# e o grupo é onde o campo está (ICMS00, gCBS...).
+colunas_dos_impostos = function(campos_dos_impostos) {
+  item_de_cada_campo = xml2::xml_find_first(campos_dos_impostos, "ancestor::det", ns = SEM_NAMESPACE)
+  tributo_de_cada_campo = xml2::xml_find_first(campos_dos_impostos, "ancestor-or-self::*[parent::imposto]", ns = SEM_NAMESPACE)
+  # xml_parent() devolveria cada grupo uma vez só; parent::* devolve um por campo.
+  grupo_de_cada_campo = xml2::xml_find_first(campos_dos_impostos, "parent::*", ns = SEM_NAMESPACE)
+  list(
+    chave = chave_de_cada(campos_dos_impostos),
+    item = as.integer(xml2::xml_attr(item_de_cada_campo, "nItem")),
+    tributo = xml2::xml_name(tributo_de_cada_campo),
+    grupo = xml2::xml_name(grupo_de_cada_campo),
+    campo = xml2::xml_name(campos_dos_impostos),
+    valor = xml2::xml_text(campos_dos_impostos)
+  )
 }
 
-# Uma coluna por campo, já no tipo certo; datas ficam como texto até converter_datas().
-# `posicoes` escolhe e repete os nós (no protocolo, NA é a nota que veio sem ele).
-extrair = function(nos, campos, posicoes = seq_along(nos)) {
-  colunas = lapply(seq_len(nrow(campos)), function(linha) {
-    valores = xml2::xml_text(xml2::xml_find_first(nos, campos$caminho[linha]))[posicoes]
-    tipo = campos$tipo[linha]
+buscar_todos = function(dentro_de, caminho) {
+  xml2::xml_find_all(dentro_de, caminho, ns = SEM_NAMESPACE)
+}
+
+texto_de_cada = function(elementos, caminho) {
+  xml2::xml_text(xml2::xml_find_first(elementos, caminho, ns = SEM_NAMESPACE))
+}
+
+chave_de_cada = function(elementos) {
+  nota_de_cada = xml2::xml_find_first(elementos, "ancestor-or-self::infNFe", ns = SEM_NAMESPACE)
+  sub("^NFe", "", xml2::xml_attr(nota_de_cada, "Id"))
+}
+
+# Uma coluna por campo, já no tipo certo; as datas ficam como texto até converter_datas().
+# `posicoes` diz de qual elemento vem cada linha (no protocolo, NA é a nota que veio sem ele).
+valores_dos_campos = function(elementos, campos, posicoes = seq_along(elementos)) {
+  colunas = list()
+  for (numero_do_campo in seq_len(nrow(campos))) {
+    textos = texto_de_cada(elementos, campos$caminho[numero_do_campo])[posicoes]
+    nome_da_coluna = campos$coluna[numero_do_campo]
+    tipo = campos$tipo[numero_do_campo]
     if (tipo == "inteiro") {
-      valores = as.integer(valores)
+      colunas[[nome_da_coluna]] = as.integer(textos)
     } else if (tipo == "numero") {
-      valores = as.numeric(valores)
+      colunas[[nome_da_coluna]] = as.numeric(textos)
+    } else {
+      colunas[[nome_da_coluna]] = textos
     }
-    valores
-  })
-  names(colunas) = campos$coluna
-  data.frame(colunas)
-}
-
-empilhar = function(tabelas) {
-  colunas = names(tabelas[[1]])
-  juntas = lapply(colunas, function(coluna) do.call(c, lapply(tabelas, function(tabela) tabela[[coluna]])))
-  names(juntas) = colunas
-  data.frame(juntas)
+  }
+  colunas
 }
 
 converter_datas = function(tabela, campos) {
-  for (linha in seq_len(nrow(campos))) {
-    coluna = campos$coluna[linha]
-    if (campos$tipo[linha] == "data") {
-      tabela[[coluna]] = as.Date(substr(tabela[[coluna]], 1, 10))
-    } else if (campos$tipo[linha] == "data_hora") {
-      tabela[[coluna]] = data_hora(tabela[[coluna]])
+  for (numero_do_campo in seq_len(nrow(campos))) {
+    nome_da_coluna = campos$coluna[numero_do_campo]
+    if (campos$tipo[numero_do_campo] == "data") {
+      tabela[[nome_da_coluna]] = as.Date(substr(tabela[[nome_da_coluna]], 1, 10))
+    } else if (campos$tipo[numero_do_campo] == "data_hora") {
+      tabela[[nome_da_coluna]] = data_hora(tabela[[nome_da_coluna]])
     }
   }
   tabela

@@ -1,8 +1,8 @@
 # Plano do RNfe
 
 Situação em 29/10/2026: **etapa 1 em andamento**: a chave de acesso e a leitura do XML da NF-e/NFC-e
-prontas e conferidas com notas reais; faltam a velocidade da leitura e as tabelas fiscais. Repositório
-público no GitHub; o pacote ainda não foi ao CRAN.
+prontas e conferidas com notas reais; faltam as tabelas fiscais. Repositório público no GitHub; o pacote
+ainda não foi ao CRAN.
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
 vai como contribuição para ele. O pacote é um dos quatro do plano "Portar para o R" (os outros: financeiro,
@@ -18,7 +18,7 @@ Cada etapa já é útil sozinha.
 | Etapa | O que o pacote passa a fazer | Precisa de certificado? | Situação |
 |---|---|---|---|
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
-| 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta; falta a velocidade |
+| 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
@@ -92,8 +92,14 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   valores de ICMS, ICMS ST, IPI, PIS e COFINS bateram em 100%. As diferenças foram todas do outro lado
   (campo vazio lá, preenchido aqui). Em 10 notas, a soma dos itens difere do total da nota em R$ 0,01: é o
   arredondamento de quem emitiu, e o pacote mostra o que está no XML.
-- **A melhorar:** 27,7 ms por arquivo. Metade do tempo vai em montar um `data.frame` por arquivo e em o
-  `xml2` procurar namespaces a cada busca (o documento já está sem eles).
+- Velocidade: 13 ms por nota (eram 27). Medido antes de mexer: o `xml2` procurava os namespaces de novo a
+  cada busca (o documento já está sem eles; agora cada busca passa `ns = SEM_NAMESPACE`) e montava um
+  `data.frame` por arquivo (agora as colunas vão em listas e a tabela é montada uma vez, no fim). A versão
+  nova deu resultado idêntico ao da anterior em 10 mil notas reais, nas seis tabelas. O que mais pesa agora:
+  tirar os namespaces (2 ms) e a tabela de impostos (2 ms).
+- O código segue o jeito do usuário (pedido de 29/10/2026: "sem variáveis genéricas, como se fosse eu
+  criando as funções, algo fácil de entender"): nomes que dizem o que a coisa é, `for` em vez de função
+  dentro de função, `if`/`else` por extenso.
 - `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
   conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
   significado de cada código muda de documento para documento e fica para quando for conferido no manual de
