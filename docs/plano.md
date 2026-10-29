@@ -1,8 +1,8 @@
 # Plano do RNfe
 
-Situação em 29/10/2026: **etapa 1 em andamento**: a chave de acesso e a leitura do XML da NF-e/NFC-e
-prontas e conferidas com notas reais; faltam as tabelas fiscais. Repositório público no GitHub; o pacote
-ainda não foi ao CRAN.
+Situação em 29/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
+fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 começando.**
+Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
 vai como contribuição para ele. O pacote é um dos quatro do plano "Portar para o R" (os outros: financeiro,
@@ -20,7 +20,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | em andamento |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
