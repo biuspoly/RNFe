@@ -1,0 +1,66 @@
+# Plano do RNfe
+
+Situação em 29/10/2026: **etapa 1 começada**, com a chave de acesso pronta. Repositório privado, ainda não
+publicado.
+
+Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
+vai como contribuição para ele. O pacote é um dos quatro do plano "Portar para o R" (os outros: financeiro,
+leitor de códigos e utilidades brasileiras); o `veiculosbr` saiu das utilidades.
+
+Antes de começar, o CRAN não tinha nenhum pacote de nota fiscal (dos 25.608 pacotes, nenhum trata de NF-e,
+SEFAZ, SPED ou CFOP), e o nome RNfe estava livre no CRAN, no PyPI e no r-universe.
+
+## As etapas
+
+Cada etapa já é útil sozinha.
+
+| Etapa | O que o pacote passa a fazer | Precisa de certificado? | Situação |
+|---|---|---|---|
+| 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
+| 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | a seguir |
+| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
+| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
+| 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
+| por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
+
+A assinatura é a peça mais delicada: vai ser comparada com a que o PyNFe faz.
+
+## Tabelas que se atualizam sozinhas
+
+O CRAN só recebe versão nova de tempos em tempos, então as tabelas vivem em três camadas: uma cópia dentro do
+pacote (funciona sem internet), um repositório de dados no GitHub que um robô semanal atualiza a partir das
+fontes oficiais, e o pacote buscando a mais nova de lá. Cada linha guarda "vale desde" e "vale até", para a
+nota antiga ser lida com a tabela da época.
+
+| Tabela | Fonte oficial | Atualização automática |
+|---|---|---|
+| NCM | Siscomex | sim |
+| Municípios | IBGE | sim |
+| Reforma (classificação e CST da CBS e do IBS) | Portal da NF-e e Receita | quase: a planilha muda de formato |
+| CFOP, CST do ICMS, CSOSN, CEST | Confaz e Sinief | em parte: o robô avisa e alguém confere |
+
+## Como testar sem certificado
+
+Respostas da SEFAZ gravadas uma vez e lidas pelos testes; um certificado falso para conferir a assinatura
+contra a do PyNFe; de vez em quando, uma consulta real.
+
+## Dependências previstas
+
+`xml2` (ler a nota) obrigatória; `httr2` e `openssl` opcionais, só para SEFAZ e certificado. Testes que vão à
+internet ficam fora da checagem do CRAN (`skip_on_cran()`).
+
+## Etapa 1, chave de acesso: o que se decidiu
+
+- A regra das letras vem da NT Conjunta 2025.001 v1.00 (homologação 06/04/2026, produção 06/07/2026): cada
+  caractere vale o ASCII menos 48, e o módulo 11 continua o mesmo, na chave e no CNPJ. Os exemplos dos testes
+  foram calculados com a tradução literal dos anexos I (JavaScript) e II (VB.NET) da NT.
+- A NT diz que algumas letras (I, O, U, Q, F) talvez não sejam aceitas no CNPJ, mas que isso "precisa ser
+  confirmado": o pacote ainda aceita todas.
+- A chave só é válida quando o CNPJ (ou o CPF, com três zeros na frente) do emitente também confere, como a
+  SEFAZ faz.
+- `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
+  conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
+  significado de cada código muda de documento para documento e fica para quando for conferido no manual de
+  cada um.

@@ -1,0 +1,19 @@
+Package: RNfe
+Title: Documentos Fiscais Eletrônicos Brasileiros (NF-e, CT-e, MDF-e)
+Version: 0.0.0.9000
+Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role = c("aut", "cre"))
+Description: Confere e desmonta a chave de acesso de 44 posições dos documentos
+    fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e e MDF-e), já com o
+    CNPJ alfanumérico da Nota Técnica Conjunta 2025.001. Pacote em construção:
+    a leitura do XML da nota e as tabelas fiscais vêm nas próximas versões.
+License: MIT + file LICENSE
+URL: https://github.com/biuspoly/RNfe
+BugReports: https://github.com/biuspoly/RNfe/issues
+Encoding: UTF-8
+Language: pt-BR
+Depends: R (>= 4.1.0)
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.1
