@@ -28,6 +28,33 @@ Cada etapa já é útil sozinha.
 
 A assinatura é a peça mais delicada: vai ser comparada com a que o PyNFe faz.
 
+## Mais completo que o PyNFe (meta do usuário, 29/10/2026)
+
+O RNfe tem de cobrir o que o PyNFe faz e também o que só existe nas bibliotecas que completam o PyNFe: o
+brans-nfe (NFS-e Nacional) e o BrazilFiscalReport (os PDFs). Fontes: o README do PyNFe no GitHub, e as
+páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/2026) no PyPI, lidas em
+29/10/2026.
+
+| O que | PyNFe | brans-nfe | BrazilFiscalReport | RNfe |
+|---|---|---|---|---|
+| Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
+| Ler CT-e, MDF-e e NFS-e Nacional em tabelas | não | não | não | etapa 2 |
+| Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) | não | não | não | pronto (etapa 1) |
+| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | etapa 3 |
+| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
+| Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
+| Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
+| Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | última |
+| Manifestação do destinatário | sim | não | não | última |
+| MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | última (entrou agora no plano) |
+| CT-e: consultar e registrar desacordo | não | não | não | etapa 3 e última |
+| NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | etapa 3 e última |
+| NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | não previsto: o padrão nacional substitui |
+| Baixar o DANFSe oficial | não | sim | não | etapa 3 |
+| PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
+| Calculadora da Reforma: conferir e simular | não | não | não | etapa 4 |
+| Ler o SPED e pré-conferência | não | não | não | etapa 5 |
+
 ## Tabelas que se atualizam sozinhas
 
 O CRAN só recebe versão nova de tempos em tempos, então as tabelas vivem em três camadas: uma cópia dentro do
