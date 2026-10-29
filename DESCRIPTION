@@ -25,3 +25,9 @@ Suggests:
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.1
+Collate: 
+    'RNfe-package.R'
+    'chave.R'
+    'ler_xml.R'
+    'nfe_ler.R'
+    'tabelas.R'
