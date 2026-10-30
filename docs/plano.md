@@ -2,7 +2,8 @@
 
 Situação em 29/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
 fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 em andamento:** a
-leitura do CT-e e do CT-e OS está pronta e conferida com 14.370 CT-e reais; faltam o MDF-e e a NFS-e Nacional.
+leitura do CT-e e do CT-e OS está pronta e conferida com 14.370 CT-e reais; a do MDF-e está pronta e
+conferida pelo schema oficial, sem MDF-e reais para comparar; falta a NFS-e Nacional.
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -21,7 +22,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | CT-e e CT-e OS prontos; faltam MDF-e e NFS-e |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | CT-e, CT-e OS e MDF-e prontos; falta a NFS-e |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
@@ -39,8 +40,8 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | O que | PyNFe | brans-nfe | BrazilFiscalReport | RNfe |
 |---|---|---|---|---|
 | Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
-| Ler CT-e e CT-e OS em tabelas | não | não | não | pronto (etapa 2) |
-| Ler MDF-e e NFS-e Nacional em tabelas | não | não | não | etapa 2 |
+| Ler CT-e, CT-e OS e MDF-e em tabelas | não | não | não | pronto (etapa 2) |
+| Ler NFS-e Nacional em tabelas | não | não | não | etapa 2 |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
@@ -216,6 +217,36 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     ficam sem o nome da classificação, que vale desde 01/01/2026; o CST do IBS/CBS tem nome porque a aba de
     CST da tabela oficial não tem datas de vigência.
 - Velocidade: 6,9 ms por CT-e (99 s para os 14.370).
+
+## Etapa 2, leitura do MDF-e: o que se decidiu
+
+- `mdfe_ler()` lê o MDF-e (modelo 58, leiaute 3.00) pelo schema oficial do Portal do MDF-e: o pacote
+  `PL_MDFe_300b_NT012025_1.04.zip`, da NT 2025.001 v1.04, de 25/04/2026, o mais recente da lista de schemas
+  em 30/10/2026 (o zip se chama 1.04 e a pasta de dentro, 1.05). A NT 2026.001 (maio de 2026) só torna o CIOT
+  obrigatório em alguns casos, sem mudar o leiaute.
+- Devolve `mdfes`, `locais`, `documentos`, `veiculos`, `condutores`, `seguros`, `campos` e `arquivos`.
+  - `locais` junta, na ordem do XML, os municípios de carregamento, as UFs do percurso e os municípios de
+    descarregamento; `documentos` traz cada CT-e, NF-e ou MDF-e com o município onde é descarregado.
+  - `seguros` tem uma linha por averbação, e uma para o seguro que não tem averbação.
+  - **`campos` é nova:** todos os campos do MDF-e, um por linha, com o caminho a partir do `infMDFe` e a
+    posição quando o grupo se repete (`condutor[2]`, `infPrazo[1]`). Assim nada se perde: o CIOT, o
+    vale-pedágio, os contratantes, o pagamento do frete, os lacres e os modais aéreo, aquaviário e
+    ferroviário ficam ali, sem tabela própria por enquanto.
+- O NCM do produto predominante ganha a descrição da tabela NCM na data de emissão.
+- **Achado no schema oficial:** no pacote de 25/04/2026, o `Id` do `infMDFe` ainda só aceita números
+  (`MDFe[0-9]{44}`, em `mdfeTiposBasico_v3.00.xsd`), embora o CNPJ do emitente, a `chMDFe`, o QR-Code e os
+  eventos já aceitem o CNPJ com letras. Um MDF-e de emitente com CNPJ alfanumérico não passa nesse schema. A
+  leitura não depende disso, mas o exemplo de MDF-e usa um CNPJ só de números.
+- A chave de MDF-e de emitente com CPF não foi usada nos exemplos: a composição dela não foi conferida no
+  manual do MDF-e.
+- **Exemplos:** dois MDF-e escritos à mão (transportadora com protocolo, levando o CT-e de exemplo; carga
+  própria sem protocolo, com percurso, veículo de terceiro, reboque, dois condutores, pagamento a prazo e um
+  seguro sem averbação) passam no schema oficial, e o modal rodoviário passa no schema dele.
+  `ferramentas/validar_exemplos.R` agora recebe também a pasta do schema do MDF-e. Ele reprovou um modal 5,
+  um MDF-e sem o peso da carga e um tipo de rodado 07; este último só na validação separada do modal.
+- **Sem conferência com MDF-e reais:** o acervo do app Fiscal não tem nenhum MDF-e, e os exemplos públicos
+  achados são poucos e soltos. Fica para quando houver MDF-e reais para comparar.
+- Cada leitor recusa o documento dos outros: o MDF-e cita `infNFe` e `infCTe`, mas não vira nota nem CT-e.
 
 ## O robô das tabelas
 

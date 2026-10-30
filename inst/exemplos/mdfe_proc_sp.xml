@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MDF-e fictício para os testes do RNfe: transportadora levando o CT-e de exemplo (cte_proc_sp.xml),
+     CNPJs de exemplo, ambiente de homologação e assinatura de mentira. O emitente tem CNPJ só de números
+     porque o schema do MDF-e de 25/04/2026 ainda não aceita letras no Id do infMDFe. -->
+<mdfeProc versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">
+  <MDFe xmlns="http://www.portalfiscal.inf.br/mdfe">
+    <infMDFe versao="3.00" Id="MDFe35261033344455500070580010000003211112233448">
+      <ide>
+        <cUF>35</cUF>
+        <tpAmb>2</tpAmb>
+        <tpEmit>1</tpEmit>
+        <mod>58</mod>
+        <serie>1</serie>
+        <nMDF>321</nMDF>
+        <cMDF>11223344</cMDF>
+        <cDV>1</cDV>
+        <modal>1</modal>
+        <dhEmi>2026-10-15T15:00:00-03:00</dhEmi>
+        <tpEmis>1</tpEmis>
+        <procEmi>0</procEmi>
+        <verProc>RNfe-testes</verProc>
+        <UFIni>SP</UFIni>
+        <UFFim>RJ</UFFim>
+        <infMunCarrega>
+          <cMunCarrega>3550308</cMunCarrega>
+          <xMunCarrega>SÃO PAULO</xMunCarrega>
+        </infMunCarrega>
+        <dhIniViagem>2026-10-15T16:00:00-03:00</dhIniViagem>
+      </ide>
+      <emit>
+        <CNPJ>33344455500070</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>LOGISTICA DE TESTE LTDA</xNome>
+        <enderEmit>
+          <xLgr>RUA DA TRANSPORTADORA</xLgr>
+          <nro>500</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderEmit>
+      </emit>
+      <infModal versaoModal="3.00">
+        <rodo>
+          <infANTT>
+            <RNTRC>12345678</RNTRC>
+            <infCIOT>
+              <CIOT>123456789012</CIOT>
+              <CNPJ>33344455500070</CNPJ>
+            </infCIOT>
+            <infContratante>
+              <xNome>EMPRESA DE TESTE LTDA</xNome>
+              <CNPJ>11222333000181</CNPJ>
+            </infContratante>
+            <infPag>
+              <xNome>EMPRESA DE TESTE LTDA</xNome>
+              <CNPJ>11222333000181</CNPJ>
+              <Comp>
+                <tpComp>04</tpComp>
+                <vComp>300.00</vComp>
+              </Comp>
+              <Comp>
+                <tpComp>01</tpComp>
+                <vComp>50.00</vComp>
+              </Comp>
+              <vContrato>350.00</vContrato>
+              <indPag>0</indPag>
+              <infBanc>
+                <PIX>11222333000181</PIX>
+              </infBanc>
+            </infPag>
+          </infANTT>
+          <veicTracao>
+            <placa>ABC1D23</placa>
+            <RENAVAM>12345678901</RENAVAM>
+            <tara>8000</tara>
+            <capKG>14000</capKG>
+            <condutor>
+              <xNome>MOTORISTA DE TESTE</xNome>
+              <CPF>12345678909</CPF>
+            </condutor>
+            <tpRod>01</tpRod>
+            <tpCar>02</tpCar>
+            <UF>SP</UF>
+          </veicTracao>
+        </rodo>
+      </infModal>
+      <infDoc>
+        <infMunDescarga>
+          <cMunDescarga>3304557</cMunDescarga>
+          <xMunDescarga>RIO DE JANEIRO</xMunDescarga>
+          <infCTe>
+            <chCTe>35261012ABC34501DE35570010000005551876543210</chCTe>
+          </infCTe>
+        </infMunDescarga>
+      </infDoc>
+      <seg>
+        <infResp>
+          <respSeg>1</respSeg>
+        </infResp>
+        <infSeg>
+          <xSeg>SEGURADORA DE TESTE</xSeg>
+          <CNPJ>11444777000161</CNPJ>
+        </infSeg>
+        <nApol>APOLICE-001</nApol>
+        <nAver>AVERBACAO-001</nAver>
+        <nAver>AVERBACAO-002</nAver>
+      </seg>
+      <prodPred>
+        <tpCarga>05</tpCarga>
+        <xProd>AGUA MINERAL</xProd>
+        <NCM>22011000</NCM>
+      </prodPred>
+      <tot>
+        <qCTe>1</qCTe>
+        <vCarga>150.00</vCarga>
+        <cUnid>01</cUnid>
+        <qCarga>120.5000</qCarga>
+      </tot>
+      <infAdic>
+        <infCpl>MDF-E DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</infCpl>
+      </infAdic>
+    </infMDFe>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#MDFe35261033344455500070580010000003211112233448">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </MDFe>
+  <protMDFe versao="3.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <chMDFe>35261033344455500070580010000003211112233448</chMDFe>
+      <dhRecbto>2026-10-15T15:00:40-03:00</dhRecbto>
+      <nProt>935260000011111</nProt>
+      <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso do MDF-e</xMotivo>
+    </infProt>
+  </protMDFe>
+</mdfeProc>

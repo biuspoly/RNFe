@@ -2,8 +2,8 @@
 
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e) no **R**.
 
-> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e e do
-> CT-e OS e as tabelas fiscais (CFOP, NCM, CSTs e as da Reforma). O MDF-e e a NFS-e Nacional vêm a seguir; o
+> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e, do
+> CT-e OS e do MDF-e e as tabelas fiscais (CFOP, NCM, CSTs e as da Reforma). A NFS-e Nacional vem a seguir; o
 > plano está em [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -69,6 +69,23 @@ Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), nos leiautes 3.00 e 4.00, pelo s
 `tomador_`. Conferido com 14 mil CT-e reais (que não estão no repositório), contra outro sistema e contra um
 segundo leitor do XML: os campos e as contagens comparados bateram em todos.
 
+## Ler o XML do MDF-e
+
+```r
+lido = mdfe_ler(c("mdfe1.xml", "mdfe2.xml"))   # ou o próprio texto do XML
+lido$mdfes        # uma linha por MDF-e: emitente, modal, UFs, placa, totais da carga, protocolo
+lido$locais       # municípios de carregamento, UFs do percurso e municípios de descarregamento
+lido$documentos   # os CT-e e as NF-e de cada descarregamento
+lido$veiculos     # o veículo com a tração e os reboques, com o proprietário
+lido$condutores   # os motoristas
+lido$seguros      # uma linha por averbação
+lido$campos       # todos os campos, um por linha, com o caminho (CIOT, vale-pedágio, pagamento do frete...)
+lido$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+Lê o MDF-e (modelo 58, leiaute 3.00) pelo schema oficial mais recente (PL_MDFe_300b da NT 2025.001,
+publicado em 25/04/2026). Os exemplos passam no schema oficial; ainda não foi conferido com MDF-e reais.
+
 ## Tabelas fiscais
 
 ```r
@@ -88,8 +105,9 @@ baixa tudo e refaz as cópias.
 Das especificações públicas do [Portal Nacional da NF-e](https://www.nfe.fazenda.gov.br/portal/): o Manual de
 Orientação do Contribuinte (a composição da chave) e a Nota Técnica Conjunta 2025.001, versão 1.00 (o CNPJ
 alfanumérico na chave e no cálculo dos dígitos: cada caractere vale o código ASCII menos 48). A leitura dos
-XMLs segue os schemas oficiais do Portal da NF-e e do
-[Portal Nacional do CT-e](https://www.cte.fazenda.gov.br/portal/). Nada aqui consulta a SEFAZ.
+XMLs segue os schemas oficiais do Portal da NF-e, do
+[Portal Nacional do CT-e](https://www.cte.fazenda.gov.br/portal/) e do
+[Portal do MDF-e](https://dfe-portal.svrs.rs.gov.br/Mdfe). Nada aqui consulta a SEFAZ.
 
 Nos exemplos e nos testes, só CNPJs e CPFs fictícios; o 12.ABC.345/01DE-35 é o exemplo da Receita Federal.
 

@@ -5,11 +5,14 @@ Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role
 Description: Confere e desmonta a chave de acesso de 44 posições dos documentos
     fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e e MDF-e), já com o
     CNPJ alfanumérico da Nota Técnica Conjunta 2025.001. Lê o XML da NF-e e
-    da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos) e o
+    da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos), o
     do CT-e e do CT-e OS (com o tomador, os componentes do frete, os
-    documentos transportados, a carga e os impostos), já com os campos da
-    Reforma Tributária (IBS e CBS) e o nome de cada CFOP e CST como a tabela
-    oficial registrava na data do documento. Traz as tabelas fiscais
+    documentos transportados, a carga e os impostos) e o do MDF-e (com o
+    percurso, os documentos de cada descarregamento, os veículos, os
+    condutores, os seguros e todos os campos com o caminho de cada um), já
+    com os campos da Reforma Tributária (IBS e CBS) e o nome de cada CFOP e
+    CST como a tabela oficial registrava na data do documento. Traz as
+    tabelas fiscais
     (CFOP, NCM, origem, CST do ICMS, CSOSN, CST do IPI, do PIS e da COFINS e o
     CST e a classificação tributária do IBS e da CBS) copiadas do Portal da
     NF-e, do Portal Único Siscomex e do SPED, com a vigência de cada código.
@@ -32,5 +35,6 @@ Collate:
     'chave.R'
     'ler_xml.R'
     'cte_ler.R'
+    'mdfe_ler.R'
     'nfe_ler.R'
     'tabelas.R'

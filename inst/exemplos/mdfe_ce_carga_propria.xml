@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MDF-e fictício para os testes do RNfe: carga própria levando a NF-e de exemplo (nfe_ce_simples_cpf.xml),
+     com percurso, veículo de terceiro, reboque, dois condutores, pagamento a prazo e dois seguros (um sem
+     averbação), sem protocolo e com assinatura de mentira. -->
+<MDFe xmlns="http://www.portalfiscal.inf.br/mdfe">
+  <infMDFe versao="3.00" Id="MDFe23261011444777000161580020000000121556677880">
+    <ide>
+      <cUF>23</cUF>
+      <tpAmb>2</tpAmb>
+      <tpEmit>2</tpEmit>
+      <mod>58</mod>
+      <serie>2</serie>
+      <nMDF>12</nMDF>
+      <cMDF>55667788</cMDF>
+      <cDV>0</cDV>
+      <modal>1</modal>
+      <dhEmi>2026-10-23T07:30:00-03:00</dhEmi>
+      <tpEmis>1</tpEmis>
+      <procEmi>0</procEmi>
+      <verProc>RNfe-testes</verProc>
+      <UFIni>CE</UFIni>
+      <UFFim>PE</UFFim>
+      <infMunCarrega>
+        <cMunCarrega>2304400</cMunCarrega>
+        <xMunCarrega>FORTALEZA</xMunCarrega>
+      </infMunCarrega>
+      <infPercurso>
+        <UFPer>RN</UFPer>
+      </infPercurso>
+      <infPercurso>
+        <UFPer>PB</UFPer>
+      </infPercurso>
+    </ide>
+    <emit>
+      <CNPJ>11444777000161</CNPJ>
+      <IE>123456789</IE>
+      <xNome>DISTRIBUIDORA DE TESTE LTDA</xNome>
+      <enderEmit>
+        <xLgr>RUA DE TESTE</xLgr>
+        <nro>S/N</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>2304400</cMun>
+        <xMun>FORTALEZA</xMun>
+        <UF>CE</UF>
+      </enderEmit>
+    </emit>
+    <infModal versaoModal="3.00">
+      <rodo>
+        <infANTT>
+          <infPag>
+            <xNome>TRANSPORTADOR AUTONOMO DE TESTE</xNome>
+            <CPF>12345678909</CPF>
+            <Comp>
+              <tpComp>04</tpComp>
+              <vComp>900.00</vComp>
+            </Comp>
+            <vContrato>900.00</vContrato>
+            <indPag>1</indPag>
+            <vAdiant>300.00</vAdiant>
+            <infPrazo>
+              <nParcela>001</nParcela>
+              <dVenc>2026-11-23</dVenc>
+              <vParcela>300.00</vParcela>
+            </infPrazo>
+            <infPrazo>
+              <nParcela>002</nParcela>
+              <dVenc>2026-12-23</dVenc>
+              <vParcela>300.00</vParcela>
+            </infPrazo>
+            <infBanc>
+              <codBanco>001</codBanco>
+              <codAgencia>1234</codAgencia>
+            </infBanc>
+          </infPag>
+        </infANTT>
+        <veicTracao>
+          <cInt>CAV-07</cInt>
+          <placa>XYZ9A87</placa>
+          <tara>9500</tara>
+          <capKG>0</capKG>
+          <prop>
+            <CPF>12345678909</CPF>
+            <RNTRC>87654321</RNTRC>
+            <xNome>TRANSPORTADOR AUTONOMO DE TESTE</xNome>
+            <tpProp>1</tpProp>
+          </prop>
+          <condutor>
+            <xNome>PRIMEIRO MOTORISTA DE TESTE</xNome>
+            <CPF>12345678909</CPF>
+          </condutor>
+          <condutor>
+            <xNome>SEGUNDO MOTORISTA DE TESTE</xNome>
+            <CPF>98765432100</CPF>
+          </condutor>
+          <tpRod>03</tpRod>
+          <tpCar>00</tpCar>
+          <UF>CE</UF>
+        </veicTracao>
+        <veicReboque>
+          <placa>QWE4R56</placa>
+          <tara>6000</tara>
+          <capKG>30000</capKG>
+          <tpCar>05</tpCar>
+          <UF>CE</UF>
+        </veicReboque>
+        <lacRodo>
+          <nLacre>LACRE-RODO-1</nLacre>
+        </lacRodo>
+      </rodo>
+    </infModal>
+    <infDoc>
+      <infMunDescarga>
+        <cMunDescarga>2611606</cMunDescarga>
+        <xMunDescarga>RECIFE</xMunDescarga>
+        <infNFe>
+          <chNFe>23261012ABC34501DE35550020000000421876543213</chNFe>
+          <indReentrega>1</indReentrega>
+        </infNFe>
+      </infMunDescarga>
+    </infDoc>
+    <seg>
+      <infResp>
+        <respSeg>2</respSeg>
+        <CNPJ>11222333000181</CNPJ>
+      </infResp>
+      <infSeg>
+        <xSeg>SEGURADORA DE TESTE</xSeg>
+        <CNPJ>11444777000161</CNPJ>
+      </infSeg>
+      <nApol>APOLICE-777</nApol>
+    </seg>
+    <seg>
+      <infResp>
+        <respSeg>1</respSeg>
+      </infResp>
+      <nAver>AVERBACAO-999</nAver>
+    </seg>
+    <prodPred>
+      <tpCarga>05</tpCarga>
+      <xProd>REFRIGERANTES</xProd>
+    </prodPred>
+    <tot>
+      <qNFe>1</qNFe>
+      <vCarga>35.00</vCarga>
+      <cUnid>02</cUnid>
+      <qCarga>0.0360</qCarga>
+    </tot>
+    <lacres>
+      <nLacre>LACRE-1</nLacre>
+    </lacres>
+  </infMDFe>
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <Reference URI="#MDFe23261011444777000161580020000000121556677880">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+    <KeyInfo>
+      <X509Data>
+        <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+      </X509Data>
+    </KeyInfo>
+  </Signature>
+</MDFe>
