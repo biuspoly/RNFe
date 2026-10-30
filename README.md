@@ -152,7 +152,8 @@ tabela_fiscal("fontes")                  # de onde veio cada tabela, com a vers�
 Cada linha tem o `inicio` e o `fim` da vigência (vazios no CSOSN e nos municípios, que a fonte não data). As
 fontes são oficiais: o Portal da NF-e (CFOP e Reforma), o Portal Único Siscomex (NCM), as tabelas do SPED
 Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios). `ferramentas/gerar_tabelas.R` baixa
-tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso quando alguma tabela muda.
+tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso quando alguma tabela muda. Os municípios
+ficam de fora do robô, porque o IBGE não aceita conexão dos servidores do GitHub.
 
 ## De onde vêm as regras
 

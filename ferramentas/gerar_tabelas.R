@@ -343,25 +343,45 @@ fontes = rbind(fontes, data.frame(
 
 tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
-municipios_do_ibge = baixar_municipios()
 fontes = rbind(fontes, data.frame(
-  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "municipios"),
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
-    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
-    "IBGE, API de localidades (servicodados.ibge.gov.br), municípios vigentes"
+    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")")
   ),
   versao = NA,
   data_da_versao = NA,
   baixada_em = baixada_em
 ))
 
+# O IBGE não aceita conexão dos servidores do GitHub (tempo esgotado em 120 s, testado em 30/10/2026). Quando ele não
+# responde, fica a cópia que já está no pacote, com a data dela, e as outras tabelas seguem; o aviso aparece na
+# rodada do robô. Os municípios se atualizam rodando esta ferramenta numa máquina no Brasil.
+municipios_do_ibge = tryCatch(baixar_municipios(), error = function(erro) erro)
+if (inherits(municipios_do_ibge, "error")) {
+  cat("::warning::Municípios: o IBGE não respondeu, fica a cópia do pacote (",
+      gsub("\\s+", " ", conditionMessage(municipios_do_ibge)), ")\n")
+  fontes_de_antes = utils::read.csv(file.path(PASTA_DAS_TABELAS, "fontes.csv"), colClasses = "character", na.strings = "")
+  fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela == "municipios", ])
+  municipios_do_ibge = NULL
+} else {
+  fontes = rbind(fontes, data.frame(
+    tabela = "municipios",
+    fonte = "IBGE, API de localidades (servicodados.ibge.gov.br), municípios vigentes",
+    versao = NA,
+    data_da_versao = NA,
+    baixada_em = baixada_em
+  ))
+}
+
 gravar_tabela(cfop_do_portal$tabela, "cfop")
 gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
 gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
-gravar_tabela(municipios_do_ibge, "municipios")
+if (!is.null(municipios_do_ibge)) {
+  gravar_tabela(municipios_do_ibge, "municipios")
+}
 gravar_tabela(origem_com_as_que_faltam(tabelas_do_sped$origem, tabelas_do_sped$cst_icms_tres_digitos), "origem")
 gravar_tabela(cst_icms_com_os_monofasicos(tabelas_do_sped$cst_icms_b, tabelas_do_sped$cst_icms_tres_digitos), "cst_icms")
 gravar_tabela(csosn_do_sped(tabelas_do_sped$cst_icms_tres_digitos), "csosn")

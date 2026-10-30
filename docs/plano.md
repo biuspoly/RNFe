@@ -73,7 +73,7 @@ nota antiga ser lida com a tabela da época.
 | Tabela | Fonte oficial | Atualização automática |
 |---|---|---|
 | NCM | Siscomex | sim |
-| Municípios | IBGE | sim (desde 30/10/2026) |
+| Municípios | IBGE | não pelo robô: o IBGE não aceita conexão dos servidores do GitHub; roda-se `ferramentas/gerar_tabelas.R` numa máquina no Brasil |
 | Reforma (classificação e CST da CBS e do IBS) | Portal da NF-e e Receita | quase: a planilha muda de formato |
 | CFOP, CST do ICMS, CSOSN, CEST | Confaz e Sinief | em parte: o robô avisa e alguém confere |
 
@@ -205,8 +205,13 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   (`localidades/municipios?view=nivelado`): 5.571 municípios, com o código de 7 dígitos, o nome, a UF e o
   código da UF. A visão completa traz a UF dentro da microrregião, e um município vinha sem microrregião (ficaria
   sem UF). O IBGE só publica a lista de hoje: a tabela vai sem datas, como o CSOSN. O código 9999999, que a NF-e
-  usa para o exterior (está no schema), não é do IBGE e não entra. O robô das tabelas passa a baixá-la junto
-  com as outras.
+  usa para o exterior (está no schema), não é do IBGE e não entra.
+  - **O IBGE não aceita conexão dos servidores do GitHub:** na primeira rodada do robô com os municípios
+    (30/10/2026), a conexão esgotou o tempo (120 s) e o `gerar_tabelas.R` parou, sem atualizar nenhuma
+    tabela. Agora, quando o IBGE não responde, fica a cópia de municípios que está no pacote, com a data dela
+    em `fontes.csv`, as outras tabelas seguem e a rodada do robô mostra um aviso. Testado aqui com o endereço
+    trocado por um que não existe: o arquivo dos municípios ficou igual e a data antiga ficou. A lista se
+    atualiza rodando `ferramentas/gerar_tabelas.R` numa máquina no Brasil.
 
 ## Etapa 2, leitura do CT-e: o que se decidiu
 
