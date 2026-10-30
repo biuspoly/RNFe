@@ -49,16 +49,19 @@ não atrapalha as outras: o motivo fica em \code{problema}.
 
 Precisa dos pacotes \code{httr2}, \code{curl} e \code{openssl}.
 
-\strong{No Windows, use o motor OpenSSL.} O curl do R tem dois motores de
-conexão segura no Windows, e usa o Schannel se nada for dito. Com ele, BA,
-MG, MT, SP e a SVAN (o MA) não conectam (testado em 30/10/2026). Com o
-OpenSSL, as 27 UFs respondem. Para ligar o OpenSSL, ponha a linha
-\code{CURL_SSL_BACKEND=openssl} no arquivo \code{.Renviron} da sua pasta pessoal (veja
-\link{Startup}) e reinicie o R: o motor é escolhido quando o curl carrega.
+\strong{No Windows não é preciso configurar nada.} Lá o curl do R usa o motor de
+conexão segura do Windows (Schannel), que não conecta com BA, MG, MT, SP e a
+SVAN (testado em 30/10/2026). Quando ele está ligado, o RNFe manda os
+pedidos por um processo R separado, aberto com o motor OpenSSL, que conecta
+com as 27 UFs; a sua sessão do R não muda. Isso custa uns 0,3 segundo a mais
+por chamada, não por UF (medido em 30/10/2026). Quem já usa o OpenSSL (no
+Linux, no Mac, ou com \code{CURL_SSL_BACKEND=openssl} no \code{.Renviron}) não paga
+esse tempo.
 
-Com o OpenSSL, o certificado vai em PEM (o OpenSSL 3 não abre o \code{.pfx} com a
-cifra antiga que os certificados costumam ter), num arquivo temporário
-apagado no fim, com a chave cifrada pela própria senha. O certificado do
+O certificado vai em PEM (o OpenSSL 3 não abre o \code{.pfx} com a cifra antiga
+que os certificados costumam ter), num arquivo temporário apagado no fim,
+com a chave cifrada pela própria senha; para o processo separado, a senha vai
+numa variável de ambiente só dele, nunca num arquivo. O certificado do
 servidor é sempre verificado, contra as raízes de sempre e a raiz v10 da
 ICP-Brasil (a de SSL, que vem no pacote), que os servidores da SEFAZ usam.
 }

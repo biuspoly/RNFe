@@ -153,17 +153,15 @@ conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (
 serviço e o autorizador de cada UF (a própria SEFAZ, a SVRS ou a SVAN) vêm da Relação de Serviços Web do Portal
 da NF-e, que o robô das tabelas confere toda semana.
 
-**No Windows, ligue o motor OpenSSL do curl:** ponha a linha abaixo no arquivo `.Renviron` da sua pasta pessoal e
-reinicie o R (o motor é escolhido quando o curl carrega).
+Não é preciso configurar nada, nem no Windows. Testado em 30/10/2026: as 27 UFs responderam numa sessão comum do R
+no Windows. Lá o curl do R usa o motor de conexão segura do próprio Windows (Schannel), que não conecta com BA, MA,
+MG, MT e SP; quando é ele que está ligado, o RNFe manda os pedidos por um processo R separado, aberto com o motor
+OpenSSL, e a sua sessão não muda. Isso custa uns 0,3 segundo por chamada (não por UF).
 
-```
-CURL_SSL_BACKEND=openssl
-```
-
-Testado em 30/10/2026: com o OpenSSL, as 27 UFs responderam. Com o motor padrão do Windows (Schannel), BA, MA, MG,
-MT e SP não conectam, e a coluna `problema` diz isso. Com o OpenSSL, o certificado vai em PEM, num arquivo temporário
-apagado no fim (a chave cifrada com a senha), e o certificado do servidor é sempre verificado: contra as raízes de
-sempre e a raiz v10 da ICP-Brasil, que vem no pacote (conferida com a do repositório do ITI).
+O certificado vai em PEM, num arquivo temporário apagado no fim, com a chave cifrada pela senha; para o processo
+separado, a senha vai numa variável de ambiente só dele, nunca num arquivo. O certificado do servidor é sempre
+verificado: contra as raízes de sempre e a raiz v10 da ICP-Brasil, que vem no pacote (conferida com a do repositório
+do ITI). O PyNFe conecta sem isso porque desliga a verificação (`verify=False`).
 
 ## Tabelas fiscais
 

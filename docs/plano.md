@@ -516,10 +516,21 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     do repositório do ITI (acraiz.icpbrasil.gov.br); o SHA-256 dela é igual ao da raiz que o servidor do MT manda
     na própria cadeia, e um teste confere esse SHA-256. Vale até 01/07/2032. As outras raízes (v5, v11 de
     assinatura de código, v12, v13) ficam de fora: nenhum servidor da SEFAZ as usa hoje.
-  - **O motor não é trocado pelo pacote:** ele é escolhido quando o curl carrega, e mudar a variável de ambiente
-    por conta própria afetaria tudo o que a sessão faz na internet. O RNFe usa o motor que estiver ligado
-    (`motor_de_tls()`): no Schannel, o .pfx, como antes, e a falha diz como ligar o OpenSSL; nos outros, o
-    caminho PEM. A ajuda e o README pedem `CURL_SSL_BACKEND=openssl` no `.Renviron`.
+  - **O motor da sessão não é trocado:** ele é escolhido quando o curl carrega, e mudar a variável de ambiente por
+    conta própria afetaria tudo o que a sessão faz na internet. Primeiro a ajuda e o README pediam
+    `CURL_SSL_BACKEND=openssl` no `.Renviron`; o usuário perguntou se cada pessoa teria de fazer isso e decidiu
+    "então quero automático" (30/10/2026).
+  - **Automático, como no PyNFe:** com o Schannel ligado (`usar_processo_separado()`), os pedidos vão todos juntos
+    por um processo R separado (`Rscript --vanilla inst/sefaz/processo_separado.R`), aberto com
+    `CURL_SSL_BACKEND=openssl`. A tarefa vai num arquivo da pasta temporária: os pedidos já montados, as opções da
+    conexão sem a senha, as bibliotecas desta sessão e a própria função que envia (`enviar_os_pedidos()`, só httr2 e
+    R base, com o ambiente trocado para o global, para não depender do RNFe instalado lá). A senha vai numa
+    variável de ambiente que o processo herda; as variáveis desta sessão voltam como eram. A leitura das
+    respostas fica nesta sessão. Com o OpenSSL já ligado, tudo roda aqui mesmo, com a mesma função.
+  - **Medido em 30/10/2026:** numa sessão comum do Windows (Schannel), as 27 UFs responderam 107 em 8 s (7 s com o
+    OpenSSL já ligado); uma UF só, 0,6 a 0,8 s contra 0,3 a 0,4 s: o processo separado custa uns 0,3 s por chamada.
+    Um teste roda o processo separado de verdade, contra uma porta fechada do próprio computador: o motor lá dentro
+    é o OpenSSL, o erro volta, a senha não está no arquivo da tarefa e as variáveis da sessão não mudam.
   - **Como o PyNFe faz** (o `master` do GitHub, lido em 30/10/2026, pergunta do usuário: "mas o pynfe consegue?"):
     o `requests` do Python roda sempre sobre o OpenSSL, também no Windows, então o problema do Schannel não existe
     para ele; o .pfx vira PEM em arquivos temporários (a chave sem cifra, `NoEncryption()`, só o certificado da
@@ -531,7 +542,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Testes sem rede:** certificados falsos (`ferramentas/gerar_certificados_de_teste.py`, com o pacote
   `cryptography`: pessoa jurídica com os quatro otherName dos reais, pessoa física, sem os campos e vencido), a
   resposta real da SVRS gravada (não tem dado de empresa) e o `httr2` devolvendo essa resposta no lugar da
-  SEFAZ. `httr2` e `openssl` ficam em Suggests.
+  SEFAZ (esses testes forçam o envio nesta sessão, porque o processo separado não veria o httr2 simulado).
+  `httr2`, `curl` e `openssl` ficam em Suggests.
 
 ## O robô das tabelas
 
