@@ -45,8 +45,50 @@ test_that("o status pela SVRS: o pedido que vai e a resposta da SEFAZ em colunas
   expect_match(corpo, '<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4">', fixed = TRUE)
   expect_match(corpo, '<consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>2</tpAmb><cUF>23</cUF><xServ>STATUS</xServ></consStatServ>', fixed = TRUE)
   expect_match(pedidos[[1]]$body$content_type, 'action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"', fixed = TRUE)
-  expect_identical(pedidos[[1]]$options$sslcerttype, "P12")
-  expect_identical(pedidos[[1]]$options$sslcert, CERTIFICADO_DE_TESTE)
+  # O certificado vai como o motor de TLS desta máquina pede: o .pfx no Schannel, PEM com as raízes nos outros.
+  if (identical(motor_de_tls(), "Schannel")) {
+    expect_identical(pedidos[[1]]$options$sslcerttype, "P12")
+    expect_identical(pedidos[[1]]$options$sslcert, CERTIFICADO_DE_TESTE)
+  } else {
+    expect_identical(pedidos[[1]]$options$sslcerttype, "PEM")
+    expect_false(is.null(pedidos[[1]]$options$sslkey))
+  }
+})
+
+test_that("o motor de TLS pelo texto do curl: o que est\u00e1 entre par\u00eanteses est\u00e1 desligado", {
+  expect_identical(motor_de_tls("(OpenSSL/3.5.8) Schannel"), "Schannel")
+  expect_identical(motor_de_tls("OpenSSL/3.5.8 (Schannel)"), "OpenSSL")
+  expect_identical(motor_de_tls("OpenSSL/3.0.13"), "OpenSSL")
+})
+
+test_that("a conex\u00e3o: o .pfx no Schannel; nos outros, PEM com a chave cifrada e as ra\u00edzes com a da ICP-Brasil", {
+  skip_if_not_installed("openssl")
+  pasta = tempfile("teste_da_conexao_")
+  dir.create(pasta)
+  schannel = preparar_conexao(CERTIFICADO_DE_TESTE, "teste", pasta, motor = "Schannel")
+  expect_identical(schannel$opcoes, list(sslcert = CERTIFICADO_DE_TESTE, sslcerttype = "P12", keypasswd = "teste"))
+  pelo_openssl = preparar_conexao(CERTIFICADO_DE_TESTE, "teste", pasta, motor = "OpenSSL")
+  expect_identical(pelo_openssl$opcoes$sslcerttype, "PEM")
+  expect_match(openssl::read_cert(pelo_openssl$opcoes$sslcert)$subject, "EMPRESA DE TESTE LTDA")
+  expect_true(any(grepl("ENCRYPTED", readLines(pelo_openssl$opcoes$sslkey))))
+  expect_error(openssl::read_key(pelo_openssl$opcoes$sslkey, password = "errada"))
+  expect_s3_class(openssl::read_key(pelo_openssl$opcoes$sslkey, password = "teste"), "key")
+  # As raízes: a lista padrão e, no fim, a v10 da ICP-Brasil.
+  lista_de_teste = file.path(pasta, "lista_padrao.pem")
+  writeLines(c("-----BEGIN CERTIFICATE-----", "RAIZ DE TESTE", "-----END CERTIFICATE-----"), lista_de_teste)
+  raizes = readLines(juntar_raizes(pasta, lista_de_teste))
+  expect_identical(raizes[2], "RAIZ DE TESTE")
+  expect_identical(sum(grepl("BEGIN CERTIFICATE", raizes)), 2L)
+  expect_true(is.na(juntar_raizes(pasta, NA_character_)))
+  unlink(pasta, recursive = TRUE)
+})
+
+test_that("a raiz v10 da ICP-Brasil que vem no pacote \u00e9 a do reposit\u00f3rio do ITI", {
+  skip_if_not_installed("openssl")
+  raiz = openssl::read_cert(system.file("certificados", "icp_brasil_raiz_v10.pem", package = "RNFe"))
+  expect_identical(paste(as.character(openssl::sha256(openssl::write_der(raiz))), collapse = ""),
+                   "6e0bff069a26994c15de2c4888cc54af84882e5495b7fbf66be9ccffec7489f6")
+  expect_match(raiz$subject, "Autoridade Certificadora Raiz Brasileira v10")
 })
 
 test_that("UF desconhecida e SEFAZ fora do ar n\u00e3o atrapalham as outras UFs", {

@@ -33,6 +33,7 @@ Imports:
     utils,
     xml2
 Suggests:
+    curl,
     httr2 (>= 1.0.0),
     openssl,
     testthat (>= 3.0.0)

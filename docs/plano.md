@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, MDF-e, NFS-e Nacional e eventos) |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado e status do serviço, em homologação |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado e status do serviço nas 27 UFs, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -504,8 +504,20 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     com o repositório do Windows, não);
   - os servidores usam a Raiz Brasileira v10 da ICP-Brasil (BA, MS, MT, PE, RS, SP, SVRS), a GlobalSign Root R46
     (Ambiente Nacional e SVAN) e a ISRG Root X1 (GO).
-  - **Próximo passo:** levar as raízes da ICP-Brasil (do ITI) junto das comerciais e usar o caminho OpenSSL com
-    PEM, sem nunca desligar a verificação do servidor.
+  - **Resolvido no mesmo dia (pedido: "siga com as UF que não respondem"):** com o motor OpenSSL, o certificado
+    em PEM (com a cadeia que vem no .pfx; a chave cifrada com a senha, num arquivo temporário apagado no fim) e o
+    `cainfo` com a lista padrão de raízes mais a raiz v10 da ICP-Brasil, as 27 UFs respondem 107 (6 s). A lista
+    padrão é a do R no Windows (`CURL_CA_BUNDLE`, `R/etc/curl-ca-bundle.crt`) ou a do sistema; precisa ir junto,
+    porque o `cainfo` troca a lista inteira (só com a v10, GO, a SVAN e MG falharam), e o `ssl_options` das raízes
+    do Windows não soma com o `cainfo` neste curl (8.14).
+  - **A raiz v10** (`inst/certificados/icp_brasil_raiz_v10.pem`), a que o ITI identifica como a raiz de SSL, vem
+    do repositório do ITI (acraiz.icpbrasil.gov.br); o SHA-256 dela é igual ao da raiz que o servidor do MT manda
+    na própria cadeia, e um teste confere esse SHA-256. Vale até 01/07/2032. As outras raízes (v5, v11 de
+    assinatura de código, v12, v13) ficam de fora: nenhum servidor da SEFAZ as usa hoje.
+  - **O motor não é trocado pelo pacote:** ele é escolhido quando o curl carrega, e mudar a variável de ambiente
+    por conta própria afetaria tudo o que a sessão faz na internet. O RNFe usa o motor que estiver ligado
+    (`motor_de_tls()`): no Schannel, o .pfx, como antes, e a falha diz como ligar o OpenSSL; nos outros, o
+    caminho PEM. A ajuda e o README pedem `CURL_SSL_BACKEND=openssl` no `.Renviron`.
 - **Testes sem rede:** certificados falsos (`ferramentas/gerar_certificados_de_teste.py`, com o pacote
   `cryptography`: pessoa jurídica com os quatro otherName dos reais, pessoa física, sem os campos e vencido), a
   resposta real da SVRS gravada (não tem dado de empresa) e o `httr2` devolvendo essa resposta no lugar da

@@ -153,8 +153,17 @@ conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (
 serviço e o autorizador de cada UF (a própria SEFAZ, a SVRS ou a SVAN) vêm da Relação de Serviços Web do Portal
 da NF-e, que o robô das tabelas confere toda semana.
 
-Testado em 30/10/2026 no Windows: 22 das 27 UFs responderam (as da SVRS e AM, GO, MS, PE, PR e RS). Em BA, MA,
-MG, MT e SP a conexão segura ainda não fecha com o motor de TLS padrão do Windows; resolver isso é o próximo passo.
+**No Windows, ligue o motor OpenSSL do curl:** ponha a linha abaixo no arquivo `.Renviron` da sua pasta pessoal e
+reinicie o R (o motor é escolhido quando o curl carrega).
+
+```
+CURL_SSL_BACKEND=openssl
+```
+
+Testado em 30/10/2026: com o OpenSSL, as 27 UFs responderam. Com o motor padrão do Windows (Schannel), BA, MA, MG,
+MT e SP não conectam, e a coluna `problema` diz isso. Com o OpenSSL, o certificado vai em PEM, num arquivo temporário
+apagado no fim (a chave cifrada com a senha), e o certificado do servidor é sempre verificado: contra as raízes de
+sempre e a raiz v10 da ICP-Brasil, que vem no pacote (conferida com a do repositório do ITI).
 
 ## Tabelas fiscais
 

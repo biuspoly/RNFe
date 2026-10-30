@@ -26,9 +26,20 @@ TEMPO_LIMITE_DA_SEFAZ = 60
 #' o certificado digital A1 (veja [certificado_ler()]). Uma UF que não responde
 #' não atrapalha as outras: o motivo fica em `problema`.
 #'
-#' Precisa dos pacotes `httr2` e `openssl`. A conexão foi testada no Windows,
-#' que confia na cadeia de certificados da ICP-Brasil usada pelos servidores da
-#' SEFAZ; em outro sistema, a cadeia pode precisar ser instalada.
+#' Precisa dos pacotes `httr2`, `curl` e `openssl`.
+#'
+#' **No Windows, use o motor OpenSSL.** O curl do R tem dois motores de
+#' conexão segura no Windows, e usa o Schannel se nada for dito. Com ele, BA,
+#' MG, MT, SP e a SVAN (o MA) não conectam (testado em 30/10/2026). Com o
+#' OpenSSL, as 27 UFs respondem. Para ligar o OpenSSL, ponha a linha
+#' `CURL_SSL_BACKEND=openssl` no arquivo `.Renviron` da sua pasta pessoal (veja
+#' [Startup]) e reinicie o R: o motor é escolhido quando o curl carrega.
+#'
+#' Com o OpenSSL, o certificado vai em PEM (o OpenSSL 3 não abre o `.pfx` com a
+#' cifra antiga que os certificados costumam ter), num arquivo temporário
+#' apagado no fim, com a chave cifrada pela própria senha. O certificado do
+#' servidor é sempre verificado, contra as raízes de sempre e a raiz v10 da
+#' ICP-Brasil (a de SSL, que vem no pacote), que os servidores da SEFAZ usam.
 #'
 #' @param ufs As UFs pela sigla (`"SP"`, `"CE"`...): um texto ou um vetor.
 #' @param certificado O caminho do certificado digital A1 (`.pfx` ou `.p12`).
@@ -54,15 +65,20 @@ TEMPO_LIMITE_DA_SEFAZ = 60
 #' @export
 sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
   conferir_ambiente(ambiente)
-  exigir_pacotes(c("httr2", "openssl"))
+  exigir_pacotes(c("httr2", "curl", "openssl"))
   conferir_certificado(certificado, senha)
+  # Os arquivos da conexão (o certificado em PEM, a lista de raízes) ficam numa pasta temporária, apagada no fim.
+  pasta_temporaria = tempfile("rnfe_")
+  dir.create(pasta_temporaria)
+  on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
+  conexao = preparar_conexao(certificado, senha, pasta_temporaria)
   ufs = toupper(trimws(as.character(ufs)))
   linhas = list()
   for (posicao in seq_along(ufs)) {
-    linhas[[posicao]] = status_de_uma_uf(ufs[posicao], certificado, senha, ambiente)
+    linhas[[posicao]] = status_de_uma_uf(ufs[posicao], conexao, ambiente)
   }
   if (length(linhas) == 0) {
-    status = status_de_uma_uf(character(), certificado, senha, ambiente)
+    status = status_de_uma_uf(character(), conexao, ambiente)
   } else {
     status = do.call(rbind, linhas)
   }
@@ -72,7 +88,7 @@ sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
   status
 }
 
-status_de_uma_uf = function(uf, certificado, senha, ambiente) {
+status_de_uma_uf = function(uf, conexao, ambiente) {
   linha = data.frame(
     uf = NA_character_, autorizador = NA_character_, ambiente = ambiente, situacao = NA_integer_, motivo = NA_character_,
     recebimento = as.POSIXct(NA), tempo_medio = NA_integer_, retorno_previsto = as.POSIXct(NA), observacao = NA_character_,
@@ -100,7 +116,7 @@ status_de_uma_uf = function(uf, certificado, senha, ambiente) {
     "<tpAmb>", AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><cUF>", codigo_da_uf, "</cUF><xServ>STATUS</xServ>",
     "</consStatServ>"
   )
-  resposta = pedir_a_sefaz(servico$endereco, "NFeStatusServico4", "nfeStatusServicoNF", mensagem, certificado, senha)
+  resposta = pedir_a_sefaz(servico$endereco, "NFeStatusServico4", "nfeStatusServicoNF", mensagem, conexao)
   if (!is.na(resposta$problema)) {
     linha$problema = resposta$problema
     return(linha)
@@ -174,9 +190,60 @@ tabela_interna = function(nome_da_tabela) {
   tabelas_ja_lidas[[nome_da_tabela]]
 }
 
+# O motor de conexão segura que o curl está usando ("Schannel", "OpenSSL"...). O curl_version() mostra entre
+# parênteses os motores que estão disponíveis, mas desligados: "(OpenSSL/3.5.8) Schannel" é o Schannel.
+motor_de_tls = function(motores_do_curl = curl::curl_version()$ssl_version) {
+  motores = trimws(gsub("\\([^)]*\\)", "", motores_do_curl))
+  sub("/.*$", "", strsplit(motores, " ")[[1]][1])
+}
+
+# As opções de conexão do certificado de cliente. No Schannel (o padrão do curl no Windows), o próprio .pfx. Nos
+# outros motores, o certificado em PEM com a cadeia que vier no .pfx e a chave cifrada com a senha (o OpenSSL 3 não
+# abre o .pfx com a cifra antiga), e as raízes de sempre com a da ICP-Brasil.
+preparar_conexao = function(certificado, senha, pasta_temporaria, motor = motor_de_tls()) {
+  if (identical(motor, "Schannel")) {
+    return(list(motor = motor, opcoes = list(sslcert = certificado, sslcerttype = "P12", keypasswd = senha)))
+  }
+  conteudo = openssl::read_p12(certificado, password = senha)
+  arquivo_do_certificado = file.path(pasta_temporaria, "certificado.pem")
+  arquivo_da_chave = file.path(pasta_temporaria, "chave.pem")
+  writeLines(c(openssl::write_pem(conteudo$cert), vapply(conteudo$ca, openssl::write_pem, character(1))), arquivo_do_certificado)
+  writeLines(openssl::write_pem(conteudo$key, password = senha), arquivo_da_chave)
+  opcoes = list(sslcert = arquivo_do_certificado, sslcerttype = "PEM", sslkey = arquivo_da_chave, keypasswd = senha)
+  arquivo_das_raizes = juntar_raizes(pasta_temporaria)
+  if (!is.na(arquivo_das_raizes)) {
+    opcoes$cainfo = arquivo_das_raizes
+  }
+  list(motor = motor, opcoes = opcoes)
+}
+
+# Os servidores da SEFAZ usam a raiz v10 da ICP-Brasil (a maioria) e raízes comerciais (GlobalSign na SVAN e no
+# Ambiente Nacional, Let's Encrypt em GO). O cainfo troca a lista de raízes inteira, então vai num arquivo só a lista
+# padrão e a raiz v10. Sem lista padrão, fica a que o curl já usa (NA), e as UFs da ICP-Brasil podem falhar.
+juntar_raizes = function(pasta_temporaria, lista_padrao = lista_de_raizes_padrao()) {
+  if (is.na(lista_padrao)) {
+    return(NA_character_)
+  }
+  raiz_da_icp_brasil = system.file("certificados", "icp_brasil_raiz_v10.pem", package = "RNFe")
+  arquivo_das_raizes = file.path(pasta_temporaria, "raizes.pem")
+  writeLines(c(readLines(lista_padrao, warn = FALSE), readLines(raiz_da_icp_brasil, warn = FALSE)), arquivo_das_raizes)
+  arquivo_das_raizes
+}
+
+# A lista de raízes que o curl usa sem cainfo: a do R no Windows (CURL_CA_BUNDLE) ou a do sistema.
+lista_de_raizes_padrao = function() {
+  lugares = c(Sys.getenv("CURL_CA_BUNDLE"), Sys.getenv("SSL_CERT_FILE"), "/etc/ssl/certs/ca-certificates.crt",
+              "/etc/pki/tls/certs/ca-bundle.crt", "/etc/ssl/cert.pem")
+  lugares = lugares[nzchar(lugares) & file.exists(lugares)]
+  if (length(lugares) == 0) {
+    return(NA_character_)
+  }
+  lugares[1]
+}
+
 # Manda a mensagem no envelope SOAP 1.2 (o elemento nfeDadosMsg, no namespace do serviço), com o certificado de
 # cliente, e devolve o retorno de dentro do nfeResultMsg. Sem retorno, o motivo vai em `problema`.
-pedir_a_sefaz = function(endereco, servico_do_wsdl, operacao, mensagem, certificado, senha) {
+pedir_a_sefaz = function(endereco, servico_do_wsdl, operacao, mensagem, conexao) {
   namespace_do_servico = paste0("http://www.portalfiscal.inf.br/nfe/wsdl/", servico_do_wsdl)
   envelope = paste0(
     '<?xml version="1.0" encoding="utf-8"?>',
@@ -187,12 +254,16 @@ pedir_a_sefaz = function(endereco, servico_do_wsdl, operacao, mensagem, certific
   tipo_do_conteudo = paste0('application/soap+xml; charset=utf-8; action="', namespace_do_servico, "/", operacao, '"')
   pedido = httr2::request(endereco)
   pedido = httr2::req_body_raw(pedido, charToRaw(enc2utf8(envelope)), type = tipo_do_conteudo)
-  pedido = httr2::req_options(pedido, sslcert = certificado, sslcerttype = "P12", keypasswd = senha)
+  pedido = do.call(httr2::req_options, c(list(pedido), conexao$opcoes))
   pedido = httr2::req_timeout(pedido, TEMPO_LIMITE_DA_SEFAZ)
   pedido = httr2::req_error(pedido, is_error = function(resposta) FALSE)
   resposta = tryCatch(httr2::req_perform(pedido), error = function(erro) erro)
   if (inherits(resposta, "error")) {
-    return(list(retorno = NULL, problema = paste("sem resposta da SEFAZ:", gsub("\\s+", " ", conditionMessage(resposta)))))
+    problema = paste("sem resposta da SEFAZ:", gsub("\\s+", " ", conditionMessage(resposta)))
+    if (identical(conexao$motor, "Schannel")) {
+      problema = paste(problema, "| No Windows, o motor OpenSSL conecta com todas as UFs: veja ?sefaz_status.")
+    }
+    return(list(retorno = NULL, problema = problema))
   }
   situacao_http = httr2::resp_status(resposta)
   xml_da_resposta = tryCatch(xml2::read_xml(httr2::resp_body_raw(resposta)), error = function(erro) NULL)

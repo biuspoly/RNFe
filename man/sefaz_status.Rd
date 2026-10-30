@@ -47,9 +47,20 @@ SVAN), como diz a Relação de Serviços Web do Portal da NF-e. A conexão usa
 o certificado digital A1 (veja \code{\link[=certificado_ler]{certificado_ler()}}). Uma UF que não responde
 não atrapalha as outras: o motivo fica em \code{problema}.
 
-Precisa dos pacotes \code{httr2} e \code{openssl}. A conexão foi testada no Windows,
-que confia na cadeia de certificados da ICP-Brasil usada pelos servidores da
-SEFAZ; em outro sistema, a cadeia pode precisar ser instalada.
+Precisa dos pacotes \code{httr2}, \code{curl} e \code{openssl}.
+
+\strong{No Windows, use o motor OpenSSL.} O curl do R tem dois motores de
+conexão segura no Windows, e usa o Schannel se nada for dito. Com ele, BA,
+MG, MT, SP e a SVAN (o MA) não conectam (testado em 30/10/2026). Com o
+OpenSSL, as 27 UFs respondem. Para ligar o OpenSSL, ponha a linha
+\code{CURL_SSL_BACKEND=openssl} no arquivo \code{.Renviron} da sua pasta pessoal (veja
+\link{Startup}) e reinicie o R: o motor é escolhido quando o curl carrega.
+
+Com o OpenSSL, o certificado vai em PEM (o OpenSSL 3 não abre o \code{.pfx} com a
+cifra antiga que os certificados costumam ter), num arquivo temporário
+apagado no fim, com a chave cifrada pela própria senha. O certificado do
+servidor é sempre verificado, contra as raízes de sempre e a raiz v10 da
+ICP-Brasil (a de SSL, que vem no pacote), que os servidores da SEFAZ usam.
 }
 \examples{
 \dontrun{
