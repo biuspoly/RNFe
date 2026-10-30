@@ -4,7 +4,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e Nac
 
 > **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e, do
 > CT-e OS, do MDF-e, da NFS-e Nacional e dos eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
-> da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). O certificado digital e a SEFAZ vêm a seguir; o plano está em
+> da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
+> SEFAZ, por enquanto, a leitura do certificado digital e o status do serviço, em homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -138,6 +139,22 @@ sistema nacional registra e o resumo de evento que a Distribuição de DF-e entr
 eventos reais (que não estão no repositório), contra outro sistema e contra um segundo leitor do XML: os campos
 comparados bateram em todos. A data do evento sai como o instante exato, pelo fuso escrito no XML (que nem
 sempre é o de Brasília).
+
+## Certificado digital e SEFAZ (homologação)
+
+```r
+senha = Sys.getenv("SENHA_DO_CERTIFICADO")   # nunca escrita no script
+certificado_ler("empresa.pfx", senha)          # titular, CNPJ ou CPF, emissor e validade
+sefaz_status(c("SP", "CE"), "empresa.pfx", senha)   # o serviço da NF-e está no ar em cada UF?
+```
+
+Por enquanto o RNfe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
+conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada
+serviço e o autorizador de cada UF (a própria SEFAZ, a SVRS ou a SVAN) vêm da Relação de Serviços Web do Portal
+da NF-e, que o robô das tabelas confere toda semana.
+
+Testado em 30/10/2026 no Windows: 22 das 27 UFs responderam (as da SVRS e AM, GO, MS, PE, PR e RS). Em BA, MA,
+MG, MT e SP a conexão segura ainda não fecha com o motor de TLS padrão do Windows; resolver isso é o próximo passo.
 
 ## Tabelas fiscais
 

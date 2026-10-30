@@ -13,6 +13,8 @@
 # - Meios de pagamento e bandeiras de cartão: as tabelas do Portal da NF-e (seção Diversos).
 # - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
 #   município.
+# - Serviços web da SEFAZ (o endereço de cada serviço da NF-e e o autorizador de cada UF): a Relação de Serviços
+#   Web do Portal da NF-e. Só a de homologação, por enquanto: o RNfe ainda não fala com a produção.
 
 PASTA_DAS_TABELAS = "inst/extdata/tabelas"
 ENDERECO_DO_PORTAL = "https://www.nfe.fazenda.gov.br/portal/"
@@ -285,6 +287,64 @@ baixar_municipios = function() {
   municipios[order(municipios$codigo), ]
 }
 
+# ---- serviços web da SEFAZ ----
+
+PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO = "https://hom.nfe.fazenda.gov.br/portal/webServices.aspx"
+SIGLAS_DAS_UFS = c("AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI",
+                   "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO")
+# Antes das tabelas, a página diz que UFs usam cada SEFAZ virtual, num elemento com este id.
+LISTAS_DE_UFS_DA_PAGINA = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE, text = "
+id                                               ; autorizador ; uso
+ctl00_ContentPlaceHolder1_lblUsuariosSVAN         ; SVAN        ; todos os serviços
+ctl00_ContentPlaceHolder1_lblUsuarioSVRS_ConsCad  ; SVRS        ; consulta de cadastro
+ctl00_ContentPlaceHolder1_lblUsuarioSVRS_DemServ  ; SVRS        ; demais serviços
+ctl00_ContentPlaceHolder1_lblUsuariosSVCAN        ; SVC-AN      ; contingência
+ctl00_ContentPlaceHolder1_lblUsuariosSVCRS        ; SVC-RS      ; contingência
+")
+
+# A Relação de Serviços Web: uma tabela por autorizador (a legenda traz a sigla entre parênteses, como
+# "Sefaz Amazonas - (AM)"), com o serviço, a versão e o endereço. A UF com tabela própria usa a própria SEFAZ em
+# todos os serviços; as outras, as SEFAZ virtuais que a página lista.
+baixar_servicos_da_sefaz = function(endereco_da_pagina, ambiente) {
+  pedido_da_pagina = httr2::req_timeout(httr2::request(endereco_da_pagina), 120)
+  pagina = xml2::read_html(httr2::resp_body_raw(httr2::req_perform(pedido_da_pagina)))
+  servicos = data.frame()
+  for (tabela_do_autorizador in xml2::xml_find_all(pagina, "//table[caption]")) {
+    legenda = trimws(xml2::xml_text(xml2::xml_find_first(tabela_do_autorizador, "caption")))
+    autorizador = sub("^.*\\((.*)\\)$", "\\1", legenda)
+    for (linha in xml2::xml_find_all(tabela_do_autorizador, ".//tr[td]")) {
+      celulas = trimws(xml2::xml_text(xml2::xml_find_all(linha, "td")))
+      if (length(celulas) == 3 && nzchar(celulas[3])) {
+        servicos = rbind(servicos, data.frame(documento = "NF-e", ambiente = ambiente, autorizador = autorizador,
+                                              servico = celulas[1], versao = celulas[2], endereco = celulas[3]))
+      }
+    }
+  }
+  if (nrow(servicos) == 0 || !all(startsWith(servicos$endereco, "https://"))) {
+    stop("A Relação de Serviços Web mudou de formato: ", endereco_da_pagina, call. = FALSE)
+  }
+  ufs_com_sefaz_propria = intersect(SIGLAS_DAS_UFS, servicos$autorizador)
+  autorizadores = data.frame(documento = "NF-e", ambiente = ambiente, uf = ufs_com_sefaz_propria,
+                             uso = "todos os serviços", autorizador = ufs_com_sefaz_propria)
+  for (numero_da_lista in seq_len(nrow(LISTAS_DE_UFS_DA_PAGINA))) {
+    lista = LISTAS_DE_UFS_DA_PAGINA[numero_da_lista, ]
+    elemento = xml2::xml_find_first(pagina, paste0("//*[@id='", lista$id, "']"))
+    if (inherits(elemento, "xml_missing")) {
+      stop("A Relação de Serviços Web não traz mais a lista ", lista$id, ": ", endereco_da_pagina, call. = FALSE)
+    }
+    ufs_da_lista = trimws(strsplit(xml2::xml_text(elemento), ",")[[1]])
+    if (!all(ufs_da_lista %in% SIGLAS_DAS_UFS)) {
+      stop("A lista ", lista$id, " traz o que não é UF: ", xml2::xml_text(elemento), call. = FALSE)
+    }
+    autorizadores = rbind(autorizadores, data.frame(documento = "NF-e", ambiente = ambiente, uf = ufs_da_lista,
+                                                    uso = lista$uso, autorizador = lista$autorizador))
+  }
+  list(
+    servicos = servicos[order(servicos$autorizador, servicos$servico), ],
+    autorizadores = autorizadores[order(autorizadores$uf, autorizadores$uso), ]
+  )
+}
+
 # ---- montar as tabelas do pacote ----
 
 # A tabela B do SPED parou em 2009: os quatro CST de combustível monofásico (02, 15, 53 e 61, desde
@@ -387,14 +447,18 @@ tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
 meios_do_portal = baixar_meios_de_pagamento(pasta_temporaria)
 bandeiras_do_portal = baixar_bandeiras_de_cartao(pasta_temporaria)
+servicos_de_homologacao = baixar_servicos_da_sefaz(PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO, "homologacao")
 fontes = rbind(fontes, data.frame(
-  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao"),
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao", "servicos_sefaz",
+             "autorizadores_sefaz"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
     paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
     paste0("Portal da NF-e, ", meios_do_portal$titulo),
-    paste0("Portal da NF-e, ", bandeiras_do_portal$titulo)
+    paste0("Portal da NF-e, ", bandeiras_do_portal$titulo),
+    paste0("Portal da NF-e, Relação de Serviços Web de homologação (", PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO, ")"),
+    paste0("Portal da NF-e, Relação de Serviços Web de homologação (", PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO, "), UFs de cada SEFAZ virtual")
   ),
   versao = NA,
   data_da_versao = NA,
@@ -432,6 +496,8 @@ gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
 gravar_tabela(meios_do_portal$tabela, "meios_pagamento")
 gravar_tabela(bandeiras_do_portal$tabela, "bandeiras_cartao")
+gravar_tabela(servicos_de_homologacao$servicos, "servicos_sefaz")
+gravar_tabela(servicos_de_homologacao$autorizadores, "autorizadores_sefaz")
 if (!is.null(municipios_do_ibge)) {
   gravar_tabela(municipios_do_ibge, "municipios")
 }

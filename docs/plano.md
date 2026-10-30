@@ -27,7 +27,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, MDF-e, NFS-e Nacional e eventos) |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado e status do serviço, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -48,7 +48,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
-| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | etapa 3 |
+| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status da NF-e pronto em homologação; o resto na etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
@@ -467,6 +467,47 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Comparação da documentação da NFS-e 1.00 com a 1.01**, campo por campo: além do `tribISSQN` e do CST 07,
   só a lista de códigos mudou: no `cStat` o 101 (só na 1.00) e o 107 (só na 1.01), o regime especial 9 e os
   campos da Reforma, na 1.01. Como o código de uma versão não aparece na outra, uma lista só serve às duas.
+
+## Etapa 3, primeiro passo: o certificado e o status do serviço (30/10/2026)
+
+- **Pedido do usuário:** "a fase três vá com calma, primeiramente indo com as partes fáceis como consulta status".
+  Só homologação (autorização de 29/10/2026): `AMBIENTES_LIBERADOS` só tem a homologação, a produção é
+  recusada antes de qualquer conexão, e a resposta que vier de outro ambiente (`tpAmb`) fica marcada em
+  `problema`.
+- **`certificado_ler()`**, pelo DOC-ICP-04 v8.3 (ITI): o CNPJ vem do otherName 2.16.76.1.3.3 da extensão Subject
+  Alternative Name; o CPF, do 2.16.76.1.3.1 (depois da data de nascimento). Sem eles, o número depois de ":" no
+  fim do nome (o CN). Os perfis novos do DOC-ICP-04 tiram o número do CN (vai para o serialNumber), por isso o
+  campo próprio vem primeiro. Nos 58 certificados reais do Fiscal (só contagens): o campo traz o CNPJ em todos,
+  igual ao do fim do nome, com os dígitos certos; vem como PrintableString, e o certificado falso dos testes
+  também. A validade vem com o mês em inglês ("Oct"): lida pelo `month.abb`, que não depende do idioma do R. O
+  primeiro script de busca, com `%b`, contou 19 certificados válidos em vez de 23, porque no R em português "Oct"
+  não é mês.
+- **Endereços:** a Relação de Serviços Web de homologação do Portal da NF-e, baixada por `gerar_tabelas.R` (e
+  conferida pelo robô toda semana): `servicos_sefaz` (96 serviços de 14 autorizadores) e `autorizadores_sefaz`
+  (a UF com SEFAZ própria usa a dela; as outras, a SVRS ou a SVAN; a consulta de cadastro da SVRS tem lista
+  própria, menor). Ficam fora de `tabela_fiscal()`. O resumo do robô compara pela linha inteira a tabela que
+  não tem `codigo`.
+- **A mensagem:** o pedido segue o `leiauteConsStatServ_v4.00.xsd`, que está no pacote completo 9q (os parciais
+  010d e 010g, que o RNfe segue, não trazem os schemas dos serviços); o pedido montado passa nele, e um estragado
+  é reprovado. O envelope é o do WSDL do serviço (SOAP 1.2, `nfeDadosMsg` no namespace do serviço e a action
+  `.../NFeStatusServico4/nfeStatusServicoNF`); a SVRS só mostra o WSDL com certificado de cliente. As respostas
+  são lidas pelo nome local de cada elemento, porque cada SEFAZ põe o prefixo de namespace que quer.
+- **Teste real (30/10/2026), as 27 UFs em homologação, com um e-CNPJ da empresa:** 22 responderam 107 em 8 s
+  (as 16 da SVRS e AM, GO, MS, PE, PR e RS). As 5 que falham são de TLS:
+  - com o Schannel (o motor padrão do curl no Windows), MG e MT não têm algoritmo em comum com o servidor, e BA,
+    SP e a SVAN (MA) fecham a conexão sem resposta (o Schannel manda só o certificado da empresa, sem a cadeia);
+  - com o OpenSSL (`CURL_SSL_BACKEND=openssl`), o `.pfx` não abre no curl (cifra antiga, que o OpenSSL 3 não lê);
+    em PEM, extraído pelo pacote `openssl` com a cadeia, MG e a SVAN respondem, mas a SVRS, BA, SP e MT falham
+    porque o OpenSSL não acha a raiz da ICP-Brasil (o Schannel busca a raiz no Windows Update; o OpenSSL, mesmo
+    com o repositório do Windows, não);
+  - os servidores usam a Raiz Brasileira v10 da ICP-Brasil (BA, MS, MT, PE, RS, SP, SVRS), a GlobalSign Root R46
+    (Ambiente Nacional e SVAN) e a ISRG Root X1 (GO).
+  - **Próximo passo:** levar as raízes da ICP-Brasil (do ITI) junto das comerciais e usar o caminho OpenSSL com
+    PEM, sem nunca desligar a verificação do servidor.
+- **Testes sem rede:** certificados falsos (`ferramentas/gerar_certificados_de_teste.py`, com o pacote
+  `cryptography`: pessoa jurídica com os quatro otherName dos reais, pessoa física, sem os campos e vencido), a
+  resposta real da SVRS gravada (não tem dado de empresa) e o `httr2` devolvendo essa resposta no lugar da
+  SEFAZ. `httr2` e `openssl` ficam em Suggests.
 
 ## O robô das tabelas
 

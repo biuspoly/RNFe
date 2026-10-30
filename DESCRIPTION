@@ -20,7 +20,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     NCM, origem, CST do ICMS, CSOSN, CST do IPI, do PIS e da COFINS, o CST e
     a classificação tributária do IBS e da CBS e os municípios) copiadas do
     Portal da NF-e, do Portal Único Siscomex, do SPED e do IBGE, com a
-    vigência de cada código.
+    vigência de cada código. Lê o certificado digital A1 (titular, CNPJ ou
+    CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e, por
+    enquanto só no ambiente de homologação.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNfe
 BugReports: https://github.com/biuspoly/RNfe/issues
@@ -31,6 +33,8 @@ Imports:
     utils,
     xml2
 Suggests:
+    httr2 (>= 1.0.0),
+    openssl,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
@@ -38,10 +42,12 @@ Config/roxygen2/version: 8.1.1
 Collate: 
     'RNfe-package.R'
     'chave.R'
+    'certificado.R'
     'ler_xml.R'
     'cte_ler.R'
     'eventos_ler.R'
     'mdfe_ler.R'
     'nfe_ler.R'
     'nfse_ler.R'
+    'sefaz.R'
     'tabelas.R'
