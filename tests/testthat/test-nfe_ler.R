@@ -108,6 +108,27 @@ test_that("os itens somam os totais da nota", {
   expect_equal(sum(lida$itens$valor_ibs), lida$notas$valor_ibs)
   expect_equal(sum(lida$itens$valor_cbs), lida$notas$valor_cbs)
   expect_equal(sum(lida$parcelas$valor), lida$notas$fatura_valor_liquido)
+  expect_equal(sum(lida$itens$valor_produto_liquido), lida$notas$valor_produtos_liquido)
+})
+
+test_that("os valores l\u00edquidos (sem tributos) do pacote 010g", {
+  lida = nfe_ler(c(NOTA_SP, NOTA_CE))
+  expect_equal(lida$itens$valor_unitario_liquido, c(4.4, 2.05, NA))
+  expect_equal(lida$itens$valor_produto_liquido, c(44, 49.2, NA))
+  expect_identical(match("valor_unitario_liquido", names(lida$itens)), match("valor_produto", names(lida$itens)) + 1L)
+  expect_equal(lida$notas$valor_produtos_liquido, c(93.2, NA))
+  expect_true(all(is.na(lida$itens$valor_icms_previsto)))
+})
+
+test_that("o pagamento vinculado da Reforma (gPgtoVinc)", {
+  lida = nfe_ler(c(NOTA_SP, NOTA_CE))
+  vinculados = lida$pagamentos_vinculados
+  expect_identical(vinculados$chave, CHAVE_SP)
+  expect_identical(vinculados$numero, 1L)
+  expect_identical(vinculados$transacao, "TRANSACAO-DE-TESTE-1")
+  expect_identical(vinculados$meio_pagamento, "15")
+  expect_identical(vinculados$cnpj_recebedor, "11222333000181")
+  expect_identical(vinculados$cnpj_base_instituicao, "11444777")
 })
 
 test_that("a tabela de impostos tem todos os campos de imposto de cada item", {

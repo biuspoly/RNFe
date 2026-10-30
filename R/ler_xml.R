@@ -33,6 +33,18 @@ vencimento dVenc   data
 valor      vDup    numero
 ")
 
+# A partir de cada pagamento vinculado da Reforma (gPgtoVinc/gPgto na NF-e, pgtoVinc/pgto no CT-e), que liga o
+# documento à transação de pagamento usada no split payment. O código do meio de pagamento é o do Informe
+# Técnico 2026.001.
+CAMPOS_DO_PAGAMENTO_VINCULADO = ler_campos("
+coluna                 caminho        tipo
+numero                 @nPag          inteiro
+transacao              @idTransacao   texto
+meio_pagamento         tpMeioPgto     texto
+cnpj_recebedor         CNPJReceb      texto
+cnpj_base_instituicao  CNPJBasePSP    texto
+")
+
 # Lê cada arquivo e devolve, de cada um, as colunas das tabelas (o que `colunas_do_documento` monta), o
 # nome e o problema. `caminho_dos_documentos` acha cada documento no XML ("//NFe/infNFe") e
 # `nome_do_documento` vai na mensagem do arquivo que não é desse tipo ("uma NF-e", "um CT-e").

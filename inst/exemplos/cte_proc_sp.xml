@@ -125,6 +125,13 @@
           </gIBSCBS>
         </IBSCBS>
       </imp>
+      <pgtoVinc>
+        <pgto nPag="1" idTransacao="TRANSACAO-DE-TESTE-2">
+          <tpMeioPgto>17</tpMeioPgto>
+          <CNPJReceb>12ABC34501DE35</CNPJReceb>
+          <CNPJBasePSP>11444777</CNPJBasePSP>
+        </pgto>
+      </pgtoVinc>
       <infCTeNorm>
         <infCarga>
           <vCarga>150.00</vCarga>

@@ -72,6 +72,8 @@
           <qCom>10.0000</qCom>
           <vUnCom>5.0000000000</vUnCom>
           <vProd>50.00</vProd>
+          <vUnComLiq>4.4000000000</vUnComLiq>
+          <vProdLiq>44.00</vProdLiq>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
           <qTrib>10.0000</qTrib>
@@ -151,6 +153,8 @@
           <qCom>24.0000</qCom>
           <vUnCom>2.5000000000</vUnCom>
           <vProd>60.00</vProd>
+          <vUnComLiq>2.0500000000</vUnComLiq>
+          <vProdLiq>49.20</vProdLiq>
           <cEANTrib>SEM GTIN</cEANTrib>
           <uTrib>UN</uTrib>
           <qTrib>24.0000</qTrib>
@@ -200,6 +204,7 @@
         </imposto>
       </det>
       <total>
+        <vProdLiqTot>93.20</vProdLiqTot>
         <ICMSTot>
           <vBC>50.00</vBC>
           <vICMS>6.00</vICMS>
@@ -287,6 +292,13 @@
           <vPag>115.00</vPag>
         </detPag>
       </pag>
+      <gPgtoVinc>
+        <gPgto nPag="1" idTransacao="TRANSACAO-DE-TESTE-1">
+          <tpMeioPgto>15</tpMeioPgto>
+          <CNPJReceb>11222333000181</CNPJReceb>
+          <CNPJBasePSP>11444777</CNPJBasePSP>
+        </gPgto>
+      </gPgtoVinc>
       <infAdic>
         <infCpl>NOTA DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</infCpl>
       </infAdic>

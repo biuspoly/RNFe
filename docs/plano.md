@@ -290,7 +290,14 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   o da NF-e às vezes publica o `+` do código do arquivo como espaço (os dois vão como `%2B`, e o portal aceita).
 - **O primeiro uso já achou lacunas:** comparando o pacote 010f da NF-e com o 010g, que o `nfe_ler()` segue,
   entraram os valores líquidos (`vProdLiq`, `vUnComLiq`, `vProdLiqTot`) e o pagamento vinculado
-  (`gPgtoVinc`), que o leitor ainda não lia; no CT-e, o `pgtoVinc`.
+  (`gPgtoVinc`), que o leitor ainda não lia; no CT-e, o `pgtoVinc`. **Resolvidas em 30/10/2026:** colunas
+  `valor_unitario_liquido`, `valor_produto_liquido`, `valor_produtos_liquido` e `valor_icms_previsto`, e a
+  tabela `pagamentos_vinculados` na NF-e e no CT-e (o código do meio de pagamento é o do IT 2026.001 v1.01:
+  15, 17, 18, 20, 23, 24). Nenhum dos 133.310 XMLs reais do Fiscal (118.783 NF-e, 14.527 CT-e) traz esses
+  campos ainda; a conferência foi pelo schema e pelos exemplos, que ganharam esses campos.
+- **Grupos opcionais e escolhas:** as regras de cada campo dizem também se ele está num grupo que pode faltar
+  ("num grupo [0..1]") ou numa escolha entre campos ("numa escolha"). Sem isso, o `vProdLiq` aparecia como
+  obrigatório, e um grupo que passasse a ser obrigatório não apareceria no aviso.
 
 ## CEST: adiado (decisão do usuário, 29/10/2026)
 

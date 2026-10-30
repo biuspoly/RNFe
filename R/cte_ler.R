@@ -91,6 +91,7 @@ aliquota_icms_st_retido         imp/ICMS/*/pICMSSTRet                           
 valor_icms_st_retido            imp/ICMS/*/vICMSSTRet                             numero
 valor_credito_icms              imp/ICMS/*/vCred                                  numero
 valor_icms_desonerado           imp/ICMS/*/vICMSDeson                             numero
+valor_icms_previsto             imp/ICMS/gICMSPrevistoPagtoAntecip/vICMSPrevisto  numero
 beneficio_fiscal                imp/ICMS/*/cBenef                                 texto
 simples_nacional                imp/ICMS/*/indSN                                  inteiro
 valor_tributos_aproximado       imp/vTotTrib                                      numero
@@ -279,9 +280,13 @@ texto  xTexto   texto
 #' no leiaute) e `valor` (o texto do XML). É o que sobra para quem precisa de um
 #' campo que não está em `ctes`.
 #'
-#' @section parcelas e observações:
+#' @section parcelas, pagamentos vinculados e observações:
 #' `parcelas`, uma linha por duplicata: `chave`,
 #' `r documentar_campos(CAMPOS_DA_PARCELA)`.
+#' `pagamentos_vinculados`, uma linha por pagamento vinculado da Reforma (o
+#' que liga o CT-e à transação de pagamento usada no split payment): `chave`,
+#' `r documentar_campos(CAMPOS_DO_PAGAMENTO_VINCULADO)`. O código do meio de
+#' pagamento é o da tabela do Informe Técnico 2026.001.
 #' `observacoes`, uma linha por campo de uso livre (`ObsCont` e `ObsFisco`):
 #' `chave`, `r documentar_campos(CAMPOS_DA_OBSERVACAO)`.
 #'
@@ -293,7 +298,8 @@ texto  xTexto   texto
 #' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
 #'   (começando por `<`).
 #' @return Uma lista com os `data.frame`s `ctes`, `componentes`, `documentos`,
-#'   `cargas`, `impostos`, `parcelas`, `observacoes` e `arquivos`.
+#'   `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`, `observacoes` e
+#'   `arquivos`.
 #' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.004
 #'   RTC 1.00, publicado no Portal Nacional do CT-e (republicado em
 #'   16/10/2026).
@@ -314,6 +320,7 @@ cte_ler = function(arquivos) {
     cargas = juntar_tabela(arquivos_lidos, "cargas", colunas_vazias$cargas),
     impostos = juntar_tabela(arquivos_lidos, "impostos", colunas_vazias$impostos),
     parcelas = juntar_tabela(arquivos_lidos, "parcelas", colunas_vazias$parcelas),
+    pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados),
     observacoes = juntar_tabela(arquivos_lidos, "observacoes", colunas_vazias$observacoes),
     arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
   )
@@ -339,6 +346,7 @@ colunas_do_cte = function(xml_lido, nome_do_arquivo) {
   campos_dos_impostos = buscar_todos(ctes, "imp//*[not(*)]")
   duplicatas = buscar_todos(ctes, "infCTeNorm/cobr/dup")
   observacoes = buscar_todos(ctes, "compl/ObsCont|compl/ObsFisco")
+  pagamentos_vinculados = buscar_todos(ctes, "pgtoVinc/pgto")
 
   chaves = chave_de_cada(ctes, "infCte")
   # O protocolo é casado com o CT-e pela chave; CT-e que veio sem protocolo fica com NA.
@@ -356,6 +364,10 @@ colunas_do_cte = function(xml_lido, nome_do_arquivo) {
     cargas = c(list(chave = chave_de_cada(cargas, "infCte")), valores_dos_campos(cargas, CAMPOS_DA_CARGA)),
     impostos = colunas_dos_impostos_do_cte(campos_dos_impostos),
     parcelas = c(list(chave = chave_de_cada(duplicatas, "infCte")), valores_dos_campos(duplicatas, CAMPOS_DA_PARCELA)),
+    pagamentos_vinculados = c(
+      list(chave = chave_de_cada(pagamentos_vinculados, "infCte")),
+      valores_dos_campos(pagamentos_vinculados, CAMPOS_DO_PAGAMENTO_VINCULADO)
+    ),
     observacoes = c(list(chave = chave_de_cada(observacoes, "infCte")), valores_dos_campos(observacoes, CAMPOS_DA_OBSERVACAO))
   )
 }

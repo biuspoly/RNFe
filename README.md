@@ -41,6 +41,7 @@ lida$itens        # uma linha por item: produto, CFOP, NCM e os impostos princip
 lida$impostos     # todos os campos de imposto de cada item, um por linha
 lida$parcelas     # as duplicatas
 lida$pagamentos   # as formas de pagamento
+lida$pagamentos_vinculados   # o pagamento vinculado da Reforma (split payment)
 lida$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
 ```
 
@@ -59,6 +60,7 @@ lido$documentos    # o que o CT-e cita: NF-e transportadas, transporte anterior,
 lido$cargas        # as quantidades da carga (peso, caixas...)
 lido$impostos      # todos os campos de imposto, um por linha
 lido$parcelas      # as duplicatas
+lido$pagamentos_vinculados   # o pagamento vinculado da Reforma (split payment)
 lido$observacoes   # os campos de uso livre (ObsCont e ObsFisco)
 lido$arquivos      # o que foi lido, e o motivo de cada arquivo que não deu
 ```

@@ -52,6 +52,7 @@ valor_icms_st                 total/ICMSTot/vST                           numero
 valor_fcp_st                  total/ICMSTot/vFCPST                        numero
 valor_fcp_st_retido           total/ICMSTot/vFCPSTRet                     numero
 valor_produtos                total/ICMSTot/vProd                         numero
+valor_produtos_liquido        total/vProdLiqTot                           numero
 valor_frete                   total/ICMSTot/vFrete                        numero
 valor_seguro                  total/ICMSTot/vSeg                          numero
 valor_desconto                total/ICMSTot/vDesc                         numero
@@ -94,6 +95,8 @@ unidade                   prod/uCom                                  texto
 quantidade                prod/qCom                                  numero
 valor_unitario            prod/vUnCom                                numero
 valor_produto             prod/vProd                                 numero
+valor_unitario_liquido    prod/vUnComLiq                             numero
+valor_produto_liquido     prod/vProdLiq                              numero
 unidade_tributavel        prod/uTrib                                 texto
 quantidade_tributavel     prod/qTrib                                 numero
 valor_unitario_tributavel prod/vUnTrib                               numero
@@ -120,6 +123,7 @@ valor_icms_st_retido      imposto/ICMS/*/vICMSSTRet                  numero
 valor_fcp                 imposto/ICMS/*/vFCP                        numero
 valor_fcp_st              imposto/ICMS/*/vFCPST                      numero
 valor_icms_desonerado     imposto/ICMS/*/vICMSDeson                  numero
+valor_icms_previsto       imposto/ICMS/ICMSPrevistoPagtoAntecip/vICMSPrevisto numero
 cst_ipi                   imposto/IPI/*/CST                          texto
 valor_ipi                 imposto/IPI/IPITrib/vIPI                   numero
 cst_pis                   imposto/PIS/*/CST                          texto
@@ -213,6 +217,10 @@ autorizacao      card/cAut  texto
 #' `r documentar_campos(CAMPOS_DA_PARCELA)`.
 #' `pagamentos`, uma linha por forma de pagamento: `chave`,
 #' `r documentar_campos(CAMPOS_DO_PAGAMENTO)`.
+#' `pagamentos_vinculados`, uma linha por pagamento vinculado da Reforma (o que
+#' liga a nota à transação de pagamento usada no split payment): `chave`,
+#' `r documentar_campos(CAMPOS_DO_PAGAMENTO_VINCULADO)`. O código do meio de
+#' pagamento é o da tabela do Informe Técnico 2026.001.
 #'
 #' @section arquivos:
 #' Uma linha por arquivo pedido: `arquivo`, `notas` (quantas notas tinha) e
@@ -222,7 +230,7 @@ autorizacao      card/cAut  texto
 #' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
 #'   (começando por `<`).
 #' @return Uma lista com os `data.frame`s `notas`, `itens`, `impostos`,
-#'   `parcelas`, `pagamentos` e `arquivos`.
+#'   `parcelas`, `pagamentos`, `pagamentos_vinculados` e `arquivos`.
 #' @source Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
 #'   2026.006 e NT 2026.008), publicado no Portal Nacional da NF-e em
 #'   26/10/2026.
@@ -242,6 +250,7 @@ nfe_ler = function(arquivos) {
     impostos = juntar_tabela(arquivos_lidos, "impostos", colunas_vazias$impostos),
     parcelas = juntar_tabela(arquivos_lidos, "parcelas", colunas_vazias$parcelas),
     pagamentos = juntar_tabela(arquivos_lidos, "pagamentos", colunas_vazias$pagamentos),
+    pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados),
     arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
   )
   tabelas_da_nfe$notas = converter_datas(tabelas_da_nfe$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
@@ -264,6 +273,7 @@ colunas_da_nfe = function(xml_lido, nome_do_arquivo) {
   campos_dos_impostos = buscar_todos(itens, "imposto//*[not(*)]")
   duplicatas = buscar_todos(notas, "cobr/dup")
   formas_de_pagamento = buscar_todos(notas, "pag/detPag")
+  pagamentos_vinculados = buscar_todos(notas, "gPgtoVinc/gPgto")
 
   chaves = chave_de_cada(notas, "infNFe")
   # O protocolo é casado com a nota pela chave; nota que veio sem protocolo fica com NA.
@@ -285,6 +295,10 @@ colunas_da_nfe = function(xml_lido, nome_do_arquivo) {
     pagamentos = c(
       list(chave = chave_de_cada(formas_de_pagamento, "infNFe")),
       valores_dos_campos(formas_de_pagamento, CAMPOS_DO_PAGAMENTO)
+    ),
+    pagamentos_vinculados = c(
+      list(chave = chave_de_cada(pagamentos_vinculados, "infNFe")),
+      valores_dos_campos(pagamentos_vinculados, CAMPOS_DO_PAGAMENTO_VINCULADO)
     )
   )
 }

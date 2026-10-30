@@ -210,9 +210,34 @@ regras_do_campo = function(definicao_do_campo, definicoes) {
   paste(regras_achadas, collapse = "; ")
 }
 
+# Onde o campo está, quando isso muda o que é obrigatório: num grupo que pode faltar ou se repetir
+# ("num grupo [0..1]") ou numa escolha entre campos ("numa escolha"). Uma sequência simples não conta.
+descrever_grupo = function(grupo_do_schema) {
+  minimo_de_vezes = xml2::xml_attr(grupo_do_schema, "minOccurs")
+  maximo_de_vezes = xml2::xml_attr(grupo_do_schema, "maxOccurs")
+  descricoes_do_grupo = character()
+  if (xml2::xml_name(grupo_do_schema) == "choice") {
+    descricoes_do_grupo = c(descricoes_do_grupo, "numa escolha")
+  }
+  if (!is.na(minimo_de_vezes) || !is.na(maximo_de_vezes)) {
+    descricoes_do_grupo = c(descricoes_do_grupo, paste0("num grupo [", ifelse(is.na(minimo_de_vezes), "1", minimo_de_vezes), "..",
+                                                        ifelse(is.na(maximo_de_vezes), "1", maximo_de_vezes), "]"))
+  }
+  descricoes_do_grupo
+}
+
+# As regras do campo e, no fim, os grupos em que ele está (descrever_grupo).
+regras_com_os_grupos = function(regras_do_campo_sozinho, grupos_de_cima) {
+  if (length(grupos_de_cima) == 0) {
+    return(regras_do_campo_sozinho)
+  }
+  paste(c(regras_do_campo_sozinho[regras_do_campo_sozinho != ""], grupos_de_cima), collapse = "; ")
+}
+
 # Todos os campos dentro de uma parte do schema, cada um com o caminho e as regras. `tipos_ja_abertos` evita
-# entrar de novo num tipo que contém a si mesmo.
-campos_dentro = function(parte_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos) {
+# entrar de novo num tipo que contém a si mesmo. `grupos_de_cima` são os grupos opcionais ou de escolha em
+# que os campos estão, dentro do mesmo elemento.
+campos_dentro = function(parte_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos, grupos_de_cima = character()) {
   caminhos = character()
   regras = character()
   for (item_do_schema in xml2::xml_children(parte_do_schema)) {
@@ -222,35 +247,40 @@ campos_dentro = function(parte_do_schema, caminho_de_cima, definicoes, tipos_ja_
       if (tipo_do_item %in% c("extension", "restriction")) {
         tipo_de_origem = sem_prefixo(xml2::xml_attr(item_do_schema, "base"))
         if (!is.na(tipo_de_origem) && !is.null(definicoes$tipos[[tipo_de_origem]]) && !(tipo_de_origem %in% tipos_ja_abertos)) {
-          campos_do_tipo_de_origem = campos_dentro(definicoes$tipos[[tipo_de_origem]], caminho_de_cima, definicoes, c(tipos_ja_abertos, tipo_de_origem))
+          campos_do_tipo_de_origem = campos_dentro(definicoes$tipos[[tipo_de_origem]], caminho_de_cima, definicoes,
+                                                   c(tipos_ja_abertos, tipo_de_origem), grupos_de_cima)
           caminhos = c(caminhos, campos_do_tipo_de_origem$caminhos)
           regras = c(regras, campos_do_tipo_de_origem$regras)
         }
       }
-      campos_do_grupo = campos_dentro(item_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos)
+      grupos_ate_aqui = grupos_de_cima
+      if (tipo_do_item %in% c("sequence", "choice", "all")) {
+        grupos_ate_aqui = c(grupos_de_cima, descrever_grupo(item_do_schema))
+      }
+      campos_do_grupo = campos_dentro(item_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos, grupos_ate_aqui)
       caminhos = c(caminhos, campos_do_grupo$caminhos)
       regras = c(regras, campos_do_grupo$regras)
     } else if (tipo_do_item %in% c("complexContent", "simpleContent")) {
-      campos_do_conteudo = campos_dentro(item_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos)
+      campos_do_conteudo = campos_dentro(item_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos, grupos_de_cima)
       caminhos = c(caminhos, campos_do_conteudo$caminhos)
       regras = c(regras, campos_do_conteudo$regras)
     } else if (tipo_do_item == "attribute") {
       caminhos = c(caminhos, paste0(caminho_de_cima, "/@", xml2::xml_attr(item_do_schema, "name")))
-      regras = c(regras, regras_do_campo(item_do_schema, definicoes))
+      regras = c(regras, regras_com_os_grupos(regras_do_campo(item_do_schema, definicoes), grupos_de_cima))
     } else if (tipo_do_item == "any") {
       caminhos = c(caminhos, paste0(caminho_de_cima, "/(qualquer elemento)"))
-      regras = c(regras, "")
+      regras = c(regras, regras_com_os_grupos("", grupos_de_cima))
     } else if (tipo_do_item == "element") {
       nome_do_campo = xml2::xml_attr(item_do_schema, "name")
       # Um elemento que só aponta para outro (ref, como a Signature) entra pelo nome, sem abrir.
       if (is.na(nome_do_campo)) {
         caminhos = c(caminhos, paste0(caminho_de_cima, "/", sem_prefixo(xml2::xml_attr(item_do_schema, "ref"))))
-        regras = c(regras, "")
+        regras = c(regras, regras_com_os_grupos("", grupos_de_cima))
         next
       }
       caminho_do_campo = paste0(caminho_de_cima, "/", nome_do_campo)
       caminhos = c(caminhos, caminho_do_campo)
-      regras = c(regras, regras_do_campo(item_do_schema, definicoes))
+      regras = c(regras, regras_com_os_grupos(regras_do_campo(item_do_schema, definicoes), grupos_de_cima))
       nome_do_tipo = sem_prefixo(xml2::xml_attr(item_do_schema, "type"))
       tipo_escrito_dentro = xml2::xml_find_first(item_do_schema, "xs:complexType", NAMESPACE_DO_XSD)
       if (!inherits(tipo_escrito_dentro, "xml_missing")) {

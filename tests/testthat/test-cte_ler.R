@@ -186,6 +186,18 @@ test_that("o CT-e OS: servi\u00e7o, tributos federais, fatura e observa\u00e7\u0
   expect_identical(nrow(lido$documentos), 0L)
 })
 
+test_that("o pagamento vinculado da Reforma (pgtoVinc)", {
+  lido = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
+  vinculados = lido$pagamentos_vinculados
+  expect_identical(vinculados$chave, CHAVE_SP)
+  expect_identical(vinculados$numero, 1L)
+  expect_identical(vinculados$transacao, "TRANSACAO-DE-TESTE-2")
+  expect_identical(vinculados$meio_pagamento, "17")
+  expect_identical(vinculados$cnpj_recebedor, "12ABC34501DE35")
+  expect_identical(vinculados$cnpj_base_instituicao, "11444777")
+  expect_true(all(is.na(lido$ctes$valor_icms_previsto)))
+})
+
 test_that("CT-e sem protocolo", {
   cte = cte_ler(CTE_CE)$ctes
   expect_identical(cte$chave, CHAVE_CE)
