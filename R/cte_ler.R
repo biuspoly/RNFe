@@ -212,11 +212,22 @@ texto  xTexto   texto
 
 #' Ler o XML de CT-e e CT-e OS
 #'
-#' Lê arquivos XML de CT-e (modelo 57) e de CT-e OS (modelo 67), leiautes 3.00
-#' e 4.00, com ou sem o protocolo de autorização (`cteProc`, `cteOSProc` ou só
-#' o documento), e devolve tabelas ligadas pela `chave`. Um arquivo que não dá
-#' para ler não interrompe os outros: fica em `arquivos`, com o motivo. O CT-e
-#' simplificado e a GTV-e, que têm outro conteúdo, não são lidos.
+#' Lê o XML de CT-e e CT-e OS e devolve uma lista de tabelas (`data.frame`s)
+#' ligadas pela `chave`: `ctes` (uma linha por CT-e: as pessoas, o tomador já
+#' resolvido, o valor da prestação, ICMS, IBS e CBS, a carga e o protocolo),
+#' `componentes` (frete peso, pedágio...), `documentos` (as NF-e transportadas e
+#' o que mais o CT-e cita), `cargas` (as quantidades), `impostos` (todos os
+#' campos de imposto, um por linha), `parcelas`, `pagamentos_vinculados`,
+#' `observacoes`, `campos` (todos os campos, só com `todos_os_campos = TRUE`) e
+#' `arquivos` (o que foi lido e o motivo do que não deu).
+#'
+#' Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), leiautes 3.00 e 4.00, com ou
+#' sem o protocolo de autorização (`cteProc`, `cteOSProc` ou só o documento),
+#' de um arquivo, de vários de uma vez ou do próprio texto do XML. Um arquivo
+#' que não dá para ler não interrompe os outros: fica em `arquivos`, com o
+#' motivo. O CT-e simplificado e a GTV-e, que têm outro conteúdo, não são
+#' lidos. Para saber se o CT-e foi cancelado, leia os eventos dele com
+#' [eventos_ler()].
 #'
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 #' (CST, CFOP, modal...) ficam como estão no XML; o significado de cada um está
@@ -305,8 +316,9 @@ texto  xTexto   texto
 #' `problema` (`NA` quando deu certo). Um texto de XML aparece como
 #' `"(texto 1)"`, `"(texto 2)"`...
 #'
-#' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
-#'   (começando por `<`).
+#' @param arquivos Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+#'   (por exemplo, `list.files("pasta", pattern = "xml$", full.names = TRUE)`)
+#'   ou o próprio texto do XML (começando por `<`).
 #' @param todos_os_campos `TRUE` devolve também a tabela `campos`, com todos os
 #'   campos de cada CT-e.
 #' @return Uma lista com os `data.frame`s `ctes`, `componentes`, `documentos`,

@@ -18,65 +18,59 @@ UF_PELO_CODIGO = c(
 )
 DOCUMENTO_PELO_MODELO = c("55" = "NF-e", "65" = "NFC-e", "57" = "CT-e", "67" = "CT-e OS", "58" = "MDF-e")
 
-#' Chave de acesso de documento fiscal eletrônico
+#' Conferir chaves de acesso
 #'
-#' A chave de 44 posições que identifica uma NF-e, NFC-e, CT-e ou MDF-e. Ela
-#' junta, nesta ordem: o código da UF do emitente (2), o ano e o mês de emissão
-#' (4), o CNPJ do emitente (14; em alguns documentos, um CPF com três zeros na
-#' frente), o modelo (2), a série (3), o número (9), a forma de emissão (1), um
-#' código numérico (8) e o dígito verificador (1).
-#'
-#' Na NF-e avulsa, emitida pelo Fisco (`procEmi` 1 no XML), as posições do CNPJ
-#' trazem o CNPJ do órgão que a emitiu, que vem no grupo `avulsa` do XML, e não
-#' o do emitente.
-#'
-#' Desde 06/07/2026 o CNPJ pode ter letras nas 12 primeiras posições (CNPJ
-#' alfanumérico). No cálculo dos dígitos, cada caractere vale o seu código ASCII
-#' menos 48: os números continuam valendo o mesmo e as letras valem A = 17,
-#' B = 18 e assim por diante.
-#'
-#' - `chave_valida()`: `TRUE` quando a chave tem o formato certo, a UF existe, o
-#'   mês vai de 1 a 12, o CNPJ (ou CPF) da chave confere e o dígito verificador
-#'   também.
-#' - `chave_decompor()`: as partes da chave, uma linha por chave, com o que está
-#'   errado em `problema`.
-#' - `chave_digito()`: o dígito verificador que a chave deveria ter, calculado
-#'   das 43 primeiras posições. Aceita a chave com ou sem o dígito.
+#' Diz se cada chave de acesso de 44 posições (NF-e, NFC-e, CT-e, CT-e OS ou
+#' MDF-e) está certa: `TRUE` ou `FALSE`, uma resposta por chave. Confere, como a
+#' SEFAZ, o formato, a UF, o mês, o CNPJ (ou CPF) do emitente que vai dentro da
+#' chave e o dígito verificador. Para saber o que está errado, use
+#' [chave_decompor()].
 #'
 #' Espaços, pontos e o prefixo do atributo `Id` do XML (`NFe`, `CTe`, `MDFe`)
-#' são ignorados, e letras minúsculas viram maiúsculas.
+#' são ignorados, e letras minúsculas viram maiúsculas. O CNPJ com letras (CNPJ
+#' alfanumérico, desde 06/07/2026) é aceito. A chave de 50 posições da NFS-e
+#' Nacional não é conferida: a regra do dígito dela não está escrita nas fontes
+#' oficiais.
 #'
-#' @param chaves As chaves de acesso (um vetor de texto, uma ou várias). Em
-#'   `chave_digito()`, com 44 posições ou só as 43 primeiras.
-#' @return `chave_valida()`: um vetor lógico. `chave_digito()`: um vetor de
-#'   inteiros, `NA` quando o texto não tem o formato de chave.
-#'   `chave_decompor()`: um `data.frame` com `chave`, `valida`, `problema`,
-#'   `codigo_uf`, `uf`, `ano`, `mes`, `documento_emitente` (o CNPJ ou CPF da
-#'   chave; na NF-e avulsa, o do órgão do Fisco), `tipo_documento` (`"CNPJ"` ou
-#'   `"CPF"`), `modelo`, `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`,
-#'   `"CT-e OS"` ou `"MDF-e"`; `NA` para outro modelo), `serie`, `numero`,
-#'   `forma_emissao`, `codigo_numerico` e `digito`.
+#' @param chaves As chaves de acesso: um texto ou um vetor com várias (por
+#'   exemplo, a coluna `chave` que vem de [nfe_ler()]).
+#' @return Um vetor lógico, um valor por chave.
+#' @seealso [chave_decompor()] para as partes da chave e o problema;
+#'   [chave_digito()] para calcular o dígito.
 #' @source Manual de Orientação do Contribuinte da NF-e (composição da chave) e
 #'   Nota Técnica Conjunta 2025.001, versão 1.00 de 25/04/2025 (CNPJ
-#'   alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
+#'   alfanumérico), do Portal Nacional da NF-e.
 #' @examples
-#' chave = "35261011444777000161550010000001231123456783"
-#' chave_valida(chave)
-#' chave_decompor(chave)
-#' chave_digito(chave)
-#'
-#' # CNPJ alfanumérico (o exemplo da Receita Federal, 12.ABC.345/01DE-35)
-#' chave_decompor("35261012ABC34501DE35550010000001231123456784")
-#' @name chave
-NULL
-
-#' @rdname chave
+#' chave_valida("35261011444777000161550010000001231123456783")   # TRUE
+#' chave_valida("35261011444777000161550010000001231123456780")   # FALSE: o dígito não confere
+#' chave_valida(c("35261012ABC34501DE35550010000001231123456784", "123"))
 #' @export
 chave_valida = function(chaves) {
   chave_decompor(chaves)$valida
 }
 
-#' @rdname chave
+#' Calcular o dígito verificador da chave de acesso
+#'
+#' Calcula o dígito verificador (a última posição, de 0 a 9) que cada chave de
+#' acesso deveria ter, a partir das 43 primeiras posições. Aceita a chave
+#' inteira (44 posições) ou sem o dígito (43) e devolve um número por chave, ou
+#' `NA` quando o texto não tem o formato de chave. Serve para completar uma
+#' chave montada à mão ou para achar o dígito certo de uma chave errada.
+#'
+#' O dígito é o módulo 11 com pesos de 2 a 9 a partir da direita (resto 0 ou 1
+#' dá dígito 0). Cada caractere vale o seu código ASCII menos 48: os números
+#' valem o mesmo, e as letras do CNPJ alfanumérico valem A = 17, B = 18 e assim
+#' por diante.
+#'
+#' @param chaves As chaves de acesso, com 44 posições ou só as 43 primeiras: um
+#'   texto ou um vetor com várias.
+#' @return Um vetor de inteiros, um por chave.
+#' @seealso [chave_valida()], [chave_decompor()]
+#' @source Manual de Orientação do Contribuinte da NF-e e Nota Técnica Conjunta
+#'   2025.001, versão 1.00 de 25/04/2025, do Portal Nacional da NF-e.
+#' @examples
+#' chave_digito("3526101144477700016155001000000123112345678")    # 3, sem o dígito
+#' chave_digito("35261011444777000161550010000001231123456789")   # 3: a chave deveria terminar em 3
 #' @export
 chave_digito = function(chaves) {
   chaves_limpas = limpar_chaves(chaves)
@@ -89,7 +83,48 @@ chave_digito = function(chaves) {
   digitos_calculados
 }
 
-#' @rdname chave
+#' Desmontar chaves de acesso
+#'
+#' Separa cada chave de acesso de 44 posições nas partes dela e diz o que está
+#' errado. Devolve um `data.frame` com uma linha por chave: `valida` (`TRUE` ou
+#' `FALSE`), `problema` (o que não confere), a `uf`, o `ano` e o `mes` de
+#' emissão, o CNPJ ou CPF do emitente (`documento_emitente`), o `modelo` e o
+#' nome do `documento` (NF-e, NFC-e, CT-e, CT-e OS ou MDF-e), a `serie`, o
+#' `numero`, a `forma_emissao`, o `codigo_numerico` e o `digito`.
+#'
+#' A chave junta, nesta ordem: o código da UF do emitente (2 posições), o ano e
+#' o mês de emissão (4), o CNPJ do emitente (14; em alguns documentos, um CPF
+#' com três zeros na frente), o modelo (2), a série (3), o número (9), a forma
+#' de emissão (1), um código numérico (8) e o dígito verificador (1).
+#'
+#' Na NF-e avulsa, emitida pelo Fisco (`procEmi` 1 no XML), as posições do CNPJ
+#' trazem o CNPJ do órgão que a emitiu, que vem no grupo `avulsa` do XML, e não
+#' o do emitente.
+#'
+#' Desde 06/07/2026 o CNPJ pode ter letras nas 12 primeiras posições (CNPJ
+#' alfanumérico). Espaços, pontos e o prefixo do atributo `Id` do XML (`NFe`,
+#' `CTe`, `MDFe`) são ignorados, e letras minúsculas viram maiúsculas.
+#'
+#' @param chaves As chaves de acesso: um texto ou um vetor com várias.
+#' @return Um `data.frame` com `chave`, `valida`, `problema`, `codigo_uf`,
+#'   `uf`, `ano`, `mes`, `documento_emitente` (o CNPJ ou CPF da chave; na NF-e
+#'   avulsa, o do órgão do Fisco), `tipo_documento` (`"CNPJ"` ou `"CPF"`),
+#'   `modelo`, `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`, `"CT-e OS"` ou
+#'   `"MDF-e"`; `NA` para outro modelo), `serie`, `numero`, `forma_emissao`,
+#'   `codigo_numerico` e `digito`. Chave com o formato errado fica com as partes
+#'   vazias (`NA`) e o motivo em `problema`.
+#' @seealso [chave_valida()], [chave_digito()]
+#' @source Manual de Orientação do Contribuinte da NF-e (composição da chave) e
+#'   Nota Técnica Conjunta 2025.001, versão 1.00 de 25/04/2025 (CNPJ
+#'   alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
+#' @examples
+#' chave_decompor("35261011444777000161550010000001231123456783")
+#'
+#' # CNPJ alfanumérico (o exemplo da Receita Federal, 12.ABC.345/01DE-35)
+#' chave_decompor("35261012ABC34501DE35550010000001231123456784")
+#'
+#' # O que está errado em cada uma
+#' chave_decompor(c("35261011444777000161550010000001231123456780", "3526"))$problema
 #' @export
 chave_decompor = function(chaves) {
   chaves_limpas = limpar_chaves(chaves)

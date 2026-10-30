@@ -123,11 +123,18 @@ classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 
 #' Ler o XML da NFS-e Nacional
 #'
-#' Lê arquivos XML da NFS-e do padrão nacional (leiautes 1.00 e 1.01, raiz
-#' `NFSe`) e devolve tabelas ligadas pela `chave`, a chave de acesso de 50
-#' posições. A NFS-e de prefeitura, no padrão próprio de cada município, não é
-#' lida. Um arquivo que não dá para ler não interrompe os outros: fica em
-#' `arquivos`, com o motivo.
+#' Lê o XML da NFS-e do padrão nacional e devolve uma lista de tabelas
+#' (`data.frame`s) ligadas pela `chave` (a chave de acesso de 50 posições):
+#' `nfses` (uma linha por NFS-e: prestador, tomador, serviço, valor, ISSQN,
+#' retenções, valor líquido, IBS e CBS), `campos` (todos os campos, um por
+#' linha: deduções, obra, comércio exterior...) e `arquivos` (o que foi lido e
+#' o motivo do que não deu).
+#'
+#' Lê os leiautes 1.00 e 1.01 (raiz `NFSe`), de um arquivo, de vários de uma
+#' vez ou do próprio texto do XML. A NFS-e de prefeitura, no padrão próprio de
+#' cada município, não é lida. Um arquivo que não dá para ler não interrompe os
+#' outros: fica em `arquivos`, com o motivo. Para saber se a NFS-e foi
+#' cancelada ou substituída, leia os eventos dela com [eventos_ler()].
 #'
 #' A NFS-e traz duas partes: a DPS, que quem emitiu declarou (prestador,
 #' tomador, serviço, valores, tributos), e o que o sistema que a autorizou gerou
@@ -163,8 +170,9 @@ classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 #' `problema` (`NA` quando deu certo). Um texto de XML aparece como
 #' `"(texto 1)"`, `"(texto 2)"`...
 #'
-#' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
-#'   (começando por `<`).
+#' @param arquivos Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+#'   (por exemplo, `list.files("pasta", pattern = "xml$", full.names = TRUE)`)
+#'   ou o próprio texto do XML (começando por `<`).
 #' @param todos_os_campos `FALSE` deixa de fora a tabela `campos`. O padrão é
 #'   `TRUE` porque boa parte da NFS-e não tem coluna própria, e uma NFS-e tem
 #'   poucos campos.

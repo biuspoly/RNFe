@@ -11,8 +11,9 @@ publicado no Portal Nacional do MDF-e em 25/04/2026.
 mdfe_ler(arquivos, todos_os_campos = TRUE)
 }
 \arguments{
-\item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
-(começando por \code{<}).}
+\item{arquivos}{Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+(por exemplo, \code{list.files("pasta", pattern = "xml$", full.names = TRUE)})
+ou o próprio texto do XML (começando por \code{<}).}
 
 \item{todos_os_campos}{\code{FALSE} deixa de fora a tabela \code{campos}. O padrão é
 \code{TRUE} porque boa parte do MDF-e não tem coluna própria, e um MDF-e tem
@@ -24,12 +25,22 @@ Uma lista com os \code{data.frame}s \code{mdfes}, \code{locais}, \code{documento
 \code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
-Lê arquivos XML de MDF-e (modelo 58, leiaute 3.00), com ou sem o protocolo
-de autorização (\code{mdfeProc} ou só \code{MDFe}), e devolve tabelas ligadas pela
-\code{chave}. Um arquivo que não dá para ler não interrompe os outros: fica em
-\code{arquivos}, com o motivo.
+Lê o XML de MDF-e e devolve uma lista de tabelas (\code{data.frame}s) ligadas
+pela \code{chave}: \code{mdfes} (uma linha por MDF-e: emitente, modal, UFs de início e
+fim, placa, totais da carga e protocolo), \code{locais} (municípios de
+carregamento, UFs do percurso e municípios de descarregamento), \code{documentos}
+(os CT-e e as NF-e de cada descarregamento), \code{veiculos}, \code{condutores},
+\code{seguros}, \code{campos} (todos os campos, um por linha: CIOT, vale-pedágio,
+pagamento do frete...) e \code{arquivos} (o que foi lido e o motivo do que não
+deu).
 }
 \details{
+Lê o modelo 58, leiaute 3.00, com ou sem o protocolo de autorização
+(\code{mdfeProc} ou só \code{MDFe}), de um arquivo, de vários de uma vez ou do próprio
+texto do XML. Um arquivo que não dá para ler não interrompe os outros: fica
+em \code{arquivos}, com o motivo. Para saber se o MDF-e foi encerrado ou
+cancelado, leia os eventos dele com \code{\link[=eventos_ler]{eventos_ler()}}.
+
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 (modal, tipo de emitente, tipo de carga...) ficam como estão no XML; o
 significado de cada um está no Manual de Orientação do Contribuinte do

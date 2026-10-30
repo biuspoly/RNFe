@@ -12,8 +12,9 @@ Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
 nfe_ler(arquivos, todos_os_campos = FALSE)
 }
 \arguments{
-\item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
-(começando por \code{<}).}
+\item{arquivos}{Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+(por exemplo, \code{list.files("pasta", pattern = "xml$", full.names = TRUE)})
+ou o próprio texto do XML (começando por \code{<}).}
 
 \item{todos_os_campos}{\code{TRUE} devolve também a tabela \code{campos}, com todos os
 campos de cada nota.}
@@ -24,12 +25,22 @@ Uma lista com os \code{data.frame}s \code{notas}, \code{itens}, \code{impostos},
 \code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
-Lê arquivos XML de NF-e e NFC-e (leiaute 4.00), com ou sem o protocolo de
-autorização (\code{nfeProc} ou só \code{NFe}), e devolve tabelas ligadas pela \code{chave}.
-Um arquivo que não dá para ler não interrompe os outros: fica em \code{arquivos},
-com o motivo.
+Lê o XML de NF-e e NFC-e e devolve uma lista de tabelas (\code{data.frame}s)
+ligadas pela \code{chave}: \code{notas} (uma linha por nota: emitente, destinatário,
+totais, IBS e CBS, protocolo e, na NFC-e, o QR-Code), \code{itens} (uma linha por
+item: produto, NCM, CFOP e os impostos em colunas, com o nome de cada
+código), \code{impostos} (todos os campos de imposto, um por linha), \code{parcelas},
+\code{pagamentos}, \code{pagamentos_vinculados}, \code{campos} (todos os campos, só com
+\code{todos_os_campos = TRUE}) e \code{arquivos} (o que foi lido e o motivo do que não
+deu).
 }
 \details{
+Lê o leiaute 4.00, com ou sem o protocolo de autorização (\code{nfeProc} ou só
+\code{NFe}), de um arquivo, de vários de uma vez ou do próprio texto do XML. Um
+arquivo que não dá para ler não interrompe os outros: fica em \code{arquivos},
+com o motivo. Para saber se a nota foi cancelada, leia os eventos dela com
+\code{\link[=eventos_ler]{eventos_ler()}}.
+
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 (CST, CFOP, forma de pagamento...) ficam como estão no XML; o significado de
 cada um está no Manual de Orientação do Contribuinte. Campo que a nota não

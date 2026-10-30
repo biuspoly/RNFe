@@ -11,8 +11,9 @@ publicado na documentação técnica do portal da NFS-e (gov.br/nfse).
 nfse_ler(arquivos, todos_os_campos = TRUE)
 }
 \arguments{
-\item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
-(começando por \code{<}).}
+\item{arquivos}{Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+(por exemplo, \code{list.files("pasta", pattern = "xml$", full.names = TRUE)})
+ou o próprio texto do XML (começando por \code{<}).}
 
 \item{todos_os_campos}{\code{FALSE} deixa de fora a tabela \code{campos}. O padrão é
 \code{TRUE} porque boa parte da NFS-e não tem coluna própria, e uma NFS-e tem
@@ -23,13 +24,20 @@ Uma lista com os \code{data.frame}s \code{nfses}, \code{campos} (só com
 \code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
-Lê arquivos XML da NFS-e do padrão nacional (leiautes 1.00 e 1.01, raiz
-\code{NFSe}) e devolve tabelas ligadas pela \code{chave}, a chave de acesso de 50
-posições. A NFS-e de prefeitura, no padrão próprio de cada município, não é
-lida. Um arquivo que não dá para ler não interrompe os outros: fica em
-\code{arquivos}, com o motivo.
+Lê o XML da NFS-e do padrão nacional e devolve uma lista de tabelas
+(\code{data.frame}s) ligadas pela \code{chave} (a chave de acesso de 50 posições):
+\code{nfses} (uma linha por NFS-e: prestador, tomador, serviço, valor, ISSQN,
+retenções, valor líquido, IBS e CBS), \code{campos} (todos os campos, um por
+linha: deduções, obra, comércio exterior...) e \code{arquivos} (o que foi lido e
+o motivo do que não deu).
 }
 \details{
+Lê os leiautes 1.00 e 1.01 (raiz \code{NFSe}), de um arquivo, de vários de uma
+vez ou do próprio texto do XML. A NFS-e de prefeitura, no padrão próprio de
+cada município, não é lida. Um arquivo que não dá para ler não interrompe os
+outros: fica em \code{arquivos}, com o motivo. Para saber se a NFS-e foi
+cancelada ou substituída, leia os eventos dela com \code{\link[=eventos_ler]{eventos_ler()}}.
+
 A NFS-e traz duas partes: a DPS, que quem emitiu declarou (prestador,
 tomador, serviço, valores, tributos), e o que o sistema que a autorizou gerou
 (número, situação, base e valor do ISSQN, valor líquido e o IBS e a CBS

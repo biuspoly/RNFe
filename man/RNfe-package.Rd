@@ -9,8 +9,9 @@
 Funções para os documentos fiscais eletrônicos do Brasil (NF-e, NFC-e, CT-e,
 MDF-e, NFS-e Nacional). Nesta versão:
 \itemize{
-\item a chave de acesso: conferir, desmontar e calcular o dígito, já com o CNPJ
-alfanumérico (veja \link{chave});
+\item a chave de acesso, já com o CNPJ alfanumérico: \code{\link[=chave_valida]{chave_valida()}} (está
+certa?), \code{\link[=chave_decompor]{chave_decompor()}} (as partes e o que está errado) e
+\code{\link[=chave_digito]{chave_digito()}} (o dígito que ela deveria ter);
 \item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}},
 \code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles (cancelamento, carta de
 correção, manifestação, encerramento...), \code{\link[=eventos_ler]{eventos_ler()}};

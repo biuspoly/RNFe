@@ -125,10 +125,20 @@ averbacao              self::nAver                                              
 
 #' Ler o XML de MDF-e
 #'
-#' Lê arquivos XML de MDF-e (modelo 58, leiaute 3.00), com ou sem o protocolo
-#' de autorização (`mdfeProc` ou só `MDFe`), e devolve tabelas ligadas pela
-#' `chave`. Um arquivo que não dá para ler não interrompe os outros: fica em
-#' `arquivos`, com o motivo.
+#' Lê o XML de MDF-e e devolve uma lista de tabelas (`data.frame`s) ligadas
+#' pela `chave`: `mdfes` (uma linha por MDF-e: emitente, modal, UFs de início e
+#' fim, placa, totais da carga e protocolo), `locais` (municípios de
+#' carregamento, UFs do percurso e municípios de descarregamento), `documentos`
+#' (os CT-e e as NF-e de cada descarregamento), `veiculos`, `condutores`,
+#' `seguros`, `campos` (todos os campos, um por linha: CIOT, vale-pedágio,
+#' pagamento do frete...) e `arquivos` (o que foi lido e o motivo do que não
+#' deu).
+#'
+#' Lê o modelo 58, leiaute 3.00, com ou sem o protocolo de autorização
+#' (`mdfeProc` ou só `MDFe`), de um arquivo, de vários de uma vez ou do próprio
+#' texto do XML. Um arquivo que não dá para ler não interrompe os outros: fica
+#' em `arquivos`, com o motivo. Para saber se o MDF-e foi encerrado ou
+#' cancelado, leia os eventos dele com [eventos_ler()].
 #'
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 #' (modal, tipo de emitente, tipo de carga...) ficam como estão no XML; o
@@ -187,8 +197,9 @@ averbacao              self::nAver                                              
 #' `problema` (`NA` quando deu certo). Um texto de XML aparece como
 #' `"(texto 1)"`, `"(texto 2)"`...
 #'
-#' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
-#'   (começando por `<`).
+#' @param arquivos Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+#'   (por exemplo, `list.files("pasta", pattern = "xml$", full.names = TRUE)`)
+#'   ou o próprio texto do XML (começando por `<`).
 #' @param todos_os_campos `FALSE` deixa de fora a tabela `campos`. O padrão é
 #'   `TRUE` porque boa parte do MDF-e não tem coluna própria, e um MDF-e tem
 #'   poucos campos.

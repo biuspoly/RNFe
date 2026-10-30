@@ -95,15 +95,22 @@ FAMILIA_PELA_CHAVE = c(chNFe = "NF-e", chCTe = "CT-e", chMDFe = "MDF-e")
 
 #' Ler o XML de eventos
 #'
-#' Lê arquivos XML de eventos da NF-e, da NFC-e, do CT-e, do MDF-e e da NFS-e
-#' Nacional (cancelamento, carta de correção, manifestação do destinatário,
-#' encerramento, os eventos que o Fisco registra...) e devolve uma tabela com
-#' uma linha por evento, ligada aos documentos pela `chave`. Lê o evento com o
-#' retorno da SEFAZ (`procEventoNFe`, `procEventoCTe`, `procEventoMDFe`), o
-#' evento só assinado, o evento da NFS-e como o sistema nacional o registra e o
-#' resumo de evento que a Distribuição de DF-e entrega (`resEvento`). Um
-#' arquivo que não dá para ler não interrompe os outros: fica em `arquivos`,
-#' com o motivo.
+#' Lê o XML dos eventos (cancelamento, carta de correção, manifestação do
+#' destinatário, encerramento, os que o Fisco registra...) da NF-e, da NFC-e, do
+#' CT-e, do MDF-e e da NFS-e Nacional e devolve uma lista de tabelas
+#' (`data.frame`s): `eventos` (uma linha por evento: o documento e a `chave`
+#' dele, o tipo do evento, a descrição, a data, o autor, a justificativa, a
+#' correção e o retorno da SEFAZ), `campos` (todos os campos de cada evento, um
+#' por linha) e `arquivos` (o que foi lido e o motivo do que não deu). Junte
+#' com as tabelas dos documentos pela `chave` para saber, por exemplo, quais
+#' notas foram canceladas (tipo `110111`).
+#'
+#' Lê o evento com o retorno da SEFAZ (`procEventoNFe`, `procEventoCTe`,
+#' `procEventoMDFe`), o evento só assinado, o evento da NFS-e como o sistema
+#' nacional o registra e o resumo de evento que a Distribuição de DF-e entrega
+#' (`resEvento`), de um arquivo, de vários de uma vez ou do próprio texto do
+#' XML. Um arquivo que não dá para ler não interrompe os outros: fica em
+#' `arquivos`, com o motivo.
 #'
 #' Um documento cancelado continua com a situação de autorizado no protocolo
 #' dele, porque o cancelamento é um evento à parte. Para saber quais foram
@@ -155,8 +162,9 @@ FAMILIA_PELA_CHAVE = c(chNFe = "NF-e", chCTe = "CT-e", chMDFe = "MDF-e")
 #' e `problema` (`NA` quando deu certo). Um texto de XML aparece como
 #' `"(texto 1)"`, `"(texto 2)"`...
 #'
-#' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
-#'   (começando por `<`).
+#' @param arquivos Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+#'   (por exemplo, `list.files("pasta", pattern = "xml$", full.names = TRUE)`)
+#'   ou o próprio texto do XML (começando por `<`).
 #' @param todos_os_campos `FALSE` deixa de fora a tabela `campos`. O padrão é
 #'   `TRUE` porque cada tipo de evento tem campos próprios, e um evento tem
 #'   poucos campos.

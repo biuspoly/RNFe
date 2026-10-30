@@ -2,7 +2,7 @@
 % Please edit documentation in R/tabelas.R
 \name{tabela_fiscal}
 \alias{tabela_fiscal}
-\title{Tabelas fiscais}
+\title{Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS e municípios}
 \source{
 CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
@@ -19,9 +19,12 @@ está em \code{tabela_fiscal("fontes")}.
 tabela_fiscal(nome_da_tabela)
 }
 \arguments{
-\item{nome_da_tabela}{O nome da tabela: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
-\code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
-\code{"classificacao_ibs_cbs"}, \code{"municipios"} ou \code{"fontes"}.}
+\item{nome_da_tabela}{Qual tabela: \code{"cfop"} (CFOP), \code{"ncm"} (NCM),
+\code{"origem"} (origem da mercadoria), \code{"cst_icms"} (CST do ICMS), \code{"csosn"}
+(CSOSN, do Simples Nacional), \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"},
+\code{"cst_ibs_cbs"} (CST do IBS e da CBS), \code{"classificacao_ibs_cbs"}
+(cClassTrib da Reforma), \code{"municipios"} (código IBGE, nome e UF) ou
+\code{"fontes"} (de onde veio cada tabela).}
 }
 \value{
 Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
@@ -29,12 +32,16 @@ Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
 \code{inicio} e \code{fim}.
 }
 \description{
-As tabelas de códigos da NF-e, copiadas das fontes oficiais, com a data em
-que cada linha passou a valer (\code{inicio}) e a última em que valeu (\code{fim},
-vazio quando ainda vale). Um código que mudou de descrição tem uma linha
-por período.
+Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
+oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
+\code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
+\code{"classificacao_ibs_cbs"}, \code{"municipios"} ou \code{"fontes"} (de onde veio cada
+uma, com a data). Cada tabela de códigos traz o \code{codigo}, a descrição e a vigência:
+\code{inicio} (desde quando vale) e \code{fim} (até quando valeu, vazio quando ainda
+vale). Um código que mudou de descrição tem uma linha por período.
 }
 \details{
+O que cada tabela tem:
 \itemize{
 \item \code{"cfop"}: os CFOP aceitos hoje na NF-e, com o \code{titulo} e a
 \code{nota_explicativa} literais do Anexo II do Convênio SINIEF s/nº de 1970 e

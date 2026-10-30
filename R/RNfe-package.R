@@ -2,8 +2,9 @@
 #'
 #' Funções para os documentos fiscais eletrônicos do Brasil (NF-e, NFC-e, CT-e,
 #' MDF-e, NFS-e Nacional). Nesta versão:
-#' - a chave de acesso: conferir, desmontar e calcular o dígito, já com o CNPJ
-#'   alfanumérico (veja [chave]);
+#' - a chave de acesso, já com o CNPJ alfanumérico: [chave_valida()] (está
+#'   certa?), [chave_decompor()] (as partes e o que está errado) e
+#'   [chave_digito()] (o dígito que ela deveria ter);
 #' - a leitura do XML em tabelas: [nfe_ler()], [cte_ler()], [mdfe_ler()],
 #'   [nfse_ler()] e, para os eventos de todos eles (cancelamento, carta de
 #'   correção, manifestação, encerramento...), [eventos_ler()];

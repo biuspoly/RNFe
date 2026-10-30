@@ -12,8 +12,9 @@ RTC 1.00, publicado no Portal Nacional do CT-e (republicado em
 cte_ler(arquivos, todos_os_campos = FALSE)
 }
 \arguments{
-\item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
-(começando por \code{<}).}
+\item{arquivos}{Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+(por exemplo, \code{list.files("pasta", pattern = "xml$", full.names = TRUE)})
+ou o próprio texto do XML (começando por \code{<}).}
 
 \item{todos_os_campos}{\code{TRUE} devolve também a tabela \code{campos}, com todos os
 campos de cada CT-e.}
@@ -24,13 +25,24 @@ Uma lista com os \code{data.frame}s \code{ctes}, \code{componentes}, \code{docum
 \code{campos} (só com \code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
-Lê arquivos XML de CT-e (modelo 57) e de CT-e OS (modelo 67), leiautes 3.00
-e 4.00, com ou sem o protocolo de autorização (\code{cteProc}, \code{cteOSProc} ou só
-o documento), e devolve tabelas ligadas pela \code{chave}. Um arquivo que não dá
-para ler não interrompe os outros: fica em \code{arquivos}, com o motivo. O CT-e
-simplificado e a GTV-e, que têm outro conteúdo, não são lidos.
+Lê o XML de CT-e e CT-e OS e devolve uma lista de tabelas (\code{data.frame}s)
+ligadas pela \code{chave}: \code{ctes} (uma linha por CT-e: as pessoas, o tomador já
+resolvido, o valor da prestação, ICMS, IBS e CBS, a carga e o protocolo),
+\code{componentes} (frete peso, pedágio...), \code{documentos} (as NF-e transportadas e
+o que mais o CT-e cita), \code{cargas} (as quantidades), \code{impostos} (todos os
+campos de imposto, um por linha), \code{parcelas}, \code{pagamentos_vinculados},
+\code{observacoes}, \code{campos} (todos os campos, só com \code{todos_os_campos = TRUE}) e
+\code{arquivos} (o que foi lido e o motivo do que não deu).
 }
 \details{
+Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), leiautes 3.00 e 4.00, com ou
+sem o protocolo de autorização (\code{cteProc}, \code{cteOSProc} ou só o documento),
+de um arquivo, de vários de uma vez ou do próprio texto do XML. Um arquivo
+que não dá para ler não interrompe os outros: fica em \code{arquivos}, com o
+motivo. O CT-e simplificado e a GTV-e, que têm outro conteúdo, não são
+lidos. Para saber se o CT-e foi cancelado, leia os eventos dele com
+\code{\link[=eventos_ler]{eventos_ler()}}.
+
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 (CST, CFOP, modal...) ficam como estão no XML; o significado de cada um está
 no Manual de Orientação do Contribuinte do CT-e. Campo que o CT-e não tem

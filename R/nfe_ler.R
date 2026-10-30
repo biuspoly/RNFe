@@ -180,10 +180,20 @@ autorizacao      card/cAut  texto
 
 #' Ler o XML de NF-e e NFC-e
 #'
-#' Lê arquivos XML de NF-e e NFC-e (leiaute 4.00), com ou sem o protocolo de
-#' autorização (`nfeProc` ou só `NFe`), e devolve tabelas ligadas pela `chave`.
-#' Um arquivo que não dá para ler não interrompe os outros: fica em `arquivos`,
-#' com o motivo.
+#' Lê o XML de NF-e e NFC-e e devolve uma lista de tabelas (`data.frame`s)
+#' ligadas pela `chave`: `notas` (uma linha por nota: emitente, destinatário,
+#' totais, IBS e CBS, protocolo e, na NFC-e, o QR-Code), `itens` (uma linha por
+#' item: produto, NCM, CFOP e os impostos em colunas, com o nome de cada
+#' código), `impostos` (todos os campos de imposto, um por linha), `parcelas`,
+#' `pagamentos`, `pagamentos_vinculados`, `campos` (todos os campos, só com
+#' `todos_os_campos = TRUE`) e `arquivos` (o que foi lido e o motivo do que não
+#' deu).
+#'
+#' Lê o leiaute 4.00, com ou sem o protocolo de autorização (`nfeProc` ou só
+#' `NFe`), de um arquivo, de vários de uma vez ou do próprio texto do XML. Um
+#' arquivo que não dá para ler não interrompe os outros: fica em `arquivos`,
+#' com o motivo. Para saber se a nota foi cancelada, leia os eventos dela com
+#' [eventos_ler()].
 #'
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 #' (CST, CFOP, forma de pagamento...) ficam como estão no XML; o significado de
@@ -247,8 +257,9 @@ autorizacao      card/cAut  texto
 #' `problema` (`NA` quando deu certo). Um texto de XML aparece como
 #' `"(texto 1)"`, `"(texto 2)"`...
 #'
-#' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
-#'   (começando por `<`).
+#' @param arquivos Os XMLs a ler: o caminho de um arquivo, um vetor com vários
+#'   (por exemplo, `list.files("pasta", pattern = "xml$", full.names = TRUE)`)
+#'   ou o próprio texto do XML (começando por `<`).
 #' @param todos_os_campos `TRUE` devolve também a tabela `campos`, com todos os
 #'   campos de cada nota.
 #' @return Uma lista com os `data.frame`s `notas`, `itens`, `impostos`,

@@ -14,13 +14,17 @@ COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs")
 # Cada tabela é lida do disco uma vez por sessão.
 tabelas_ja_lidas = new.env(parent = emptyenv())
 
-#' Tabelas fiscais
+#' Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS e municípios
 #'
-#' As tabelas de códigos da NF-e, copiadas das fontes oficiais, com a data em
-#' que cada linha passou a valer (`inicio`) e a última em que valeu (`fim`,
-#' vazio quando ainda vale). Um código que mudou de descrição tem uma linha
-#' por período.
+#' Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
+#' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
+#' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
+#' `"classificacao_ibs_cbs"`, `"municipios"` ou `"fontes"` (de onde veio cada
+#' uma, com a data). Cada tabela de códigos traz o `codigo`, a descrição e a vigência:
+#' `inicio` (desde quando vale) e `fim` (até quando valeu, vazio quando ainda
+#' vale). Um código que mudou de descrição tem uma linha por período.
 #'
+#' O que cada tabela tem:
 #' - `"cfop"`: os CFOP aceitos hoje na NF-e, com o `titulo` e a
 #'   `nota_explicativa` literais do Anexo II do Convênio SINIEF s/nº de 1970 e
 #'   os indicadores da tabela da NF-e (1 = sim): `permitido_na_nfe`,
@@ -59,9 +63,12 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #' 500 em 2012 e o 102 e o 202 em 2023 só porque passaram a coincidir com CSTs
 #' novos; na NF-e eles continuam aceitos.
 #'
-#' @param nome_da_tabela O nome da tabela: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
-#'   `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
-#'   `"classificacao_ibs_cbs"`, `"municipios"` ou `"fontes"`.
+#' @param nome_da_tabela Qual tabela: `"cfop"` (CFOP), `"ncm"` (NCM),
+#'   `"origem"` (origem da mercadoria), `"cst_icms"` (CST do ICMS), `"csosn"`
+#'   (CSOSN, do Simples Nacional), `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`,
+#'   `"cst_ibs_cbs"` (CST do IBS e da CBS), `"classificacao_ibs_cbs"`
+#'   (cClassTrib da Reforma), `"municipios"` (código IBGE, nome e UF) ou
+#'   `"fontes"` (de onde veio cada tabela).
 #' @return Um `data.frame` com `codigo`, a descrição (`titulo` e
 #'   `nota_explicativa` no CFOP, `nome` nos municípios, `descricao` nas outras),
 #'   `inicio` e `fim`.
