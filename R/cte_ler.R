@@ -307,7 +307,7 @@ cte_ler = function(arquivos) {
   arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DOS_CTES, "um CT-e", colunas_do_cte)
   colunas_vazias = colunas_do_cte(NULL, NA_character_)
 
-  resultado = list(
+  tabelas_do_cte = list(
     ctes = juntar_tabela(arquivos_lidos, "ctes", colunas_vazias$ctes),
     componentes = juntar_tabela(arquivos_lidos, "componentes", colunas_vazias$componentes),
     documentos = juntar_tabela(arquivos_lidos, "documentos", colunas_vazias$documentos),
@@ -317,22 +317,22 @@ cte_ler = function(arquivos) {
     observacoes = juntar_tabela(arquivos_lidos, "observacoes", colunas_vazias$observacoes),
     arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
   )
-  resultado$ctes = converter_datas(resultado$ctes, rbind(CAMPOS_DO_CTE, CAMPOS_DO_PROTOCOLO))
-  resultado$ctes = preencher_tomador(resultado$ctes)
-  resultado$ctes = acrescentar_descricoes(resultado$ctes, resultado$ctes$data_emissao, DESCRICOES_DO_CTE)
-  resultado$documentos = converter_datas(resultado$documentos, CAMPOS_DO_DOCUMENTO)
-  resultado$parcelas = converter_datas(resultado$parcelas, CAMPOS_DA_PARCELA)
-  resultado
+  tabelas_do_cte$ctes = converter_datas(tabelas_do_cte$ctes, rbind(CAMPOS_DO_CTE, CAMPOS_DO_PROTOCOLO))
+  tabelas_do_cte$ctes = preencher_tomador(tabelas_do_cte$ctes)
+  tabelas_do_cte$ctes = acrescentar_descricoes(tabelas_do_cte$ctes, tabelas_do_cte$ctes$data_emissao, DESCRICOES_DO_CTE)
+  tabelas_do_cte$documentos = converter_datas(tabelas_do_cte$documentos, CAMPOS_DO_DOCUMENTO)
+  tabelas_do_cte$parcelas = converter_datas(tabelas_do_cte$parcelas, CAMPOS_DA_PARCELA)
+  tabelas_do_cte
 }
 
-# As colunas das tabelas de um arquivo de CT-e, cada uma num vetor. Com documento NULL, vêm vazias, já
-# com os nomes e os tipos certos.
-colunas_do_cte = function(documento, nome_do_arquivo) {
-  if (is.null(documento)) {
-    documento = xml2::read_xml("<vazio/>")
+# As colunas das tabelas de um arquivo de CT-e, cada uma num vetor. Com xml_lido NULL, vêm vazias, já com
+# os nomes e os tipos certos.
+colunas_do_cte = function(xml_lido, nome_do_arquivo) {
+  if (is.null(xml_lido)) {
+    xml_lido = xml2::read_xml("<vazio/>")
   }
-  ctes = buscar_todos(documento, CAMINHO_DOS_CTES)
-  protocolos = buscar_todos(documento, "//protCTe/infProt")
+  ctes = buscar_todos(xml_lido, CAMINHO_DOS_CTES)
+  protocolos = buscar_todos(xml_lido, "//protCTe/infProt")
   componentes = buscar_todos(ctes, "vPrest/Comp")
   documentos = buscar_todos(ctes, CAMINHO_DOS_DOCUMENTOS)
   cargas = buscar_todos(ctes, "infCTeNorm/infCarga/infQ")
@@ -379,9 +379,11 @@ colunas_dos_impostos_do_cte = function(campos_dos_impostos) {
 preencher_tomador = function(ctes) {
   for (papel in 0:3) {
     linhas_do_papel = which(ctes$tomador_papel == papel)
-    pessoa = PESSOA_DE_CADA_PAPEL[papel + 1]
-    for (dado in DADOS_DO_TOMADOR) {
-      ctes[[paste0("tomador_", dado)]][linhas_do_papel] = ctes[[paste0(pessoa, "_", dado)]][linhas_do_papel]
+    pessoa_do_papel = PESSOA_DE_CADA_PAPEL[papel + 1]
+    for (dado_do_tomador in DADOS_DO_TOMADOR) {
+      coluna_do_tomador = paste0("tomador_", dado_do_tomador)
+      coluna_da_pessoa = paste0(pessoa_do_papel, "_", dado_do_tomador)
+      ctes[[coluna_do_tomador]][linhas_do_papel] = ctes[[coluna_da_pessoa]][linhas_do_papel]
     }
   }
   ctes

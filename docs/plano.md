@@ -267,6 +267,31 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Falta a terceira camada:** o pacote buscar sozinho, no computador de quem usa, a tabela mais nova do
   repositório.
 
+## O vigia dos schemas
+
+- Os leitores seguem um pacote de schemas por documento (`ferramentas/schemas_usados.csv`), e o código dos
+  leitores é escrito à mão a partir dele. Quando a SEFAZ publica um pacote novo, nada muda sozinho: o vigia
+  avisa e uma pessoa atualiza.
+- `.github/workflows/vigiar-schemas.yml` roda toda segunda às 9h30 UTC (6h30 em Brasília), e também à mão.
+  Ele lê as listas de schemas dos portais da NF-e, do CT-e e do MDF-e (`ferramentas/vigiar_schemas.R`) e
+  abre um aviso (issue) para cada publicação que não está em `ferramentas/schemas_vistos.csv`. Quando a
+  publicação traz o schema principal, o aviso diz os campos que entraram, que saíram e que mudaram de regra
+  (ocorrências, tipo, padrão, valores aceitos, seguindo o tipo de origem). Nunca abre dois avisos com o mesmo
+  título, aberto ou fechado. Se um portal não responde, termina com erro depois de abrir os avisos dos outros.
+- Depois de atualizar um leitor (ou de ver que a publicação não afeta o RNfe), rodar
+  `Rscript ferramentas/vigiar_schemas.R --registrar`.
+- `ferramentas/baixar_schemas.R` baixa os pacotes seguidos, e `ferramentas/validar_exemplos.R` sem argumentos
+  usa ele: a validação não depende mais de uma cópia guardada à mão.
+- **Testado em 30/10/2026:** os três portais responderam aos servidores do GitHub (205 publicações). Num ramo
+  de teste sem uma publicação no registro, o robô abriu um aviso (nº 2) e, na rodada seguinte, não abriu
+  outro; o aviso foi fechado com a explicação e o ramo apagado. Os pacotes que o `baixar_schemas.R` traz são
+  idênticos, arquivo por arquivo, aos usados para validar os exemplos.
+- **Detalhes dos portais:** o do MDF-e monta os links por JavaScript (o nome do arquivo está no `onclick`);
+  o da NF-e às vezes publica o `+` do código do arquivo como espaço (os dois vão como `%2B`, e o portal aceita).
+- **O primeiro uso já achou lacunas:** comparando o pacote 010f da NF-e com o 010g, que o `nfe_ler()` segue,
+  entraram os valores líquidos (`vProdLiq`, `vUnComLiq`, `vProdLiqTot`) e o pagamento vinculado
+  (`gPgtoVinc`), que o leitor ainda não lia; no CT-e, o `pgtoVinc`.
+
 ## CEST: adiado (decisão do usuário, 29/10/2026)
 
 Nenhuma fonte oficial dá a descrição atual do CEST sem ambiguidade, e o Portal da NF-e não publica tabela de

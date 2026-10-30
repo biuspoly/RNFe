@@ -54,7 +54,7 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #' 500 em 2012 e o 102 e o 202 em 2023 só porque passaram a coincidir com CSTs
 #' novos; na NF-e eles continuam aceitos.
 #'
-#' @param nome O nome da tabela: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
+#' @param nome_da_tabela O nome da tabela: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #'   `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
 #'   `"classificacao_ibs_cbs"` ou `"fontes"`.
 #' @return Um `data.frame` com `codigo`, a descrição (`titulo` e
@@ -74,36 +74,36 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #' cfop[cfop$codigo == "5102", c("codigo", "titulo")]
 #' tabela_fiscal("fontes")
 #' @export
-tabela_fiscal = function(nome) {
-  if (length(nome) != 1 || !(nome %in% NOMES_DAS_TABELAS)) {
+tabela_fiscal = function(nome_da_tabela) {
+  if (length(nome_da_tabela) != 1 || !(nome_da_tabela %in% NOMES_DAS_TABELAS)) {
     stop(
-      "Tabela desconhecida: ", paste(nome, collapse = ", "), ". As tabelas s\u00e3o: ",
+      "Tabela desconhecida: ", paste(nome_da_tabela, collapse = ", "), ". As tabelas s\u00e3o: ",
       paste(NOMES_DAS_TABELAS, collapse = ", "),
       call. = FALSE
     )
   }
-  if (is.null(tabelas_ja_lidas[[nome]])) {
-    tabelas_ja_lidas[[nome]] = ler_tabela_do_pacote(nome)
+  if (is.null(tabelas_ja_lidas[[nome_da_tabela]])) {
+    tabelas_ja_lidas[[nome_da_tabela]] = ler_tabela_do_pacote(nome_da_tabela)
   }
-  tabelas_ja_lidas[[nome]]
+  tabelas_ja_lidas[[nome_da_tabela]]
 }
 
-ler_tabela_do_pacote = function(nome) {
-  arquivo = system.file("extdata", "tabelas", paste0(nome, ".csv"), package = "RNfe")
-  tabela = utils::read.csv(arquivo, colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
-  for (nome_da_coluna in names(tabela)) {
+ler_tabela_do_pacote = function(nome_da_tabela) {
+  arquivo_csv = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNfe")
+  tabela_do_pacote = utils::read.csv(arquivo_csv, colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
+  for (nome_da_coluna in names(tabela_do_pacote)) {
     if (nome_da_coluna %in% COLUNAS_DE_DATA) {
-      tabela[[nome_da_coluna]] = as.Date(tabela[[nome_da_coluna]])
+      tabela_do_pacote[[nome_da_coluna]] = as.Date(tabela_do_pacote[[nome_da_coluna]])
     } else if (nome_da_coluna %in% COLUNAS_DE_INDICADOR) {
-      tabela[[nome_da_coluna]] = as.integer(tabela[[nome_da_coluna]])
+      tabela_do_pacote[[nome_da_coluna]] = as.integer(tabela_do_pacote[[nome_da_coluna]])
     } else if (nome_da_coluna %in% COLUNAS_DE_NUMERO) {
-      tabela[[nome_da_coluna]] = as.numeric(tabela[[nome_da_coluna]])
+      tabela_do_pacote[[nome_da_coluna]] = as.numeric(tabela_do_pacote[[nome_da_coluna]])
     }
   }
-  if (nome == "ncm") {
-    tabela$descricao_completa = descricao_completa_do_ncm(tabela)
+  if (nome_da_tabela == "ncm") {
+    tabela_do_pacote$descricao_completa = descricao_completa_do_ncm(tabela_do_pacote)
   }
-  tabela
+  tabela_do_pacote
 }
 
 # No NCM, o subitem diz pouco sozinho ("-- Outros"). A descrição completa junta a da posição (4 dígitos)
@@ -123,14 +123,14 @@ descricao_completa_do_ncm = function(ncm) {
 # O texto de cada código como a tabela registrava na data de cada nota. Código que a tabela não tem, ou
 # data fora do período em que ela registra o código (antes do início ou depois do fim), fica NA.
 descricao_na_data = function(nome_da_tabela, codigos, datas, coluna_do_texto = "descricao") {
-  tabela = tabela_fiscal(nome_da_tabela)
-  tabela = tabela[tabela$codigo %in% codigos, ]
+  tabela_completa = tabela_fiscal(nome_da_tabela)
+  linhas_dos_codigos = tabela_completa[tabela_completa$codigo %in% codigos, ]
   descricoes = rep(NA_character_, length(codigos))
-  for (numero_da_linha in seq_len(nrow(tabela))) {
-    do_codigo = !is.na(codigos) & codigos == tabela$codigo[numero_da_linha]
-    ja_valia = is.na(tabela$inicio[numero_da_linha]) | (!is.na(datas) & datas >= tabela$inicio[numero_da_linha])
-    ainda_valia = is.na(tabela$fim[numero_da_linha]) | (!is.na(datas) & datas <= tabela$fim[numero_da_linha])
-    descricoes[do_codigo & ja_valia & ainda_valia] = tabela[[coluna_do_texto]][numero_da_linha]
+  for (numero_da_linha in seq_len(nrow(linhas_dos_codigos))) {
+    do_codigo = !is.na(codigos) & codigos == linhas_dos_codigos$codigo[numero_da_linha]
+    ja_valia = is.na(linhas_dos_codigos$inicio[numero_da_linha]) | (!is.na(datas) & datas >= linhas_dos_codigos$inicio[numero_da_linha])
+    ainda_valia = is.na(linhas_dos_codigos$fim[numero_da_linha]) | (!is.na(datas) & datas <= linhas_dos_codigos$fim[numero_da_linha])
+    descricoes[do_codigo & ja_valia & ainda_valia] = linhas_dos_codigos[[coluna_do_texto]][numero_da_linha]
   }
   descricoes
 }

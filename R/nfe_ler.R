@@ -236,7 +236,7 @@ nfe_ler = function(arquivos) {
   arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS, "uma NF-e", colunas_da_nfe)
   colunas_vazias = colunas_da_nfe(NULL, NA_character_)
 
-  resultado = list(
+  tabelas_da_nfe = list(
     notas = juntar_tabela(arquivos_lidos, "notas", colunas_vazias$notas),
     itens = juntar_tabela(arquivos_lidos, "itens", colunas_vazias$itens),
     impostos = juntar_tabela(arquivos_lidos, "impostos", colunas_vazias$impostos),
@@ -244,22 +244,22 @@ nfe_ler = function(arquivos) {
     pagamentos = juntar_tabela(arquivos_lidos, "pagamentos", colunas_vazias$pagamentos),
     arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
   )
-  resultado$notas = converter_datas(resultado$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
-  resultado$parcelas = converter_datas(resultado$parcelas, CAMPOS_DA_PARCELA)
-  resultado$pagamentos = converter_datas(resultado$pagamentos, CAMPOS_DO_PAGAMENTO)
-  data_de_cada_item = resultado$notas$data_emissao[match(resultado$itens$chave, resultado$notas$chave)]
-  resultado$itens = acrescentar_descricoes(resultado$itens, data_de_cada_item, DESCRICOES_DOS_ITENS)
-  resultado
+  tabelas_da_nfe$notas = converter_datas(tabelas_da_nfe$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
+  tabelas_da_nfe$parcelas = converter_datas(tabelas_da_nfe$parcelas, CAMPOS_DA_PARCELA)
+  tabelas_da_nfe$pagamentos = converter_datas(tabelas_da_nfe$pagamentos, CAMPOS_DO_PAGAMENTO)
+  data_de_cada_item = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$itens$chave, tabelas_da_nfe$notas$chave)]
+  tabelas_da_nfe$itens = acrescentar_descricoes(tabelas_da_nfe$itens, data_de_cada_item, DESCRICOES_DOS_ITENS)
+  tabelas_da_nfe
 }
 
-# As colunas das tabelas de um arquivo de NF-e, cada uma num vetor. Com documento NULL, vêm vazias, já
-# com os nomes e os tipos certos.
-colunas_da_nfe = function(documento, nome_do_arquivo) {
-  if (is.null(documento)) {
-    documento = xml2::read_xml("<vazio/>")
+# As colunas das tabelas de um arquivo de NF-e, cada uma num vetor. Com xml_lido NULL, vêm vazias, já com
+# os nomes e os tipos certos.
+colunas_da_nfe = function(xml_lido, nome_do_arquivo) {
+  if (is.null(xml_lido)) {
+    xml_lido = xml2::read_xml("<vazio/>")
   }
-  notas = buscar_todos(documento, CAMINHO_DAS_NOTAS)
-  protocolos = buscar_todos(documento, "//protNFe/infProt")
+  notas = buscar_todos(xml_lido, CAMINHO_DAS_NOTAS)
+  protocolos = buscar_todos(xml_lido, "//protNFe/infProt")
   itens = buscar_todos(notas, "det")
   campos_dos_impostos = buscar_todos(itens, "imposto//*[not(*)]")
   duplicatas = buscar_todos(notas, "cobr/dup")

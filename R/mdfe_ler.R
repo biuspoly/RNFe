@@ -202,7 +202,7 @@ mdfe_ler = function(arquivos) {
   arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DOS_MDFES, "um MDF-e", colunas_do_mdfe)
   colunas_vazias = colunas_do_mdfe(NULL, NA_character_)
 
-  resultado = list(
+  tabelas_do_mdfe = list(
     mdfes = juntar_tabela(arquivos_lidos, "mdfes", colunas_vazias$mdfes),
     locais = juntar_tabela(arquivos_lidos, "locais", colunas_vazias$locais),
     documentos = juntar_tabela(arquivos_lidos, "documentos", colunas_vazias$documentos),
@@ -212,19 +212,19 @@ mdfe_ler = function(arquivos) {
     campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos),
     arquivos = resumo_dos_arquivos(arquivos_lidos, "mdfes", "mdfes")
   )
-  resultado$mdfes = converter_datas(resultado$mdfes, rbind(CAMPOS_DO_MDFE, CAMPOS_DO_PROTOCOLO))
-  resultado$mdfes = acrescentar_descricoes(resultado$mdfes, resultado$mdfes$data_emissao, DESCRICOES_DO_MDFE)
-  resultado
+  tabelas_do_mdfe$mdfes = converter_datas(tabelas_do_mdfe$mdfes, rbind(CAMPOS_DO_MDFE, CAMPOS_DO_PROTOCOLO))
+  tabelas_do_mdfe$mdfes = acrescentar_descricoes(tabelas_do_mdfe$mdfes, tabelas_do_mdfe$mdfes$data_emissao, DESCRICOES_DO_MDFE)
+  tabelas_do_mdfe
 }
 
-# As colunas das tabelas de um arquivo de MDF-e, cada uma num vetor. Com documento NULL, vêm vazias, já
-# com os nomes e os tipos certos.
-colunas_do_mdfe = function(documento, nome_do_arquivo) {
-  if (is.null(documento)) {
-    documento = xml2::read_xml("<vazio/>")
+# As colunas das tabelas de um arquivo de MDF-e, cada uma num vetor. Com xml_lido NULL, vêm vazias, já com
+# os nomes e os tipos certos.
+colunas_do_mdfe = function(xml_lido, nome_do_arquivo) {
+  if (is.null(xml_lido)) {
+    xml_lido = xml2::read_xml("<vazio/>")
   }
-  mdfes = buscar_todos(documento, CAMINHO_DOS_MDFES)
-  protocolos = buscar_todos(documento, "//protMDFe/infProt")
+  mdfes = buscar_todos(xml_lido, CAMINHO_DOS_MDFES)
+  protocolos = buscar_todos(xml_lido, "//protMDFe/infProt")
   locais = buscar_todos(mdfes, CAMINHO_DOS_LOCAIS)
   documentos = buscar_todos(mdfes, CAMINHO_DOS_DOCUMENTOS_DO_MDFE)
   veiculos = buscar_todos(mdfes, CAMINHO_DOS_VEICULOS)
@@ -254,13 +254,13 @@ colunas_do_mdfe = function(documento, nome_do_arquivo) {
 
 # Um campo por linha, com o caminho a partir do infMDFe. O xml2 põe a posição no caminho só quando o grupo
 # se repete (condutor[2]), o que basta para separar uma ocorrência da outra.
-colunas_de_todos_os_campos = function(campos) {
-  grupo_de_cada_campo = xml2::xml_find_first(campos, "parent::*", ns = SEM_NAMESPACE)
+colunas_de_todos_os_campos = function(campos_do_xml) {
+  grupo_de_cada_campo = xml2::xml_find_first(campos_do_xml, "parent::*", ns = SEM_NAMESPACE)
   list(
-    chave = chave_de_cada(campos, "infMDFe"),
-    caminho = sub("^.*/infMDFe/", "", xml2::xml_path(campos)),
+    chave = chave_de_cada(campos_do_xml, "infMDFe"),
+    caminho = sub("^.*/infMDFe/", "", xml2::xml_path(campos_do_xml)),
     grupo = xml2::xml_name(grupo_de_cada_campo),
-    campo = xml2::xml_name(campos),
-    valor = xml2::xml_text(campos)
+    campo = xml2::xml_name(campos_do_xml),
+    valor = xml2::xml_text(campos_do_xml)
   )
 }

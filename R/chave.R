@@ -46,8 +46,8 @@ DOCUMENTO_PELO_MODELO = c("55" = "NF-e", "65" = "NFC-e", "57" = "CT-e", "67" = "
 #' Espaços, pontos e o prefixo do atributo `Id` do XML (`NFe`, `CTe`, `MDFe`)
 #' são ignorados, e letras minúsculas viram maiúsculas.
 #'
-#' @param chave A chave de acesso (um vetor de texto). Em `chave_digito()`, com
-#'   44 posições ou só as 43 primeiras.
+#' @param chaves As chaves de acesso (um vetor de texto, uma ou várias). Em
+#'   `chave_digito()`, com 44 posições ou só as 43 primeiras.
 #' @return `chave_valida()`: um vetor lógico. `chave_digito()`: um vetor de
 #'   inteiros, `NA` quando o texto não tem o formato de chave.
 #'   `chave_decompor()`: um `data.frame` com `chave`, `valida`, `problema`,
@@ -72,45 +72,39 @@ NULL
 
 #' @rdname chave
 #' @export
-chave_valida = function(chave) {
-  chave_decompor(chave)$valida
+chave_valida = function(chaves) {
+  chave_decompor(chaves)$valida
 }
 
 #' @rdname chave
 #' @export
-chave_digito = function(chave) {
-  chave = limpar_chave(chave)
-  chave_inteira = !is.na(chave) & grepl(FORMATO_DA_CHAVE, chave)
-  chave_sem_digito = !is.na(chave) & grepl(FORMATO_SEM_DIGITO, chave)
-  chave[chave_inteira] = substr(chave[chave_inteira], 1, 43)
-  digitos_calculados = rep(NA_integer_, length(chave))
+chave_digito = function(chaves) {
+  chaves_limpas = limpar_chaves(chaves)
+  chave_inteira = !is.na(chaves_limpas) & grepl(FORMATO_DA_CHAVE, chaves_limpas)
+  chave_sem_digito = !is.na(chaves_limpas) & grepl(FORMATO_SEM_DIGITO, chaves_limpas)
+  chaves_limpas[chave_inteira] = substr(chaves_limpas[chave_inteira], 1, 43)
+  digitos_calculados = rep(NA_integer_, length(chaves_limpas))
   da_para_calcular = chave_inteira | chave_sem_digito
-  digitos_calculados[da_para_calcular] = digitos_das_chaves(chave[da_para_calcular])
+  digitos_calculados[da_para_calcular] = digitos_das_chaves(chaves_limpas[da_para_calcular])
   digitos_calculados
 }
 
 #' @rdname chave
 #' @export
-chave_decompor = function(chave) {
-  chave = limpar_chave(chave)
-  formato_certo = !is.na(chave) & grepl(FORMATO_DA_CHAVE, chave)
-  # As posi\u00e7\u00f5es de in\u00edcio a fim de cada chave; NA na chave fora do formato.
-  parte_da_chave = function(inicio, fim) {
-    partes_das_chaves = rep(NA_character_, length(chave))
-    partes_das_chaves[formato_certo] = substr(chave[formato_certo], inicio, fim)
-    partes_das_chaves
-  }
-  codigo_uf = parte_da_chave(1, 2)
-  mes = as.integer(parte_da_chave(5, 6))
-  documento_emitente = parte_da_chave(7, 20)
-  modelo = parte_da_chave(21, 22)
-  digito = as.integer(parte_da_chave(44, 44))
+chave_decompor = function(chaves) {
+  chaves_limpas = limpar_chaves(chaves)
+  formato_certo = !is.na(chaves_limpas) & grepl(FORMATO_DA_CHAVE, chaves_limpas)
+  codigo_uf = parte_das_chaves(chaves_limpas, formato_certo, 1, 2)
+  mes = as.integer(parte_das_chaves(chaves_limpas, formato_certo, 5, 6))
+  documento_emitente = parte_das_chaves(chaves_limpas, formato_certo, 7, 20)
+  modelo = parte_das_chaves(chaves_limpas, formato_certo, 21, 22)
+  digito = as.integer(parte_das_chaves(chaves_limpas, formato_certo, 44, 44))
   tipo_documento = tipo_do_documento(documento_emitente)
-  digito_certo = rep(NA_integer_, length(chave))
-  digito_certo[formato_certo] = digitos_das_chaves(substr(chave[formato_certo], 1, 43))
+  digito_certo = rep(NA_integer_, length(chaves_limpas))
+  digito_certo[formato_certo] = digitos_das_chaves(substr(chaves_limpas[formato_certo], 1, 43))
 
-  problemas = rep(NA_character_, length(chave))
-  problemas[!formato_certo] = vapply(chave[!formato_certo], problema_de_formato, character(1), USE.NAMES = FALSE)
+  problemas = rep(NA_character_, length(chaves_limpas))
+  problemas[!formato_certo] = vapply(chaves_limpas[!formato_certo], problema_de_formato, character(1), USE.NAMES = FALSE)
   problemas = juntar_problema(
     problemas, formato_certo & !(codigo_uf %in% names(UF_PELO_CODIGO)),
     paste0("c\u00f3digo de UF desconhecido: ", codigo_uf)
@@ -129,30 +123,37 @@ chave_decompor = function(chave) {
   )
 
   data.frame(
-    chave = chave,
+    chave = chaves_limpas,
     valida = formato_certo & is.na(problemas),
     problema = problemas,
     codigo_uf = codigo_uf,
     uf = unname(UF_PELO_CODIGO[codigo_uf]),
-    ano = 2000L + as.integer(parte_da_chave(3, 4)),
+    ano = 2000L + as.integer(parte_das_chaves(chaves_limpas, formato_certo, 3, 4)),
     mes = mes,
     documento_emitente = documento_emitente,
     tipo_documento = tipo_documento,
     modelo = modelo,
     documento = unname(DOCUMENTO_PELO_MODELO[modelo]),
-    serie = as.integer(parte_da_chave(23, 25)),
-    numero = as.integer(parte_da_chave(26, 34)),
-    forma_emissao = as.integer(parte_da_chave(35, 35)),
-    codigo_numerico = parte_da_chave(36, 43),
+    serie = as.integer(parte_das_chaves(chaves_limpas, formato_certo, 23, 25)),
+    numero = as.integer(parte_das_chaves(chaves_limpas, formato_certo, 26, 34)),
+    forma_emissao = as.integer(parte_das_chaves(chaves_limpas, formato_certo, 35, 35)),
+    codigo_numerico = parte_das_chaves(chaves_limpas, formato_certo, 36, 43),
     digito = digito
   )
 }
 
-limpar_chave = function(chave) {
-  chave = toupper(as.character(chave))
-  chave = gsub("[^A-Z0-9]", "", chave)
+# As posições de início a fim de cada chave; NA na chave fora do formato.
+parte_das_chaves = function(chaves_limpas, formato_certo, inicio, fim) {
+  partes_das_chaves = rep(NA_character_, length(chaves_limpas))
+  partes_das_chaves[formato_certo] = substr(chaves_limpas[formato_certo], inicio, fim)
+  partes_das_chaves
+}
+
+limpar_chaves = function(chaves) {
+  chaves_em_maiusculas = toupper(as.character(chaves))
+  so_letras_e_numeros = gsub("[^A-Z0-9]", "", chaves_em_maiusculas)
   # A chave sempre começa por 6 números; letras antes disso são o prefixo do Id do XML.
-  sub("^[A-Z]+", "", chave)
+  sub("^[A-Z]+", "", so_letras_e_numeros)
 }
 
 problema_de_formato = function(chave) {
@@ -222,10 +223,10 @@ cpf_confere = function(cpf) {
 
 # Na chave, o CPF ocupa as 14 posições do CNPJ com três zeros na frente. Se o número servir
 # como CNPJ, fica CNPJ.
-tipo_do_documento = function(documento) {
-  tipos = rep(NA_character_, length(documento))
-  cpf_certo = !is.na(documento) & startsWith(documento, "000") & cpf_confere(substr(documento, 4, 14))
-  tipos[cpf_certo] = "CPF"
-  tipos[cnpj_confere(documento)] = "CNPJ"
-  tipos
+tipo_do_documento = function(documento_emitente) {
+  tipo_de_cada = rep(NA_character_, length(documento_emitente))
+  cpf_certo = !is.na(documento_emitente) & startsWith(documento_emitente, "000") & cpf_confere(substr(documento_emitente, 4, 14))
+  tipo_de_cada[cpf_certo] = "CPF"
+  tipo_de_cada[cnpj_confere(documento_emitente)] = "CNPJ"
+  tipo_de_cada
 }

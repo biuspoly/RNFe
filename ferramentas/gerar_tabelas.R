@@ -30,60 +30,73 @@ TABELAS_DO_SPED = c(
 # ---- SPED ----
 
 versoes_das_tabelas_do_sped = function() {
-  corpo = paste0(
+  corpo_do_pedido = paste0(
     '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">',
     '<soap:Body><consultarVersoesTabelasExternas xmlns="http://www.sped.fazenda.gov.br/sped/tabelas/ConsultaVersoes">',
     '<codigoSistema>SpedFiscal</codigoSistema></consultarVersoesTabelasExternas></soap:Body></soap:Envelope>'
   )
-  pedido = httr2::request(SERVICO_DO_SPED)
-  pedido = httr2::req_headers(pedido, SOAPAction = '"http://www.sped.fazenda.gov.br/sped/tabelas/ConsultaVersoes/consultarVersoesTabelasExternas"')
-  pedido = httr2::req_body_raw(pedido, corpo, "text/xml; charset=utf-8")
-  resposta = xml2::read_xml(httr2::resp_body_string(httr2::req_perform(pedido)))
-  xml2::xml_ns_strip(resposta)
-  metadados_em_texto = xml2::xml_text(xml2::xml_find_first(resposta, "//metadadosXml"))
-  metadados = xml2::read_xml(sub("^﻿", "", metadados_em_texto))
+  pedido_ao_sped = httr2::request(SERVICO_DO_SPED)
+  pedido_ao_sped = httr2::req_headers(pedido_ao_sped, SOAPAction = '"http://www.sped.fazenda.gov.br/sped/tabelas/ConsultaVersoes/consultarVersoesTabelasExternas"')
+  pedido_ao_sped = httr2::req_body_raw(pedido_ao_sped, corpo_do_pedido, "text/xml; charset=utf-8")
+  resposta_do_sped = xml2::read_xml(httr2::resp_body_string(httr2::req_perform(pedido_ao_sped)))
+  xml2::xml_ns_strip(resposta_do_sped)
+  metadados_em_texto = xml2::xml_text(xml2::xml_find_first(resposta_do_sped, "//metadadosXml"))
+  metadados = xml2::read_xml(sub("^\ufeff", "", metadados_em_texto))
   xml2::xml_ns_strip(metadados)
-  tabelas = xml2::xml_find_all(metadados, "//tabela")
+  tabelas_listadas = xml2::xml_find_all(metadados, "//tabela")
   data.frame(
-    id = xml2::xml_attr(tabelas, "id"),
-    tipo = xml2::xml_attr(tabelas, "tipo"),
-    descricao = xml2::xml_attr(tabelas, "desc"),
-    versao = xml2::xml_attr(tabelas, "versao"),
-    data_da_versao = xml2::xml_attr(tabelas, "dtVersao")
+    id = xml2::xml_attr(tabelas_listadas, "id"),
+    tipo = xml2::xml_attr(tabelas_listadas, "tipo"),
+    descricao = xml2::xml_attr(tabelas_listadas, "desc"),
+    versao = xml2::xml_attr(tabelas_listadas, "versao"),
+    data_da_versao = xml2::xml_attr(tabelas_listadas, "dtVersao")
   )
 }
 
-# O arquivo vem em Windows-1252 (não Latin-1: o travessão do CST 51 do PIS é o byte 0x96), uma linha por código: código|descrição|início (DDMMAAAA)|fim. A primeira
-# linha é o cabeçalho com a versão. Uma descrição pode vir quebrada em duas linhas (a do CFOP 5909 vem):
-# linha que não começa por um código continua a anterior.
-baixar_tabela_do_sped = function(id, versao) {
-  pedido = httr2::request(paste0(DOWNLOAD_DO_SPED, "?idTabela=", id, "&versao=", versao))
-  bruto = httr2::resp_body_raw(httr2::req_perform(pedido))
-  linhas = strsplit(iconv(rawToChar(bruto), from = "CP1252", to = "UTF-8"), "\r?\n")[[1]]
-  linhas = linhas[-1]
+# O arquivo vem em Windows-1252 (não Latin-1: o travessão do CST 51 do PIS é o byte 0x96), uma linha por
+# código: código|descrição|início (DDMMAAAA)|fim. A primeira linha é o cabeçalho com a versão. Uma
+# descrição pode vir quebrada em duas linhas (a do CFOP 5909 vem): linha que não começa por um código
+# continua a anterior.
+baixar_tabela_do_sped = function(id_da_tabela, versao_da_tabela) {
+  pedido_da_tabela = httr2::request(paste0(DOWNLOAD_DO_SPED, "?idTabela=", id_da_tabela, "&versao=", versao_da_tabela))
+  conteudo_bruto = httr2::resp_body_raw(httr2::req_perform(pedido_da_tabela))
+  linhas_do_arquivo = strsplit(iconv(rawToChar(conteudo_bruto), from = "CP1252", to = "UTF-8"), "\r?\n")[[1]]
+  linhas_do_arquivo = linhas_do_arquivo[-1]
   linhas_inteiras = character()
-  for (linha in linhas) {
-    if (trimws(linha) == "") {
+  for (linha_do_arquivo in linhas_do_arquivo) {
+    if (trimws(linha_do_arquivo) == "") {
       next
     }
-    if (grepl("^[0-9A-Z]+\\|", linha) || length(linhas_inteiras) == 0) {
-      linhas_inteiras = c(linhas_inteiras, linha)
+    if (grepl("^[0-9A-Z]+\\|", linha_do_arquivo) || length(linhas_inteiras) == 0) {
+      linhas_inteiras = c(linhas_inteiras, linha_do_arquivo)
     } else {
-      ultima = length(linhas_inteiras)
-      linhas_inteiras[ultima] = paste0(linhas_inteiras[ultima], linha)
+      posicao_da_ultima = length(linhas_inteiras)
+      linhas_inteiras[posicao_da_ultima] = paste0(linhas_inteiras[posicao_da_ultima], linha_do_arquivo)
     }
   }
-  campos = strsplit(linhas_inteiras, "|", fixed = TRUE)
+  campos_de_cada_linha = strsplit(linhas_inteiras, "|", fixed = TRUE)
+  quantidade_de_codigos = length(campos_de_cada_linha)
+  codigos = character(quantidade_de_codigos)
+  descricoes = character(quantidade_de_codigos)
+  inicios_em_texto = character(quantidade_de_codigos)
+  fins_em_texto = character(quantidade_de_codigos)
+  for (posicao in seq_len(quantidade_de_codigos)) {
+    campos_da_linha = campos_de_cada_linha[[posicao]]
+    codigos[posicao] = campos_da_linha[1]
+    descricoes[posicao] = trimws(campos_da_linha[2])
+    inicios_em_texto[posicao] = campos_da_linha[3]
+    fins_em_texto[posicao] = campos_da_linha[4]
+  }
   data.frame(
-    codigo = vapply(campos, function(campo) campo[1], character(1)),
-    descricao = vapply(campos, function(campo) trimws(campo[2]), character(1)),
-    inicio = data_do_sped(vapply(campos, function(campo) campo[3], character(1))),
-    fim = data_do_sped(vapply(campos, function(campo) campo[4], character(1)))
+    codigo = codigos,
+    descricao = descricoes,
+    inicio = data_do_sped(inicios_em_texto),
+    fim = data_do_sped(fins_em_texto)
   )
 }
 
-data_do_sped = function(texto) {
-  as.Date(ifelse(is.na(texto) | texto == "", NA, texto), format = "%d%m%Y")
+data_do_sped = function(datas_em_texto) {
+  as.Date(ifelse(is.na(datas_em_texto) | datas_em_texto == "", NA, datas_em_texto), format = "%d%m%Y")
 }
 
 # ---- Portal da NF-e ----
@@ -93,65 +106,64 @@ data_do_sped = function(texto) {
 baixar_do_portal = function(comeco_do_link, pasta_temporaria) {
   # O portal só entrega o arquivo para quem abriu a página antes (cookie de sessão).
   arquivo_de_cookies = file.path(pasta_temporaria, "cookies_do_portal.txt")
-  pedido = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, PAGINA_COM_A_TABELA_DE_CFOP)), arquivo_de_cookies)
-  pagina = xml2::read_html(httr2::resp_body_string(httr2::req_perform(pedido)))
-  links = xml2::xml_find_all(pagina, paste0("//a[starts-with(normalize-space(.), '", comeco_do_link, "')]"))
-  if (length(links) == 0) {
+  pedido_da_pagina = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, PAGINA_COM_A_TABELA_DE_CFOP)), arquivo_de_cookies)
+  pagina_do_portal = xml2::read_html(httr2::resp_body_string(httr2::req_perform(pedido_da_pagina)))
+  links_achados = xml2::xml_find_all(pagina_do_portal, paste0("//a[starts-with(normalize-space(.), '", comeco_do_link, "')]"))
+  if (length(links_achados) == 0) {
     stop("A página do portal não tem mais o link '", comeco_do_link, "'", call. = FALSE)
   }
   # O primeiro é o mais recente (a página lista do mais novo para o mais antigo).
-  titulo = trimws(xml2::xml_text(links[1]))
-  endereco = gsub("+", "%2B", xml2::xml_attr(links[1], "href"), fixed = TRUE)
-  arquivo = tempfile(tmpdir = pasta_temporaria, fileext = ".xlsx")
-  pedido = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, endereco)), arquivo_de_cookies)
-  httr2::req_perform(pedido, path = arquivo)
-  list(arquivo = arquivo, titulo = titulo)
+  titulo_do_link = trimws(xml2::xml_text(links_achados[1]))
+  endereco_do_arquivo = gsub("+", "%2B", xml2::xml_attr(links_achados[1], "href"), fixed = TRUE)
+  arquivo_baixado = tempfile(tmpdir = pasta_temporaria, fileext = ".xlsx")
+  pedido_do_arquivo = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, endereco_do_arquivo)), arquivo_de_cookies)
+  httr2::req_perform(pedido_do_arquivo, path = arquivo_baixado)
+  list(arquivo = arquivo_baixado, titulo = titulo_do_link)
 }
 
 conferir_colunas = function(planilha, colunas_esperadas, nome_da_tabela) {
-  faltando = setdiff(colunas_esperadas, names(planilha))
-  if (length(faltando) > 0) {
-    stop("A tabela ", nome_da_tabela, " não tem mais as colunas: ", paste(faltando, collapse = ", "), call. = FALSE)
+  colunas_que_faltam = setdiff(colunas_esperadas, names(planilha))
+  if (length(colunas_que_faltam) > 0) {
+    stop("A tabela ", nome_da_tabela, " não tem mais as colunas: ", paste(colunas_que_faltam, collapse = ", "), call. = FALSE)
   }
 }
 
 baixar_tabela_de_cfop = function(pasta_temporaria) {
-  baixado = baixar_do_portal("Tabela de CFOP", pasta_temporaria)
-  titulo = baixado$titulo
-  planilha = readxl::read_excel(baixado$arquivo, sheet = 1, range = readxl::cell_cols("A:N"))
+  planilha_baixada = baixar_do_portal("Tabela de CFOP", pasta_temporaria)
+  planilha_de_cfop = readxl::read_excel(planilha_baixada$arquivo, sheet = 1, range = readxl::cell_cols("A:N"))
   nomes_na_planilha = c(
     "CFOP", "Início de vigência", "Fim de vigência", "indNFe", "indComunica", "indTransp", "indDevol",
     "indRetor", "indAnula", "indRemes", "indComb", "indExcIBSCBS", "Título do CFOP", "Descrição (nota explicativa)"
   )
-  if (!identical(names(planilha), nomes_na_planilha)) {
-    stop("As colunas da tabela de CFOP mudaram: ", paste(names(planilha), collapse = ", "), call. = FALSE)
+  if (!identical(names(planilha_de_cfop), nomes_na_planilha)) {
+    stop("As colunas da tabela de CFOP mudaram: ", paste(names(planilha_de_cfop), collapse = ", "), call. = FALSE)
   }
   cfop = data.frame(
-    codigo = as.character(as.integer(planilha[["CFOP"]])),
-    titulo = trimws(planilha[["Título do CFOP"]]),
-    nota_explicativa = trimws(planilha[["Descrição (nota explicativa)"]]),
-    inicio = as.Date(planilha[["Início de vigência"]]),
-    fim = as.Date(planilha[["Fim de vigência"]]),
-    permitido_na_nfe = as.integer(planilha[["indNFe"]]),
-    comunicacao = as.integer(planilha[["indComunica"]]),
-    transporte = as.integer(planilha[["indTransp"]]),
-    devolucao = as.integer(planilha[["indDevol"]]),
-    retorno = as.integer(planilha[["indRetor"]]),
-    anulacao = as.integer(planilha[["indAnula"]]),
-    remessa = as.integer(planilha[["indRemes"]]),
-    combustivel = as.integer(planilha[["indComb"]]),
-    exclusivo_ibs_cbs = as.integer(planilha[["indExcIBSCBS"]])
+    codigo = as.character(as.integer(planilha_de_cfop[["CFOP"]])),
+    titulo = trimws(planilha_de_cfop[["Título do CFOP"]]),
+    nota_explicativa = trimws(planilha_de_cfop[["Descrição (nota explicativa)"]]),
+    inicio = as.Date(planilha_de_cfop[["Início de vigência"]]),
+    fim = as.Date(planilha_de_cfop[["Fim de vigência"]]),
+    permitido_na_nfe = as.integer(planilha_de_cfop[["indNFe"]]),
+    comunicacao = as.integer(planilha_de_cfop[["indComunica"]]),
+    transporte = as.integer(planilha_de_cfop[["indTransp"]]),
+    devolucao = as.integer(planilha_de_cfop[["indDevol"]]),
+    retorno = as.integer(planilha_de_cfop[["indRetor"]]),
+    anulacao = as.integer(planilha_de_cfop[["indAnula"]]),
+    remessa = as.integer(planilha_de_cfop[["indRemes"]]),
+    combustivel = as.integer(planilha_de_cfop[["indComb"]]),
+    exclusivo_ibs_cbs = as.integer(planilha_de_cfop[["indExcIBSCBS"]])
   )
   cfop = cfop[!is.na(cfop$codigo), ]
-  list(tabela = cfop, titulo = titulo)
+  list(tabela = cfop, titulo = planilha_baixada$titulo)
 }
 
 # A Tabela de Classificação Tributária do IBS e CBS (Informe Técnico 2025.002): a primeira aba tem as
 # classificações (cClassTrib), a segunda os CST. O Excel guarda alguns CST como número (400 em vez de
 # "400"): todo CST volta a ter três dígitos.
 baixar_tabelas_da_reforma = function(pasta_temporaria) {
-  baixado = baixar_do_portal("Tabela de Classificação Tributária do IBS e CBS", pasta_temporaria)
-  classificacoes = readxl::read_excel(baixado$arquivo, sheet = 1)
+  planilha_baixada = baixar_do_portal("Tabela de Classificação Tributária do IBS e CBS", pasta_temporaria)
+  classificacoes = readxl::read_excel(planilha_baixada$arquivo, sheet = 1)
   conferir_colunas(classificacoes, c(
     "CST-IBS/CBS", "cClassTrib", "Nome cClassTrib", "Descrição cClassTrib", "LC 214/25", "Tipo de Alíquota",
     "pRedIBS", "pRedCBS", "dIniVig", "dFimVig", "indNFe", "indNFCe"
@@ -171,7 +183,7 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
     permitido_na_nfe = as.integer(classificacoes[["indNFe"]]),
     permitido_na_nfce = as.integer(classificacoes[["indNFCe"]])
   )
-  csts = readxl::read_excel(baixado$arquivo, sheet = 2)
+  csts = readxl::read_excel(planilha_baixada$arquivo, sheet = 2)
   conferir_colunas(csts, c("CST-IBS/CBS", "Descrição CST-IBS/CBS"), "de CST do IBS e CBS")
   csts = csts[!is.na(csts[["CST-IBS/CBS"]]), ]
   cst = data.frame(
@@ -180,7 +192,7 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
     inicio = as.Date(NA),
     fim = as.Date(NA)
   )
-  list(classificacao = classificacao, cst = cst, titulo = baixado$titulo)
+  list(classificacao = classificacao, cst = cst, titulo = planilha_baixada$titulo)
 }
 
 # ---- Siscomex ----
@@ -188,17 +200,17 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
 # A nomenclatura vigente, em todos os níveis (capítulo, posição, subposição, item e subitem). O código vai
 # sem os pontos, como na NF-e; a data de fim 31/12/9999 quer dizer "ainda vale".
 baixar_ncm = function() {
-  pedido = httr2::request(ENDERECO_DA_NCM)
-  ncm_do_siscomex = jsonlite::fromJSON(httr2::resp_body_string(httr2::req_perform(pedido)))
+  pedido_da_ncm = httr2::request(ENDERECO_DA_NCM)
+  ncm_do_siscomex = jsonlite::fromJSON(httr2::resp_body_string(httr2::req_perform(pedido_da_ncm)))
   nomenclaturas = ncm_do_siscomex$Nomenclaturas
   conferir_colunas(nomenclaturas, c("Codigo", "Descricao", "Data_Inicio", "Data_Fim", "Tipo_Ato_Ini", "Numero_Ato_Ini", "Ano_Ato_Ini"), "NCM")
-  fim = as.Date(nomenclaturas$Data_Fim, format = "%d/%m/%Y")
-  fim[fim == as.Date("9999-12-31")] = NA
+  fim_de_cada_codigo = as.Date(nomenclaturas$Data_Fim, format = "%d/%m/%Y")
+  fim_de_cada_codigo[fim_de_cada_codigo == as.Date("9999-12-31")] = NA
   ncm = data.frame(
     codigo = gsub(".", "", nomenclaturas$Codigo, fixed = TRUE),
     descricao = trimws(nomenclaturas$Descricao),
     inicio = as.Date(nomenclaturas$Data_Inicio, format = "%d/%m/%Y"),
-    fim = fim,
+    fim = fim_de_cada_codigo,
     ato_inicio = paste0(nomenclaturas$Tipo_Ato_Ini, " ", nomenclaturas$Numero_Ato_Ini, "/", nomenclaturas$Ano_Ato_Ini)
   )
   list(tabela = ncm, situacao = ncm_do_siscomex$Data_Ultima_Atualizacao_NCM, ato = ncm_do_siscomex$Ato)
@@ -212,11 +224,11 @@ baixar_ncm = function() {
 cst_icms_com_os_monofasicos = function(cst_b, cst_tres_digitos) {
   origem_nacional = cst_tres_digitos[substr(cst_tres_digitos$codigo, 1, 1) == "0", ]
   codigo_de_dois_digitos = substr(origem_nacional$codigo, 2, 3)
-  faltando = origem_nacional[!(codigo_de_dois_digitos %in% cst_b$codigo), ]
-  faltando$codigo = substr(faltando$codigo, 2, 3)
-  faltando$descricao = sub("^.*? - ", "", faltando$descricao, perl = TRUE)
-  juntas = rbind(cst_b, faltando)
-  juntas[order(juntas$codigo, juntas$inicio), ]
+  csts_que_faltam = origem_nacional[!(codigo_de_dois_digitos %in% cst_b$codigo), ]
+  csts_que_faltam$codigo = substr(csts_que_faltam$codigo, 2, 3)
+  csts_que_faltam$descricao = sub("^.*? - ", "", csts_que_faltam$descricao, perl = TRUE)
+  cst_icms_completo = rbind(cst_b, csts_que_faltam)
+  cst_icms_completo[order(cst_icms_completo$codigo, cst_icms_completo$inicio), ]
 }
 
 # A tabela A do SPED parou em 2012 e não tem a origem 8 (desde 01/08/2013), que está na tabela de três
@@ -226,18 +238,18 @@ origem_com_as_que_faltam = function(origem_a, cst_tres_digitos) {
   primeiro_digito = substr(cst_tres_digitos$codigo, 1, 1)
   # As linhas do Simples Nacional (CSOSN) também começam por um dígito, mas não têm origem.
   com_origem = !startsWith(cst_tres_digitos$descricao, "Simples Nacional") & !startsWith(cst_tres_digitos$descricao, "Para Simples Nacional")
-  faltando = setdiff(unique(primeiro_digito[com_origem]), origem_a$codigo)
-  juntas = origem_a
-  for (codigo_da_origem in faltando) {
+  origens_que_faltam = setdiff(unique(primeiro_digito[com_origem]), origem_a$codigo)
+  origens_completas = origem_a
+  for (codigo_da_origem in origens_que_faltam) {
     linhas_da_origem = cst_tres_digitos[com_origem & primeiro_digito == codigo_da_origem, ]
-    juntas = rbind(juntas, data.frame(
+    origens_completas = rbind(origens_completas, data.frame(
       codigo = codigo_da_origem,
       descricao = sub(" - [^-]*$", "", linhas_da_origem$descricao[1]),
       inicio = min(linhas_da_origem$inicio),
       fim = as.Date(NA)
     ))
   }
-  juntas
+  origens_completas
 }
 
 # O CSOSN está na tabela de três dígitos do SPED, nas linhas "Simples Nacional - ...". As datas de lá
@@ -245,10 +257,10 @@ origem_com_as_que_faltam = function(origem_a, cst_tres_digitos) {
 # 500 em 2012 e o 102 e o 202 em 2023 porque passaram a coincidir com códigos novos de CST. Na NF-e o
 # CSOSN tem campo próprio e o schema PL_010g (26/10/2026) ainda aceita todos. Por isso o CSOSN vai sem datas.
 csosn_do_sped = function(cst_tres_digitos) {
-  do_simples = cst_tres_digitos[startsWith(cst_tres_digitos$descricao, "Simples Nacional - "), ]
+  linhas_do_simples = cst_tres_digitos[startsWith(cst_tres_digitos$descricao, "Simples Nacional - "), ]
   csosn = data.frame(
-    codigo = do_simples$codigo,
-    descricao = sub("^Simples Nacional - ", "", do_simples$descricao),
+    codigo = linhas_do_simples$codigo,
+    descricao = sub("^Simples Nacional - ", "", linhas_do_simples$descricao),
     inicio = as.Date(NA),
     fim = as.Date(NA)
   )
@@ -258,17 +270,17 @@ csosn_do_sped = function(cst_tres_digitos) {
 # O arquivo tem de sair igual no Windows e no Linux (onde o robô roda), senão o robô veria mudança toda
 # semana: quebra de linha dentro de uma célula (a planilha da Reforma tem uma) vira espaço, e o fim de linha
 # é sempre "\n" (a conexão binária impede o Windows de trocar por "\r\n").
-gravar_tabela = function(tabela, nome) {
-  rownames(tabela) = NULL
-  for (nome_da_coluna in names(tabela)) {
-    if (is.character(tabela[[nome_da_coluna]])) {
-      tabela[[nome_da_coluna]] = gsub("\\s*[\r\n]+\\s*", " ", tabela[[nome_da_coluna]])
+gravar_tabela = function(tabela_para_gravar, nome_da_tabela) {
+  rownames(tabela_para_gravar) = NULL
+  for (nome_da_coluna in names(tabela_para_gravar)) {
+    if (is.character(tabela_para_gravar[[nome_da_coluna]])) {
+      tabela_para_gravar[[nome_da_coluna]] = gsub("\\s*[\r\n]+\\s*", " ", tabela_para_gravar[[nome_da_coluna]])
     }
   }
-  arquivo = file(file.path(PASTA_DAS_TABELAS, paste0(nome, ".csv")), open = "wb")
-  utils::write.csv(tabela, arquivo, row.names = FALSE, na = "", eol = "\n")
-  close(arquivo)
-  cat(sprintf("%-12s %4d linhas\n", nome, nrow(tabela)))
+  conexao_com_o_arquivo = file(file.path(PASTA_DAS_TABELAS, paste0(nome_da_tabela, ".csv")), open = "wb")
+  utils::write.csv(tabela_para_gravar, conexao_com_o_arquivo, row.names = FALSE, na = "", eol = "\n")
+  close(conexao_com_o_arquivo)
+  cat(sprintf("%-12s %4d linhas\n", nome_da_tabela, nrow(tabela_para_gravar)))
 }
 
 pasta_temporaria = tempfile("tabelas_oficiais_")
@@ -276,20 +288,20 @@ dir.create(pasta_temporaria)
 dir.create(PASTA_DAS_TABELAS, recursive = TRUE, showWarnings = FALSE)
 baixada_em = format(Sys.Date())
 
-versoes = versoes_das_tabelas_do_sped()
+versoes_no_sped = versoes_das_tabelas_do_sped()
 tabelas_do_sped = list()
 fontes = data.frame()
-for (nome in names(TABELAS_DO_SPED)) {
-  linha = versoes[versoes$tipo == TABELAS_DO_SPED[[nome]], ]
-  if (nrow(linha) != 1) {
-    stop("O SPED não tem uma tabela do tipo ", TABELAS_DO_SPED[[nome]], call. = FALSE)
+for (nome_da_tabela in names(TABELAS_DO_SPED)) {
+  tabela_no_sped = versoes_no_sped[versoes_no_sped$tipo == TABELAS_DO_SPED[[nome_da_tabela]], ]
+  if (nrow(tabela_no_sped) != 1) {
+    stop("O SPED não tem uma tabela do tipo ", TABELAS_DO_SPED[[nome_da_tabela]], call. = FALSE)
   }
-  tabelas_do_sped[[nome]] = baixar_tabela_do_sped(linha$id, linha$versao)
+  tabelas_do_sped[[nome_da_tabela]] = baixar_tabela_do_sped(tabela_no_sped$id, tabela_no_sped$versao)
   fontes = rbind(fontes, data.frame(
-    tabela = nome,
-    fonte = paste0("SPED Fiscal, tabela externa ", linha$id, " (", linha$descricao, ")"),
-    versao = linha$versao,
-    data_da_versao = linha$data_da_versao,
+    tabela = nome_da_tabela,
+    fonte = paste0("SPED Fiscal, tabela externa ", tabela_no_sped$id, " (", tabela_no_sped$descricao, ")"),
+    versao = tabela_no_sped$versao,
+    data_da_versao = tabela_no_sped$data_da_versao,
     baixada_em = baixada_em
   ))
 }
@@ -302,14 +314,14 @@ fontes = rbind(fontes, data.frame(
   baixada_em = baixada_em
 ))
 
-reforma = baixar_tabelas_da_reforma(pasta_temporaria)
-ncm = baixar_ncm()
+tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
+ncm_baixada = baixar_ncm()
 fontes = rbind(fontes, data.frame(
   tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm"),
   fonte = c(
-    paste0("Portal da NF-e, ", reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
-    paste0("Portal da NF-e, ", reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
-    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm$situacao, ", ", ncm$ato, ")")
+    paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
+    paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
+    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")")
   ),
   versao = NA,
   data_da_versao = NA,
@@ -317,9 +329,9 @@ fontes = rbind(fontes, data.frame(
 ))
 
 gravar_tabela(cfop_do_portal$tabela, "cfop")
-gravar_tabela(reforma$cst, "cst_ibs_cbs")
-gravar_tabela(reforma$classificacao, "classificacao_ibs_cbs")
-gravar_tabela(ncm$tabela, "ncm")
+gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
+gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
+gravar_tabela(ncm_baixada$tabela, "ncm")
 gravar_tabela(origem_com_as_que_faltam(tabelas_do_sped$origem, tabelas_do_sped$cst_icms_tres_digitos), "origem")
 gravar_tabela(cst_icms_com_os_monofasicos(tabelas_do_sped$cst_icms_b, tabelas_do_sped$cst_icms_tres_digitos), "cst_icms")
 gravar_tabela(csosn_do_sped(tabelas_do_sped$cst_icms_tres_digitos), "csosn")

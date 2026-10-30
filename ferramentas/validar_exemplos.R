@@ -66,40 +66,40 @@ schema_do_mdfe = schema_com_as_raizes(pasta_do_schema_do_mdfe, "schema_mdfe", "h
   '  <xs:include schemaLocation="mdfeModalRodoviario_v3.00.xsd"/>'
 ))
 
-mostrar_resultado = function(nome, resultado) {
-  if (resultado) {
-    cat("ok      ", nome, "\n")
+mostrar_resultado = function(nome_do_que_foi_validado, resultado_da_validacao) {
+  if (resultado_da_validacao) {
+    cat("ok      ", nome_do_que_foi_validado, "\n")
   } else {
-    cat("FALHOU  ", nome, "\n")
-    cat(paste0("        ", attr(resultado, "errors"), collapse = "\n"), "\n")
+    cat("FALHOU  ", nome_do_que_foi_validado, "\n")
+    cat(paste0("        ", attr(resultado_da_validacao, "errors"), collapse = "\n"), "\n")
   }
-  resultado
+  resultado_da_validacao
 }
 
 # O documento inteiro e, depois, cada modal sozinho, contra o mesmo schema.
-validar_com_o_modal = function(arquivo, documento, schema) {
-  passou = mostrar_resultado(basename(arquivo), xml2::xml_validate(documento, schema))
-  for (modal in xml2::xml_find_all(documento, "//d1:infModal/*", xml2::xml_ns(documento))) {
-    so_o_modal = xml2::xml_new_root(modal)
-    nome = paste0(basename(arquivo), " (modal ", xml2::xml_name(modal), ")")
-    passou = mostrar_resultado(nome, xml2::xml_validate(so_o_modal, schema)) && passou
+validar_com_o_modal = function(arquivo_de_exemplo, documento_lido, schema) {
+  passou = mostrar_resultado(basename(arquivo_de_exemplo), xml2::xml_validate(documento_lido, schema))
+  for (grupo_do_modal in xml2::xml_find_all(documento_lido, "//d1:infModal/*", xml2::xml_ns(documento_lido))) {
+    so_o_modal = xml2::xml_new_root(grupo_do_modal)
+    nome_do_modal = paste0(basename(arquivo_de_exemplo), " (modal ", xml2::xml_name(grupo_do_modal), ")")
+    passou = mostrar_resultado(nome_do_modal, xml2::xml_validate(so_o_modal, schema)) && passou
   }
   passou
 }
 
-documentos = list.files("inst/exemplos", pattern = "\\.xml$", full.names = TRUE)
+arquivos_de_exemplo = list.files("inst/exemplos", pattern = "\\.xml$", full.names = TRUE)
 todos_passaram = TRUE
-for (arquivo in documentos) {
-  documento = xml2::read_xml(arquivo)
-  namespace = xml2::xml_ns(documento)[["d1"]]
-  if (identical(namespace, "http://www.portalfiscal.inf.br/nfe")) {
-    passou = mostrar_resultado(basename(arquivo), xml2::xml_validate(documento, schema_da_nfe))
-  } else if (identical(namespace, "http://www.portalfiscal.inf.br/cte")) {
-    passou = validar_com_o_modal(arquivo, documento, schema_do_cte)
-  } else if (identical(namespace, "http://www.portalfiscal.inf.br/mdfe")) {
-    passou = validar_com_o_modal(arquivo, documento, schema_do_mdfe)
+for (arquivo_de_exemplo in arquivos_de_exemplo) {
+  documento_lido = xml2::read_xml(arquivo_de_exemplo)
+  namespace_do_documento = xml2::xml_ns(documento_lido)[["d1"]]
+  if (identical(namespace_do_documento, "http://www.portalfiscal.inf.br/nfe")) {
+    passou = mostrar_resultado(basename(arquivo_de_exemplo), xml2::xml_validate(documento_lido, schema_da_nfe))
+  } else if (identical(namespace_do_documento, "http://www.portalfiscal.inf.br/cte")) {
+    passou = validar_com_o_modal(arquivo_de_exemplo, documento_lido, schema_do_cte)
+  } else if (identical(namespace_do_documento, "http://www.portalfiscal.inf.br/mdfe")) {
+    passou = validar_com_o_modal(arquivo_de_exemplo, documento_lido, schema_do_mdfe)
   } else {
-    cat("FALHOU  ", basename(arquivo), "\n         namespace desconhecido:", namespace, "\n")
+    cat("FALHOU  ", basename(arquivo_de_exemplo), "\n         namespace desconhecido:", namespace_do_documento, "\n")
     passou = FALSE
   }
   todos_passaram = todos_passaram && passou

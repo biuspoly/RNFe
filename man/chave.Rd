@@ -12,15 +12,15 @@ Nota Técnica Conjunta 2025.001, versão 1.00 de 25/04/2025 (CNPJ
 alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
 }
 \usage{
-chave_valida(chave)
+chave_valida(chaves)
 
-chave_digito(chave)
+chave_digito(chaves)
 
-chave_decompor(chave)
+chave_decompor(chaves)
 }
 \arguments{
-\item{chave}{A chave de acesso (um vetor de texto). Em \code{chave_digito()}, com
-44 posições ou só as 43 primeiras.}
+\item{chaves}{As chaves de acesso (um vetor de texto, uma ou várias). Em
+\code{chave_digito()}, com 44 posições ou só as 43 primeiras.}
 }
 \value{
 \code{chave_valida()}: um vetor lógico. \code{chave_digito()}: um vetor de

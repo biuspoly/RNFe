@@ -15,10 +15,10 @@ porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma
 está em \code{tabela_fiscal("fontes")}.
 }
 \usage{
-tabela_fiscal(nome)
+tabela_fiscal(nome_da_tabela)
 }
 \arguments{
-\item{nome}{O nome da tabela: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
+\item{nome_da_tabela}{O nome da tabela: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
 \code{"classificacao_ibs_cbs"} ou \code{"fontes"}.}
 }

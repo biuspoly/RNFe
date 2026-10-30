@@ -22,68 +22,75 @@ O_QUE_COMPARAR = list(
 
 NAMESPACE_DO_XSD = c(xs = "http://www.w3.org/2001/XMLSchema")
 
-ler_csv = function(arquivo) {
-  utils::read.csv(arquivo, colClasses = "character", encoding = "UTF-8")
+ler_csv = function(caminho_do_csv) {
+  utils::read.csv(caminho_do_csv, colClasses = "character", encoding = "UTF-8")
 }
 
-gravar_csv = function(tabela, arquivo) {
-  conexao = file(arquivo, "wb")
-  utils::write.csv(tabela, conexao, row.names = FALSE, fileEncoding = "UTF-8", eol = "\n")
-  close(conexao)
+gravar_csv = function(tabela_para_gravar, caminho_do_csv) {
+  conexao_com_o_arquivo = file(caminho_do_csv, "wb")
+  utils::write.csv(tabela_para_gravar, conexao_com_o_arquivo, row.names = FALSE, fileEncoding = "UTF-8", eol = "\n")
+  close(conexao_com_o_arquivo)
 }
 
 # ---- portais ----
 
+arquivo_de_cookies_do_portal = function(documento, pasta_temporaria) {
+  file.path(pasta_temporaria, paste0("cookies_", documento, ".txt"))
+}
+
 # Abre a página da lista guardando o cookie de sessão: o Portal da NF-e e o do CT-e só entregam o arquivo
 # para quem abriu a página antes.
 abrir_pagina = function(documento, pasta_temporaria) {
-  arquivo_de_cookies = file.path(pasta_temporaria, paste0("cookies_", documento, ".txt"))
-  pedido = httr2::req_cookie_preserve(httr2::request(PAGINA_DOS_SCHEMAS[[documento]]), arquivo_de_cookies)
-  pedido = httr2::req_timeout(pedido, 120)
-  xml2::read_html(httr2::resp_body_string(httr2::req_perform(pedido)))
+  pedido_da_pagina = httr2::request(PAGINA_DOS_SCHEMAS[[documento]])
+  pedido_da_pagina = httr2::req_cookie_preserve(pedido_da_pagina, arquivo_de_cookies_do_portal(documento, pasta_temporaria))
+  pedido_da_pagina = httr2::req_timeout(pedido_da_pagina, 120)
+  resposta_da_pagina = httr2::req_perform(pedido_da_pagina)
+  xml2::read_html(httr2::resp_body_string(resposta_da_pagina))
 }
 
 # Uma linha por publicação da página: documento, título (o texto do link) e endereço para baixar.
 listar_publicacoes = function(documento, pasta_temporaria) {
-  pagina = abrir_pagina(documento, pasta_temporaria)
+  pagina_da_lista = abrir_pagina(documento, pasta_temporaria)
   if (documento == "mdfe") {
     # No portal do MDF-e o link é montado por JavaScript: download_arquivo_estatico('MDFE', 2, 'arquivo.zip'),
     # em que o 2 é o tipo "schemas".
-    links = xml2::xml_find_all(pagina, "//a[contains(@onclick, 'download_arquivo_estatico')]")
-    chamadas = xml2::xml_attr(links, "onclick")
-    sao_schemas = grepl("download_arquivo_estatico\\('MDFE', *2, *'", chamadas)
-    links = links[sao_schemas]
-    nomes_dos_arquivos = sub("^.*download_arquivo_estatico\\('MDFE', *2, *'([^']+)'.*$", "\\1", chamadas[sao_schemas])
-    enderecos = paste0(DOWNLOAD_DO_PORTAL_DO_MDFE, vapply(nomes_dos_arquivos, utils::URLencode, character(1), reserved = TRUE))
+    links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@onclick, 'download_arquivo_estatico')]")
+    chamadas_do_javascript = xml2::xml_attr(links_de_download, "onclick")
+    links_que_sao_schemas = grepl("download_arquivo_estatico\\('MDFE', *2, *'", chamadas_do_javascript)
+    links_de_download = links_de_download[links_que_sao_schemas]
+    nomes_dos_arquivos = sub("^.*download_arquivo_estatico\\('MDFE', *2, *'([^']+)'.*$", "\\1", chamadas_do_javascript[links_que_sao_schemas])
+    enderecos_para_baixar = paste0(DOWNLOAD_DO_PORTAL_DO_MDFE, vapply(nomes_dos_arquivos, utils::URLencode, character(1), reserved = TRUE))
   } else {
-    links = xml2::xml_find_all(pagina, "//a[contains(@href, 'exibirArquivo.aspx')]")
+    links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@href, 'exibirArquivo.aspx')]")
     comeco_do_endereco = sub("listaConteudo\\.aspx.*$", "", PAGINA_DOS_SCHEMAS[[documento]])
     # O endereço vem com espaços e quebras de linha em volta. O código do arquivo é Base64, e o portal às
     # vezes publica o "+" dele como espaço: os dois vão como %2B (o portal aceita, conferido em 30/10/2026).
-    enderecos = paste0(comeco_do_endereco, gsub("[+ ]", "%2B", trimws(xml2::xml_attr(links, "href"))))
+    codigos_dos_arquivos = gsub("[+ ]", "%2B", trimws(xml2::xml_attr(links_de_download, "href")))
+    enderecos_para_baixar = paste0(comeco_do_endereco, codigos_dos_arquivos)
   }
-  titulos = gsub("\\s+", " ", trimws(xml2::xml_text(links)))
-  if (length(links) == 0) {
+  if (length(links_de_download) == 0) {
     stop("A página de schemas do ", documento, " não tem mais os links de download: ", PAGINA_DOS_SCHEMAS[[documento]], call. = FALSE)
   }
-  publicacoes = data.frame(documento = documento, titulo = titulos, endereco = unname(enderecos))
+  titulos_das_publicacoes = gsub("\\s+", " ", trimws(xml2::xml_text(links_de_download)))
+  publicacoes = data.frame(documento = documento, titulo = titulos_das_publicacoes, endereco = unname(enderecos_para_baixar))
   publicacoes[!duplicated(publicacoes$endereco), ]
 }
 
 # Baixa o pacote e o abre numa pasta. Devolve a pasta, ou NA quando o arquivo não é um zip.
 baixar_pacote = function(documento, endereco, pasta_temporaria) {
   abrir_pagina(documento, pasta_temporaria)
-  arquivo_de_cookies = file.path(pasta_temporaria, paste0("cookies_", documento, ".txt"))
-  arquivo = tempfile(tmpdir = pasta_temporaria, fileext = ".zip")
-  pedido = httr2::req_cookie_preserve(httr2::request(endereco), arquivo_de_cookies)
-  pedido = httr2::req_timeout(pedido, 300)
-  httr2::req_perform(pedido, path = arquivo)
-  pasta = sub("\\.zip$", "", arquivo)
-  abertos = tryCatch(utils::unzip(arquivo, exdir = pasta), error = function(erro) character(), warning = function(aviso) character())
-  if (length(abertos) == 0) {
+  arquivo_zip = tempfile(tmpdir = pasta_temporaria, fileext = ".zip")
+  pedido_do_arquivo = httr2::request(endereco)
+  pedido_do_arquivo = httr2::req_cookie_preserve(pedido_do_arquivo, arquivo_de_cookies_do_portal(documento, pasta_temporaria))
+  pedido_do_arquivo = httr2::req_timeout(pedido_do_arquivo, 300)
+  httr2::req_perform(pedido_do_arquivo, path = arquivo_zip)
+  pasta_do_pacote = sub("\\.zip$", "", arquivo_zip)
+  arquivos_abertos = tryCatch(utils::unzip(arquivo_zip, exdir = pasta_do_pacote),
+                              error = function(erro) character(), warning = function(aviso) character())
+  if (length(arquivos_abertos) == 0) {
     return(NA_character_)
   }
-  pasta
+  pasta_do_pacote
 }
 
 # A pasta, dentro do pacote aberto, que tem o arquivo principal (os pacotes guardam os schemas em
@@ -92,12 +99,12 @@ pasta_do_arquivo = function(pasta_do_pacote, arquivo_principal) {
   if (is.na(pasta_do_pacote)) {
     return(NA_character_)
   }
-  achados = list.files(pasta_do_pacote, pattern = paste0("^", gsub(".", "\\.", arquivo_principal, fixed = TRUE), "$"),
-                       recursive = TRUE, full.names = TRUE)
-  if (length(achados) == 0) {
+  nome_exato = paste0("^", gsub(".", "\\.", arquivo_principal, fixed = TRUE), "$")
+  arquivos_achados = list.files(pasta_do_pacote, pattern = nome_exato, recursive = TRUE, full.names = TRUE)
+  if (length(arquivos_achados) == 0) {
     return(NA_character_)
   }
-  dirname(achados[1])
+  dirname(arquivos_achados[1])
 }
 
 # ---- campos de um schema ----
@@ -106,67 +113,68 @@ pasta_do_arquivo = function(pasta_do_pacote, arquivo_principal) {
 ler_definicoes = function(pasta_do_schema) {
   tipos = list()
   elementos = list()
-  for (arquivo in list.files(pasta_do_schema, pattern = "\\.xsd$", full.names = TRUE)) {
-    for (definicao in xml2::xml_children(xml2::xml_root(xml2::read_xml(arquivo)))) {
-      nome = xml2::xml_attr(definicao, "name")
-      if (is.na(nome)) {
+  for (arquivo_xsd in list.files(pasta_do_schema, pattern = "\\.xsd$", full.names = TRUE)) {
+    for (definicao in xml2::xml_children(xml2::xml_root(xml2::read_xml(arquivo_xsd)))) {
+      nome_da_definicao = xml2::xml_attr(definicao, "name")
+      if (is.na(nome_da_definicao)) {
         next
       }
       if (xml2::xml_name(definicao) %in% c("complexType", "simpleType")) {
-        tipos[[nome]] = definicao
+        tipos[[nome_da_definicao]] = definicao
       } else if (xml2::xml_name(definicao) == "element") {
-        elementos[[nome]] = definicao
+        elementos[[nome_da_definicao]] = definicao
       }
     }
   }
   list(tipos = tipos, elementos = elementos)
 }
 
-sem_prefixo = function(nome) {
-  sub("^.*:", "", nome)
+# "xs:string" vira "string": o prefixo do namespace não importa para achar o tipo.
+sem_prefixo = function(nome_com_prefixo) {
+  sub("^.*:", "", nome_com_prefixo)
 }
 
-# As regras de uma restrição: padrões, valores aceitos e tamanhos, e as do tipo de onde ela vem (base). No
-# schema do MDF-e, por exemplo, o procEmi é uma restrição sem regra própria do tipo TProcEmi, onde estão os
-# valores aceitos.
+# As regras de uma restrição: padrões, valores aceitos e tamanhos, e as do tipo de onde ela vem. No schema
+# do MDF-e, por exemplo, o procEmi é uma restrição sem regra própria do tipo TProcEmi, onde estão os valores
+# aceitos.
 descrever_restricao = function(restricao, definicoes, tipos_ja_vistos) {
-  partes = character()
+  regras_achadas = character()
   padroes = xml2::xml_attr(xml2::xml_find_all(restricao, "xs:pattern", NAMESPACE_DO_XSD), "value")
-  valores = xml2::xml_attr(xml2::xml_find_all(restricao, "xs:enumeration", NAMESPACE_DO_XSD), "value")
-  tamanhos = xml2::xml_find_all(restricao, "xs:length|xs:minLength|xs:maxLength|xs:totalDigits|xs:fractionDigits", NAMESPACE_DO_XSD)
+  valores_aceitos = xml2::xml_attr(xml2::xml_find_all(restricao, "xs:enumeration", NAMESPACE_DO_XSD), "value")
+  limites_de_tamanho = xml2::xml_find_all(restricao, "xs:length|xs:minLength|xs:maxLength|xs:totalDigits|xs:fractionDigits", NAMESPACE_DO_XSD)
   if (length(padroes) > 0) {
-    partes = c(partes, paste0("padrão ", paste(padroes, collapse = " ou ")))
+    regras_achadas = c(regras_achadas, paste0("padrão ", paste(padroes, collapse = " ou ")))
   }
-  if (length(valores) > 0) {
-    partes = c(partes, paste0("valores ", paste(valores, collapse = ",")))
+  if (length(valores_aceitos) > 0) {
+    regras_achadas = c(regras_achadas, paste0("valores ", paste(valores_aceitos, collapse = ",")))
   }
-  if (length(tamanhos) > 0) {
-    partes = c(partes, paste0(xml2::xml_name(tamanhos), " ", xml2::xml_attr(tamanhos, "value")))
+  if (length(limites_de_tamanho) > 0) {
+    regras_achadas = c(regras_achadas, paste0(xml2::xml_name(limites_de_tamanho), " ", xml2::xml_attr(limites_de_tamanho, "value")))
   }
-  base = sem_prefixo(xml2::xml_attr(restricao, "base"))
-  if (!is.na(base) && !(base %in% tipos_ja_vistos)) {
-    da_base = descrever_tipo_simples(base, definicoes, c(tipos_ja_vistos, base))
-    if (da_base != "") {
-      partes = c(partes, paste0("de ", base, ": ", da_base))
+  tipo_de_origem = sem_prefixo(xml2::xml_attr(restricao, "base"))
+  if (!is.na(tipo_de_origem) && !(tipo_de_origem %in% tipos_ja_vistos)) {
+    regras_do_tipo_de_origem = descrever_tipo_simples(tipo_de_origem, definicoes, c(tipos_ja_vistos, tipo_de_origem))
+    if (regras_do_tipo_de_origem != "") {
+      regras_achadas = c(regras_achadas, paste0("de ", tipo_de_origem, ": ", regras_do_tipo_de_origem))
     }
   }
-  paste(partes, collapse = "; ")
+  paste(regras_achadas, collapse = "; ")
 }
 
 # As regras de um tipo simples com nome (TCnpj, TProcEmi...); "" quando o nome não é um tipo do pacote
 # (xs:string, por exemplo).
 descrever_tipo_simples = function(nome_do_tipo, definicoes, tipos_ja_vistos) {
-  tipo = definicoes$tipos[[nome_do_tipo]]
-  if (is.null(tipo) || xml2::xml_name(tipo) != "simpleType") {
+  definicao_do_tipo = definicoes$tipos[[nome_do_tipo]]
+  if (is.null(definicao_do_tipo) || xml2::xml_name(definicao_do_tipo) != "simpleType") {
     return("")
   }
-  restricao = xml2::xml_find_first(tipo, "xs:restriction", NAMESPACE_DO_XSD)
+  restricao = xml2::xml_find_first(definicao_do_tipo, "xs:restriction", NAMESPACE_DO_XSD)
   if (!inherits(restricao, "xml_missing")) {
     return(descrever_restricao(restricao, definicoes, tipos_ja_vistos))
   }
-  uniao = xml2::xml_find_first(tipo, "xs:union", NAMESPACE_DO_XSD)
-  if (!inherits(uniao, "xml_missing")) {
-    return(paste0("um de ", xml2::xml_attr(uniao, "memberTypes")))
+  uniao_de_tipos = xml2::xml_find_first(definicao_do_tipo, "xs:union", NAMESPACE_DO_XSD)
+  if (!inherits(uniao_de_tipos, "xml_missing")) {
+    return(paste0("um de ", xml2::xml_attr(uniao_de_tipos, "memberTypes")))
   }
   ""
 }
@@ -174,84 +182,87 @@ descrever_tipo_simples = function(nome_do_tipo, definicoes, tipos_ja_vistos) {
 # As regras de um campo num texto só: quantas vezes aparece, o tipo, o padrão e os valores aceitos. É o que
 # se compara entre um pacote e outro.
 regras_do_campo = function(definicao_do_campo, definicoes) {
-  minimo = xml2::xml_attr(definicao_do_campo, "minOccurs")
-  maximo = xml2::xml_attr(definicao_do_campo, "maxOccurs")
-  uso = xml2::xml_attr(definicao_do_campo, "use")
-  tipo = sem_prefixo(xml2::xml_attr(definicao_do_campo, "type"))
-  partes = character()
-  if (!is.na(uso)) {
-    partes = c(partes, paste0("uso ", uso))
+  minimo_de_vezes = xml2::xml_attr(definicao_do_campo, "minOccurs")
+  maximo_de_vezes = xml2::xml_attr(definicao_do_campo, "maxOccurs")
+  uso_do_atributo = xml2::xml_attr(definicao_do_campo, "use")
+  nome_do_tipo = sem_prefixo(xml2::xml_attr(definicao_do_campo, "type"))
+  regras_achadas = character()
+  if (!is.na(uso_do_atributo)) {
+    regras_achadas = c(regras_achadas, paste0("uso ", uso_do_atributo))
   } else if (xml2::xml_name(definicao_do_campo) == "element") {
-    partes = c(partes, paste0("[", ifelse(is.na(minimo), "1", minimo), "..", ifelse(is.na(maximo), "1", maximo), "]"))
+    regras_achadas = c(regras_achadas, paste0("[", ifelse(is.na(minimo_de_vezes), "1", minimo_de_vezes), "..",
+                                              ifelse(is.na(maximo_de_vezes), "1", maximo_de_vezes), "]"))
   }
-  if (!is.na(tipo)) {
-    partes = c(partes, paste0("tipo ", tipo))
-    do_tipo = descrever_tipo_simples(tipo, definicoes, tipo)
-    if (do_tipo != "") {
-      partes = c(partes, do_tipo)
+  if (!is.na(nome_do_tipo)) {
+    regras_achadas = c(regras_achadas, paste0("tipo ", nome_do_tipo))
+    regras_do_tipo = descrever_tipo_simples(nome_do_tipo, definicoes, nome_do_tipo)
+    if (regras_do_tipo != "") {
+      regras_achadas = c(regras_achadas, regras_do_tipo)
     }
   }
   restricao_de_dentro = xml2::xml_find_first(definicao_do_campo, "xs:simpleType/xs:restriction", NAMESPACE_DO_XSD)
   if (!inherits(restricao_de_dentro, "xml_missing")) {
-    de_dentro = descrever_restricao(restricao_de_dentro, definicoes, character())
-    if (de_dentro != "") {
-      partes = c(partes, de_dentro)
+    regras_da_restricao = descrever_restricao(restricao_de_dentro, definicoes, character())
+    if (regras_da_restricao != "") {
+      regras_achadas = c(regras_achadas, regras_da_restricao)
     }
   }
-  paste(partes, collapse = "; ")
+  paste(regras_achadas, collapse = "; ")
 }
 
-# Todos os campos dentro de um nó do schema, cada um com o caminho e as regras. `tipos_ja_abertos` evita
+# Todos os campos dentro de uma parte do schema, cada um com o caminho e as regras. `tipos_ja_abertos` evita
 # entrar de novo num tipo que contém a si mesmo.
-campos_dentro = function(no, caminho_de_cima, definicoes, tipos_ja_abertos) {
+campos_dentro = function(parte_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos) {
   caminhos = character()
   regras = character()
-  for (filho in xml2::xml_children(no)) {
-    tag = xml2::xml_name(filho)
-    if (tag %in% c("sequence", "choice", "all", "complexType", "extension", "restriction")) {
-      if (tag %in% c("extension", "restriction")) {
-        base = sem_prefixo(xml2::xml_attr(filho, "base"))
-        if (!is.na(base) && !is.null(definicoes$tipos[[base]]) && !(base %in% tipos_ja_abertos)) {
-          de_dentro = campos_dentro(definicoes$tipos[[base]], caminho_de_cima, definicoes, c(tipos_ja_abertos, base))
-          caminhos = c(caminhos, de_dentro$caminhos)
-          regras = c(regras, de_dentro$regras)
+  for (item_do_schema in xml2::xml_children(parte_do_schema)) {
+    tipo_do_item = xml2::xml_name(item_do_schema)
+    if (tipo_do_item %in% c("sequence", "choice", "all", "complexType", "extension", "restriction")) {
+      # Uma extensão ou restrição de outro tipo começa com os campos dele.
+      if (tipo_do_item %in% c("extension", "restriction")) {
+        tipo_de_origem = sem_prefixo(xml2::xml_attr(item_do_schema, "base"))
+        if (!is.na(tipo_de_origem) && !is.null(definicoes$tipos[[tipo_de_origem]]) && !(tipo_de_origem %in% tipos_ja_abertos)) {
+          campos_do_tipo_de_origem = campos_dentro(definicoes$tipos[[tipo_de_origem]], caminho_de_cima, definicoes, c(tipos_ja_abertos, tipo_de_origem))
+          caminhos = c(caminhos, campos_do_tipo_de_origem$caminhos)
+          regras = c(regras, campos_do_tipo_de_origem$regras)
         }
       }
-      de_dentro = campos_dentro(filho, caminho_de_cima, definicoes, tipos_ja_abertos)
-      caminhos = c(caminhos, de_dentro$caminhos)
-      regras = c(regras, de_dentro$regras)
-    } else if (tag %in% c("complexContent", "simpleContent")) {
-      de_dentro = campos_dentro(filho, caminho_de_cima, definicoes, tipos_ja_abertos)
-      caminhos = c(caminhos, de_dentro$caminhos)
-      regras = c(regras, de_dentro$regras)
-    } else if (tag == "attribute") {
-      caminhos = c(caminhos, paste0(caminho_de_cima, "/@", xml2::xml_attr(filho, "name")))
-      regras = c(regras, regras_do_campo(filho, definicoes))
-    } else if (tag == "any") {
+      campos_do_grupo = campos_dentro(item_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos)
+      caminhos = c(caminhos, campos_do_grupo$caminhos)
+      regras = c(regras, campos_do_grupo$regras)
+    } else if (tipo_do_item %in% c("complexContent", "simpleContent")) {
+      campos_do_conteudo = campos_dentro(item_do_schema, caminho_de_cima, definicoes, tipos_ja_abertos)
+      caminhos = c(caminhos, campos_do_conteudo$caminhos)
+      regras = c(regras, campos_do_conteudo$regras)
+    } else if (tipo_do_item == "attribute") {
+      caminhos = c(caminhos, paste0(caminho_de_cima, "/@", xml2::xml_attr(item_do_schema, "name")))
+      regras = c(regras, regras_do_campo(item_do_schema, definicoes))
+    } else if (tipo_do_item == "any") {
       caminhos = c(caminhos, paste0(caminho_de_cima, "/(qualquer elemento)"))
       regras = c(regras, "")
-    } else if (tag == "element") {
-      nome = xml2::xml_attr(filho, "name")
-      referencia = sem_prefixo(xml2::xml_attr(filho, "ref"))
-      if (is.na(nome)) {
-        caminhos = c(caminhos, paste0(caminho_de_cima, "/", referencia))
+    } else if (tipo_do_item == "element") {
+      nome_do_campo = xml2::xml_attr(item_do_schema, "name")
+      # Um elemento que só aponta para outro (ref, como a Signature) entra pelo nome, sem abrir.
+      if (is.na(nome_do_campo)) {
+        caminhos = c(caminhos, paste0(caminho_de_cima, "/", sem_prefixo(xml2::xml_attr(item_do_schema, "ref"))))
         regras = c(regras, "")
         next
       }
-      caminho = paste0(caminho_de_cima, "/", nome)
-      caminhos = c(caminhos, caminho)
-      regras = c(regras, regras_do_campo(filho, definicoes))
-      tipo = sem_prefixo(xml2::xml_attr(filho, "type"))
-      complexo_de_dentro = xml2::xml_find_first(filho, "xs:complexType", NAMESPACE_DO_XSD)
-      if (!inherits(complexo_de_dentro, "xml_missing")) {
-        de_dentro = campos_dentro(complexo_de_dentro, caminho, definicoes, tipos_ja_abertos)
-      } else if (!is.na(tipo) && !is.null(definicoes$tipos[[tipo]]) && xml2::xml_name(definicoes$tipos[[tipo]]) == "complexType" && !(tipo %in% tipos_ja_abertos)) {
-        de_dentro = campos_dentro(definicoes$tipos[[tipo]], caminho, definicoes, c(tipos_ja_abertos, tipo))
+      caminho_do_campo = paste0(caminho_de_cima, "/", nome_do_campo)
+      caminhos = c(caminhos, caminho_do_campo)
+      regras = c(regras, regras_do_campo(item_do_schema, definicoes))
+      nome_do_tipo = sem_prefixo(xml2::xml_attr(item_do_schema, "type"))
+      tipo_escrito_dentro = xml2::xml_find_first(item_do_schema, "xs:complexType", NAMESPACE_DO_XSD)
+      if (!inherits(tipo_escrito_dentro, "xml_missing")) {
+        campos_do_elemento = campos_dentro(tipo_escrito_dentro, caminho_do_campo, definicoes, tipos_ja_abertos)
+      } else if (!is.na(nome_do_tipo) && !is.null(definicoes$tipos[[nome_do_tipo]])
+                 && xml2::xml_name(definicoes$tipos[[nome_do_tipo]]) == "complexType" && !(nome_do_tipo %in% tipos_ja_abertos)) {
+        campos_do_elemento = campos_dentro(definicoes$tipos[[nome_do_tipo]], caminho_do_campo, definicoes, c(tipos_ja_abertos, nome_do_tipo))
       } else {
         next
       }
-      caminhos = c(caminhos, de_dentro$caminhos)
-      regras = c(regras, de_dentro$regras)
+      caminhos = c(caminhos, campos_do_elemento$caminhos)
+      regras = c(regras, campos_do_elemento$regras)
     }
   }
   list(caminhos = caminhos, regras = regras)
@@ -259,23 +270,24 @@ campos_dentro = function(no, caminho_de_cima, definicoes, tipos_ja_abertos) {
 
 # Os campos de cada tipo ou elemento pedido, com o caminho começando pelo nome dele (TNFe/infNFe/ide/mod) e
 # as regras. Um nome que não está no schema volta como uma linha avisando.
-campos_do_schema = function(pasta_do_schema, nomes) {
+campos_do_schema = function(pasta_do_schema, nomes_para_comparar) {
   definicoes = ler_definicoes(pasta_do_schema)
   caminhos = character()
   regras = character()
-  for (nome in nomes) {
-    if (!is.null(definicoes$tipos[[nome]])) {
-      de_dentro = campos_dentro(definicoes$tipos[[nome]], nome, definicoes, nome)
-    } else if (!is.null(definicoes$elementos[[nome]])) {
-      elemento_sozinho = xml2::xml_new_root("xs:schema", "xmlns:xs" = NAMESPACE_DO_XSD[["xs"]])
-      xml2::xml_add_child(elemento_sozinho, definicoes$elementos[[nome]])
-      de_dentro = campos_dentro(elemento_sozinho, "", definicoes, character())
-      de_dentro$caminhos = sub("^/", "", de_dentro$caminhos)
+  for (nome_para_comparar in nomes_para_comparar) {
+    if (!is.null(definicoes$tipos[[nome_para_comparar]])) {
+      campos_achados = campos_dentro(definicoes$tipos[[nome_para_comparar]], nome_para_comparar, definicoes, nome_para_comparar)
+    } else if (!is.null(definicoes$elementos[[nome_para_comparar]])) {
+      # Um elemento solto (o rodo) é posto sozinho num schema, para ser lido como os outros.
+      schema_so_com_o_elemento = xml2::xml_new_root("xs:schema", "xmlns:xs" = NAMESPACE_DO_XSD[["xs"]])
+      xml2::xml_add_child(schema_so_com_o_elemento, definicoes$elementos[[nome_para_comparar]])
+      campos_achados = campos_dentro(schema_so_com_o_elemento, "", definicoes, character())
+      campos_achados$caminhos = sub("^/", "", campos_achados$caminhos)
     } else {
-      de_dentro = list(caminhos = nome, regras = "(não está neste pacote)")
+      campos_achados = list(caminhos = nome_para_comparar, regras = "(não está neste pacote)")
     }
-    caminhos = c(caminhos, de_dentro$caminhos)
-    regras = c(regras, de_dentro$regras)
+    caminhos = c(caminhos, campos_achados$caminhos)
+    regras = c(regras, campos_achados$regras)
   }
   data.frame(caminho = caminhos, regras = regras)
 }
@@ -284,10 +296,10 @@ campos_do_schema = function(pasta_do_schema, nomes) {
 comparar_campos = function(campos_de_antes, campos_de_agora) {
   entraram = campos_de_agora[!(campos_de_agora$caminho %in% campos_de_antes$caminho), ]
   sairam = campos_de_antes[!(campos_de_antes$caminho %in% campos_de_agora$caminho), ]
-  nos_dois = intersect(campos_de_antes$caminho, campos_de_agora$caminho)
-  regras_de_antes = campos_de_antes$regras[match(nos_dois, campos_de_antes$caminho)]
-  regras_de_agora = campos_de_agora$regras[match(nos_dois, campos_de_agora$caminho)]
-  mudaram = data.frame(caminho = nos_dois, antes = regras_de_antes, agora = regras_de_agora)
+  caminhos_nos_dois = intersect(campos_de_antes$caminho, campos_de_agora$caminho)
+  regras_de_antes = campos_de_antes$regras[match(caminhos_nos_dois, campos_de_antes$caminho)]
+  regras_de_agora = campos_de_agora$regras[match(caminhos_nos_dois, campos_de_agora$caminho)]
+  mudaram = data.frame(caminho = caminhos_nos_dois, antes = regras_de_antes, agora = regras_de_agora)
   mudaram = mudaram[mudaram$antes != mudaram$agora, ]
   list(entraram = entraram, sairam = sairam, mudaram = mudaram)
 }
