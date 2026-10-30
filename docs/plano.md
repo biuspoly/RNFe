@@ -497,7 +497,9 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Teste real (30/10/2026), as 27 UFs em homologação, com um e-CNPJ da empresa:** 22 responderam 107 em 8 s
   (as 16 da SVRS e AM, GO, MS, PE, PR e RS). As 5 que falham são de TLS:
   - com o Schannel (o motor padrão do curl no Windows), MG e MT não têm algoritmo em comum com o servidor, e BA,
-    SP e a SVAN (MA) fecham a conexão sem resposta (o Schannel manda só o certificado da empresa, sem a cadeia);
+    SP e a SVAN (MA) fecham a conexão sem resposta. A primeira suspeita (o Schannel não mandar a cadeia do
+    certificado de cliente) estava errada: pelo OpenSSL, os três respondem mesmo com só o certificado da empresa,
+    sem a cadeia (testado em 30/10/2026). A causa no Schannel não foi provada;
   - com o OpenSSL (`CURL_SSL_BACKEND=openssl`), o `.pfx` não abre no curl (cifra antiga, que o OpenSSL 3 não lê);
     em PEM, extraído pelo pacote `openssl` com a cadeia, MG e a SVAN respondem, mas a SVRS, BA, SP e MT falham
     porque o OpenSSL não acha a raiz da ICP-Brasil (o Schannel busca a raiz no Windows Update; o OpenSSL, mesmo
@@ -518,6 +520,14 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     por conta própria afetaria tudo o que a sessão faz na internet. O RNFe usa o motor que estiver ligado
     (`motor_de_tls()`): no Schannel, o .pfx, como antes, e a falha diz como ligar o OpenSSL; nos outros, o
     caminho PEM. A ajuda e o README pedem `CURL_SSL_BACKEND=openssl` no `.Renviron`.
+  - **Como o PyNFe faz** (o `master` do GitHub, lido em 30/10/2026, pergunta do usuário: "mas o pynfe consegue?"):
+    o `requests` do Python roda sempre sobre o OpenSSL, também no Windows, então o problema do Schannel não existe
+    para ele; o .pfx vira PEM em arquivos temporários (a chave sem cifra, `NoEncryption()`, só o certificado da
+    empresa, sem a cadeia) apagados depois; e a chamada é `requests.post(..., verify=False)`, nas três funções de
+    envio: **não verifica o certificado do servidor**, por isso não precisa das raízes da ICP-Brasil. Pelo nosso
+    teste com o OpenSSL e só o certificado da empresa, BA, SP, a SVAN, MG e MT respondem; o PyNFe em si não foi
+    rodado. O RNFe mantém a verificação ligada (sem ela, quem estiver no meio do caminho pode se passar pela
+    SEFAZ) e grava a chave cifrada.
 - **Testes sem rede:** certificados falsos (`ferramentas/gerar_certificados_de_teste.py`, com o pacote
   `cryptography`: pessoa jurídica com os quatro otherName dos reais, pessoa física, sem os campos e vencido), a
   resposta real da SVRS gravada (não tem dado de empresa) e o `httr2` devolvendo essa resposta no lugar da
