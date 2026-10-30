@@ -61,6 +61,29 @@ test_that("NCM como no Siscomex, com a descri\u00e7\u00e3o completa", {
   )
 })
 
+test_that("munic\u00edpios como na API de localidades do IBGE", {
+  municipios = tabela_fiscal("municipios")
+  expect_identical(names(municipios), c("codigo", "nome", "uf", "codigo_uf", "inicio", "fim"))
+  expect_s3_class(municipios$inicio, "Date")
+  expect_true(all(is.na(municipios$inicio) & is.na(municipios$fim)))
+  # 5.571 em 30/10/2026; o rob\u00f4 atualiza a lista, ent\u00e3o o teste s\u00f3 confere que ela est\u00e1 inteira.
+  expect_gt(nrow(municipios), 5500)
+  expect_true(all(grepl("^[0-9]{7}$", municipios$codigo)))
+  expect_false(any(duplicated(municipios$codigo)))
+  expect_identical(municipios$codigo_uf, substr(municipios$codigo, 1, 2))
+  expect_identical(length(unique(municipios$uf)), 27L)
+  expect_identical(municipios$nome[municipios$codigo == "3550308"], "S\u00e3o Paulo")
+  expect_identical(municipios$uf[municipios$codigo == "2304400"], "CE")
+  expect_identical(municipios$nome[municipios$codigo == "3304557"], "Rio de Janeiro")
+  # Os munic\u00edpios dos documentos de exemplo est\u00e3o todos na tabela.
+  exemplos = system.file("exemplos", c("nfe_proc_sp.xml", "cte_proc_sp.xml", "mdfe_proc_sp.xml"), package = "RNfe")
+  codigos_nos_exemplos = c(nfe_ler(exemplos[1])$notas$emitente_codigo_municipio, cte_ler(exemplos[2])$ctes$fim_codigo_municipio,
+                           mdfe_ler(exemplos[3])$locais$codigo_municipio)
+  codigos_nos_exemplos = codigos_nos_exemplos[!is.na(codigos_nos_exemplos)]
+  expect_gt(length(codigos_nos_exemplos), 0)
+  expect_true(all(codigos_nos_exemplos %in% municipios$codigo))
+})
+
 test_that("IBS e CBS como na tabela de classifica\u00e7\u00e3o tribut\u00e1ria do Portal da NF-e", {
   cst = tabela_fiscal("cst_ibs_cbs")
   expect_identical(cst$descricao[cst$codigo == "000"], "Tributa\u00e7\u00e3o integral")

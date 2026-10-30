@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Evento fictício para os testes do RNfe: a carta de correção da NF-e de exemplo nfe_ce_simples_cpf.xml (emitente
+     com CNPJ alfanumérico, o exemplo da Receita), com o retorno da SEFAZ. Ambiente de homologação e assinatura de
+     mentira. -->
+<procEventoNFe versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+  <evento versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infEvento Id="ID11011023261012ABC34501DE3555002000000042187654321301">
+      <cOrgao>23</cOrgao>
+      <tpAmb>2</tpAmb>
+      <CNPJ>12ABC34501DE35</CNPJ>
+      <chNFe>23261012ABC34501DE35550020000000421876543213</chNFe>
+      <dhEvento>2026-10-21T09:15:00-03:00</dhEvento>
+      <tpEvento>110110</tpEvento>
+      <nSeqEvento>1</nSeqEvento>
+      <verEvento>1.00</verEvento>
+      <detEvento versao="1.00">
+        <descEvento>Carta de Correcao</descEvento>
+        <xCorrecao>ONDE SE LE RUA DO CLIENTE, 10, LEIA-SE RUA DO CLIENTE, 100</xCorrecao>
+        <xCondUso>A Carta de Correcao e disciplinada pelo paragrafo 1o-A do art. 7o do Convenio S/N, de 15 de dezembro de 1970 e pode ser utilizada para regularizacao de erro ocorrido na emissao de documento fiscal, desde que o erro nao esteja relacionado com: I - as variaveis que determinam o valor do imposto tais como: base de calculo, aliquota, diferenca de preco, quantidade, valor da operacao ou da prestacao; II - a correcao de dados cadastrais que implique mudanca do remetente ou do destinatario; III - a data de emissao ou de saida.</xCondUso>
+      </detEvento>
+    </infEvento>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#ID11011023261012ABC34501DE3555002000000042187654321301">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </evento>
+  <retEvento versao="1.00">
+    <infEvento>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <cOrgao>23</cOrgao>
+      <cStat>135</cStat>
+      <xMotivo>Evento registrado e vinculado a NF-e</xMotivo>
+      <chNFe>23261012ABC34501DE35550020000000421876543213</chNFe>
+      <tpEvento>110110</tpEvento>
+      <xEvento>Carta de Correcao</xEvento>
+      <nSeqEvento>1</nSeqEvento>
+      <CPFDest>12345678909</CPFDest>
+      <dhRegEvento>2026-10-21T09:15:02-03:00</dhRegEvento>
+      <nProt>323260000006789</nProt>
+    </infEvento>
+  </retEvento>
+</procEventoNFe>

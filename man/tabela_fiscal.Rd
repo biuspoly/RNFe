@@ -8,7 +8,8 @@ CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
 01/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
-(29/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
+(29/10/2026). Municípios: a API de localidades do IBGE
+(servicodados.ibge.gov.br, 30/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
 Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
 combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma
@@ -20,11 +21,12 @@ tabela_fiscal(nome_da_tabela)
 \arguments{
 \item{nome_da_tabela}{O nome da tabela: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
-\code{"classificacao_ibs_cbs"} ou \code{"fontes"}.}
+\code{"classificacao_ibs_cbs"}, \code{"municipios"} ou \code{"fontes"}.}
 }
 \value{
 Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
-\code{nota_explicativa} no CFOP, \code{descricao} nas outras), \code{inicio} e \code{fim}.
+\code{nota_explicativa} no CFOP, \code{nome} nos municípios, \code{descricao} nas outras),
+\code{inicio} e \code{fim}.
 }
 \description{
 As tabelas de códigos da NF-e, copiadas das fontes oficiais, com a data em
@@ -57,6 +59,11 @@ códigos 0 a 2 mudaram de descrição em 2013, quando vieram os de 3 a 8.
 (\code{cClassTrib}), com o \code{cst} dela, o \code{nome}, a \code{descricao}, o artigo da LC
 214/2025 (\code{artigo_lc_214}), o \code{tipo_aliquota}, os percentuais de redução
 (\code{reducao_ibs} e \code{reducao_cbs}) e se vale na NF-e e na NFC-e.
+\item \code{"municipios"}: os municípios vigentes do IBGE, com o \code{codigo} de 7
+dígitos que vai nos documentos (\code{cMun}, \code{cMunFG}, \code{cLocIncid}...), o \code{nome},
+a \code{uf} e o \code{codigo_uf} (o que abre a chave de acesso). Sem datas: o IBGE só
+publica a lista de hoje. O código 9999999, que a NF-e usa para o exterior,
+não é do IBGE e não está nela.
 \item \code{"fontes"}: de onde veio cada tabela, com a versão e o dia em que foi
 baixada.
 }

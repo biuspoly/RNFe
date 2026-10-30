@@ -11,9 +11,11 @@ MDF-e, NFS-e Nacional). Nesta versão:
 \itemize{
 \item a chave de acesso: conferir, desmontar e calcular o dígito, já com o CNPJ
 alfanumérico (veja \link{chave});
-\item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}} e
-\code{\link[=nfse_ler]{nfse_ler()}};
-\item as tabelas fiscais, com a vigência de cada código: \code{\link[=tabela_fiscal]{tabela_fiscal()}}.
+\item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}},
+\code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles (cancelamento, carta de
+correção, manifestação, encerramento...), \code{\link[=eventos_ler]{eventos_ler()}};
+\item as tabelas fiscais, com a vigência de cada código, e os municípios do
+IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}}.
 }
 }
 \section{De onde vêm as regras}{

@@ -14,7 +14,9 @@ PAGINA_DOS_SCHEMAS = list(
 DOWNLOAD_DO_PORTAL_DO_MDFE = "https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArquivoEstatico/?sistema=MDFE&tipoArquivo=2&nomeArquivo="
 
 # O pacote de schemas que cada leitor do RNfe segue, o arquivo principal dele e o que é comparado quando sai
-# um pacote novo: tipos (TNFe...) e elementos soltos (o modal rodoviário, que o infModal não confere).
+# um pacote novo: tipos (TNFe...) e elementos soltos (o modal rodoviário, que o infModal não confere). As linhas
+# nfe_eventos, nfe_cancelamento, nfe_carta_correcao e nfe_distribuicao são os pacotes à parte dos eventos da NF-e,
+# que só o validador dos exemplos usa: o vigia compara as publicações com a linha do documento (nfe).
 SCHEMAS_USADOS = "ferramentas/schemas_usados.csv"
 SCHEMAS_VISTOS = "ferramentas/schemas_vistos.csv"
 O_QUE_COMPARAR = list(
@@ -115,6 +117,12 @@ baixar_pacote = function(documento, endereco, pasta_temporaria) {
                               error = function(erro) character(), warning = function(aviso) character())
   if (length(arquivos_abertos) == 0) {
     return(NA_character_)
+  }
+  # Alguns pacotes guardam os schemas em zips dentro do zip (o 010d da NF-e traz o PL_Evento.zip): cada um é
+  # aberto numa pasta com o nome dele.
+  for (zip_de_dentro in arquivos_abertos[grepl("\\.zip$", arquivos_abertos, ignore.case = TRUE)]) {
+    tryCatch(utils::unzip(zip_de_dentro, exdir = sub("\\.zip$", "", zip_de_dentro, ignore.case = TRUE)),
+             error = function(erro) character(), warning = function(aviso) character())
   }
   pasta_do_pacote
 }

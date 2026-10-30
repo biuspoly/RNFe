@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Evento fictício para os testes do RNfe: o encerramento do MDF-e de exemplo mdfe_proc_sp.xml no município de
+     descarregamento, com o retorno. CNPJ de exemplo, ambiente de homologação e assinatura de mentira. -->
+<procEventoMDFe versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">
+  <eventoMDFe versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">
+    <infEvento Id="ID1101123526103334445550007058001000000321111223344801">
+      <cOrgao>35</cOrgao>
+      <tpAmb>2</tpAmb>
+      <CNPJ>33344455500070</CNPJ>
+      <chMDFe>35261033344455500070580010000003211112233448</chMDFe>
+      <dhEvento>2026-10-16T09:00:00-03:00</dhEvento>
+      <tpEvento>110112</tpEvento>
+      <nSeqEvento>1</nSeqEvento>
+      <detEvento versaoEvento="3.00">
+        <evEncMDFe>
+          <descEvento>Encerramento</descEvento>
+          <nProt>935260000011111</nProt>
+          <dtEnc>2026-10-16</dtEnc>
+          <cUF>33</cUF>
+          <cMun>3304557</cMun>
+        </evEncMDFe>
+      </detEvento>
+    </infEvento>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#ID1101123526103334445550007058001000000321111223344801">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </eventoMDFe>
+  <retEventoMDFe versao="3.00">
+    <infEvento>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <cOrgao>35</cOrgao>
+      <cStat>135</cStat>
+      <xMotivo>Evento registrado e vinculado a MDF-e</xMotivo>
+      <chMDFe>35261033344455500070580010000003211112233448</chMDFe>
+      <tpEvento>110112</tpEvento>
+      <xEvento>Encerramento</xEvento>
+      <nSeqEvento>1</nSeqEvento>
+      <dhRegEvento>2026-10-16T09:00:02-03:00</dhRegEvento>
+      <nProt>935260000022222</nProt>
+    </infEvento>
+  </retEventoMDFe>
+</procEventoMDFe>

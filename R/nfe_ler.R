@@ -8,7 +8,8 @@ NULL
 # citam, e não são notas.
 CAMINHO_DAS_NOTAS = "//NFe/infNFe"
 
-# Coluna, caminho a partir do infNFe e tipo. "a|b" pega o que existir (o leiaute deixa um ou outro).
+# Coluna, caminho a partir do infNFe e tipo. "a|b" pega o que existir (o leiaute deixa um ou outro). O QR-Code e a
+# URL de consulta da NFC-e ficam fora do infNFe, no infNFeSupl, ao lado dele.
 CAMPOS_DA_NOTA = ler_campos("
 coluna                        caminho                                     tipo
 modelo                        ide/mod                                     texto
@@ -26,6 +27,9 @@ presenca                      ide/indPres                                 inteir
 forma_emissao                 ide/tpEmis                                  inteiro
 ambiente                      ide/tpAmb                                   inteiro
 processo_emissao              ide/procEmi                                 inteiro
+formato_danfe                 ide/tpImp                                   inteiro
+contingencia_entrada          ide/dhCont                                  data_hora
+contingencia_justificativa    ide/xJust                                   texto
 municipio_fato_gerador        ide/cMunFG                                  texto
 emitente_documento            emit/CNPJ|emit/CPF                          texto
 emitente_nome                 emit/xNome                                  texto
@@ -79,6 +83,8 @@ fatura_valor_liquido          cobr/fat/vLiq                               numero
 valor_troco                   pag/vTroco                                  numero
 informacoes_complementares    infAdic/infCpl                              texto
 informacoes_fisco             infAdic/infAdFisco                          texto
+qrcode                        parent::NFe/infNFeSupl/qrCode               texto
+url_consulta                  parent::NFe/infNFeSupl/urlChave             texto
 ")
 
 # A partir do det. Os impostos principais em colunas; todos os campos estão na tabela impostos.
@@ -190,9 +196,11 @@ autorizacao      card/cAut  texto
 #' `r documentar_campos(CAMPOS_DA_NOTA)`;
 #' do protocolo de autorização, quando vem junto:
 #' `r documentar_campos(CAMPOS_DO_PROTOCOLO)`;
-#' e `arquivo`. `emissao`, `saida_entrada` e `autorizacao` são data e hora
-#' (mostradas no horário de Brasília); `data_emissao` é a data como está na
-#' nota.
+#' e `arquivo`. `emissao`, `saida_entrada`, `contingencia_entrada` e
+#' `autorizacao` são data e hora (mostradas no horário de Brasília);
+#' `data_emissao` é a data como está na nota. Na NFC-e (`modelo` 65), `qrcode`
+#' e `url_consulta` vêm do grupo `infNFeSupl`, que fica fora do `infNFe`; o
+#' texto do QR-Code fica como está, sem desmontar.
 #'
 #' @section itens:
 #' Uma linha por item: `chave`, `item` (`nItem`),

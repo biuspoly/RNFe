@@ -12,12 +12,15 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     condutores e os seguros) e o da NFS-e Nacional (com a DPS declarada e o
     ISSQN, as retenções e o valor líquido calculados pelo sistema nacional),
     já com os campos da Reforma Tributária (IBS e CBS) e o nome de cada CFOP
-    e CST como a tabela oficial registrava na data do documento. Todos os
-    campos de cada documento podem vir também um por linha, com o caminho de
-    cada um. Traz as tabelas fiscais
-    (CFOP, NCM, origem, CST do ICMS, CSOSN, CST do IPI, do PIS e da COFINS e o
-    CST e a classificação tributária do IBS e da CBS) copiadas do Portal da
-    NF-e, do Portal Único Siscomex e do SPED, com a vigência de cada código.
+    e CST como a tabela oficial registrava na data do documento. Lê também os
+    eventos de todos eles (cancelamento, carta de correção, manifestação do
+    destinatário, encerramento), com o retorno da SEFAZ ou o resumo da
+    Distribuição de DF-e. Todos os campos de cada documento podem vir também
+    um por linha, com o caminho de cada um. Traz as tabelas fiscais (CFOP,
+    NCM, origem, CST do ICMS, CSOSN, CST do IPI, do PIS e da COFINS, o CST e
+    a classificação tributária do IBS e da CBS e os municípios) copiadas do
+    Portal da NF-e, do Portal Único Siscomex, do SPED e do IBGE, com a
+    vigência de cada código.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNfe
 BugReports: https://github.com/biuspoly/RNfe/issues
@@ -37,6 +40,7 @@ Collate:
     'chave.R'
     'ler_xml.R'
     'cte_ler.R'
+    'eventos_ler.R'
     'mdfe_ler.R'
     'nfe_ler.R'
     'nfse_ler.R'

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NFC-e fictícia para os testes do RNfe: emitida em contingência offline (forma de emissão 9) e autorizada
+     depois, consumidor não identificado, pagamento em dinheiro com troco, QR-Code da versão 3. CNPJ de exemplo,
+     endereços .invalid, ambiente de homologação e assinatura de mentira. -->
+<nfeProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infNFe versao="4.00" Id="NFe23261011444777000161650030000000779135724686">
+      <ide>
+        <cUF>23</cUF>
+        <cNF>13572468</cNF>
+        <natOp>VENDA</natOp>
+        <mod>65</mod>
+        <serie>3</serie>
+        <nNF>77</nNF>
+        <dhEmi>2026-10-21T19:12:40-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>2304400</cMunFG>
+        <tpImp>4</tpImp>
+        <tpEmis>9</tpEmis>
+        <cDV>6</cDV>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>1</indPres>
+        <procEmi>0</procEmi>
+        <verProc>RNfe-testes</verProc>
+        <dhCont>2026-10-21T19:05:00-03:00</dhCont>
+        <xJust>SEM CONEXAO COM A INTERNET NO CAIXA</xJust>
+      </ide>
+      <emit>
+        <CNPJ>11444777000161</CNPJ>
+        <xNome>MERCADINHO DE TESTE LTDA</xNome>
+        <xFant>MERCADINHO DE TESTE</xFant>
+        <enderEmit>
+          <xLgr>RUA DE TESTE</xLgr>
+          <nro>100</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>2304400</cMun>
+          <xMun>FORTALEZA</xMun>
+          <UF>CE</UF>
+          <CEP>60000000</CEP>
+        </enderEmit>
+        <IE>987654321</IE>
+        <CRT>1</CRT>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <cProd>P10</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL</xProd>
+          <NCM>19052090</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>2.0000</qCom>
+          <vUnCom>10.0000000000</vUnCom>
+          <vProd>20.00</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>2.0000</qTrib>
+          <vUnTrib>10.0000000000</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>102</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISOutr>
+              <CST>99</CST>
+              <vBC>0.00</vBC>
+              <pPIS>0.00</pPIS>
+              <vPIS>0.00</vPIS>
+            </PISOutr>
+          </PIS>
+          <COFINS>
+            <COFINSOutr>
+              <CST>99</CST>
+              <vBC>0.00</vBC>
+              <pCOFINS>0.00</pCOFINS>
+              <vCOFINS>0.00</vCOFINS>
+            </COFINSOutr>
+          </COFINS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>P20</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>SUCO DE TESTE 1 L</xProd>
+          <NCM>20098990</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>1.0000</qCom>
+          <vUnCom>15.0000000000</vUnCom>
+          <vProd>15.00</vProd>
+          <cEANTrib>SEM GTIN</cEANTrib>
+          <uTrib>UN</uTrib>
+          <qTrib>1.0000</qTrib>
+          <vUnTrib>15.0000000000</vUnTrib>
+          <indTot>1</indTot>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMSSN102>
+              <orig>0</orig>
+              <CSOSN>102</CSOSN>
+            </ICMSSN102>
+          </ICMS>
+          <PIS>
+            <PISOutr>
+              <CST>99</CST>
+              <vBC>0.00</vBC>
+              <pPIS>0.00</pPIS>
+              <vPIS>0.00</vPIS>
+            </PISOutr>
+          </PIS>
+          <COFINS>
+            <COFINSOutr>
+              <CST>99</CST>
+              <vBC>0.00</vBC>
+              <pCOFINS>0.00</pCOFINS>
+              <vCOFINS>0.00</vCOFINS>
+            </COFINSOutr>
+          </COFINS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>0.00</vBC>
+          <vICMS>0.00</vICMS>
+          <vICMSDeson>0.00</vICMSDeson>
+          <vFCP>0.00</vFCP>
+          <vBCST>0.00</vBCST>
+          <vST>0.00</vST>
+          <vFCPST>0.00</vFCPST>
+          <vFCPSTRet>0.00</vFCPSTRet>
+          <vProd>35.00</vProd>
+          <vFrete>0.00</vFrete>
+          <vSeg>0.00</vSeg>
+          <vDesc>0.00</vDesc>
+          <vII>0.00</vII>
+          <vIPI>0.00</vIPI>
+          <vIPIDevol>0.00</vIPIDevol>
+          <vPIS>0.00</vPIS>
+          <vCOFINS>0.00</vCOFINS>
+          <vOutro>0.00</vOutro>
+          <vNF>35.00</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>9</modFrete>
+      </transp>
+      <pag>
+        <detPag>
+          <indPag>0</indPag>
+          <tPag>01</tPag>
+          <vPag>50.00</vPag>
+        </detPag>
+        <vTroco>15.00</vTroco>
+      </pag>
+    </infNFe>
+    <infNFeSupl>
+      <qrCode>https://nfce.exemplo.invalid/qrcode?p=23261011444777000161650030000000779135724686|3|2|21|35.00|||QVNTSU5BVFVSQSBERSBURVNURSBETyBRUi1DT0RF</qrCode>
+      <urlChave>https://nfce.exemplo.invalid/consulta</urlChave>
+    </infNFeSupl>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#NFe23261011444777000161650030000000779135724686">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <chNFe>23261011444777000161650030000000779135724686</chNFe>
+      <dhRecbto>2026-10-21T20:30:15-03:00</dhRecbto>
+      <nProt>323260000004321</nProt>
+      <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

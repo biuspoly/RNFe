@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Evento fictício para os testes do RNfe (leiaute 1.01): o cancelamento da NFS-e de exemplo nfse_sp_v101.xml pelo
+     prestador, como o sistema nacional o registra. CNPJ de exemplo, ambiente de homologação e assinatura de mentira. -->
+<evento versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
+  <infEvento Id="EVT35503082211222333000181000000000012326101234567898101101001">
+    <verAplic>TESTE</verAplic>
+    <ambGer>2</ambGer>
+    <nSeqEvento>1</nSeqEvento>
+    <dhProc>2026-10-20T17:30:05-03:00</dhProc>
+    <nDFSe>789</nDFSe>
+    <pedRegEvento versao="1.01">
+      <infPedReg Id="PRE35503082211222333000181000000000012326101234567898101101">
+        <tpAmb>2</tpAmb>
+        <verAplic>RNfe-testes</verAplic>
+        <dhEvento>2026-10-20T17:30:00-03:00</dhEvento>
+        <CNPJAutor>11222333000181</CNPJAutor>
+        <chNFSe>35503082211222333000181000000000012326101234567898</chNFSe>
+        <e101101>
+          <xDesc>Cancelamento de NFS-e</xDesc>
+          <cMotivo>1</cMotivo>
+          <xMotivo>VALOR DO SERVICO INFORMADO ERRADO NA EMISSAO</xMotivo>
+        </e101101>
+      </infPedReg>
+    </pedRegEvento>
+  </infEvento>
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <Reference URI="#EVT35503082211222333000181000000000012326101234567898101101001">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+    <KeyInfo>
+      <X509Data>
+        <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+      </X509Data>
+    </KeyInfo>
+  </Signature>
+</evento>

@@ -5,14 +5,17 @@
 
 source("ferramentas/schemas.R", encoding = "UTF-8")
 
-# Devolve a pasta de cada documento (nfe, cte, mdfe), a que tem o arquivo principal do pacote.
+# Devolve a pasta de cada linha de schemas_usados.csv (nfe, cte, mdfe, nfse e os pacotes dos eventos da NF-e), a
+# que tem o arquivo principal do pacote.
 baixar_schemas_usados = function(pasta_dos_schemas) {
   dir.create(pasta_dos_schemas, showWarnings = FALSE, recursive = TRUE)
   pacotes_usados = ler_csv(SCHEMAS_USADOS)
   pasta_de_cada_documento = character()
   for (numero_do_pacote in seq_len(nrow(pacotes_usados))) {
     pacote_usado = pacotes_usados[numero_do_pacote, ]
-    pasta_do_pacote = baixar_pacote(pacote_usado$documento, pacote_usado$endereco, pasta_dos_schemas)
+    # O portal é o começo do nome da linha: nfe_eventos é um pacote do portal da NF-e.
+    portal_do_pacote = sub("_.*$", "", pacote_usado$documento)
+    pasta_do_pacote = baixar_pacote(portal_do_pacote, pacote_usado$endereco, pasta_dos_schemas)
     pasta_do_schema = pasta_do_arquivo(pasta_do_pacote, pacote_usado$arquivo_principal)
     if (is.na(pasta_do_schema)) {
       stop("O pacote de ", pacote_usado$documento, " baixado de ", pacote_usado$endereco, " não tem o ",

@@ -4,6 +4,9 @@ NOTA_SP = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
 NOTA_CE = system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNfe")
 CHAVE_SP = "35261011222333000181550010000010011123456785"
 CHAVE_CE = "23261012ABC34501DE35550020000000421876543213"
+NFCE_CE = system.file("exemplos", "nfce_ce_contingencia.xml", package = "RNfe")
+# Dígito calculado à parte, pela regra da NT Conjunta 2025.001.
+CHAVE_NFCE = "23261011444777000161650030000000779135724686"
 
 test_that("a nota com protocolo: cabe\u00e7alho, totais e autoriza\u00e7\u00e3o", {
   nota = nfe_ler(NOTA_SP)$notas
@@ -179,6 +182,36 @@ test_that("nota sem protocolo, emitente com CNPJ alfanum\u00e9rico e destinat\u0
   expect_equal(lida$itens$valor_desconto, 2.5)
   expect_identical(nrow(lida$parcelas), 0L)
   expect_identical(lida$pagamentos$forma, "17")
+})
+
+test_that("a NFC-e em conting\u00eancia offline: modelo 65, QR-Code, URL de consulta e troco", {
+  lida = nfe_ler(NFCE_CE)
+  nota = lida$notas
+  expect_identical(nota$chave, CHAVE_NFCE)
+  expect_true(chave_valida(nota$chave))
+  expect_identical(chave_decompor(nota$chave)$documento, "NFC-e")
+  expect_identical(nota$modelo, "65")
+  expect_identical(nota$formato_danfe, 4L)
+  expect_identical(nota$forma_emissao, 9L)
+  expect_equal(as.numeric(nota$contingencia_entrada), as.numeric(as.POSIXct("2026-10-21 22:05:00", tz = "UTC")))
+  expect_identical(attr(nota$contingencia_entrada, "tzone"), "America/Sao_Paulo")
+  expect_identical(nota$contingencia_justificativa, "SEM CONEXAO COM A INTERNET NO CAIXA")
+  expect_true(is.na(nota$destinatario_documento))
+  expect_identical(nota$qrcode, paste0("https://nfce.exemplo.invalid/qrcode?p=", CHAVE_NFCE,
+                                       "|3|2|21|35.00|||QVNTSU5BVFVSQSBERSBURVNURSBETyBRUi1DT0RF"))
+  expect_identical(nota$url_consulta, "https://nfce.exemplo.invalid/consulta")
+  expect_equal(nota$valor_nota, 35)
+  expect_equal(nota$valor_troco, 15)
+  expect_identical(nota$protocolo, "323260000004321")
+  expect_identical(nota$situacao, 100L)
+  expect_identical(nrow(lida$itens), 2L)
+  expect_equal(sum(lida$itens$valor_produto), nota$valor_produtos)
+  expect_identical(lida$pagamentos$forma, "01")
+  expect_equal(lida$pagamentos$valor, 50)
+  expect_equal(lida$pagamentos$valor - nota$valor_troco, nota$valor_nota)
+  # A NF-e (modelo 55) n\u00e3o tem o infNFeSupl.
+  expect_true(is.na(nfe_ler(NOTA_SP)$notas$qrcode))
+  expect_true(is.na(nfe_ler(NOTA_SP)$notas$contingencia_entrada))
 })
 
 test_that("a tabela campos s\u00f3 vem quando pedida, com todos os campos da nota", {

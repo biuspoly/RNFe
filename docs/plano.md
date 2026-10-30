@@ -4,7 +4,10 @@ Situação em 30/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XM
 fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 concluída:** a
 leitura do CT-e e do CT-e OS, conferida com 14.370 CT-e reais; a do MDF-e, conferida pelo schema oficial,
 sem MDF-e reais para comparar; e a da NFS-e Nacional, conferida com 11.207 NFS-e reais. Os quatro leitores
-têm a tabela `campos` e o vigia olha os quatro portais. A próxima é a etapa 3 (certificado e SEFAZ).
+têm a tabela `campos` e o vigia olha os quatro portais. **Fechadas em 30/10/2026 as lacunas achadas na
+revisão das duas etapas:** a NFC-e (que nunca tinha sido lida de verdade: ganhou exemplo, QR-Code e
+contingência), a leitura dos eventos de todos os documentos e a tabela de municípios do IBGE. A próxima é a
+etapa 3 (certificado e SEFAZ).
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -22,8 +25,8 @@ Cada etapa já é útil sozinha.
 |---|---|---|---|
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
-| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | prontos (CT-e, CT-e OS, MDF-e e NFS-e Nacional) |
+| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, MDF-e, NFS-e Nacional e eventos) |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
@@ -43,7 +46,8 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
 | Ler CT-e, CT-e OS e MDF-e em tabelas | não | não | não | pronto (etapa 2) |
 | Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
-| Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) | não | não | não | pronto (etapa 1) |
+| Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
+| Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
@@ -69,7 +73,7 @@ nota antiga ser lida com a tabela da época.
 | Tabela | Fonte oficial | Atualização automática |
 |---|---|---|
 | NCM | Siscomex | sim |
-| Municípios | IBGE | sim |
+| Municípios | IBGE | sim (desde 30/10/2026) |
 | Reforma (classificação e CST da CBS e do IBS) | Portal da NF-e e Receita | quase: a planilha muda de formato |
 | CFOP, CST do ICMS, CSOSN, CEST | Confaz e Sinief | em parte: o robô avisa e alguém confere |
 
@@ -139,6 +143,23 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   criando as funções, algo fácil de entender"): nomes que dizem o que a coisa é, `for` em vez de função
   dentro de função, `if`/`else` por extenso.
 
+## Etapa 1, a NFC-e: o que se decidiu (30/10/2026)
+
+- **Lacuna achada na revisão das etapas:** o `nfe_ler()` dizia ler a NFC-e, mas nenhuma NFC-e tinha sido
+  lida. Os exemplos eram os dois de modelo 55, e as 120.522 NF-e reais do app Fiscal também (nenhuma de
+  modelo 65). O grupo do QR-Code (`infNFeSupl`) fica fora do `infNFe`, então não entrava nem na tabela
+  `campos`.
+- `notas` ganhou `qrcode` e `url_consulta` (do `infNFeSupl`), `formato_danfe` (`tpImp`: 4 é o DANFE NFC-e) e,
+  para a emissão em contingência, `contingencia_entrada` (`dhCont`) e `contingencia_justificativa` (`xJust`).
+  O texto do QR-Code fica como está, sem desmontar.
+- **Exemplo:** uma NFC-e em contingência offline (forma de emissão 9) autorizada depois, com consumidor não
+  identificado, troco e o QR-Code da versão 3 offline. Passa no schema PL_010g. O validador reprovou o QR-Code
+  com dia 32, sem o `?p=` e a URL de consulta curta. Ele **não** reprova forma de emissão 1 com um QR-Code de
+  contingência: o schema não cruza o `tpEmis` com a chave dentro do QR-Code. Essa conferência entre campos é
+  da SEFAZ e fica para a pré-conferência (etapa 5).
+- Os endereços do exemplo usam o domínio reservado `.invalid`, para não parecer endereço de SEFAZ.
+- **Sem NFC-e reais para conferir:** a conferência é pelo schema e pelo exemplo.
+
 ## Etapa 1, tabelas fiscais menores: o que se decidiu
 
 - **Fontes:** as duas são oficiais e baixadas por `ferramentas/gerar_tabelas.R`.
@@ -180,6 +201,12 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - O Excel guardava alguns CST como número (400 em vez de "400"); voltam com três dígitos.
   - Nota anterior a 2026 com o grupo IBSCBS (fase de testes) fica sem o nome da classificação. Em 10 mil notas
     reais foram 5 itens.
+- **Municípios (30/10/2026):** a API de localidades do IBGE, na visão nivelada
+  (`localidades/municipios?view=nivelado`): 5.571 municípios, com o código de 7 dígitos, o nome, a UF e o
+  código da UF. A visão completa traz a UF dentro da microrregião, e um município vinha sem microrregião (ficaria
+  sem UF). O IBGE só publica a lista de hoje: a tabela vai sem datas, como o CSOSN. O código 9999999, que a NF-e
+  usa para o exterior (está no schema), não é do IBGE e não entra. O robô das tabelas passa a baixá-la junto
+  com as outras.
 
 ## Etapa 2, leitura do CT-e: o que se decidiu
 
@@ -295,6 +322,61 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - CST e classificação do IBS/CBS acharam o nome em todas.
 - Velocidade: 7 ms por NFS-e (78 s para as 11.207).
 
+## Etapa 2, os eventos: o que se decidiu (30/10/2026)
+
+- **Lacuna achada na revisão das etapas:** nenhum leitor lia eventos, e um documento cancelado saía do leitor
+  como autorizado (a situação 100 do protocolo): o cancelamento é um evento à parte. O acervo do app Fiscal
+  tem 181.621 eventos, entre eles 2.208 cancelamentos e 2.142 cartas de correção.
+- `eventos_ler()` lê, numa tabela só: o evento com o retorno da SEFAZ (`procEventoNFe`, `procEventoCTe`,
+  `procEventoMDFe`), o evento só assinado, o evento da NFS-e (raiz `evento`, com o `pedRegEvento` dentro) e o
+  resumo de evento da Distribuição de DF-e (`resEvento`, 60% dos eventos do acervo). Devolve `eventos`,
+  `campos` (ligada por padrão) e `arquivos`, e se junta aos documentos pela chave.
+- O retorno é casado com o pedido pelo envelope em que os dois estão, não pela chave: num arquivo com vários
+  envelopes, cada pedido fica com o seu (há teste). `documento` sai do modelo da chave (NF-e, NFC-e, CT-e,
+  CT-e OS, MDF-e) e é "NFS-e" no evento da NFS-e.
+- Na NF-e o detalhe fica direto no `detEvento`; no CT-e e no MDF-e, num grupo de cada evento (`evCancCTe`,
+  `evEncMDFe`...). As colunas leem os dois lugares, e o que é próprio de cada tipo fica em `campos`, com o
+  caminho a partir do evento, do retorno ou do resumo (os três aparecem no caminho, então o resumo e o completo
+  do mesmo evento não se confundem).
+- Textos em colunas: `justificativa` (`xJust`; na NFS-e, o `xMotivo` que o autor escreveu), `correcao`
+  (`xCorrecao`, da carta de correção da NF-e) e `observacao` (`xObs`, como o motivo do desacordo do CT-e). A
+  `observacao` entrou depois da conferência: o Fiscal mostrava o `xObs` de 4 eventos de desacordo que o RNfe só
+  tinha em `campos`.
+- **NFS-e:** o tipo é o nome do grupo do evento sem o `e` (`e101101` dá `101101`). **Achado nos eventos
+  reais:** a NFS-e 1.00 de substituição traz o `nPedRegEvento` entre a chave e o grupo (e `nDFe` no lugar de
+  `nDFSe`), o que não está no schema 1.00. Por isso o tipo sai do grupo que tem a descrição (`xDesc`), não da
+  posição.
+- **Schemas:** os eventos do CT-e, do MDF-e e da NFS-e vêm nos pacotes que os leitores já seguem. Os da NF-e
+  têm pacotes à parte: o leiaute genérico de 2026 (PL_Evento do pacote 010d, que já aceita o CNPJ com letras),
+  o do cancelamento (2018), o da carta de correção (2014) e o da Distribuição de DF-e v1.04 (o `resEvento`).
+  O validador confere o envelope do evento da NF-e pelo genérico e o `detEvento` pelo schema do tipo dele
+  (`e110111`, `e110110`); no CT-e e no MDF-e, o `procEvento*` pelo schema próprio e o grupo do evento pelo
+  arquivo que tem o nome dele. Juntar o evento do CT-e ao schema do CT-e dá conflito (os dois definem o tipo
+  `TModTransp`), e juntar todos os grupos também. O `resEvento` importa o schema da assinatura, que o pacote
+  da Distribuição não traz: vai a cópia do pacote dos eventos.
+- **Exemplos:** seis eventos escritos à mão passam no schema oficial: cancelamento da NF-e, carta de correção
+  da NF-e de emitente com CNPJ alfanumérico, resumo da ciência da operação, cancelamento do CT-e,
+  encerramento do MDF-e e cancelamento da NFS-e, todos citando os documentos de exemplo. Os textos (descrição,
+  motivo do retorno) são os que a SEFAZ usa, conferidos no acervo. O validador reprovou oito versões
+  estragadas de propósito: justificativa curta, descrição fora da lista, sequência 0, condição de uso da carta
+  alterada, protocolo do resumo com 14 dígitos, cancelamento do CT-e sem protocolo, município do encerramento
+  com 5 dígitos e código de motivo 3 na NFS-e.
+- **Conferido em 30/10/2026 com os 181.621 eventos reais** do app Fiscal (180.417 de NF-e, 884 de CT-e e 320
+  de NFS-e; 108.418 resumos), que não entram no repositório. Todos foram lidos, um evento por arquivo:
+  - contra um segundo leitor do XML (ElementTree, em Python): chave, tipo, sequência, data do evento, autor,
+    descrição, protocolo, data do registro, situação, justificativa, correção, protocolo do documento,
+    versão, resumo e o número de campos de cada evento (2.530.117 no total) bateram em todos;
+  - contra o que o app Fiscal tirou dos mesmos XMLs: documento, chave, tipo, sequência, autor, situação,
+    protocolo e resumo bateram em todos; o texto (correção, justificativa ou observação), em todos menos um,
+    em que o Fiscal tira os espaços das pontas.
+  - A data difere na forma: o Fiscal guarda o relógio escrito no XML sem o fuso, e o RNfe guarda o instante.
+    Em 148 eventos o fuso escrito não era o de Brasília (+00:00, -04:00, -02:00, -07:00, -00:00 e -08:00); em
+    2, o Fiscal ficou sem a data.
+  - 393 eventos aparecem em dois arquivos (o mesmo evento guardado duas vezes); o leitor devolve uma linha por
+    arquivo lido.
+- Sem eventos de MDF-e reais (o acervo não tem MDF-e): a conferência deles é pelo schema e pelo exemplo.
+- Velocidade: uns 4 ms por evento (de 700 a 840 s para os 181 mil, com a tabela `campos`).
+
 ## Etapa 2, a tabela `campos` nos quatro leitores
 
 - Cada leitor tem colunas para os campos mais usados, e o resto do documento vai para `campos`: um campo por
@@ -344,7 +426,15 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - Depois de atualizar um leitor (ou de ver que a publicação não afeta o RNfe), rodar
   `Rscript ferramentas/vigiar_schemas.R --registrar`.
 - `ferramentas/baixar_schemas.R` baixa os pacotes seguidos, e `ferramentas/validar_exemplos.R` sem argumentos
-  usa ele: a validação não depende mais de uma cópia guardada à mão.
+  usa ele: a validação não depende mais de uma cópia guardada à mão. Com argumentos, o validador recebe uma
+  pasta por linha de `schemas_usados.csv` (`nfe=<pasta> cte=<pasta>...`).
+- **Os eventos da NF-e têm pacotes à parte**, que entraram em `schemas_usados.csv` com nomes próprios
+  (`nfe_eventos`, `nfe_cancelamento`, `nfe_carta_correcao`, `nfe_distribuicao`): só o validador os usa. O vigia
+  continua comparando cada publicação com a linha do documento (`nfe`); uma publicação só de eventos ganha o
+  aviso de que não traz o schema principal.
+- **Zip dentro do zip:** o pacote 010d da NF-e guarda os schemas em zips internos (`PL_Evento.zip`,
+  `PL_010d_NT2026.004.zip`). O `baixar_pacote()` agora abre esses zips também, o que vale para o vigia: antes,
+  um pacote assim seria dado como "não traz o schema principal".
 - **Testado em 30/10/2026:** os três portais responderam aos servidores do GitHub (205 publicações). Num ramo
   de teste sem uma publicação no registro, o robô abriu um aviso (nº 2) e, na rodada seguinte, não abriu
   outro; o aviso foi fechado com a explicação e o ramo apagado. Os pacotes que o `baixar_schemas.R` traz são

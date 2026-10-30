@@ -3,3 +3,7 @@
 "cte","Schemas XML CT-e - NT 2026.004 - v.1.00 (Republicado em 16/10/2026)","https://www.cte.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=zeylq8Ib5E0=","cte_v4.00.xsd"
 "mdfe","Schemas NT 2025.001 v 1.04","https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArquivoEstatico/?sistema=MDFE&tipoArquivo=2&nomeArquivo=PL_MDFe_300b_NT012025_1.04.zip","mdfe_v3.00.xsd"
 "nfse","NFSe-ESQUEMAS_XSD-v1.01-20260209","https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip","NFSe_v1.01.xsd"
+"nfe_eventos","Schemas XML NF-e 010d_v1.01 - CNPJ Alfanumérico - NT 2026.004.v.1.01, Eventos e ws de Consulta CCC. (Publicado em 08/06/2026)","https://www.nfe.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=FOEnx2KAsCk=","leiauteEvento_v1.00.xsd"
+"nfe_cancelamento","Esquemas XML NF-e / NFC-e - Evento Cancelamento (Atualizado em 21/12/2018) (ZIP)","https://www.nfe.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=0Yynu2Ck%2BbM=","e110111_v1.00.xsd"
+"nfe_carta_correcao","Esquemas XML NF-e - Pacote de Liberação Evento CCe v1.01 (30/05/2014) (ZIP)","https://www.nfe.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=%2B0MSTVshMl8=","e110110_v1.00.xsd"
+"nfe_distribuicao","Esquemas XML NF-e - Pacote de Liberação Distribuição de DF-e v.1.04. Publicado em 03/07/2026 (ZIP)","https://www.nfe.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=IzuP2y0G6hk=","resEvento_v1.01.xsd"

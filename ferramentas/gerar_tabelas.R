@@ -10,6 +10,8 @@
 #   Receita publica com o início e o fim de cada código, baixadas pelo serviço do próprio SPED.
 # - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e.
 # - NCM: a nomenclatura vigente do Portal Único Siscomex.
+# - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
+#   município.
 
 PASTA_DAS_TABELAS = "inst/extdata/tabelas"
 ENDERECO_DO_PORTAL = "https://www.nfe.fazenda.gov.br/portal/"
@@ -17,6 +19,9 @@ PAGINA_COM_A_TABELA_DE_CFOP = "listaConteudo.aspx?tipoConteudo=/NJarYc9nus="
 SERVICO_DO_SPED = "http://www.sped.fazenda.gov.br/spedtabelas/WsConsulta/WsConsulta.asmx"
 DOWNLOAD_DO_SPED = "http://www.sped.fazenda.gov.br/spedtabelas/wsconsulta/obterTabela.ashx"
 ENDERECO_DA_NCM = "https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json"
+# A visão nivelada traz a UF de todos os municípios. Na visão completa, a UF vem dentro da microrregião, e um
+# município vinha sem microrregião em 30/10/2026: ficaria sem a UF.
+ENDERECO_DOS_MUNICIPIOS = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?view=nivelado"
 # O tipo de cada tabela no SPED Fiscal (atributo "tipo" dos metadados).
 TABELAS_DO_SPED = c(
   origem = "SIT_TRIB_ICMS_A",
@@ -216,6 +221,28 @@ baixar_ncm = function() {
   list(tabela = ncm, situacao = ncm_do_siscomex$Data_Ultima_Atualizacao_NCM, ato = ncm_do_siscomex$Ato)
 }
 
+# ---- IBGE ----
+
+# Os municípios vigentes, com o código de 7 dígitos que vai nos documentos. O IBGE só publica a lista de hoje,
+# então a tabela vai sem datas, como o CSOSN.
+baixar_municipios = function() {
+  pedido_dos_municipios = httr2::req_timeout(httr2::request(ENDERECO_DOS_MUNICIPIOS), 120)
+  municipios_do_ibge = jsonlite::fromJSON(httr2::resp_body_string(httr2::req_perform(pedido_dos_municipios)))
+  conferir_colunas(municipios_do_ibge, c("municipio-id", "municipio-nome", "UF-id", "UF-sigla"), "municípios")
+  municipios = data.frame(
+    codigo = as.character(municipios_do_ibge$`municipio-id`),
+    nome = municipios_do_ibge$`municipio-nome`,
+    uf = municipios_do_ibge$`UF-sigla`,
+    codigo_uf = as.character(municipios_do_ibge$`UF-id`),
+    inicio = as.Date(NA),
+    fim = as.Date(NA)
+  )
+  if (any(nchar(municipios$codigo) != 7) || anyDuplicated(municipios$codigo) > 0 || anyNA(municipios$uf)) {
+    stop("A lista de municípios do IBGE mudou de formato: código sem 7 dígitos, repetido ou sem UF", call. = FALSE)
+  }
+  municipios[order(municipios$codigo), ]
+}
+
 # ---- montar as tabelas do pacote ----
 
 # A tabela B do SPED parou em 2009: os quatro CST de combustível monofásico (02, 15, 53 e 61, desde
@@ -316,12 +343,14 @@ fontes = rbind(fontes, data.frame(
 
 tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
+municipios_do_ibge = baixar_municipios()
 fontes = rbind(fontes, data.frame(
-  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm"),
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "municipios"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
-    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")")
+    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
+    "IBGE, API de localidades (servicodados.ibge.gov.br), municípios vigentes"
   ),
   versao = NA,
   data_da_versao = NA,
@@ -332,6 +361,7 @@ gravar_tabela(cfop_do_portal$tabela, "cfop")
 gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
 gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
+gravar_tabela(municipios_do_ibge, "municipios")
 gravar_tabela(origem_com_as_que_faltam(tabelas_do_sped$origem, tabelas_do_sped$cst_icms_tres_digitos), "origem")
 gravar_tabela(cst_icms_com_os_monofasicos(tabelas_do_sped$cst_icms_b, tabelas_do_sped$cst_icms_tres_digitos), "cst_icms")
 gravar_tabela(csosn_do_sped(tabelas_do_sped$cst_icms_tres_digitos), "csosn")

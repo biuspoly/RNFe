@@ -3,7 +3,7 @@
 
 NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
-  "classificacao_ibs_cbs", "fontes"
+  "classificacao_ibs_cbs", "municipios", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em")
 COLUNAS_DE_INDICADOR = c(
@@ -44,6 +44,11 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #'   (`cClassTrib`), com o `cst` dela, o `nome`, a `descricao`, o artigo da LC
 #'   214/2025 (`artigo_lc_214`), o `tipo_aliquota`, os percentuais de redução
 #'   (`reducao_ibs` e `reducao_cbs`) e se vale na NF-e e na NFC-e.
+#' - `"municipios"`: os municípios vigentes do IBGE, com o `codigo` de 7
+#'   dígitos que vai nos documentos (`cMun`, `cMunFG`, `cLocIncid`...), o `nome`,
+#'   a `uf` e o `codigo_uf` (o que abre a chave de acesso). Sem datas: o IBGE só
+#'   publica a lista de hoje. O código 9999999, que a NF-e usa para o exterior,
+#'   não é do IBGE e não está nela.
 #' - `"fontes"`: de onde veio cada tabela, com a versão e o dia em que foi
 #'   baixada.
 #'
@@ -56,14 +61,16 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #'
 #' @param nome_da_tabela O nome da tabela: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #'   `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
-#'   `"classificacao_ibs_cbs"` ou `"fontes"`.
+#'   `"classificacao_ibs_cbs"`, `"municipios"` ou `"fontes"`.
 #' @return Um `data.frame` com `codigo`, a descrição (`titulo` e
-#'   `nota_explicativa` no CFOP, `descricao` nas outras), `inicio` e `fim`.
+#'   `nota_explicativa` no CFOP, `nome` nos municípios, `descricao` nas outras),
+#'   `inicio` e `fim`.
 #' @source CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 #'   2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 #'   Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
 #'   01/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
-#'   (29/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
+#'   (29/10/2026). Municípios: a API de localidades do IBGE
+#'   (servicodados.ibge.gov.br, 30/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
 #'   Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
 #'   combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 #'   porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma

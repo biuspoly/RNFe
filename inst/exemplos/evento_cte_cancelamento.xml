@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Evento fictício para os testes do RNfe: o cancelamento do CT-e de exemplo cte_proc_sp.xml (emitente com CNPJ
+     alfanumérico, o exemplo da Receita), com o retorno da SEFAZ. Ambiente de homologação e assinatura de mentira. -->
+<procEventoCTe versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+  <eventoCTe versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+    <infEvento Id="ID11011135261012ABC34501DE35570010000005551876543210001">
+      <cOrgao>35</cOrgao>
+      <tpAmb>2</tpAmb>
+      <CNPJ>12ABC34501DE35</CNPJ>
+      <chCTe>35261012ABC34501DE35570010000005551876543210</chCTe>
+      <dhEvento>2026-10-15T18:00:00-03:00</dhEvento>
+      <tpEvento>110111</tpEvento>
+      <nSeqEvento>1</nSeqEvento>
+      <detEvento versaoEvento="4.00">
+        <evCancCTe>
+          <descEvento>Cancelamento</descEvento>
+          <nProt>135260000098765</nProt>
+          <xJust>CT-E EMITIDO EM DUPLICIDADE PARA O MESMO FRETE</xJust>
+        </evCancCTe>
+      </detEvento>
+    </infEvento>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#ID11011135261012ABC34501DE35570010000005551876543210001">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </eventoCTe>
+  <retEventoCTe versao="4.00">
+    <infEvento>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <cOrgao>35</cOrgao>
+      <cStat>135</cStat>
+      <xMotivo>Evento registrado e vinculado a CT-e</xMotivo>
+      <chCTe>35261012ABC34501DE35570010000005551876543210</chCTe>
+      <tpEvento>110111</tpEvento>
+      <xEvento>Cancelamento</xEvento>
+      <nSeqEvento>1</nSeqEvento>
+      <dhRegEvento>2026-10-15T18:00:04-03:00</dhRegEvento>
+      <nProt>135260000077777</nProt>
+    </infEvento>
+  </retEventoCTe>
+</procEventoCTe>
