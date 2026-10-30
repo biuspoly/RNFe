@@ -45,6 +45,13 @@ cnpj_recebedor         CNPJReceb      texto
 cnpj_base_instituicao  CNPJBasePSP    texto
 ")
 
+# O nome do meio de pagamento, como a tabela de meios de pagamento do Portal da NF-e registrava na data do documento
+# (o Informe Técnico 2026.001 manda usar a mesma tabela do tPag).
+DESCRICOES_DO_PAGAMENTO_VINCULADO = ler_campos("
+coluna_do_codigo coluna_nova              tabela          texto
+meio_pagamento   meio_pagamento_descricao meios_pagamento descricao
+")
+
 # Lê cada arquivo e devolve, de cada um, as colunas das tabelas (o que `colunas_do_documento` monta), o
 # nome e o problema. `caminho_dos_documentos` acha cada documento no XML ("//NFe/infNFe") e
 # `nome_do_documento` vai na mensagem do arquivo que não é desse tipo ("uma NF-e", "um CT-e").
@@ -228,6 +235,36 @@ acrescentar_descricoes = function(tabela_lida, datas, descricoes) {
     codigos = tabela_lida[[descricao_pedida$coluna_do_codigo]]
     nomes_na_data = descricao_na_data(descricao_pedida$tabela, codigos, datas, descricao_pedida$texto)
     tabela_lida = inserir_coluna_depois(tabela_lida, descricao_pedida$coluna_nova, nomes_na_data, descricao_pedida$coluna_do_codigo)
+  }
+  tabela_lida
+}
+
+# Ao lado de cada coluna de código, o que o código quer dizer, numa coluna `<coluna>_descricao`, pela tabela
+# tabela_fiscal("codigos_dos_campos") (textos da documentação dos schemas). `significados` diz a coluna, o campo do
+# leiaute que ela lê e, quando o significado depende de outra coluna (o modelo do CT-e, o grupo do documento), qual
+# é ela; "-" quando não depende. Código que a tabela não tem fica NA.
+acrescentar_significados = function(tabela_lida, documento, significados) {
+  codigos_dos_campos = tabela_fiscal("codigos_dos_campos")
+  codigos_do_documento = codigos_dos_campos[codigos_dos_campos$documento == documento, ]
+  for (numero_do_significado in seq_len(nrow(significados))) {
+    significado_pedido = significados[numero_do_significado, ]
+    codigos_do_campo = codigos_do_documento[codigos_do_documento$campo == significado_pedido$campo, ]
+    codigos_na_tabela = as.character(tabela_lida[[significado_pedido$coluna_do_codigo]])
+    if (significado_pedido$coluna_do_contexto == "-") {
+      contexto_de_cada = rep(NA_character_, length(codigos_na_tabela))
+    } else {
+      contexto_de_cada = as.character(tabela_lida[[significado_pedido$coluna_do_contexto]])
+    }
+    # Primeiro o significado do contexto da linha; sem ele, o que vale em qualquer contexto.
+    linha_com_contexto = match(paste(contexto_de_cada, codigos_na_tabela),
+                               paste(codigos_do_campo$contexto, codigos_do_campo$codigo)[!is.na(codigos_do_campo$contexto)])
+    linhas_com_contexto = which(!is.na(codigos_do_campo$contexto))
+    linhas_sem_contexto = which(is.na(codigos_do_campo$contexto))
+    linha_de_cada = linhas_com_contexto[linha_com_contexto]
+    sem_o_contexto = is.na(linha_de_cada)
+    linha_de_cada[sem_o_contexto] = linhas_sem_contexto[match(codigos_na_tabela[sem_o_contexto], codigos_do_campo$codigo[linhas_sem_contexto])]
+    tabela_lida = inserir_coluna_depois(tabela_lida, paste0(significado_pedido$coluna_do_codigo, "_descricao"),
+                                        codigos_do_campo$descricao[linha_de_cada], significado_pedido$coluna_do_codigo)
   }
   tabela_lida
 }

@@ -132,6 +132,13 @@ test_that("a NFS-e 1.00 de substitui\u00e7\u00e3o, com o nPedRegEvento entre a c
   expect_identical(evento$descricao, "Cancelamento de NFS-e")
 })
 
+test_that("o ambiente com o significado ao lado", {
+  eventos = eventos_ler(TODOS_OS_EVENTOS)$eventos
+  expect_identical(match("ambiente_descricao", names(eventos)), match("ambiente", names(eventos)) + 1L)
+  expect_identical(is.na(eventos$ambiente_descricao), is.na(eventos$ambiente))
+  expect_true(all(eventos$ambiente_descricao[!is.na(eventos$ambiente)] == "Homologa\u00e7\u00e3o"))
+})
+
 test_that("a tabela campos tem todos os campos de cada evento, sem a assinatura", {
   campos = eventos_ler(TODOS_OS_EVENTOS)$campos
   eventos = eventos_ler(TODOS_OS_EVENTOS)$eventos

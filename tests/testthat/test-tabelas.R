@@ -100,6 +100,34 @@ test_that("IBS e CBS como na tabela de classifica\u00e7\u00e3o tribut\u00e1ria d
   expect_true(all(classificacao$cst %in% cst$codigo))
 })
 
+test_that("meios de pagamento e bandeiras de cart\u00e3o como nas planilhas do Portal da NF-e", {
+  meios = tabela_fiscal("meios_pagamento")
+  expect_identical(names(meios), c("codigo", "descricao", "observacao", "inicio", "fim"))
+  expect_s3_class(meios$inicio, "Date")
+  expect_false(any(duplicated(meios$codigo)))
+  expect_identical(meios$descricao[meios$codigo == "17"], "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico")
+  expect_identical(meios$descricao[meios$codigo == "24"], "TEF - \"Book Transfer\"")
+  # A planilha guarda a data como n\u00famero do Excel: 45474 \u00e9 01/07/2024 e 46146, 04/05/2026.
+  expect_identical(meios$inicio[meios$codigo %in% c("05", "17", "23", "99")], as.Date(c("2024-07-01", "2024-07-01", "2026-05-04", "2020-01-01")))
+  expect_match(meios$observacao[meios$codigo == "05"], "^Cart\u00e3o da loja \\(na forma de credi\u00e1rio\\)")
+  bandeiras = tabela_fiscal("bandeiras_cartao")
+  expect_identical(names(bandeiras), c("codigo", "descricao", "inicio", "fim"))
+  expect_false(any(duplicated(bandeiras$codigo)))
+  expect_identical(bandeiras$descricao[bandeiras$codigo %in% c("06", "18", "27", "99")], c("Elo", "JcB", "Ticket", "Outros"))
+  expect_true(all(bandeiras$inicio == as.Date("2020-01-01")))
+})
+
+test_that("o significado dos c\u00f3digos de cada campo do leiaute", {
+  codigos = tabela_fiscal("codigos_dos_campos")
+  expect_identical(names(codigos), c("documento", "campo", "contexto", "codigo", "descricao", "inicio", "fim"))
+  expect_setequal(codigos$documento, c("NF-e", "CT-e", "MDF-e", "NFS-e", "evento"))
+  expect_false(any(is.na(codigos$descricao) | is.na(codigos$codigo)))
+  expect_false(any(duplicated(codigos[, c("documento", "campo", "contexto", "codigo")])))
+  forma_de_emissao = codigos[codigos$campo == "tpEmis" & codigos$codigo == "2", ]
+  expect_identical(forma_de_emissao$descricao[forma_de_emissao$documento == "NF-e"], "Conting\u00eancia FS")
+  expect_identical(forma_de_emissao$descricao[forma_de_emissao$documento == "CT-e"], "Conting\u00eancia offline")
+})
+
 test_that("a descri\u00e7\u00e3o muda com a data da nota", {
   datas = as.Date(c("2012-06-01", "2013-06-01", "2008-12-31"))
   expect_identical(
@@ -114,4 +142,7 @@ test_that("a descri\u00e7\u00e3o muda com a data da nota", {
   )
   expect_identical(descricao_na_data("csosn", "102", as.Date("2026-10-20")), "Tributada pelo Simples Nacional sem permiss\u00e3o de cr\u00e9dito")
   expect_identical(descricao_na_data("cst_icms", c("99", NA), as.Date(c("2026-01-01", "2026-01-01"))), c(NA_character_, NA_character_))
+  # O PIX dinâmico (17) só entrou na tabela de meios de pagamento em 01/07/2024.
+  expect_identical(descricao_na_data("meios_pagamento", c("17", "17"), as.Date(c("2024-06-30", "2024-07-01"))),
+                   c(NA, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico"))
 })

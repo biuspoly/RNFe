@@ -104,6 +104,33 @@ test_that("ao lado de cada c\u00f3digo do item, o nome dele na data da nota", {
   expect_true(is.na(itens$classificacao_ibs_cbs_nome[3]))
 })
 
+test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
+  lida = nfe_ler(c(NOTA_SP, NOTA_CE, NFCE_CE))
+  notas = lida$notas
+  expect_identical(match("forma_emissao_descricao", names(notas)), match("forma_emissao", names(notas)) + 1L)
+  expect_identical(notas$forma_emissao_descricao,
+                   c("Normal", "Normal", "Conting\u00eancia off-line da NFC-e e da NF-e com DANFE Simplificado Tipo 2"))
+  expect_identical(notas$emitente_regime_descricao, c("Regime Normal", "Simples Nacional", "Simples Nacional"))
+  expect_identical(notas$formato_danfe_descricao[3], "DANFE NFC-e")
+  expect_identical(notas$ambiente_descricao, rep("Homologa\u00e7\u00e3o", 3))
+  expect_identical(lida$itens$compoe_total_descricao[1], "O valor do item comp\u00f5e o total da NF-e")
+  # A forma de pagamento e o meio do pagamento vinculado pela tabela de meios de pagamento, na data da nota.
+  expect_identical(lida$pagamentos$indicador_descricao[lida$pagamentos$chave == CHAVE_SP], "Pagamento a prazo")
+  expect_identical(lida$pagamentos$forma_descricao,
+                   c("Boleto Banc\u00e1rio", "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico", "Dinheiro"))
+  expect_identical(lida$pagamentos_vinculados$meio_pagamento_descricao, "Boleto Banc\u00e1rio")
+})
+
+test_that("a bandeira do cart\u00e3o, pela tabela de bandeiras", {
+  texto_da_nfce = paste(readLines(NFCE_CE, encoding = "UTF-8"), collapse = "\n")
+  texto_da_nfce = sub("<tPag>01</tPag>", "<tPag>03</tPag>", texto_da_nfce, fixed = TRUE)
+  texto_da_nfce = sub("<vPag>50.00</vPag>", "<vPag>50.00</vPag><card><tpIntegra>2</tpIntegra><tBand>06</tBand></card>", texto_da_nfce, fixed = TRUE)
+  pagamentos = nfe_ler(texto_da_nfce)$pagamentos
+  expect_identical(pagamentos$forma_descricao, "Cart\u00e3o de Cr\u00e9dito")
+  expect_identical(pagamentos$bandeira, "06")
+  expect_identical(pagamentos$bandeira_descricao, "Elo")
+})
+
 test_that("os itens somam os totais da nota", {
   lida = nfe_ler(NOTA_SP)
   expect_equal(sum(lida$itens$valor_produto), lida$notas$valor_produtos)

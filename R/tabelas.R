@@ -3,7 +3,7 @@
 
 NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
-  "classificacao_ibs_cbs", "municipios", "fontes"
+  "classificacao_ibs_cbs", "meios_pagamento", "bandeiras_cartao", "municipios", "codigos_dos_campos", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em")
 COLUNAS_DE_INDICADOR = c(
@@ -14,13 +14,15 @@ COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs")
 # Cada tabela é lida do disco uma vez por sessão.
 tabelas_ja_lidas = new.env(parent = emptyenv())
 
-#' Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS e municípios
+#' Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS, pagamentos, municípios e o significado de cada código
 #'
 #' Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 #' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
-#' `"classificacao_ibs_cbs"`, `"municipios"` ou `"fontes"` (de onde veio cada
-#' uma, com a data). Cada tabela de códigos traz o `codigo`, a descrição e a vigência:
+#' `"classificacao_ibs_cbs"`, `"meios_pagamento"`, `"bandeiras_cartao"`,
+#' `"municipios"`, `"codigos_dos_campos"` (o que quer dizer cada código dos
+#' campos dos documentos) ou `"fontes"` (de onde veio cada uma, com a data).
+#' Cada tabela de códigos traz o `codigo`, a descrição e a vigência:
 #' `inicio` (desde quando vale) e `fim` (até quando valeu, vazio quando ainda
 #' vale). Um código que mudou de descrição tem uma linha por período.
 #'
@@ -48,6 +50,20 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #'   (`cClassTrib`), com o `cst` dela, o `nome`, a `descricao`, o artigo da LC
 #'   214/2025 (`artigo_lc_214`), o `tipo_aliquota`, os percentuais de redução
 #'   (`reducao_ibs` e `reducao_cbs`) e se vale na NF-e e na NFC-e.
+#' - `"meios_pagamento"`: os meios de pagamento da tabela do Portal da NF-e
+#'   (dinheiro, cartão, boleto, PIX...), com a `observacao` de quando usar
+#'   cada um. É o código do `tPag` da NF-e e do meio de pagamento vinculado da
+#'   Reforma (`tpMeioPgto`).
+#' - `"bandeiras_cartao"`: as bandeiras de cartão de crédito e débito da
+#'   tabela do Portal da NF-e (o `tBand`).
+#' - `"codigos_dos_campos"`: o que quer dizer cada código dos campos dos
+#'   documentos que não têm tabela própria (forma de emissão, finalidade,
+#'   modal, tipo de carga, regime do Simples Nacional...): `documento`
+#'   (`"NF-e"`, `"CT-e"`, `"MDF-e"`, `"NFS-e"` ou `"evento"`), `campo` (o nome
+#'   no leiaute, como `tpEmis`), `contexto` (quando o significado depende de
+#'   outra coisa: o modelo do CT-e ou o grupo do documento), `codigo` e
+#'   `descricao`. Os textos vêm da documentação dos schemas oficiais; os
+#'   leitores os põem ao lado de cada coluna de código (`*_descricao`).
 #' - `"municipios"`: os municípios vigentes do IBGE, com o `codigo` de 7
 #'   dígitos que vai nos documentos (`cMun`, `cMunFG`, `cLocIncid`...), o `nome`,
 #'   a `uf` e o `codigo_uf` (o que abre a chave de acesso). Sem datas: o IBGE só
@@ -67,7 +83,9 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #'   `"origem"` (origem da mercadoria), `"cst_icms"` (CST do ICMS), `"csosn"`
 #'   (CSOSN, do Simples Nacional), `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`,
 #'   `"cst_ibs_cbs"` (CST do IBS e da CBS), `"classificacao_ibs_cbs"`
-#'   (cClassTrib da Reforma), `"municipios"` (código IBGE, nome e UF) ou
+#'   (cClassTrib da Reforma), `"meios_pagamento"` (dinheiro, cartão, PIX...),
+#'   `"bandeiras_cartao"`, `"municipios"` (código IBGE, nome e UF),
+#'   `"codigos_dos_campos"` (o significado dos códigos dos documentos) ou
 #'   `"fontes"` (de onde veio cada tabela).
 #' @return Um `data.frame` com `codigo`, a descrição (`titulo` e
 #'   `nota_explicativa` no CFOP, `nome` nos municípios, `descricao` nas outras),
@@ -75,9 +93,16 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #' @source CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 #'   2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 #'   Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
-#'   01/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
-#'   (29/10/2026). Municípios: a API de localidades do IBGE
-#'   (servicodados.ibge.gov.br, 30/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
+#'   30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
+#'   (30/10/2026). Municípios: a API de localidades do IBGE
+#'   (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de
+#'   cartão: as tabelas do Portal da NF-e (publicadas em 06/03/2026 e
+#'   16/03/2021). Códigos dos campos: a documentação dos schemas oficiais que os
+#'   leitores seguem, conferida por `ferramentas/conferir_codigos_dos_campos.R`;
+#'   o tipo de transportador do MDF-e, pela Lei 11.442/2007 (art. 2º), e a
+#'   tributação do ISSQN da NFS-e (`tribISSQN`), pelo Anexo I do leiaute da
+#'   NFS-e Nacional, que corrige a ordem errada da documentação do schema 1.00.
+#'   Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
 #'   Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
 #'   combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 #'   porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma

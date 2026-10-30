@@ -77,6 +77,22 @@ test_that("o IBS e a CBS: o declarado na DPS e o calculado pelo sistema, com os 
   expect_equal(nfse$valor_total_com_ibs_cbs, nfse$valor_servico + nfse$valor_ibs + nfse$valor_cbs)
 })
 
+test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
+  nfses = nfse_ler(c(NFSE_SP, NFSE_CE))$nfses
+  expect_identical(match("tributacao_issqn_descricao", names(nfses)), match("tributacao_issqn", names(nfses)) + 1L)
+  expect_identical(nfses$situacao_descricao, rep("NFS-e gerada", 2))
+  expect_identical(nfses$prestador_simples_nacional_descricao, c("N\u00e3o optante", "Optante, Microempreendedor Individual (MEI)"))
+  expect_identical(nfses$tributacao_issqn_descricao, rep("Opera\u00e7\u00e3o tribut\u00e1vel", 2))
+  expect_identical(nfses$retencao_issqn_descricao, rep("N\u00e3o retido", 2))
+  expect_identical(nfses$cst_pis_cofins_descricao[1], "Opera\u00e7\u00e3o tribut\u00e1vel com al\u00edquota b\u00e1sica")
+  expect_identical(nfses$retencao_pis_cofins_descricao[1], "PIS e COFINS n\u00e3o retidos")
+  expect_identical(nfses$finalidade_descricao, c("NFS-e regular", NA))
+  # Na NFS-e 1.00 também vale a ordem do Anexo I (2 imunidade, 3 exportação, 4 não incidência): a documentação
+  # do schema 1.00 trazia outra ordem, por engano, corrigida no 1.01.
+  texto_da_ce = sub("<tribISSQN>1</tribISSQN>", "<tribISSQN>2</tribISSQN>", paste(readLines(NFSE_CE, encoding = "UTF-8"), collapse = "\n"), fixed = TRUE)
+  expect_identical(nfse_ler(texto_da_ce)$nfses$tributacao_issqn_descricao, "Imunidade")
+})
+
 test_that("a NFS-e 1.00: MEI, tomador pessoa f\u00edsica, desconto e o xOutInf no lugar antigo", {
   nfse = nfse_ler(NFSE_CE)$nfses
   expect_identical(nfse$chave, CHAVE_CE)

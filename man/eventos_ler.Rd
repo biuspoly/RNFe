@@ -81,8 +81,9 @@ que o autor escreveu;
 
 \code{data_evento} e \code{registro} são data e hora (mostradas no horário de
 Brasília). Códigos e textos ficam como estão no XML (as descrições da SEFAZ
-vêm sem acento); o significado de cada tipo de evento está no manual de cada
-documento.
+vêm sem acento). O nome do tipo do evento é a \code{descricao} que o próprio
+evento traz, e o \code{ambiente} vem com o significado ao lado
+(\code{ambiente_descricao}).
 }
 
 \section{campos}{

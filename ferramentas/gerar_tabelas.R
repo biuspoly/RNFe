@@ -10,6 +10,7 @@
 #   Receita publica com o início e o fim de cada código, baixadas pelo serviço do próprio SPED.
 # - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e.
 # - NCM: a nomenclatura vigente do Portal Único Siscomex.
+# - Meios de pagamento e bandeiras de cartão: as tabelas do Portal da NF-e (seção Diversos).
 # - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
 #   município.
 
@@ -161,6 +162,47 @@ baixar_tabela_de_cfop = function(pasta_temporaria) {
   )
   cfop = cfop[!is.na(cfop$codigo), ]
   list(tabela = cfop, titulo = planilha_baixada$titulo)
+}
+
+# As datas das planilhas de pagamento vêm como número de série do Excel (dias desde 30/12/1899) ou já como data.
+data_da_planilha = function(valores_da_coluna) {
+  if (inherits(valores_da_coluna, "POSIXct") || inherits(valores_da_coluna, "Date")) {
+    return(as.Date(valores_da_coluna))
+  }
+  as.Date(as.numeric(valores_da_coluna), origin = "1899-12-30")
+}
+
+# A Tabela de Meios de Pagamento do Portal da NF-e: o código vai no tPag da NF-e e no tpMeioPgto do pagamento
+# vinculado da Reforma (Informe Técnico 2026.001). A primeira linha é o título; a segunda, os nomes das colunas.
+# O começo do link é o comum às publicações, que mudam a letra de "Pagamento".
+baixar_meios_de_pagamento = function(pasta_temporaria) {
+  planilha_baixada = baixar_do_portal("Tabela de Meios de", pasta_temporaria)
+  planilha_de_meios = readxl::read_excel(planilha_baixada$arquivo, sheet = 1, skip = 1)
+  conferir_colunas(planilha_de_meios, c("tPag", "Descrição", "dIniVig", "dFimVig", "Observações"), "de meios de pagamento")
+  planilha_de_meios = planilha_de_meios[!is.na(planilha_de_meios[["tPag"]]), ]
+  meios_pagamento = data.frame(
+    codigo = sprintf("%02d", as.integer(planilha_de_meios[["tPag"]])),
+    descricao = trimws(planilha_de_meios[["Descrição"]]),
+    observacao = trimws(planilha_de_meios[["Observações"]]),
+    inicio = data_da_planilha(planilha_de_meios[["dIniVig"]]),
+    fim = data_da_planilha(planilha_de_meios[["dFimVig"]])
+  )
+  list(tabela = meios_pagamento, titulo = planilha_baixada$titulo)
+}
+
+# A Tabela de bandeiras de cartões de crédito e débito do Portal da NF-e (o tBand do pagamento com cartão).
+baixar_bandeiras_de_cartao = function(pasta_temporaria) {
+  planilha_baixada = baixar_do_portal("Tabela de bandeiras", pasta_temporaria)
+  planilha_de_bandeiras = readxl::read_excel(planilha_baixada$arquivo, sheet = 1, skip = 1)
+  conferir_colunas(planilha_de_bandeiras, c("tBand", "Operadora", "dIniVig", "dFimVig"), "de bandeiras de cartão")
+  planilha_de_bandeiras = planilha_de_bandeiras[!is.na(planilha_de_bandeiras[["tBand"]]), ]
+  bandeiras_cartao = data.frame(
+    codigo = sprintf("%02d", as.integer(planilha_de_bandeiras[["tBand"]])),
+    descricao = trimws(planilha_de_bandeiras[["Operadora"]]),
+    inicio = data_da_planilha(planilha_de_bandeiras[["dIniVig"]]),
+    fim = data_da_planilha(planilha_de_bandeiras[["dFimVig"]])
+  )
+  list(tabela = bandeiras_cartao, titulo = planilha_baixada$titulo)
 }
 
 # A Tabela de Classificação Tributária do IBS e CBS (Informe Técnico 2025.002): a primeira aba tem as
@@ -343,17 +385,26 @@ fontes = rbind(fontes, data.frame(
 
 tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
+meios_do_portal = baixar_meios_de_pagamento(pasta_temporaria)
+bandeiras_do_portal = baixar_bandeiras_de_cartao(pasta_temporaria)
 fontes = rbind(fontes, data.frame(
-  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm"),
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
-    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")")
+    paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
+    paste0("Portal da NF-e, ", meios_do_portal$titulo),
+    paste0("Portal da NF-e, ", bandeiras_do_portal$titulo)
   ),
   versao = NA,
   data_da_versao = NA,
   baixada_em = baixada_em
 ))
+
+# A tabela dos códigos dos campos não é baixada: é escrita à mão a partir da documentação dos schemas e conferida
+# por ferramentas/conferir_codigos_dos_campos.R. A linha dela nas fontes passa adiante como está.
+fontes_de_antes = utils::read.csv(file.path(PASTA_DAS_TABELAS, "fontes.csv"), colClasses = "character", na.strings = "")
+fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela == "codigos_dos_campos", ])
 
 # O IBGE não aceita conexão dos servidores do GitHub (tempo esgotado em 120 s, testado em 30/10/2026). Quando ele não
 # responde, fica a cópia que já está no pacote, com a data dela, e as outras tabelas seguem; o aviso aparece na
@@ -379,6 +430,8 @@ gravar_tabela(cfop_do_portal$tabela, "cfop")
 gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
 gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
+gravar_tabela(meios_do_portal$tabela, "meios_pagamento")
+gravar_tabela(bandeiras_do_portal$tabela, "bandeiras_cartao")
 if (!is.null(municipios_do_ibge)) {
   gravar_tabela(municipios_do_ibge, "municipios")
 }

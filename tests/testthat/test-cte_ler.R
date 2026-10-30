@@ -198,6 +198,31 @@ test_that("o pagamento vinculado da Reforma (pgtoVinc)", {
   expect_true(all(is.na(lido$ctes$valor_icms_previsto)))
 })
 
+test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
+  lido = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
+  ctes = lido$ctes
+  expect_identical(match("tipo_servico_descricao", names(ctes)), match("tipo_servico", names(ctes)) + 1L)
+  expect_identical(ctes$tipo_servico_descricao, c("Normal", "Subcontrata\u00e7\u00e3o", "Transporte de pessoas"))
+  expect_identical(ctes$modal_descricao, rep("Rodovi\u00e1rio", 3))
+  expect_identical(ctes$tipo_cte_descricao, rep("CT-e normal", 3))
+  expect_identical(ctes$tomador_papel_descricao, c("Remetente", "Outros", NA))
+  expect_identical(ctes$retira_descricao, c("N\u00e3o", "N\u00e3o", NA))
+  expect_identical(ctes$simples_nacional_descricao, c(NA, "Sim", NA))
+  expect_identical(lido$cargas$unidade_descricao, c("KG", "Unidade", "Unidade"))
+  expect_identical(lido$documentos$tipo_documento_descricao[lido$documentos$chave == CHAVE_CE], c("Outros", NA, "ATRE"))
+  expect_identical(lido$pagamentos_vinculados$meio_pagamento_descricao, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico")
+})
+
+test_that("o mesmo c\u00f3digo com outro significado no CT-e OS", {
+  # procEmi 3: no CT-e, o aplicativo do SEBRAE; no CT-e OS, o aplicativo do Fisco.
+  texto_do_cte = sub("<procEmi>0</procEmi>", "<procEmi>3</procEmi>", paste(readLines(CTE_SP, encoding = "UTF-8"), collapse = "\n"), fixed = TRUE)
+  texto_do_os = sub("<procEmi>0</procEmi>", "<procEmi>3</procEmi>", paste(readLines(CTE_OS, encoding = "UTF-8"), collapse = "\n"), fixed = TRUE)
+  ctes = cte_ler(c(texto_do_cte, texto_do_os))$ctes
+  expect_identical(ctes$processo_emissao, c(3L, 3L))
+  expect_identical(ctes$processo_emissao_descricao, c("Emiss\u00e3o pelo contribuinte com aplicativo fornecido pelo SEBRAE",
+                                                      "Emiss\u00e3o pelo contribuinte com aplicativo fornecido pelo Fisco"))
+})
+
 test_that("CT-e sem protocolo", {
   cte = cte_ler(CTE_CE)$ctes
   expect_identical(cte$chave, CHAVE_CE)

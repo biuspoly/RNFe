@@ -165,6 +165,42 @@ cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
 classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 ")
 
+# O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
+# ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
+SIGNIFICADOS_DA_NOTA = ler_campos("
+coluna_do_codigo          campo     coluna_do_contexto
+tipo_operacao             tpNF      -
+destino_operacao          idDest    -
+finalidade                finNFe    -
+consumidor_final          indFinal  -
+presenca                  indPres   -
+forma_emissao             tpEmis    -
+ambiente                  tpAmb     -
+processo_emissao          procEmi   -
+formato_danfe             tpImp     -
+emitente_regime           CRT       -
+destinatario_indicador_ie indIEDest -
+modalidade_frete          modFrete  -
+")
+
+SIGNIFICADOS_DO_ITEM = ler_campos("
+coluna_do_codigo campo  coluna_do_contexto
+compoe_total     indTot -
+")
+
+SIGNIFICADOS_DO_PAGAMENTO = ler_campos("
+coluna_do_codigo campo  coluna_do_contexto
+indicador        indPag -
+")
+
+# O nome da forma de pagamento e da bandeira do cartão, como as tabelas do Portal da NF-e registravam na data da
+# nota.
+DESCRICOES_DO_PAGAMENTO = ler_campos("
+coluna_do_codigo coluna_nova        tabela           texto
+forma            forma_descricao    meios_pagamento  descricao
+bandeira         bandeira_descricao bandeiras_cartao descricao
+")
+
 # A partir de cada detPag (pag/detPag).
 CAMPOS_DO_PAGAMENTO = ler_campos("
 coluna           caminho    tipo
@@ -195,10 +231,13 @@ autorizacao      card/cAut  texto
 #' com o motivo. Para saber se a nota foi cancelada, leia os eventos dela com
 #' [eventos_ler()].
 #'
-#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
-#' (CST, CFOP, forma de pagamento...) ficam como estão no XML; o significado de
-#' cada um está no Manual de Orientação do Contribuinte. Campo que a nota não
-#' tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
+#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
+#' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
+#' dizer: o nome do CFOP, do CST, da forma de pagamento e da bandeira, pela
+#' tabela fiscal na data da nota, e o significado dos outros códigos (forma de
+#' emissão, finalidade, presença, modalidade do frete...) numa coluna
+#' `*_descricao`, pela documentação do schema oficial (veja
+#' `tabela_fiscal("codigos_dos_campos")`). Campo que a nota não tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
 #' pedida (`todos_os_campos = TRUE`).
 #'
 #' @section notas:
@@ -295,6 +334,14 @@ nfe_ler = function(arquivos, todos_os_campos = FALSE) {
   tabelas_da_nfe$pagamentos = converter_datas(tabelas_da_nfe$pagamentos, CAMPOS_DO_PAGAMENTO)
   data_de_cada_item = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$itens$chave, tabelas_da_nfe$notas$chave)]
   tabelas_da_nfe$itens = acrescentar_descricoes(tabelas_da_nfe$itens, data_de_cada_item, DESCRICOES_DOS_ITENS)
+  tabelas_da_nfe$notas = acrescentar_significados(tabelas_da_nfe$notas, "NF-e", SIGNIFICADOS_DA_NOTA)
+  tabelas_da_nfe$itens = acrescentar_significados(tabelas_da_nfe$itens, "NF-e", SIGNIFICADOS_DO_ITEM)
+  data_de_cada_pagamento = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$pagamentos$chave, tabelas_da_nfe$notas$chave)]
+  tabelas_da_nfe$pagamentos = acrescentar_significados(tabelas_da_nfe$pagamentos, "NF-e", SIGNIFICADOS_DO_PAGAMENTO)
+  tabelas_da_nfe$pagamentos = acrescentar_descricoes(tabelas_da_nfe$pagamentos, data_de_cada_pagamento, DESCRICOES_DO_PAGAMENTO)
+  data_de_cada_vinculado = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$pagamentos_vinculados$chave, tabelas_da_nfe$notas$chave)]
+  tabelas_da_nfe$pagamentos_vinculados = acrescentar_descricoes(tabelas_da_nfe$pagamentos_vinculados, data_de_cada_vinculado,
+                                                                DESCRICOES_DO_PAGAMENTO_VINCULADO)
   tabelas_da_nfe
 }
 

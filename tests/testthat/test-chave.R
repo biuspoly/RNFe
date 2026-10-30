@@ -48,6 +48,18 @@ test_that("CNPJ com letras, CPF no lugar do CNPJ e os outros modelos", {
   expect_identical(partes$ano[4], 2025L)
 })
 
+test_that("o significado da forma de emiss\u00e3o vem do leiaute de cada documento", {
+  partes = chave_decompor(c(NFE_SP, NFCE_CE_CONTINGENCIA, CTE_RS_EMITENTE_CPF, MDFE_BA))
+  expect_identical(partes$forma_emissao_descricao,
+                   c("Normal", "Conting\u00eancia off-line da NFC-e e da NF-e com DANFE Simplificado Tipo 2", "Normal", "Normal"))
+  # A forma 2 é a contingência FS na NF-e e a contingência offline no CT-e.
+  sem_digito = c(paste0(substr(NFE_SP, 1, 34), "2", substr(NFE_SP, 36, 43)),
+                 paste0(substr(CTE_RS_EMITENTE_CPF, 1, 34), "2", substr(CTE_RS_EMITENTE_CPF, 36, 43)))
+  forma_2 = chave_decompor(paste0(sem_digito, chave_digito(sem_digito)))
+  expect_identical(forma_2$forma_emissao, c(2L, 2L))
+  expect_identical(forma_2$forma_emissao_descricao, c("Conting\u00eancia FS", "Conting\u00eancia offline"))
+})
+
 test_that("espa\u00e7os, min\u00fasculas e o prefixo do Id do XML s\u00e3o ignorados", {
   com_espacos = "3526 1011 4447 7700 0161 5500 1000 0001 2311 2345 6783"
   expect_identical(chave_decompor(com_espacos)$chave, NFE_SP)
@@ -88,6 +100,7 @@ test_that("CNPJ que n\u00e3o confere invalida a chave, mesmo com o d\u00edgito d
 test_that("vazio, NA e vetor vazio", {
   partes = chave_decompor(c(NA, ""))
   expect_identical(partes$valida, c(FALSE, FALSE))
+  expect_identical(partes$forma_emissao_descricao, c(NA_character_, NA_character_))
   expect_identical(nrow(chave_decompor(character())), 0L)
   expect_identical(chave_digito(c("123", NA)), c(NA_integer_, NA_integer_))
 })

@@ -20,7 +20,9 @@ Um \code{data.frame} com \code{chave}, \code{valida}, \code{problema}, \code{cod
 avulsa, o do órgão do Fisco), \code{tipo_documento} (\code{"CNPJ"} ou \code{"CPF"}),
 \code{modelo}, \code{documento} (\code{"NF-e"}, \code{"NFC-e"}, \code{"CT-e"}, \code{"CT-e OS"} ou
 \code{"MDF-e"}; \code{NA} para outro modelo), \code{serie}, \code{numero}, \code{forma_emissao},
-\code{codigo_numerico} e \code{digito}. Chave com o formato errado fica com as partes
+\code{forma_emissao_descricao} (o significado da forma de emissão no leiaute do
+documento: a NFC-e segue o da NF-e e o CT-e OS o do CT-e; \code{NA} para outro
+modelo ou forma que o leiaute não prevê), \code{codigo_numerico} e \code{digito}. Chave com o formato errado fica com as partes
 vazias (\code{NA}) e o motivo em \code{problema}.
 }
 \description{
@@ -29,7 +31,8 @@ errado. Devolve um \code{data.frame} com uma linha por chave: \code{valida} (\co
 \code{FALSE}), \code{problema} (o que não confere), a \code{uf}, o \code{ano} e o \code{mes} de
 emissão, o CNPJ ou CPF do emitente (\code{documento_emitente}), o \code{modelo} e o
 nome do \code{documento} (NF-e, NFC-e, CT-e, CT-e OS ou MDF-e), a \code{serie}, o
-\code{numero}, a \code{forma_emissao}, o \code{codigo_numerico} e o \code{digito}.
+\code{numero}, a \code{forma_emissao} com o que ela quer dizer naquele documento
+(\code{forma_emissao_descricao}), o \code{codigo_numerico} e o \code{digito}.
 }
 \details{
 A chave junta, nesta ordem: o código da UF do emitente (2 posições), o ano e

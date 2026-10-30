@@ -76,6 +76,8 @@ nota antiga ser lida com a tabela da época.
 | Municípios | IBGE | não pelo robô: o IBGE não aceita conexão dos servidores do GitHub; roda-se `ferramentas/gerar_tabelas.R` numa máquina no Brasil |
 | Reforma (classificação e CST da CBS e do IBS) | Portal da NF-e e Receita | quase: a planilha muda de formato |
 | CFOP, CST do ICMS, CSOSN, CEST | Confaz e Sinief | em parte: o robô avisa e alguém confere |
+| Meios de pagamento e bandeiras de cartão | Portal da NF-e | sim |
+| Significado dos códigos de cada campo | documentação dos schemas | não: escrita à mão; o vigia dos schemas avisa quando o schema muda, e `ferramentas/conferir_codigos_dos_campos.R` confere |
 
 ## Como testar sem certificado
 
@@ -107,9 +109,10 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - `chave_digito()` aceita a chave inteira, não só as 43 primeiras posições: foi assim que o usuário a usou no
   primeiro teste, e o `NA` que voltava não explicava nada.
 - `documento` (NF-e, NFC-e, CT-e, CT-e OS, MDF-e) só para os modelos em que a composição da chave foi
-  conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número: o
-  significado de cada código muda de documento para documento e fica para quando for conferido no manual de
-  cada um.
+  conferida; outro modelo é desmontado igual, com `documento` vazio. A forma de emissão sai como número e,
+  desde 30/10/2026, com `forma_emissao_descricao`: o significado muda de documento para documento (a 2 é
+  "Contingência FS" na NF-e e "Contingência offline" no CT-e), então vem do leiaute de cada um em
+  `codigos_dos_campos` (a NFC-e segue o da NF-e, e o CT-e OS o do CT-e).
 
 ## Etapa 1, leitura do XML: o que se decidiu
 
@@ -201,6 +204,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - O Excel guardava alguns CST como número (400 em vez de "400"); voltam com três dígitos.
   - Nota anterior a 2026 com o grupo IBSCBS (fase de testes) fica sem o nome da classificação. Em 10 mil notas
     reais foram 5 itens.
+  - O Portal publicou a tabela de novo em 30/10/2026: as classificações 410003 e 410026 passaram a citar as
+    amostras grátis junto das doações (nome e descrição). O resto ficou igual.
 - **Municípios (30/10/2026):** a API de localidades do IBGE, na visão nivelada
   (`localidades/municipios?view=nivelado`): 5.571 municípios, com o código de 7 dígitos, o nome, a UF e o
   código da UF. A visão completa traz a UF dentro da microrregião, e um município vinha sem microrregião (ficaria
@@ -398,6 +403,47 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   cada versão ficaram na mesma faixa (141 a 155 s antes, 146 a 152 s depois, nas 10 mil notas). Ligado, as
   outras tabelas também saem iguais.
 
+## O significado de cada código: o que se decidiu (30/10/2026)
+
+- **Pedido do usuário**, depois de ver a ajuda no RStudio ("mas o que eu posso escolher entre as opções?"):
+  ao lado de cada coluna de código, uma coluna com o significado, como já acontecia com o CFOP e os CSTs.
+  `forma_emissao` 1 vem com `forma_emissao_descricao` "Normal". Vale para os cinco leitores e para o
+  `chave_decompor()`.
+- **Meios de pagamento e bandeiras** vêm das planilhas do Portal da NF-e, baixadas por
+  `ferramentas/gerar_tabelas.R` (o IT 2026.001 manda usar a tabela nacional de meios de pagamento). Servem ao
+  `tPag` e ao `tBand` da NF-e e ao meio do pagamento vinculado da Reforma (NF-e e CT-e). A planilha guarda a
+  data de vigência como número do Excel (dias desde 30/12/1899), e o significado sai pela data do documento:
+  o PIX dinâmico (17) só existe desde 01/07/2024.
+- **Os outros códigos** (`codigos_dos_campos.csv`, 271 linhas) foram escritos à mão a partir da
+  documentação dos schemas, porque o schema traz o texto, não uma tabela. A escrita foi acertada sem mudar o
+  sentido (maiúsculas, "à Prazo" virou "a prazo"). Onde a documentação do schema tinha erro, vale a fonte
+  que corrige:
+  - NF-e `indIEDest` 1: o schema diz "Contribuinte ICMSpagamento à vista"; ficou "Contribuinte ICMS".
+  - MDF-e `respSeg`: a documentação diz "22"; o schema aceita 1 e 2.
+  - NFS-e `tribISSQN`: o schema 1.00 documenta 2 exportação, 3 não incidência e 4 imunidade; o 1.01 e o
+    Anexo I do leiaute trazem 2 imunidade, 3 exportação e 4 não incidência. Vale a segunda para as duas
+    versões: as regras de recepção do Anexo I valem para toda DPS (a E0854 cita a 1.00 de propósito) e
+    amarram o 2 à imunidade (E0592: o tipo de imunidade só com `tribISSQN` 2) e o 4 à não incidência
+    (E0532). Em 2023 isso já tinha dado nota rejeitada e exportação no lugar de não incidência para quem
+    seguia o schema 1.00; a Receita confirmou ao ACBr que vale o manual (fórum do ACBr, tópico 73979,
+    set/2023 a fev/2024).
+  - NFS-e CST 07 do PIS/COFINS: o schema 1.00 diz "Operação tributável da contribuição"; o 1.01 e a tabela
+    oficial do CST dizem "Operação isenta da contribuição".
+  - MDF-e `tpTransp`: o schema só traz a sigla (ETC, TAC, CTC); o nome vem da Lei 11.442/2007, art. 2º.
+- **Contexto:** alguns códigos mudam de sentido dentro do mesmo documento. No CT-e, o `procEmi` 3 é o
+  aplicativo do SEBRAE no modelo 57 e o do Fisco no CT-e OS (67); o `tpDoc` tem uma lista para outros
+  documentos (`infOutros`) e outra para os de transporte anterior em papel (`idDocAntPap`). A tabela tem a
+  coluna `contexto`, e o leitor procura primeiro o significado do contexto da linha.
+- **Fora de propósito:** o `tpCTe` 4 e o `tpServ` 9 (GTV-e) e o `tpCTe` 5 e 6 (CT-e simplificado), de
+  documentos que o RNfe não lê. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00.
+- **Conferência:** `ferramentas/conferir_codigos_dos_campos.R` compara a tabela com os valores que o schema
+  aceita, campo por campo (cada versão da NFS-e lida à parte). Reprovou uma tabela estragada de propósito
+  (um código que o schema não aceita, outro que faltava). Em 30/10/2026, com os pacotes oficiais baixados na
+  hora, os 63 campos conferem. Nos 16 exemplos, todo código preenchido achou o significado.
+- **Comparação da documentação da NFS-e 1.00 com a 1.01**, campo por campo: além do `tribISSQN` e do CST 07,
+  só a lista de códigos mudou: no `cStat` o 101 (só na 1.00) e o 107 (só na 1.01), o regime especial 9 e os
+  campos da Reforma, na 1.01. Como o código de uma versão não aparece na outra, uma lista só serve às duas.
+
 ## O robô das tabelas
 
 - `.github/workflows/atualizar-tabelas.yml` roda toda segunda às 9h UTC (6h em Brasília), e também à mão. Ele
@@ -429,7 +475,9 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   (ocorrências, tipo, padrão, valores aceitos, seguindo o tipo de origem). Nunca abre dois avisos com o mesmo
   título, aberto ou fechado. Se um portal não responde, termina com erro depois de abrir os avisos dos outros.
 - Depois de atualizar um leitor (ou de ver que a publicação não afeta o RNfe), rodar
-  `Rscript ferramentas/vigiar_schemas.R --registrar`.
+  `Rscript ferramentas/vigiar_schemas.R --registrar`. Quando o aviso diz que mudaram os valores aceitos de um
+  campo, rodar também `Rscript ferramentas/conferir_codigos_dos_campos.R`: ele diz o código novo que ficou
+  sem significado.
 - `ferramentas/baixar_schemas.R` baixa os pacotes seguidos, e `ferramentas/validar_exemplos.R` sem argumentos
   usa ele: a validação não depende mais de uma cópia guardada à mão. Com argumentos, o validador recebe uma
   pasta por linha de `schemas_usados.csv` (`nfe=<pasta> cte=<pasta>...`).

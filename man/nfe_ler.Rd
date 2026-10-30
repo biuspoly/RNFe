@@ -41,10 +41,13 @@ arquivo que não dá para ler não interrompe os outros: fica em \code{arquivos}
 com o motivo. Para saber se a nota foi cancelada, leia os eventos dela com
 \code{\link[=eventos_ler]{eventos_ler()}}.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
-(CST, CFOP, forma de pagamento...) ficam como estão no XML; o significado de
-cada um está no Manual de Orientação do Contribuinte. Campo que a nota não
-tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
+códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
+dizer: o nome do CFOP, do CST, da forma de pagamento e da bandeira, pela
+tabela fiscal na data da nota, e o significado dos outros códigos (forma de
+emissão, finalidade, presença, modalidade do frete...) numa coluna
+\verb{*_descricao}, pela documentação do schema oficial (veja
+\code{tabela_fiscal("codigos_dos_campos")}). Campo que a nota não tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
 pedida (\code{todos_os_campos = TRUE}).
 }
 \section{notas}{

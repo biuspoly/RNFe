@@ -2,14 +2,21 @@
 % Please edit documentation in R/tabelas.R
 \name{tabela_fiscal}
 \alias{tabela_fiscal}
-\title{Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS e municípios}
+\title{Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS, pagamentos, municípios e o significado de cada código}
 \source{
 CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
-01/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
-(29/10/2026). Municípios: a API de localidades do IBGE
-(servicodados.ibge.gov.br, 30/10/2026). Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
+30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
+(30/10/2026). Municípios: a API de localidades do IBGE
+(servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de
+cartão: as tabelas do Portal da NF-e (publicadas em 06/03/2026 e
+16/03/2021). Códigos dos campos: a documentação dos schemas oficiais que os
+leitores seguem, conferida por \code{ferramentas/conferir_codigos_dos_campos.R};
+o tipo de transportador do MDF-e, pela Lei 11.442/2007 (art. 2º), e a
+tributação do ISSQN da NFS-e (\code{tribISSQN}), pelo Anexo I do leiaute da
+NFS-e Nacional, que corrige a ordem errada da documentação do schema 1.00.
+Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
 Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
 combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma
@@ -23,7 +30,9 @@ tabela_fiscal(nome_da_tabela)
 \code{"origem"} (origem da mercadoria), \code{"cst_icms"} (CST do ICMS), \code{"csosn"}
 (CSOSN, do Simples Nacional), \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"},
 \code{"cst_ibs_cbs"} (CST do IBS e da CBS), \code{"classificacao_ibs_cbs"}
-(cClassTrib da Reforma), \code{"municipios"} (código IBGE, nome e UF) ou
+(cClassTrib da Reforma), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
+\code{"bandeiras_cartao"}, \code{"municipios"} (código IBGE, nome e UF),
+\code{"codigos_dos_campos"} (o significado dos códigos dos documentos) ou
 \code{"fontes"} (de onde veio cada tabela).}
 }
 \value{
@@ -35,8 +44,10 @@ Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
 Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
-\code{"classificacao_ibs_cbs"}, \code{"municipios"} ou \code{"fontes"} (de onde veio cada
-uma, com a data). Cada tabela de códigos traz o \code{codigo}, a descrição e a vigência:
+\code{"classificacao_ibs_cbs"}, \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
+\code{"municipios"}, \code{"codigos_dos_campos"} (o que quer dizer cada código dos
+campos dos documentos) ou \code{"fontes"} (de onde veio cada uma, com a data).
+Cada tabela de códigos traz o \code{codigo}, a descrição e a vigência:
 \code{inicio} (desde quando vale) e \code{fim} (até quando valeu, vazio quando ainda
 vale). Um código que mudou de descrição tem uma linha por período.
 }
@@ -66,6 +77,20 @@ códigos 0 a 2 mudaram de descrição em 2013, quando vieram os de 3 a 8.
 (\code{cClassTrib}), com o \code{cst} dela, o \code{nome}, a \code{descricao}, o artigo da LC
 214/2025 (\code{artigo_lc_214}), o \code{tipo_aliquota}, os percentuais de redução
 (\code{reducao_ibs} e \code{reducao_cbs}) e se vale na NF-e e na NFC-e.
+\item \code{"meios_pagamento"}: os meios de pagamento da tabela do Portal da NF-e
+(dinheiro, cartão, boleto, PIX...), com a \code{observacao} de quando usar
+cada um. É o código do \code{tPag} da NF-e e do meio de pagamento vinculado da
+Reforma (\code{tpMeioPgto}).
+\item \code{"bandeiras_cartao"}: as bandeiras de cartão de crédito e débito da
+tabela do Portal da NF-e (o \code{tBand}).
+\item \code{"codigos_dos_campos"}: o que quer dizer cada código dos campos dos
+documentos que não têm tabela própria (forma de emissão, finalidade,
+modal, tipo de carga, regime do Simples Nacional...): \code{documento}
+(\code{"NF-e"}, \code{"CT-e"}, \code{"MDF-e"}, \code{"NFS-e"} ou \code{"evento"}), \code{campo} (o nome
+no leiaute, como \code{tpEmis}), \code{contexto} (quando o significado depende de
+outra coisa: o modelo do CT-e ou o grupo do documento), \code{codigo} e
+\code{descricao}. Os textos vêm da documentação dos schemas oficiais; os
+leitores os põem ao lado de cada coluna de código (\verb{*_descricao}).
 \item \code{"municipios"}: os municípios vigentes do IBGE, com o \code{codigo} de 7
 dígitos que vai nos documentos (\code{cMun}, \code{cMunFG}, \code{cLocIncid}...), o \code{nome},
 a \code{uf} e o \code{codigo_uf} (o que abre a chave de acesso). Sem datas: o IBGE só

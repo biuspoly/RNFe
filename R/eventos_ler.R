@@ -75,6 +75,11 @@ registro         dhRecbto    data_hora
 versao           @versao     texto
 ")
 
+SIGNIFICADOS_DOS_EVENTOS = ler_campos("
+coluna_do_codigo campo coluna_do_contexto
+ambiente         tpAmb -
+")
+
 CAMPOS_DE_DATA_DOS_EVENTOS = ler_campos("
 coluna       tipo
 data_evento  data_hora
@@ -143,8 +148,9 @@ FAMILIA_PELA_CHAVE = c(chNFe = "NF-e", chCTe = "CT-e", chMDFe = "MDF-e")
 #'
 #' `data_evento` e `registro` são data e hora (mostradas no horário de
 #' Brasília). Códigos e textos ficam como estão no XML (as descrições da SEFAZ
-#' vêm sem acento); o significado de cada tipo de evento está no manual de cada
-#' documento.
+#' vêm sem acento). O nome do tipo do evento é a `descricao` que o próprio
+#' evento traz, e o `ambiente` vem com o significado ao lado
+#' (`ambiente_descricao`).
 #'
 #' @section campos:
 #' Com `todos_os_campos = TRUE`, o padrão. Todos os campos de cada evento,
@@ -199,6 +205,7 @@ eventos_ler = function(arquivos, todos_os_campos = TRUE) {
   }
   tabelas_dos_eventos$arquivos = resumo_dos_arquivos(arquivos_lidos, "eventos", "eventos")
   tabelas_dos_eventos$eventos = converter_datas(tabelas_dos_eventos$eventos, CAMPOS_DE_DATA_DOS_EVENTOS)
+  tabelas_dos_eventos$eventos = acrescentar_significados(tabelas_dos_eventos$eventos, "evento", SIGNIFICADOS_DOS_EVENTOS)
   tabelas_dos_eventos
 }
 

@@ -41,10 +41,11 @@ texto do XML. Um arquivo que não dá para ler não interrompe os outros: fica
 em \code{arquivos}, com o motivo. Para saber se o MDF-e foi encerrado ou
 cancelado, leia os eventos dele com \code{\link[=eventos_ler]{eventos_ler()}}.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
-(modal, tipo de emitente, tipo de carga...) ficam como estão no XML; o
-significado de cada um está no Manual de Orientação do Contribuinte do
-MDF-e. Campo que o MDF-e não tem fica \code{NA}. Nenhum campo se perde: o que
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
+códigos (modal, tipo de emitente, tipo de carga, rodado, carroceria...)
+ficam como estão no XML, e ao lado de cada um vem o que ele quer dizer, numa
+coluna \verb{*_descricao}, pela documentação do schema oficial (veja
+\code{tabela_fiscal("codigos_dos_campos")}). Campo que o MDF-e não tem fica \code{NA}. Nenhum campo se perde: o que
 não tem coluna própria está na tabela \code{campos}.
 }
 \section{mdfes}{

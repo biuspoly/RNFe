@@ -41,8 +41,12 @@ cancelada ou substituída, leia os eventos dela com \code{\link[=eventos_ler]{ev
 A NFS-e traz duas partes: a DPS, que quem emitiu declarou (prestador,
 tomador, serviço, valores, tributos), e o que o sistema que a autorizou gerou
 (número, situação, base e valor do ISSQN, valor líquido e o IBS e a CBS
-calculados). Códigos ficam como estão no XML; o significado de cada um está
-no Anexo I do leiaute (portal da NFS-e). Campo que a NFS-e não tem fica
+calculados). Os códigos ficam como estão no XML, e ao lado de cada um vem o
+que ele quer dizer, numa coluna \verb{*_descricao}: a situação, o regime do
+Simples Nacional, a tributação e a retenção do ISSQN, o CST do PIS e da
+COFINS... pela documentação do schema oficial (veja
+\code{tabela_fiscal("codigos_dos_campos")}), e o nome do CST e da classificação
+do IBS e da CBS pela tabela fiscal na data. Campo que a NFS-e não tem fica
 \code{NA}. Nenhum campo se perde: o que não tem coluna própria está na tabela
 \code{campos}.
 

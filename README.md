@@ -4,7 +4,7 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e Nac
 
 > **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e, do
 > CT-e OS, do MDF-e, da NFS-e Nacional e dos eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
-> da Reforma e os municípios do IBGE). O certificado digital e a SEFAZ vêm a seguir; o plano está em
+> da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). O certificado digital e a SEFAZ vêm a seguir; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -27,7 +27,8 @@ chave_digito("35261011444777000161550010000001231123456789")     # 3: o dígito 
 ```
 
 `chave_decompor()` devolve uma linha por chave e, quando algo não confere, diz o quê na coluna `problema`
-(o dígito, o CNPJ do emitente, a UF, o mês ou o formato). Espaços e o prefixo do `Id` do XML (`NFe...`) são
+(o dígito, o CNPJ do emitente, a UF, o mês ou o formato). A forma de emissão vem com o significado dela no
+leiaute daquele documento (a 2 é "Contingência FS" na NF-e e "Contingência offline" no CT-e). Espaços e o prefixo do `Id` do XML (`NFe...`) são
 ignorados. Na NF-e avulsa, emitida pelo Fisco, o CNPJ da chave é o do órgão que a emitiu, não o do emitente.
 A chave de 50 posições da NFS-e Nacional fica de fora: a regra do dígito dela não está escrita nas fontes
 oficiais.
@@ -146,14 +147,26 @@ tabela_fiscal("ncm")                     # a NCM vigente, com a descrição comp
 tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_cbs"
 tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
 tabela_fiscal("municipios")              # os municípios do IBGE: código de 7 dígitos, nome e UF
+tabela_fiscal("meios_pagamento")         # o tPag da NF-e e da NFC-e (PIX, boleto...), e "bandeiras_cartao"
+tabela_fiscal("codigos_dos_campos")      # o significado dos códigos do leiaute (tpEmis, modFrete, toma...)
 tabela_fiscal("fontes")                  # de onde veio cada tabela, com a versão e a data
 ```
 
 Cada linha tem o `inicio` e o `fim` da vigência (vazios no CSOSN e nos municípios, que a fonte não data). As
-fontes são oficiais: o Portal da NF-e (CFOP e Reforma), o Portal Único Siscomex (NCM), as tabelas do SPED
-Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios). `ferramentas/gerar_tabelas.R` baixa
-tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso quando alguma tabela muda. Os municípios
-ficam de fora do robô, porque o IBGE não aceita conexão dos servidores do GitHub.
+fontes são oficiais: o Portal da NF-e (CFOP, Reforma, meios de pagamento e bandeiras), o Portal Único
+Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios).
+`ferramentas/gerar_tabelas.R` baixa tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso
+quando alguma tabela muda. Os municípios ficam de fora do robô, porque o IBGE não aceita conexão dos
+servidores do GitHub.
+
+Os leitores usam essas tabelas: ao lado de cada código vem o significado dele, numa coluna com o mesmo nome e
+`_descricao` no fim (`forma_emissao` 9 vem com "Contingência off-line da NFC-e e da NF-e com DANFE
+Simplificado Tipo 2"; `modal` "01", com "Rodoviário"). Os significados dos códigos do leiaute vêm da
+documentação dos schemas oficiais, escritos à mão (os schemas trazem o texto, não uma tabela), e
+`ferramentas/conferir_codigos_dos_campos.R` confere que cada código está no schema e que nenhum valor do schema
+ficou sem significado. Onde a documentação do schema tinha erro, vale a fonte que o corrige: o `tribISSQN` da
+NFS-e 1.00 segue o Anexo I do leiaute (2 é imunidade, 3 exportação, 4 não incidência), não a ordem do schema
+1.00. O tipo de transportador do MDF-e (ETC, TAC, CTC) vem com o nome da Lei 11.442/2007, art. 2º.
 
 ## De onde vêm as regras
 
