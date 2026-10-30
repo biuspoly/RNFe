@@ -111,7 +111,7 @@ e \code{problema} (\code{NA} quando deu certo). Um texto de XML aparece como
 }
 
 \examples{
-exemplos = system.file("exemplos", package = "RNfe")
+exemplos = system.file("exemplos", package = "RNFe")
 arquivos = file.path(exemplos, c("evento_nfe_cancelamento.xml", "evento_nfse_cancelamento.xml"))
 lido = eventos_ler(arquivos)
 lido$eventos[, c("documento", "tipo", "descricao", "justificativa", "situacao")]

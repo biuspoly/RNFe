@@ -1,8 +1,8 @@
 # Os valores esperados são os escritos à mão nos CT-e de inst/exemplos (validados contra o schema
 # oficial com ferramentas/validar_exemplos.R).
-CTE_SP = system.file("exemplos", "cte_proc_sp.xml", package = "RNfe")
-CTE_CE = system.file("exemplos", "cte_ce_simples_toma4.xml", package = "RNfe")
-CTE_OS = system.file("exemplos", "cte_os_sp.xml", package = "RNfe")
+CTE_SP = system.file("exemplos", "cte_proc_sp.xml", package = "RNFe")
+CTE_CE = system.file("exemplos", "cte_ce_simples_toma4.xml", package = "RNFe")
+CTE_OS = system.file("exemplos", "cte_os_sp.xml", package = "RNFe")
 CHAVE_SP = "35261012ABC34501DE35570010000005551876543210"
 CHAVE_CE = "23261011444777000161570020000000771135724689"
 CHAVE_OS = "35261011444777000161670010000000091246813571"
@@ -100,7 +100,7 @@ test_that("os documentos transportados s\u00e3o as NF-e de exemplo", {
   documentos = cte_ler(CTE_SP)$documentos
   expect_identical(documentos$chave, rep(CHAVE_SP, 2))
   expect_identical(documentos$tipo, c("infNFe", "infNFe"))
-  notas = nfe_ler(system.file("exemplos", c("nfe_proc_sp.xml", "nfe_ce_simples_cpf.xml"), package = "RNfe"))$notas
+  notas = nfe_ler(system.file("exemplos", c("nfe_proc_sp.xml", "nfe_ce_simples_cpf.xml"), package = "RNFe"))$notas
   expect_identical(documentos$documento_chave, notas$chave)
   expect_true(all(is.na(documentos$numero)))
 })
@@ -288,7 +288,7 @@ test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo
 })
 
 test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", {
-  nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
+  nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
   guia = '<GTVe xmlns="http://www.portalfiscal.inf.br/cte"><infCte versao="4.00" Id="CTe1"/></GTVe>'
   simplificado = '<CTeSimp xmlns="http://www.portalfiscal.inf.br/cte"><infCte versao="4.00" Id="CTe1"/></CTeSimp>'
   lido = cte_ler(c("nao_existe.xml", CTE_SP, "<CTe><infCte>", nota, guia, simplificado, NA))

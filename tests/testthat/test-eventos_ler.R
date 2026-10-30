@@ -1,6 +1,6 @@
 # Os valores esperados são os escritos à mão nos eventos de inst/exemplos (validados contra os schemas oficiais
 # com ferramentas/validar_exemplos.R).
-exemplo = function(nome_do_arquivo) system.file("exemplos", nome_do_arquivo, package = "RNfe")
+exemplo = function(nome_do_arquivo) system.file("exemplos", nome_do_arquivo, package = "RNFe")
 CANCELAMENTO_NFE = exemplo("evento_nfe_cancelamento.xml")
 CARTA_CORRECAO_NFE = exemplo("evento_nfe_carta_correcao.xml")
 RESUMO_NFE = exemplo("evento_nfe_resumo_ciencia.xml")

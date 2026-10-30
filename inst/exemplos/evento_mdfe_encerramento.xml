@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Evento fictício para os testes do RNfe: o encerramento do MDF-e de exemplo mdfe_proc_sp.xml no município de
+<!-- Evento fictício para os testes do RNFe: o encerramento do MDF-e de exemplo mdfe_proc_sp.xml no município de
      descarregamento, com o retorno. CNPJ de exemplo, ambiente de homologação e assinatura de mentira. -->
 <procEventoMDFe versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">
   <eventoMDFe versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">

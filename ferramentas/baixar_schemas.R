@@ -1,4 +1,4 @@
-# Baixa dos portais oficiais os pacotes de schemas que os leitores do RNfe seguem (os de
+# Baixa dos portais oficiais os pacotes de schemas que os leitores do RNFe seguem (os de
 # ferramentas/schemas_usados.csv) e diz em que pasta ficou cada um. Uso, na raiz do repositório:
 #   Rscript ferramentas/baixar_schemas.R [pasta]
 # Sem a pasta, baixa numa pasta temporária. Precisa de internet e dos pacotes httr2 e xml2.

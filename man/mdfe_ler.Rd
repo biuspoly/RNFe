@@ -114,7 +114,7 @@ Uma linha por arquivo pedido: \code{arquivo}, \code{mdfes} (quantos MDF-e tinha)
 }
 
 \examples{
-mdfe = system.file("exemplos", "mdfe_proc_sp.xml", package = "RNfe")
+mdfe = system.file("exemplos", "mdfe_proc_sp.xml", package = "RNFe")
 lido = mdfe_ler(mdfe)
 lido$mdfes[, c("chave", "emitente_nome", "placa", "valor_carga", "protocolo")]
 lido$documentos[, c("tipo", "documento_chave", "descarga_municipio")]

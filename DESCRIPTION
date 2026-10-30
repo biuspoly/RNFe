@@ -1,4 +1,4 @@
-Package: RNfe
+Package: RNFe
 Title: Documentos Fiscais Eletrônicos Brasileiros (NF-e, CT-e, MDF-e, NFS-e)
 Version: 0.0.0.9000
 Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role = c("aut", "cre"))
@@ -24,8 +24,8 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e, por
     enquanto só no ambiente de homologação.
 License: MIT + file LICENSE
-URL: https://github.com/biuspoly/RNfe
-BugReports: https://github.com/biuspoly/RNfe/issues
+URL: https://github.com/biuspoly/RNFe
+BugReports: https://github.com/biuspoly/RNFe/issues
 Encoding: UTF-8
 Language: pt-BR
 Depends: R (>= 4.1.0)
@@ -40,7 +40,7 @@ Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.1
 Collate: 
-    'RNfe-package.R'
+    'RNFe-package.R'
     'chave.R'
     'certificado.R'
     'ler_xml.R'

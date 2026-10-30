@@ -1,4 +1,4 @@
-#' RNfe: documentos fiscais eletrônicos brasileiros
+#' RNFe: documentos fiscais eletrônicos brasileiros
 #'
 #' Funções para os documentos fiscais eletrônicos do Brasil (NF-e, NFC-e, CT-e,
 #' MDF-e, NFS-e Nacional). Nesta versão:

@@ -1,4 +1,4 @@
 library(testthat)
-library(RNfe)
+library(RNFe)
 
-test_check("RNfe")
+test_check("RNFe")

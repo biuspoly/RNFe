@@ -13,7 +13,7 @@ PAGINA_DOS_SCHEMAS = list(
 )
 DOWNLOAD_DO_PORTAL_DO_MDFE = "https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArquivoEstatico/?sistema=MDFE&tipoArquivo=2&nomeArquivo="
 
-# O pacote de schemas que cada leitor do RNfe segue, o arquivo principal dele e o que é comparado quando sai
+# O pacote de schemas que cada leitor do RNFe segue, o arquivo principal dele e o que é comparado quando sai
 # um pacote novo: tipos (TNFe...) e elementos soltos (o modal rodoviário, que o infModal não confere). As linhas
 # nfe_eventos, nfe_cancelamento, nfe_carta_correcao e nfe_distribuicao são os pacotes à parte dos eventos da NF-e,
 # que só o validador dos exemplos usa: o vigia compara as publicações com a linha do documento (nfe).

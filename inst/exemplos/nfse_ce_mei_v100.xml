@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- NFS-e Nacional fictícia para os testes do RNfe (leiaute 1.00): prestador MEI, tomador pessoa física,
+<!-- NFS-e Nacional fictícia para os testes do RNFe (leiaute 1.00): prestador MEI, tomador pessoa física,
      desconto incondicionado, sem IBS e CBS, ambiente de homologação e assinatura de mentira. A situação 107
      (NFS-e MEI) só existe a partir do leiaute 1.01; aqui ela é 100. -->
 <NFSe versao="1.00" xmlns="http://www.sped.fazenda.gov.br/nfse">
@@ -10,7 +10,7 @@
     <cLocIncid>2304400</cLocIncid>
     <xLocIncid>Fortaleza</xLocIncid>
     <xTribNac>Assistência técnica.</xTribNac>
-    <verAplic>RNfe-testes</verAplic>
+    <verAplic>RNFe-testes</verAplic>
     <ambGer>2</ambGer>
     <tpEmis>1</tpEmis>
     <cStat>100</cStat>
@@ -37,7 +37,7 @@
       <infDPS Id="DPS230440021144477700016100001000000000000007">
         <tpAmb>2</tpAmb>
         <dhEmi>2026-10-22T09:00:00-03:00</dhEmi>
-        <verAplic>RNfe-testes</verAplic>
+        <verAplic>RNFe-testes</verAplic>
         <serie>1</serie>
         <nDPS>7</nDPS>
         <dCompet>2026-10-21</dCompet>

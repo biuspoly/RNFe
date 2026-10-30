@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Evento fictício para os testes do RNfe (leiaute 1.01): o cancelamento da NFS-e de exemplo nfse_sp_v101.xml pelo
+<!-- Evento fictício para os testes do RNFe (leiaute 1.01): o cancelamento da NFS-e de exemplo nfse_sp_v101.xml pelo
      prestador, como o sistema nacional o registra. CNPJ de exemplo, ambiente de homologação e assinatura de mentira. -->
 <evento versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
   <infEvento Id="EVT35503082211222333000181000000000012326101234567898101101001">
@@ -11,7 +11,7 @@
     <pedRegEvento versao="1.01">
       <infPedReg Id="PRE35503082211222333000181000000000012326101234567898101101">
         <tpAmb>2</tpAmb>
-        <verAplic>RNfe-testes</verAplic>
+        <verAplic>RNFe-testes</verAplic>
         <dhEvento>2026-10-20T17:30:00-03:00</dhEvento>
         <CNPJAutor>11222333000181</CNPJAutor>
         <chNFSe>35503082211222333000181000000000012326101234567898</chNFSe>

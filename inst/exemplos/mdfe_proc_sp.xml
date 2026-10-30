@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- MDF-e fictício para os testes do RNfe: transportadora levando o CT-e de exemplo (cte_proc_sp.xml),
+<!-- MDF-e fictício para os testes do RNFe: transportadora levando o CT-e de exemplo (cte_proc_sp.xml),
      CNPJs de exemplo, ambiente de homologação e assinatura de mentira. O emitente tem CNPJ só de números
      porque o schema do MDF-e de 25/04/2026 ainda não aceita letras no Id do infMDFe. -->
 <mdfeProc versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">
@@ -18,7 +18,7 @@
         <dhEmi>2026-10-15T15:00:00-03:00</dhEmi>
         <tpEmis>1</tpEmis>
         <procEmi>0</procEmi>
-        <verProc>RNfe-testes</verProc>
+        <verProc>RNFe-testes</verProc>
         <UFIni>SP</UFIni>
         <UFFim>RJ</UFFim>
         <infMunCarrega>

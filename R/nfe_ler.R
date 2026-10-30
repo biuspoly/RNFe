@@ -309,7 +309,7 @@ autorizacao      card/cAut  texto
 #'   2026.006 e NT 2026.008), publicado no Portal Nacional da NF-e em
 #'   26/10/2026.
 #' @examples
-#' nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
+#' nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
 #' lida = nfe_ler(nota)
 #' lida$notas[, c("chave", "emitente_nome", "valor_nota", "protocolo")]
 #' lida$itens[, c("item", "descricao", "cfop", "cst_icms", "valor_icms", "valor_cbs")]

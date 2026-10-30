@@ -154,7 +154,7 @@ Uma linha por arquivo pedido: \code{arquivo}, \code{ctes} (quantos CT-e tinha) e
 }
 
 \examples{
-cte = system.file("exemplos", "cte_proc_sp.xml", package = "RNfe")
+cte = system.file("exemplos", "cte_proc_sp.xml", package = "RNFe")
 lido = cte_ler(cte)
 lido$ctes[, c("chave", "emitente_nome", "tomador_nome", "valor_prestacao", "valor_icms")]
 lido$documentos[, c("tipo", "documento_chave")]

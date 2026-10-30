@@ -76,7 +76,7 @@ test_that("munic\u00edpios como na API de localidades do IBGE", {
   expect_identical(municipios$uf[municipios$codigo == "2304400"], "CE")
   expect_identical(municipios$nome[municipios$codigo == "3304557"], "Rio de Janeiro")
   # Os munic\u00edpios dos documentos de exemplo est\u00e3o todos na tabela.
-  exemplos = system.file("exemplos", c("nfe_proc_sp.xml", "cte_proc_sp.xml", "mdfe_proc_sp.xml"), package = "RNfe")
+  exemplos = system.file("exemplos", c("nfe_proc_sp.xml", "cte_proc_sp.xml", "mdfe_proc_sp.xml"), package = "RNFe")
   codigos_nos_exemplos = c(nfe_ler(exemplos[1])$notas$emitente_codigo_municipio, cte_ler(exemplos[2])$ctes$fim_codigo_municipio,
                            mdfe_ler(exemplos[3])$locais$codigo_municipio)
   codigos_nos_exemplos = codigos_nos_exemplos[!is.na(codigos_nos_exemplos)]

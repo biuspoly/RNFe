@@ -1,14 +1,15 @@
-# RNfe
+# RNFe
 
 Pacote em R de documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e): chave de acesso,
 leitura do XML, tabelas fiscais e, mais adiante, certificado e SEFAZ. Projeto pessoal do Marlon (biuspoly),
 parte do portfólio, irmão do `veiculosbr`. Só em R (decisão do usuário, 29/10/2026: no Python já existe o
-PyNFe). O plano e a situação ficam em `docs/plano.md`; o README é o que quem usa o pacote lê.
+PyNFe). O nome é **RNFe**, com o F maiúsculo como o PyNFe (era RNfe até 30/10/2026). O plano e a situação
+ficam em `docs/plano.md`; o README é o que quem usa o pacote lê.
 
 ## Testar
 
 - Mudou documentação ou export: `roxygen2::roxygenise()` na raiz.
-- `R CMD build .` e `R CMD check --as-cran --no-manual RNfe_*.tar.gz` (sem LaTeX nesta máquina), fora da
+- `R CMD build .` e `R CMD check --as-cran --no-manual RNFe_*.tar.gz` (sem LaTeX nesta máquina), fora da
   pasta do pacote. O R fica em `C:\Program Files\R\R-4.6.1\bin`, fora do PATH; no PowerShell, `R` é o alias
   de `Invoke-History`: chamar `R.exe`/`Rscript.exe` pelo caminho inteiro e rodar R por arquivo `.R`.
 

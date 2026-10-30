@@ -171,7 +171,7 @@ destinatario_indicador             indDest        -
 #' `NA`. Nenhum campo se perde: o que não tem coluna própria está na tabela
 #' `campos`.
 #'
-#' O RNfe não confere o dígito da chave da NFS-e: a regra do cálculo não está
+#' O RNFe não confere o dígito da chave da NFS-e: a regra do cálculo não está
 #' no schema nem no leiaute oficial.
 #'
 #' @section nfses:
@@ -208,7 +208,7 @@ destinatario_indicador             indDest        -
 #' @source Schema oficial da NFS-e Nacional, pacote NFSe-ESQUEMAS_XSD-v1.01-20260209,
 #'   publicado na documentação técnica do portal da NFS-e (gov.br/nfse).
 #' @examples
-#' nfse = system.file("exemplos", "nfse_sp_v101.xml", package = "RNfe")
+#' nfse = system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe")
 #' lida = nfse_ler(nfse)
 #' lida$nfses[, c("chave", "numero", "prestador_documento", "valor_servico",
 #'                "valor_issqn", "valor_cbs")]

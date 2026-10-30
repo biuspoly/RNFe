@@ -39,7 +39,7 @@ tempo médio de resposta e, quando a SEFAZ informa, a previsão de volta e uma
 observação.
 }
 \details{
-Por enquanto o RNfe só fala com o ambiente de \strong{homologação} (testes, sem
+Por enquanto o RNFe só fala com o ambiente de \strong{homologação} (testes, sem
 valor fiscal); o ambiente de produção é recusado.
 
 Cada UF é atendida pela própria SEFAZ ou por uma SEFAZ virtual (a SVRS ou a

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Nota fictícia para os testes do RNfe: emitente com CNPJ alfanumérico (o exemplo da Receita),
+<!-- Nota fictícia para os testes do RNFe: emitente com CNPJ alfanumérico (o exemplo da Receita),
      Simples Nacional, destinatário pessoa física, sem protocolo e com assinatura de mentira. -->
 <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
   <infNFe versao="4.00" Id="NFe23261012ABC34501DE35550020000000421876543213">
@@ -22,7 +22,7 @@
       <indFinal>1</indFinal>
       <indPres>1</indPres>
       <procEmi>0</procEmi>
-      <verProc>RNfe-testes</verProc>
+      <verProc>RNFe-testes</verProc>
     </ide>
     <emit>
       <CNPJ>12ABC34501DE35</CNPJ>

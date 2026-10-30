@@ -1,4 +1,4 @@
-# RNfe
+# RNFe
 
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e Nacional) no **R**.
 
@@ -6,12 +6,12 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e Nac
 > CT-e OS, do MDF-e, da NFS-e Nacional e dos eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
 > SEFAZ, por enquanto, a leitura do certificado digital e o status do serviço, em homologação; o plano está em
-> [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
+> [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
 
 ```r
-remotes::install_github("biuspoly/RNfe")
+remotes::install_github("biuspoly/RNFe")
 ```
 
 ## Chave de acesso
@@ -20,7 +20,7 @@ A chave de 44 posições que identifica cada documento: conferir, desmontar e ca
 **CNPJ alfanumérico** (CNPJ com letras), em produção desde 06/07/2026.
 
 ```r
-library(RNfe)
+library(RNFe)
 
 chave_valida("35261011444777000161550010000001231123456783")    # TRUE
 chave_decompor("35261012ABC34501DE35550010000001231123456784")  # UF, ano, mês, CNPJ, modelo, série, número...
@@ -148,7 +148,7 @@ certificado_ler("empresa.pfx", senha)          # titular, CNPJ ou CPF, emissor e
 sefaz_status(c("SP", "CE"), "empresa.pfx", senha)   # o serviço da NF-e está no ar em cada UF?
 ```
 
-Por enquanto o RNfe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
+Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada
 serviço e o autorizador de cada UF (a própria SEFAZ, a SVRS ou a SVAN) vêm da Relação de Serviços Web do Portal
 da NF-e, que o robô das tabelas confere toda semana.
@@ -202,21 +202,21 @@ Nos exemplos e nos testes, só CNPJs e CPFs fictícios; o 12.ABC.345/01DE-35 é 
 
 ## Agradecimentos
 
-O RNfe se apoia no trabalho de muita gente.
+O RNFe se apoia no trabalho de muita gente.
 
 - O **[PyNFe](https://github.com/TadaSoftware/PyNFe)** (TadaSoftware, LGPL-3.0), a biblioteca de NF-e do Python,
-  é a principal referência deste pacote. O plano do RNfe parte do que ele faz (consulta à SEFAZ, distribuição
+  é a principal referência deste pacote. O plano do RNFe parte do que ele faz (consulta à SEFAZ, distribuição
   de documentos, emissão, eventos), e a assinatura digital, quando chegar aqui, vai ser conferida contra a dele.
   Obrigado a quem mantém o PyNFe e a todos que contribuíram com ele.
 - O **[brans-nfe](https://github.com/badbrans/brans-nfe)** (MIT), cliente Python da NFS-e Nacional, e o
   **[BrazilFiscalReport](https://github.com/Engenere/BrazilFiscalReport)** (Engenere, LGPL-3.0), que gera o
-  DANFE, o DACTE, o DAMDFE, a DACCe e o DANFSe, mostraram o que mais o RNfe precisa cobrir.
+  DANFE, o DACTE, o DAMDFE, a DACCe e o DANFSe, mostraram o que mais o RNFe precisa cobrir.
 - Os portais que publicam abertamente os schemas, os manuais e as tabelas: o Portal Nacional da NF-e, o do
   CT-e, o do MDF-e, o da NFS-e Nacional, o SPED da Receita Federal, o Portal Único Siscomex e o IBGE.
-- Os pacotes do R em que o RNfe se apoia: o xml2, que lê os XMLs; o httr2, o jsonlite e o readxl, nas
+- Os pacotes do R em que o RNFe se apoia: o xml2, que lê os XMLs; o httr2, o jsonlite e o readxl, nas
   ferramentas que baixam as tabelas e os schemas; o testthat e o roxygen2, nos testes e na ajuda.
 
-O código do RNfe foi escrito do zero, a partir das especificações oficiais: nenhuma linha foi copiada desses
+O código do RNFe foi escrito do zero, a partir das especificações oficiais: nenhuma linha foi copiada desses
 projetos.
 
 ## Licença

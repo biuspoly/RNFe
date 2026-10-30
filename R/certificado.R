@@ -26,7 +26,7 @@ OID_DA_PESSOA_FISICA = as.raw(c(0x06, 0x05, 0x60, 0x4c, 0x01, 0x03, 0x01))
 #' os certificados costumam trazer (`EMPRESA DE TESTE LTDA:11222333000181`).
 #'
 #' Não escreva a senha no script: guarde-a numa variável de ambiente (no
-#' arquivo `.Renviron`, por exemplo) e leia com [Sys.getenv()]. O RNfe não
+#' arquivo `.Renviron`, por exemplo) e leia com [Sys.getenv()]. O RNFe não
 #' grava nem mostra a senha.
 #'
 #' Precisa do pacote `openssl`.

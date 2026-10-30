@@ -50,7 +50,7 @@ do IBS e da CBS pela tabela fiscal na data. Campo que a NFS-e não tem fica
 \code{NA}. Nenhum campo se perde: o que não tem coluna própria está na tabela
 \code{campos}.
 
-O RNfe não confere o dígito da chave da NFS-e: a regra do cálculo não está
+O RNFe não confere o dígito da chave da NFS-e: a regra do cálculo não está
 no schema nem no leiaute oficial.
 }
 \section{nfses}{
@@ -83,7 +83,7 @@ Uma linha por arquivo pedido: \code{arquivo}, \code{nfses} (quantas NFS-e tinha)
 }
 
 \examples{
-nfse = system.file("exemplos", "nfse_sp_v101.xml", package = "RNfe")
+nfse = system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe")
 lida = nfse_ler(nfse)
 lida$nfses[, c("chave", "numero", "prestador_documento", "valor_servico",
                "valor_issqn", "valor_cbs")]

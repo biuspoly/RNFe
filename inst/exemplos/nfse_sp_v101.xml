@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- NFS-e Nacional fictícia para os testes do RNfe (leiaute 1.01, com IBS e CBS): CNPJs de exemplo, ambiente de
+<!-- NFS-e Nacional fictícia para os testes do RNFe (leiaute 1.01, com IBS e CBS): CNPJs de exemplo, ambiente de
      homologação e assinatura de mentira. O dígito da chave segue o módulo 11 que as NFS-e reais seguem. -->
 <NFSe versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
   <infNFSe Id="NFS35503082211222333000181000000000012326101234567898">
@@ -9,7 +9,7 @@
     <cLocIncid>3550308</cLocIncid>
     <xLocIncid>São Paulo</xLocIncid>
     <xTribNac>Licenciamento ou cessão de direito de uso de programas de computação.</xTribNac>
-    <verAplic>RNfe-testes</verAplic>
+    <verAplic>RNFe-testes</verAplic>
     <ambGer>2</ambGer>
     <tpEmis>1</tpEmis>
     <procEmi>1</procEmi>
@@ -74,7 +74,7 @@
       <infDPS Id="DPS355030821122233300018100001000000000000123">
         <tpAmb>2</tpAmb>
         <dhEmi>2026-10-20T10:00:00-03:00</dhEmi>
-        <verAplic>RNfe-testes</verAplic>
+        <verAplic>RNFe-testes</verAplic>
         <serie>1</serie>
         <nDPS>123</nDPS>
         <dCompet>2026-10-20</dCompet>

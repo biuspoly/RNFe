@@ -14,7 +14,7 @@
 # - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
 #   município.
 # - Serviços web da SEFAZ (o endereço de cada serviço da NF-e e o autorizador de cada UF): a Relação de Serviços
-#   Web do Portal da NF-e. Só a de homologação, por enquanto: o RNfe ainda não fala com a produção.
+#   Web do Portal da NF-e. Só a de homologação, por enquanto: o RNFe ainda não fala com a produção.
 
 PASTA_DAS_TABELAS = "inst/extdata/tabelas"
 ENDERECO_DO_PORTAL = "https://www.nfe.fazenda.gov.br/portal/"

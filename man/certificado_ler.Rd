@@ -40,7 +40,7 @@ campos, vale o número que vem depois de \code{:} no fim do nome do titular, com
 os certificados costumam trazer (\verb{EMPRESA DE TESTE LTDA:11222333000181}).
 
 Não escreva a senha no script: guarde-a numa variável de ambiente (no
-arquivo \code{.Renviron}, por exemplo) e leia com \code{\link[=Sys.getenv]{Sys.getenv()}}. O RNfe não
+arquivo \code{.Renviron}, por exemplo) e leia com \code{\link[=Sys.getenv]{Sys.getenv()}}. O RNFe não
 grava nem mostra a senha.
 
 Precisa do pacote \code{openssl}.

@@ -1,4 +1,4 @@
-# Plano do RNfe
+# Plano do RNFe
 
 Situação em 30/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
 fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 concluída:** a
@@ -11,11 +11,13 @@ etapa 3 (certificado e SEFAZ).
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
-vai como contribuição para ele. O pacote é um dos quatro do plano "Portar para o R" (os outros: financeiro,
+vai como contribuição para ele. Em 30/10/2026 o nome passou a **RNFe**, com o F maiúsculo, como o PyNFe (pedido
+do usuário: "é possível trocar a biblioteca pra RNFe? com o F maiúsculo, como o PyNFe"). O pacote é um dos quatro do plano "Portar para o R" (os outros: financeiro,
 leitor de códigos e utilidades brasileiras); o `veiculosbr` saiu das utilidades.
 
 Antes de começar, o CRAN não tinha nenhum pacote de nota fiscal (dos 25.608 pacotes, nenhum trata de NF-e,
-SEFAZ, SPED ou CFOP), e o nome RNfe estava livre no CRAN, no PyPI e no r-universe.
+SEFAZ, SPED ou CFOP), e o nome RNfe estava livre no CRAN, no PyPI e no r-universe. Na troca para RNFe
+(30/10/2026), nenhum dos 25.577 pacotes do CRAN tinha esse nome, em nenhuma combinação de maiúsculas.
 
 ## As etapas
 
@@ -36,12 +38,12 @@ A assinatura é a peça mais delicada: vai ser comparada com a que o PyNFe faz.
 
 ## Mais completo que o PyNFe (meta do usuário, 29/10/2026)
 
-O RNfe tem de cobrir o que o PyNFe faz e também o que só existe nas bibliotecas que completam o PyNFe: o
+O RNFe tem de cobrir o que o PyNFe faz e também o que só existe nas bibliotecas que completam o PyNFe: o
 brans-nfe (NFS-e Nacional) e o BrazilFiscalReport (os PDFs). Fontes: o README do PyNFe no GitHub, e as
 páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/2026) no PyPI, lidas em
 29/10/2026.
 
-| O que | PyNFe | brans-nfe | BrazilFiscalReport | RNfe |
+| O que | PyNFe | brans-nfe | BrazilFiscalReport | RNFe |
 |---|---|---|---|---|
 | Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
 | Ler CT-e, CT-e OS e MDF-e em tabelas | não | não | não | pronto (etapa 2) |
@@ -308,7 +310,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   três manuais das APIs). As 11.207 chaves reais seguem o módulo 11 da NF-e, mas sem a regra escrita o pacote
   não confere o dígito da NFS-e, e as funções `chave_*` continuam só para a chave de 44 posições.
 - **O schema oficial não bate com as NFS-e reais.** Validadas 300 NFS-e reais sorteadas: 198 passaram e 102
-  não (100 da 1.00, 2 da 1.01). Os motivos são do schema e do próprio sistema nacional, não do RNfe:
+  não (100 da 1.00, 2 da 1.01). Os motivos são do schema e do próprio sistema nacional, não do RNFe:
   - a lista de situações (`cStat`) é {100, 101, 102, 103} na 1.00 e {100, 102, 103, 107} na 1.01, mas
     NFS-e 1.00 reais trazem 107 e uma 1.01 traz 101;
   - a assinatura real usa SHA-256 e a canonicalização exclusiva, e o schema da assinatura que vem no pacote
@@ -326,7 +328,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   1.01), que não entram no repositório. Todas foram lidas, por dois lados:
   - contra o que o app Fiscal tirou dos mesmos XMLs: número, prestador, tomador, valor do serviço, valor
     líquido, município e data de emissão bateram em todas. O nome do emitente diferiu em 23, todas por
-    espaços no começo ou no fim: o Fiscal tira os espaços e o RNfe deixa o nome como está no XML;
+    espaços no começo ou no fim: o Fiscal tira os espaços e o RNFe deixa o nome como está no XML;
   - contra um segundo leitor do XML (ElementTree, em Python): chave, versão, situação, processamento,
     emissão, competência, prestador, tomador, intermediário, código e nome da tributação nacional, base,
     alíquota e valor do ISSQN, total retido, retenção do ISSQN, PIS, IRRF, CST e classificação do IBS/CBS,
@@ -353,7 +355,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   do mesmo evento não se confundem).
 - Textos em colunas: `justificativa` (`xJust`; na NFS-e, o `xMotivo` que o autor escreveu), `correcao`
   (`xCorrecao`, da carta de correção da NF-e) e `observacao` (`xObs`, como o motivo do desacordo do CT-e). A
-  `observacao` entrou depois da conferência: o Fiscal mostrava o `xObs` de 4 eventos de desacordo que o RNfe só
+  `observacao` entrou depois da conferência: o Fiscal mostrava o `xObs` de 4 eventos de desacordo que o RNFe só
   tinha em `campos`.
 - **NFS-e:** o tipo é o nome do grupo do evento sem o `e` (`e101101` dá `101101`). **Achado nos eventos
   reais:** a NFS-e 1.00 de substituição traz o `nPedRegEvento` entre a chave e o grupo (e `nDFe` no lugar de
@@ -382,7 +384,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - contra o que o app Fiscal tirou dos mesmos XMLs: documento, chave, tipo, sequência, autor, situação,
     protocolo e resumo bateram em todos; o texto (correção, justificativa ou observação), em todos menos um,
     em que o Fiscal tira os espaços das pontas.
-  - A data difere na forma: o Fiscal guarda o relógio escrito no XML sem o fuso, e o RNfe guarda o instante.
+  - A data difere na forma: o Fiscal guarda o relógio escrito no XML sem o fuso, e o RNFe guarda o instante.
     Em 148 eventos o fuso escrito não era o de Brasília (+00:00, -04:00, -02:00, -07:00, -00:00 e -08:00); em
     2, o Fiscal ficou sem a data.
   - 393 eventos aparecem em dois arquivos (o mesmo evento guardado duas vezes); o leitor devolve uma linha por
@@ -438,7 +440,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   documentos (`infOutros`) e outra para os de transporte anterior em papel (`idDocAntPap`). A tabela tem a
   coluna `contexto`, e o leitor procura primeiro o significado do contexto da linha.
 - **Fora de propósito:** o `tpCTe` 4 e o `tpServ` 9 (GTV-e) e o `tpCTe` 5 e 6 (CT-e simplificado), de
-  documentos que o RNfe não lê. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
+  documentos que o RNFe não lê. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
   modelos das notas referenciadas da NF-e (`refNF`, `refNFP`, `refECF`: 01, 02, 04, 2B, 2C, 2D) também ficam
   sem significado: só vão para a tabela `campos`, e o 01 muda de sentido entre os grupos.
 - **Segunda rodada (30/10/2026), achada cruzando cada coluna dos leitores com os valores que o schema aceita:**
@@ -488,7 +490,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   própria, menor). Ficam fora de `tabela_fiscal()`. O resumo do robô compara pela linha inteira a tabela que
   não tem `codigo`.
 - **A mensagem:** o pedido segue o `leiauteConsStatServ_v4.00.xsd`, que está no pacote completo 9q (os parciais
-  010d e 010g, que o RNfe segue, não trazem os schemas dos serviços); o pedido montado passa nele, e um estragado
+  010d e 010g, que o RNFe segue, não trazem os schemas dos serviços); o pedido montado passa nele, e um estragado
   é reprovado. O envelope é o do WSDL do serviço (SOAP 1.2, `nfeDadosMsg` no namespace do serviço e a action
   `.../NFeStatusServico4/nfeStatusServicoNF`); a SVRS só mostra o WSDL com certificado de cliente. As respostas
   são lidas pelo nome local de cada elemento, porque cada SEFAZ põe o prefixo de namespace que quer.
@@ -539,7 +541,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   publicação traz o schema principal, o aviso diz os campos que entraram, que saíram e que mudaram de regra
   (ocorrências, tipo, padrão, valores aceitos, seguindo o tipo de origem). Nunca abre dois avisos com o mesmo
   título, aberto ou fechado. Se um portal não responde, termina com erro depois de abrir os avisos dos outros.
-- Depois de atualizar um leitor (ou de ver que a publicação não afeta o RNfe), rodar
+- Depois de atualizar um leitor (ou de ver que a publicação não afeta o RNFe), rodar
   `Rscript ferramentas/vigiar_schemas.R --registrar`. Quando o aviso diz que mudaram os valores aceitos de um
   campo, rodar também `Rscript ferramentas/conferir_codigos_dos_campos.R`: ele diz o código novo que ficou
   sem significado.

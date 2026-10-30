@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Evento fictício para os testes do RNfe: o cancelamento da NF-e de exemplo nfe_proc_sp.xml, com o retorno da
+<!-- Evento fictício para os testes do RNFe: o cancelamento da NF-e de exemplo nfe_proc_sp.xml, com o retorno da
      SEFAZ. CNPJ de exemplo, ambiente de homologação e assinatura de mentira. -->
 <procEventoNFe versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe">
   <evento versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe">

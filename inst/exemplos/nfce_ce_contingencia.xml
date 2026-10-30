@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- NFC-e fictícia para os testes do RNfe: emitida em contingência offline (forma de emissão 9) e autorizada
+<!-- NFC-e fictícia para os testes do RNFe: emitida em contingência offline (forma de emissão 9) e autorizada
      depois, consumidor não identificado, pagamento em dinheiro com troco, QR-Code da versão 3. CNPJ de exemplo,
      endereços .invalid, ambiente de homologação e assinatura de mentira. -->
 <nfeProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe">
@@ -24,7 +24,7 @@
         <indFinal>1</indFinal>
         <indPres>1</indPres>
         <procEmi>0</procEmi>
-        <verProc>RNfe-testes</verProc>
+        <verProc>RNFe-testes</verProc>
         <dhCont>2026-10-21T19:05:00-03:00</dhCont>
         <xJust>SEM CONEXAO COM A INTERNET NO CAIXA</xJust>
       </ide>

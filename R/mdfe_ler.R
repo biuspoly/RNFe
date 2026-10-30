@@ -245,7 +245,7 @@ averbacao              self::nAver                                              
 #' @source Schema oficial do MDF-e, pacote PL_MDFe_300b da NT 2025.001 v1.04,
 #'   publicado no Portal Nacional do MDF-e em 25/04/2026.
 #' @examples
-#' mdfe = system.file("exemplos", "mdfe_proc_sp.xml", package = "RNfe")
+#' mdfe = system.file("exemplos", "mdfe_proc_sp.xml", package = "RNFe")
 #' lido = mdfe_ler(mdfe)
 #' lido$mdfes[, c("chave", "emitente_nome", "placa", "valor_carga", "protocolo")]
 #' lido$documentos[, c("tipo", "documento_chave", "descarga_municipio")]

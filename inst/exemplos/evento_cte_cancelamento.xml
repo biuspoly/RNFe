@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Evento fictício para os testes do RNfe: o cancelamento do CT-e de exemplo cte_proc_sp.xml (emitente com CNPJ
+<!-- Evento fictício para os testes do RNFe: o cancelamento do CT-e de exemplo cte_proc_sp.xml (emitente com CNPJ
      alfanumérico, o exemplo da Receita), com o retorno da SEFAZ. Ambiente de homologação e assinatura de mentira. -->
 <procEventoCTe versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
   <eventoCTe versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">

@@ -1,7 +1,7 @@
 # Os valores esperados são os escritos à mão nas NFS-e de inst/exemplos (validadas contra o schema oficial
 # com ferramentas/validar_exemplos.R).
-NFSE_SP = system.file("exemplos", "nfse_sp_v101.xml", package = "RNfe")
-NFSE_CE = system.file("exemplos", "nfse_ce_mei_v100.xml", package = "RNfe")
+NFSE_SP = system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe")
+NFSE_CE = system.file("exemplos", "nfse_ce_mei_v100.xml", package = "RNFe")
 CHAVE_SP = "35503082211222333000181000000000012326101234567898"
 CHAVE_CE = "23044002211444777000161000000000000726109876543210"
 
@@ -153,7 +153,7 @@ test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo
 })
 
 test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros, e os leitores n\u00e3o se confundem", {
-  nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
+  nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
   de_prefeitura = '<CompNfse><Nfse><InfNfse><Numero>1</Numero></InfNfse></Nfse></CompNfse>'
   lida = nfse_ler(c("nao_existe.xml", NFSE_SP, nota, de_prefeitura, NA))
   expect_identical(lida$nfses$chave, CHAVE_SP)

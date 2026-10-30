@@ -1,10 +1,10 @@
 # Os valores esperados são os escritos à mão nas notas de inst/exemplos (validadas contra o schema
 # oficial com ferramentas/validar_exemplos.R).
-NOTA_SP = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
-NOTA_CE = system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNfe")
+NOTA_SP = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
+NOTA_CE = system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNFe")
 CHAVE_SP = "35261011222333000181550010000010011123456785"
 CHAVE_CE = "23261012ABC34501DE35550020000000421876543213"
-NFCE_CE = system.file("exemplos", "nfce_ce_contingencia.xml", package = "RNfe")
+NFCE_CE = system.file("exemplos", "nfce_ce_contingencia.xml", package = "RNFe")
 # Dígito calculado à parte, pela regra da NT Conjunta 2025.001.
 CHAVE_NFCE = "23261011444777000161650030000000779135724686"
 
@@ -297,7 +297,7 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", 
 })
 
 test_that("o CT-e cita NF-e (infNFe), mas n\u00e3o \u00e9 lido como nota", {
-  lida = nfe_ler(system.file("exemplos", "cte_proc_sp.xml", package = "RNfe"))
+  lida = nfe_ler(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))
   expect_identical(nrow(lida$notas), 0L)
   expect_identical(lida$arquivos$problema, "n\u00e3o \u00e9 uma NF-e (o XML come\u00e7a por <cteProc>)")
 })

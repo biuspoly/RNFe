@@ -119,7 +119,7 @@ Uma linha por arquivo pedido: \code{arquivo}, \code{notas} (quantas notas tinha)
 }
 
 \examples{
-nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
+nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
 lida = nfe_ler(nota)
 lida$notas[, c("chave", "emitente_nome", "valor_nota", "protocolo")]
 lida$itens[, c("item", "descricao", "cfop", "cst_icms", "valor_icms", "valor_cbs")]

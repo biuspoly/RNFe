@@ -128,7 +128,7 @@ tabela_fiscal = function(nome_da_tabela) {
 }
 
 ler_tabela_do_pacote = function(nome_da_tabela) {
-  arquivo_csv = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNfe")
+  arquivo_csv = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
   tabela_do_pacote = utils::read.csv(arquivo_csv, colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
   for (nome_da_coluna in names(tabela_do_pacote)) {
     if (nome_da_coluna %in% COLUNAS_DE_DATA) {

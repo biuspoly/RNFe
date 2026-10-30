@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- CT-e fictício para os testes do RNfe: subcontratação por emitente do Simples Nacional, tomador
+<!-- CT-e fictício para os testes do RNFe: subcontratação por emitente do Simples Nacional, tomador
      pessoa física (toma4), documento transportado que não é NF-e, documentos de transporte anterior
      (um CT-e, o de cte_proc_sp.xml, e um em papel), sem protocolo e com assinatura de mentira. -->
 <CTe xmlns="http://www.portalfiscal.inf.br/cte">
@@ -19,7 +19,7 @@
       <tpAmb>2</tpAmb>
       <tpCTe>0</tpCTe>
       <procEmi>0</procEmi>
-      <verProc>RNfe-testes</verProc>
+      <verProc>RNFe-testes</verProc>
       <cMunEnv>2304400</cMunEnv>
       <xMunEnv>FORTALEZA</xMunEnv>
       <UFEnv>CE</UFEnv>

@@ -18,7 +18,7 @@ TEMPO_LIMITE_DA_SEFAZ = 60
 #' tempo médio de resposta e, quando a SEFAZ informa, a previsão de volta e uma
 #' observação.
 #'
-#' Por enquanto o RNfe só fala com o ambiente de **homologação** (testes, sem
+#' Por enquanto o RNFe só fala com o ambiente de **homologação** (testes, sem
 #' valor fiscal); o ambiente de produção é recusado.
 #'
 #' Cada UF é atendida pela própria SEFAZ ou por uma SEFAZ virtual (a SVRS ou a
@@ -125,7 +125,7 @@ status_de_uma_uf = function(uf, certificado, senha, ambiente) {
 
 conferir_ambiente = function(ambiente) {
   if (length(ambiente) != 1 || is.na(ambiente) || !(ambiente %in% names(AMBIENTES_LIBERADOS))) {
-    stop("Por enquanto o RNfe s\u00f3 fala com o ambiente de homologa\u00e7\u00e3o da SEFAZ: use ambiente = \"homologacao\".",
+    stop("Por enquanto o RNFe s\u00f3 fala com o ambiente de homologa\u00e7\u00e3o da SEFAZ: use ambiente = \"homologacao\".",
          call. = FALSE)
   }
 }

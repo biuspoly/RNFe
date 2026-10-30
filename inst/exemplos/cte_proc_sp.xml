@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- CT-e fictício para os testes do RNfe: CNPJs de exemplo, ambiente de homologação e assinatura de mentira.
+<!-- CT-e fictício para os testes do RNFe: CNPJs de exemplo, ambiente de homologação e assinatura de mentira.
      Transporta as duas NF-e de exemplo do pacote (nfe_proc_sp.xml e nfe_ce_simples_cpf.xml). -->
 <cteProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
   <CTe xmlns="http://www.portalfiscal.inf.br/cte">
@@ -19,7 +19,7 @@
         <tpAmb>2</tpAmb>
         <tpCTe>0</tpCTe>
         <procEmi>0</procEmi>
-        <verProc>RNfe-testes</verProc>
+        <verProc>RNFe-testes</verProc>
         <cMunEnv>3550308</cMunEnv>
         <xMunEnv>SÃO PAULO</xMunEnv>
         <UFEnv>SP</UFEnv>

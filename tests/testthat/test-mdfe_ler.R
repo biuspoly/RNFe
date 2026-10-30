@@ -1,7 +1,7 @@
 # Os valores esperados são os escritos à mão nos MDF-e de inst/exemplos (validados contra o schema
 # oficial com ferramentas/validar_exemplos.R).
-MDFE_SP = system.file("exemplos", "mdfe_proc_sp.xml", package = "RNfe")
-MDFE_CE = system.file("exemplos", "mdfe_ce_carga_propria.xml", package = "RNfe")
+MDFE_SP = system.file("exemplos", "mdfe_proc_sp.xml", package = "RNFe")
+MDFE_CE = system.file("exemplos", "mdfe_ce_carga_propria.xml", package = "RNFe")
 CHAVE_SP = "35261033344455500070580010000003211112233448"
 CHAVE_CE = "23261011444777000161580020000000121556677880"
 
@@ -81,8 +81,8 @@ test_that("os documentos, com o munic\u00edpio de descarregamento", {
   documentos = mdfe_ler(c(MDFE_SP, MDFE_CE))$documentos
   expect_identical(documentos$chave, c(CHAVE_SP, CHAVE_CE))
   expect_identical(documentos$tipo, c("infCTe", "infNFe"))
-  cte = cte_ler(system.file("exemplos", "cte_proc_sp.xml", package = "RNfe"))$ctes
-  nota = nfe_ler(system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNfe"))$notas
+  cte = cte_ler(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))$ctes
+  nota = nfe_ler(system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNFe"))$notas
   expect_identical(documentos$documento_chave, c(cte$chave, nota$chave))
   expect_identical(documentos$descarga_codigo_municipio, c("3304557", "2611606"))
   expect_identical(documentos$descarga_municipio, c("RIO DE JANEIRO", "RECIFE"))
@@ -196,7 +196,7 @@ test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo
 })
 
 test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros, e cada leitor recusa os outros documentos", {
-  nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNfe")
+  nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
   lido = mdfe_ler(c("nao_existe.xml", MDFE_SP, "<MDFe><infMDFe>", nota, NA))
   expect_identical(lido$mdfes$chave, CHAVE_SP)
   expect_identical(lido$arquivos$mdfes, c(0L, 1L, 0L, 0L, 0L))

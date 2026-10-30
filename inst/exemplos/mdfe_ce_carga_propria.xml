@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- MDF-e fictício para os testes do RNfe: carga própria levando a NF-e de exemplo (nfe_ce_simples_cpf.xml),
+<!-- MDF-e fictício para os testes do RNFe: carga própria levando a NF-e de exemplo (nfe_ce_simples_cpf.xml),
      com percurso, veículo de terceiro, reboque, dois condutores, pagamento a prazo e dois seguros (um sem
      averbação), sem protocolo e com assinatura de mentira. -->
 <MDFe xmlns="http://www.portalfiscal.inf.br/mdfe">
@@ -17,7 +17,7 @@
       <dhEmi>2026-10-23T07:30:00-03:00</dhEmi>
       <tpEmis>1</tpEmis>
       <procEmi>0</procEmi>
-      <verProc>RNfe-testes</verProc>
+      <verProc>RNFe-testes</verProc>
       <UFIni>CE</UFIni>
       <UFFim>PE</UFFim>
       <infMunCarrega>

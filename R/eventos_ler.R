@@ -191,7 +191,7 @@ FAMILIA_PELA_CHAVE = c(chNFe = "NF-e", chCTe = "CT-e", chMDFe = "MDF-e")
 #'   (PL_MDFe_300b da NT 2025.001 v1.04) e da NFS-e Nacional
 #'   (NFSe-ESQUEMAS_XSD-v1.01-20260209).
 #' @examples
-#' exemplos = system.file("exemplos", package = "RNfe")
+#' exemplos = system.file("exemplos", package = "RNFe")
 #' arquivos = file.path(exemplos, c("evento_nfe_cancelamento.xml", "evento_nfse_cancelamento.xml"))
 #' lido = eventos_ler(arquivos)
 #' lido$eventos[, c("documento", "tipo", "descricao", "justificativa", "situacao")]

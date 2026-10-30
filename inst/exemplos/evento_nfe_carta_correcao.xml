@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Evento fictício para os testes do RNfe: a carta de correção da NF-e de exemplo nfe_ce_simples_cpf.xml (emitente
+<!-- Evento fictício para os testes do RNFe: a carta de correção da NF-e de exemplo nfe_ce_simples_cpf.xml (emitente
      com CNPJ alfanumérico, o exemplo da Receita), com o retorno da SEFAZ. Ambiente de homologação e assinatura de
      mentira. -->
 <procEventoNFe versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe">

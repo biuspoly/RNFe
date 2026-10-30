@@ -366,7 +366,7 @@ texto  xTexto   texto
 #'   RTC 1.00, publicado no Portal Nacional do CT-e (republicado em
 #'   16/10/2026).
 #' @examples
-#' cte = system.file("exemplos", "cte_proc_sp.xml", package = "RNfe")
+#' cte = system.file("exemplos", "cte_proc_sp.xml", package = "RNFe")
 #' lido = cte_ler(cte)
 #' lido$ctes[, c("chave", "emitente_nome", "tomador_nome", "valor_prestacao", "valor_icms")]
 #' lido$documentos[, c("tipo", "documento_chave")]

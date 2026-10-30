@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Nota fictícia para os testes do RNfe: CNPJs de exemplo, ambiente de homologação e assinatura de mentira. -->
+<!-- Nota fictícia para os testes do RNFe: CNPJs de exemplo, ambiente de homologação e assinatura de mentira. -->
 <nfeProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe">
   <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
     <infNFe versao="4.00" Id="NFe35261011222333000181550010000010011123456785">
@@ -23,7 +23,7 @@
         <indFinal>0</indFinal>
         <indPres>9</indPres>
         <procEmi>0</procEmi>
-        <verProc>RNfe-testes</verProc>
+        <verProc>RNFe-testes</verProc>
       </ide>
       <emit>
         <CNPJ>11222333000181</CNPJ>

@@ -4,7 +4,7 @@
 #   Rscript ferramentas/vigiar_schemas.R --registrar
 # Cada aviso é um arquivo .md: a primeira linha é o título, o resto é o texto. Quando a publicação traz o
 # schema principal do documento (o de schemas_usados.csv), o aviso diz os campos que entraram, que saíram e
-# que mudaram de regra em relação ao pacote que o RNfe segue. O robô (.github/workflows/vigiar-schemas.yml)
+# que mudaram de regra em relação ao pacote que o RNFe segue. O robô (.github/workflows/vigiar-schemas.yml)
 # abre um aviso (issue) por arquivo. "--registrar" grava em schemas_vistos.csv tudo o que os portais listam
 # hoje: rodar depois de atualizar os leitores para um pacote novo.
 # Termina com erro quando algum portal não respondeu, depois de escrever os avisos dos outros.
@@ -77,7 +77,7 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
     "",
     paste0("Endereço: ", publicacao$endereco),
     "",
-    paste0("O RNfe segue hoje: ", pacote_usado$titulo, "."),
+    paste0("O RNFe segue hoje: ", pacote_usado$titulo, "."),
     ""
   )
   pasta_do_pacote_novo = tryCatch(baixar_pacote(publicacao$documento, publicacao$endereco, pasta_temporaria), error = function(erro) erro)
@@ -91,11 +91,11 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
     arquivo_principal_novo = arquivo_na_versao_mais_nova(pasta_do_pacote_novo, pacote_usado$arquivo_principal)
     if (is.na(arquivo_principal_novo)) {
       linhas_do_aviso = c(linhas_do_aviso, paste0("A publicação não traz o `", pacote_usado$arquivo_principal, "` (nem em outra versão): ",
-                                                  "é de eventos, de outro serviço ou de outro documento. Confira se ela afeta algum leitor do RNfe."))
+                                                  "é de eventos, de outro serviço ou de outro documento. Confira se ela afeta algum leitor do RNFe."))
     } else {
       o_que_comparar = O_QUE_COMPARAR[[publicacao$documento]]
       campos_do_pacote_novo = campos_do_schema(dirname(arquivo_principal_novo), o_que_comparar)
-      linhas_do_aviso = c(linhas_do_aviso, paste0("Comparado com o pacote que o RNfe segue (", paste(o_que_comparar, collapse = ", "),
+      linhas_do_aviso = c(linhas_do_aviso, paste0("Comparado com o pacote que o RNFe segue (", paste(o_que_comparar, collapse = ", "),
                                                   "), pelo `", basename(arquivo_principal_novo), "` da publicação:"),
                           "", texto_das_diferencas(comparar_campos(campos_do_pacote_usado, campos_do_pacote_novo)))
     }
@@ -103,7 +103,7 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
   linhas_do_aviso = c(linhas_do_aviso, "", paste0(
     "O que fazer: conferir a nota técnica, atualizar o leitor (`R/", publicacao$documento, "_ler.R`), os exemplos e ",
     "`ferramentas/schemas_usados.csv`, validar com `ferramentas/validar_exemplos.R` e rodar ",
-    "`Rscript ferramentas/vigiar_schemas.R --registrar`. Se a publicação não muda nada no RNfe, só o último passo."
+    "`Rscript ferramentas/vigiar_schemas.R --registrar`. Se a publicação não muda nada no RNFe, só o último passo."
   ))
   linhas_do_aviso = cortar_texto(linhas_do_aviso)
   arquivo_do_aviso = file.path(pasta_dos_avisos, sprintf("%03d.md", numero_do_aviso))

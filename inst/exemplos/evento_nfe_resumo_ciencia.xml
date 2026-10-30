@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Resumo de evento fictício para os testes do RNfe, como a Distribuição de DF-e entrega: a ciência da operação
+<!-- Resumo de evento fictício para os testes do RNFe, como a Distribuição de DF-e entrega: a ciência da operação
      que o destinatário da NF-e de exemplo nfe_proc_sp.xml registrou. CNPJ de exemplo. -->
 <resEvento versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe">
   <cOrgao>91</cOrgao>
