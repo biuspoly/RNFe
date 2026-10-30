@@ -1,0 +1,60 @@
+# Toda segunda-feira, olha as listas de schemas dos portais da NF-e, do CT-e e do MDF-e
+# (ferramentas/vigiar_schemas.R). Cada publicação que ainda não está em ferramentas/schemas_vistos.csv vira
+# um aviso (issue), com os campos que entraram, saíram e mudaram quando ela traz o schema principal do
+# documento. Um aviso por publicação, e nunca dois com o mesmo título, aberto ou fechado: atualizar os
+# leitores é trabalho de uma pessoa. Se algum portal não responder, o robô termina com erro (e o GitHub
+# avisa por e-mail), depois de abrir os avisos dos outros.
+
+name: Vigiar os schemas oficiais
+
+on:
+  schedule:
+    - cron: "30 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Instalar os pacotes da ferramenta
+        run: Rscript -e 'install.packages(c("httr2", "xml2"))'
+
+      - name: Olhar os portais
+        id: vigia
+        run: |
+          if Rscript ferramentas/vigiar_schemas.R "$RUNNER_TEMP/avisos"; then
+            echo "falhou=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "falhou=sim" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Abrir um aviso para cada publicação nova
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/avisos"
+          gh issue list --state all --limit 1000 --json title --jq '.[].title' > "$RUNNER_TEMP/titulos.txt"
+          for aviso in "$RUNNER_TEMP"/avisos/*.md; do
+            [ -e "$aviso" ] || continue
+            titulo=$(head -n 1 "$aviso")
+            if grep -Fxq -- "$titulo" "$RUNNER_TEMP/titulos.txt"; then
+              echo "Já tem aviso: $titulo"
+              continue
+            fi
+            tail -n +2 "$aviso" > "$RUNNER_TEMP/corpo.md"
+            gh issue create --title "$titulo" --body-file "$RUNNER_TEMP/corpo.md"
+          done
+
+      - name: Terminar com erro se algum portal não respondeu
+        if: steps.vigia.outputs.falhou == 'sim'
+        run: exit 1

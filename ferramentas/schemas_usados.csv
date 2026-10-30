@@ -1,0 +1,4 @@
+"documento","titulo","endereco","arquivo_principal"
+"nfe","Schemas XML NF-e - Pacote de Liberação nº 010g v.1.03 - NT 2026.006 v.1.00 e NT 2026.008 v.1.00 (Publicado em 26/10/26)","https://www.nfe.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=EQhOQMgipXY=","leiauteNFe_v4.00.xsd"
+"cte","Schemas XML CT-e - NT 2026.004 - v.1.00 (Republicado em 16/10/2026)","https://www.cte.fazenda.gov.br/portal/exibirArquivo.aspx?conteudo=zeylq8Ib5E0=","cte_v4.00.xsd"
+"mdfe","Schemas NT 2025.001 v 1.04","https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArquivoEstatico/?sistema=MDFE&tipoArquivo=2&nomeArquivo=PL_MDFe_300b_NT012025_1.04.zip","mdfe_v3.00.xsd"

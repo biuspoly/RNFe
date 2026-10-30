@@ -1,17 +1,22 @@
 # Confere os documentos de exemplo (inst/exemplos, usados nos testes e na ajuda) contra os schemas
-# oficiais, os pacotes de liberação baixados do Portal da NF-e, do Portal do CT-e e do Portal do MDF-e.
-# Uso, na raiz do repositório:
+# oficiais que os leitores seguem (ferramentas/schemas_usados.csv). Uso, na raiz do repositório:
+#   Rscript ferramentas/validar_exemplos.R
 #   Rscript ferramentas/validar_exemplos.R <schema da NF-e> <schema do CT-e> <schema do MDF-e>
-# Cada argumento é a pasta do pacote: a da NF-e tem o leiauteNFe_v4.00.xsd, a do CT-e o cte_v4.00.xsd e a do
-# MDF-e o mdfe_v3.00.xsd.
+# Sem argumentos, baixa os pacotes dos portais (ferramentas/baixar_schemas.R). Com eles, usa as pastas
+# dadas: a da NF-e tem o leiauteNFe_v4.00.xsd, a do CT-e o cte_v4.00.xsd e a do MDF-e o mdfe_v3.00.xsd.
 # Todo documento nessa pasta tem de passar: documento com defeito de propósito vai como texto dentro do teste.
 
 argumentos = commandArgs(trailingOnly = TRUE)
+if (length(argumentos) == 0) {
+  source("ferramentas/baixar_schemas.R", encoding = "UTF-8")
+  pastas_baixadas = baixar_schemas_usados(file.path(tempdir(), "schemas"))
+  argumentos = unname(pastas_baixadas[c("nfe", "cte", "mdfe")])
+}
 if (length(argumentos) != 3
     || !file.exists(file.path(argumentos[1], "leiauteNFe_v4.00.xsd"))
     || !file.exists(file.path(argumentos[2], "cte_v4.00.xsd"))
     || !file.exists(file.path(argumentos[3], "mdfe_v3.00.xsd"))) {
-  stop("Informe a pasta do schema da NF-e (com o leiauteNFe_v4.00.xsd), a do CT-e (com o cte_v4.00.xsd) e a do MDF-e (com o mdfe_v3.00.xsd)", call. = FALSE)
+  stop("Informe a pasta do schema da NF-e (com o leiauteNFe_v4.00.xsd), a do CT-e (com o cte_v4.00.xsd) e a do MDF-e (com o mdfe_v3.00.xsd), ou nada para baixar", call. = FALSE)
 }
 pasta_do_schema_da_nfe = argumentos[1]
 pasta_do_schema_do_cte = argumentos[2]
