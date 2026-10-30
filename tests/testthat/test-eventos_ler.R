@@ -136,6 +136,18 @@ test_that("o ambiente com o significado ao lado", {
   eventos = eventos_ler(TODOS_OS_EVENTOS)$eventos
   expect_identical(match("ambiente_descricao", names(eventos)), match("ambiente", names(eventos)) + 1L)
   expect_identical(is.na(eventos$ambiente_descricao), is.na(eventos$ambiente))
+  expect_identical(match("orgao_descricao", names(eventos)), match("orgao", names(eventos)) + 1L)
+  expect_identical(eventos$orgao_descricao[eventos$arquivo == CANCELAMENTO_NFE], "SP")
+  expect_identical(eventos$orgao_descricao[eventos$arquivo == CARTA_CORRECAO_NFE], "CE")
+  expect_identical(eventos$orgao_descricao[eventos$arquivo == RESUMO_NFE], "Ambiente Nacional")
+  expect_identical(eventos$orgao_descricao[eventos$arquivo == ENCERRAMENTO_MDFE], "SP")
+  expect_true(is.na(eventos$orgao_descricao[eventos$arquivo == CANCELAMENTO_NFSE]))
+  # O 90 e os seguintes dependem do documento; na NF-e, o leiaute só diz o que é o 91.
+  orgaos = data.frame(documento = c("CT-e", "MDF-e", "MDF-e", "NF-e", "NF-e"), orgao = c("90", "92", "91", "91", "90"))
+  significado_do_orgao = data.frame(coluna_do_codigo = "orgao", campo = "cOrgao", coluna_do_contexto = "documento")
+  orgaos = acrescentar_significados(orgaos, "evento", significado_do_orgao)
+  expect_identical(orgaos$orgao_descricao, c("SUFRAMA (Superintend\u00eancia da Zona Franca de Manaus)", "BackOffice BRId",
+                                             "RFB (Receita Federal do Brasil)", "Ambiente Nacional", NA))
   expect_true(all(eventos$ambiente_descricao[!is.na(eventos$ambiente)] == "Homologa\u00e7\u00e3o"))
 })
 

@@ -76,8 +76,10 @@ próprio grupo.
 Ao lado do CFOP, do CST e da classificação tributária do IBS e da CBS vem o
 nome de cada um, como a tabela fiscal registrava na data de emissão (veja
 \code{\link[=tabela_fiscal]{tabela_fiscal()}}): \code{cfop_titulo}, \code{cst_ibs_cbs_descricao} e
-\code{classificacao_ibs_cbs_nome}. O CST do ICMS fica sem nome: a tabela do
-pacote é a da NF-e, que não tem o CST 45 do CT-e.
+\code{classificacao_ibs_cbs_nome}. O CST do ICMS (\code{cst_icms_descricao}) segue o
+leiaute do CT-e, pelo grupo: no \code{ICMS45} vão o 40, o 41 e o 51, e o 90 é
+"ICMS outros" no \code{ICMS90}, o ICMS devido a outra UF no \code{ICMSOutraUF} e o do
+Simples Nacional no \code{ICMSSN}.
 }
 
 \section{componentes}{

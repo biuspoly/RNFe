@@ -136,8 +136,8 @@ observacoes_gerais              compl/xObs                                      
 PESSOA_DE_CADA_PAPEL = c("remetente", "expedidor", "recebedor", "destinatario")
 DADOS_DO_TOMADOR = c("documento", "nome", "ie", "municipio", "codigo_municipio", "uf")
 
-# O nome de cada código, ao lado dele, como a tabela fiscal registrava na data de emissão do CT-e. O CST
-# do ICMS fica sem: a tabela do pacote é a da NF-e, que não tem o CST 45 do CT-e.
+# O nome de cada código, ao lado dele, como a tabela fiscal registrava na data de emissão do CT-e. O CST do ICMS
+# vem do leiaute do CT-e (SIGNIFICADOS_DO_CTE), porque o 90 muda de sentido com o grupo do ICMS.
 DESCRICOES_DO_CTE = ler_campos("
 coluna_do_codigo      coluna_nova                tabela                texto
 cfop                  cfop_titulo                cfop                  titulo
@@ -147,9 +147,11 @@ classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 
 # O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
 # ("-" quando não depende). O processo de emissão 3 é o aplicativo do SEBRAE no CT-e e o do Fisco no CT-e OS; o
-# tipo de documento 10 é "dutoviário" entre os outros documentos e um conhecimento no transporte anterior.
+# tipo de documento 10 é "dutoviário" entre os outros documentos e um conhecimento no transporte anterior; o CST
+# 90 do ICMS é "outros", "outra UF" ou "Simples Nacional", conforme o grupo.
 SIGNIFICADOS_DO_CTE = ler_campos("
 coluna_do_codigo      campo          coluna_do_contexto
+modelo                mod            -
 tipo_cte              tpCTe          -
 tipo_servico          tpServ         -
 modal                 modal          -
@@ -161,6 +163,7 @@ retira                retira         -
 tomador_papel         toma           -
 tomador_indicador_ie  indIEToma      -
 emitente_regime       CRT            -
+cst_icms              CST            grupo_icms
 simples_nacional      indSN          -
 ")
 
@@ -171,6 +174,7 @@ unidade          cUnid -
 
 SIGNIFICADOS_DO_DOCUMENTO = ler_campos("
 coluna_do_codigo campo coluna_do_contexto
+modelo           mod   -
 tipo_documento   tpDoc tipo
 ")
 
@@ -290,8 +294,10 @@ texto  xTexto   texto
 #' Ao lado do CFOP, do CST e da classificação tributária do IBS e da CBS vem o
 #' nome de cada um, como a tabela fiscal registrava na data de emissão (veja
 #' [tabela_fiscal()]): `cfop_titulo`, `cst_ibs_cbs_descricao` e
-#' `classificacao_ibs_cbs_nome`. O CST do ICMS fica sem nome: a tabela do
-#' pacote é a da NF-e, que não tem o CST 45 do CT-e.
+#' `classificacao_ibs_cbs_nome`. O CST do ICMS (`cst_icms_descricao`) segue o
+#' leiaute do CT-e, pelo grupo: no `ICMS45` vão o 40, o 41 e o 51, e o 90 é
+#' "ICMS outros" no `ICMS90`, o ICMS devido a outra UF no `ICMSOutraUF` e o do
+#' Simples Nacional no `ICMSSN`.
 #'
 #' @section componentes:
 #' Os componentes do valor da prestação (frete peso, pedágio...), um por linha:

@@ -123,6 +123,11 @@ test_that("o significado dos c\u00f3digos de cada campo do leiaute", {
   expect_setequal(codigos$documento, c("NF-e", "CT-e", "MDF-e", "NFS-e", "evento"))
   expect_false(any(is.na(codigos$descricao) | is.na(codigos$codigo)))
   expect_false(any(duplicated(codigos[, c("documento", "campo", "contexto", "codigo")])))
+  # O órgão dos eventos pelo código da UF: as 27 UFs, iguais às da tabela de municípios do IBGE.
+  orgaos_de_uf = codigos[codigos$campo == "cOrgao" & is.na(codigos$contexto), ]
+  ufs_do_ibge = unique(tabela_fiscal("municipios")[, c("codigo_uf", "uf")])
+  expect_identical(nrow(orgaos_de_uf), 27L)
+  expect_identical(orgaos_de_uf$descricao, ufs_do_ibge$uf[match(orgaos_de_uf$codigo, ufs_do_ibge$codigo_uf)])
   forma_de_emissao = codigos[codigos$campo == "tpEmis" & codigos$codigo == "2", ]
   expect_identical(forma_de_emissao$descricao[forma_de_emissao$documento == "NF-e"], "Conting\u00eancia FS")
   expect_identical(forma_de_emissao$descricao[forma_de_emissao$documento == "CT-e"], "Conting\u00eancia offline")

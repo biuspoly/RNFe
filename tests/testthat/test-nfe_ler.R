@@ -113,6 +113,7 @@ test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
   expect_identical(notas$emitente_regime_descricao, c("Regime Normal", "Simples Nacional", "Simples Nacional"))
   expect_identical(notas$formato_danfe_descricao[3], "DANFE NFC-e")
   expect_identical(notas$ambiente_descricao, rep("Homologa\u00e7\u00e3o", 3))
+  expect_identical(notas$modelo_descricao, c("NF-e", "NF-e", "NFC-e"))
   expect_identical(lida$itens$compoe_total_descricao[1], "O valor do item comp\u00f5e o total da NF-e")
   # A forma de pagamento e o meio do pagamento vinculado pela tabela de meios de pagamento, na data da nota.
   expect_identical(lida$pagamentos$indicador_descricao[lida$pagamentos$chave == CHAVE_SP], "Pagamento a prazo")

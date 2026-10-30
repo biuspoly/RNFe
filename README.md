@@ -166,7 +166,9 @@ documentação dos schemas oficiais, escritos à mão (os schemas trazem o texto
 `ferramentas/conferir_codigos_dos_campos.R` confere que cada código está no schema e que nenhum valor do schema
 ficou sem significado. Onde a documentação do schema tinha erro, vale a fonte que o corrige: o `tribISSQN` da
 NFS-e 1.00 segue o Anexo I do leiaute (2 é imunidade, 3 exportação, 4 não incidência), não a ordem do schema
-1.00. O tipo de transportador do MDF-e (ETC, TAC, CTC) vem com o nome da Lei 11.442/2007, art. 2º.
+1.00. O tipo de transportador do MDF-e (ETC, TAC, CTC) vem com o nome da Lei 11.442/2007, art. 2º. No órgão dos
+eventos da NF-e, os schemas se contradizem sobre o Ambiente Nacional (90 ou 91): vale o 91, que é o que a SEFAZ
+devolve; o código que nenhuma fonte explica fica com o significado vazio.
 
 ## De onde vêm as regras
 

@@ -23,15 +23,22 @@ PASTAS_DE_CADA_DOCUMENTO = list(
   "CT-e" = pasta_de_cada_pacote[["cte"]],
   "MDF-e" = pasta_de_cada_pacote[["mdfe"]],
   "NFS-e" = list.dirs(dirname(pasta_de_cada_pacote[["nfse"]]), recursive = FALSE),
-  "evento" = pasta_de_cada_pacote[["nfe_eventos"]]
+  "evento" = c(pasta_de_cada_pacote[["nfe_eventos"]], pasta_de_cada_pacote[["cte"]], pasta_de_cada_pacote[["mdfe"]])
 )
-# Valores que o schema aceita em grupos que o RNfe não lê: ficam sem significado na tabela de propósito.
+# Valores que o schema aceita em grupos que o RNfe não lê, ou que só vão para a tabela campos (as notas referenciadas
+# da NF-e): ficam sem significado na tabela de propósito.
 VALORES_FORA_DOS_LEITORES = utils::read.table(header = TRUE, stringsAsFactors = FALSE, colClasses = "character", text = "
 documento campo codigo grupo
 CT-e      tpCTe 4      GTV-e
 CT-e      tpCTe 5      CT-e_simplificado
 CT-e      tpCTe 6      CT-e_simplificado
 CT-e      tpServ 9     GTV-e
+NF-e      mod   01     refNF_e_refNFP
+NF-e      mod   02     refNF
+NF-e      mod   04     refNFP
+NF-e      mod   2B     refECF
+NF-e      mod   2C     refECF
+NF-e      mod   2D     refECF
 ")
 # Valores de leiaute anterior que o RNfe ainda lê: o CT-e de anulação (tpCTe 2) é do leiaute 3.00. O texto vem da
 # documentação do evento EPEC, no pacote do 4.00, que ainda lista o 2.

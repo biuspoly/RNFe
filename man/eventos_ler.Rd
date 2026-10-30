@@ -82,8 +82,12 @@ que o autor escreveu;
 \code{data_evento} e \code{registro} são data e hora (mostradas no horário de
 Brasília). Códigos e textos ficam como estão no XML (as descrições da SEFAZ
 vêm sem acento). O nome do tipo do evento é a \code{descricao} que o próprio
-evento traz, e o \code{ambiente} vem com o significado ao lado
-(\code{ambiente_descricao}).
+evento traz. O \code{ambiente} e o \code{orgao} vêm com o significado ao lado
+(\code{ambiente_descricao} e \code{orgao_descricao}): o órgão é a UF pelo código do
+IBGE ou um dos órgãos que o leiaute de cada documento lista (o Ambiente
+Nacional da NF-e, a SUFRAMA e a RFB no CT-e e no MDF-e...). Os códigos que
+o leiaute aceita sem dizer o que são (o 90 e o 92 na NF-e, o 93 no CT-e)
+ficam com o significado vazio.
 }
 
 \section{campos}{

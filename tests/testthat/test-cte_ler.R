@@ -205,6 +205,8 @@ test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
   expect_identical(ctes$tipo_servico_descricao, c("Normal", "Subcontrata\u00e7\u00e3o", "Transporte de pessoas"))
   expect_identical(ctes$modal_descricao, rep("Rodovi\u00e1rio", 3))
   expect_identical(ctes$tipo_cte_descricao, rep("CT-e normal", 3))
+  expect_identical(ctes$modelo_descricao, c("CT-e", "CT-e", "CT-e OS (Outros Servi\u00e7os)"))
+  expect_identical(ctes$cst_icms_descricao, c("Tributa\u00e7\u00e3o normal do ICMS", "ICMS do Simples Nacional", "Tributa\u00e7\u00e3o normal do ICMS"))
   expect_identical(ctes$tomador_papel_descricao, c("Remetente", "Outros", NA))
   expect_identical(ctes$retira_descricao, c("N\u00e3o", "N\u00e3o", NA))
   expect_identical(ctes$simples_nacional_descricao, c(NA, "Sim", NA))
@@ -221,6 +223,20 @@ test_that("o mesmo c\u00f3digo com outro significado no CT-e OS", {
   expect_identical(ctes$processo_emissao, c(3L, 3L))
   expect_identical(ctes$processo_emissao_descricao, c("Emiss\u00e3o pelo contribuinte com aplicativo fornecido pelo SEBRAE",
                                                       "Emiss\u00e3o pelo contribuinte com aplicativo fornecido pelo Fisco"))
+})
+
+test_that("o CST do ICMS pelo grupo: o 90 tem tr\u00eas sentidos, e o ICMS45 leva o 40, o 41 e o 51", {
+  icms = data.frame(grupo_icms = c("ICMS90", "ICMSOutraUF", "ICMSSN", "ICMS45", "ICMS45", "ICMS45", "ICMS60"),
+                    cst_icms = c("90", "90", "90", "40", "41", "51", "60"))
+  significado_do_cst = data.frame(coluna_do_codigo = "cst_icms", campo = "CST", coluna_do_contexto = "grupo_icms")
+  icms = acrescentar_significados(icms, "CT-e", significado_do_cst)
+  expect_identical(icms$cst_icms_descricao, c(
+    "ICMS outros", "ICMS devido \u00e0 UF de origem da presta\u00e7\u00e3o, quando diferente da UF do emitente", "ICMS do Simples Nacional",
+    "Isen\u00e7\u00e3o do ICMS", "N\u00e3o tributada pelo ICMS", "ICMS diferido", "ICMS cobrado por substitui\u00e7\u00e3o tribut\u00e1ria"
+  ))
+  # O CST num grupo que não é o dele fica sem significado, em vez de pegar o de outro grupo.
+  errado = acrescentar_significados(data.frame(grupo_icms = "ICMS00", cst_icms = "90"), "CT-e", significado_do_cst)
+  expect_true(is.na(errado$cst_icms_descricao))
 })
 
 test_that("CT-e sem protocolo", {

@@ -59,6 +59,7 @@ produto_ncm      produto_ncm_descricao  ncm    descricao_completa
 # ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
 SIGNIFICADOS_DO_MDFE = ler_campos("
 coluna_do_codigo        campo               coluna_do_contexto
+modelo                  mod                 -
 tipo_emitente           tpEmit              -
 tipo_transportador      tpTransp            -
 modal                   modal               -

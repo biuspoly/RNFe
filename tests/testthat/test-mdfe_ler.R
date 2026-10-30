@@ -129,6 +129,7 @@ test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
   expect_identical(match("tipo_emitente_descricao", names(mdfes)), match("tipo_emitente", names(mdfes)) + 1L)
   expect_identical(mdfes$tipo_emitente_descricao, c("Prestador de servi\u00e7o de transporte", "Transportador de carga pr\u00f3pria"))
   expect_identical(mdfes$modal_descricao, rep("Rodovi\u00e1rio", 2))
+  expect_identical(mdfes$modelo_descricao, rep("MDF-e", 2))
   expect_identical(mdfes$unidade_peso_descricao, c("KG", "TON"))
   expect_identical(mdfes$tipo_carga_descricao[1], "Carga geral")
   expect_identical(lido$documentos$reentrega_descricao, c(NA, "Reentrega"))

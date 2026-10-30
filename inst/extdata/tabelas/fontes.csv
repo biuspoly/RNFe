@@ -11,5 +11,5 @@
 "ncm","Portal Único Siscomex, nomenclatura NCM (Vigente em 30/10/2026, Resolução Gecex nº 926/2026)",,,"2026-10-30"
 "meios_pagamento","Portal da NF-e, Tabela de Meios de pagamento - Publicada em 06/03/2026",,,"2026-10-30"
 "bandeiras_cartao","Portal da NF-e, Tabela de bandeiras de Cartões de Crédito/Débito - Publicada em 16/03/2021",,,"2026-10-30"
-"codigos_dos_campos","Documentação dos schemas oficiais dos pacotes de ferramentas/schemas_usados.csv, escrita à mão e conferida por ferramentas/conferir_codigos_dos_campos.R; o tipo de transportador do MDF-e pela Lei 11.442/2007; a tributação do ISSQN da NFS-e pelo Anexo I do leiaute da NFS-e Nacional",,,"2026-10-30"
+"codigos_dos_campos","Documentação dos schemas oficiais dos pacotes de ferramentas/schemas_usados.csv, escrita à mão e conferida por ferramentas/conferir_codigos_dos_campos.R; o tipo de transportador do MDF-e pela Lei 11.442/2007; a tributação do ISSQN da NFS-e pelo Anexo I do leiaute da NFS-e Nacional; o órgão dos eventos pela UF do IBGE e pelos órgãos que cada leiaute lista",,,"2026-10-30"
 "municipios","IBGE, API de localidades (servicodados.ibge.gov.br), municípios vigentes",,,"2026-10-30"

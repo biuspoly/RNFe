@@ -75,9 +75,12 @@ registro         dhRecbto    data_hora
 versao           @versao     texto
 ")
 
+# O órgão 90 e os seguintes mudam de documento para documento (o 90 é a SUFRAMA no CT-e e no MDF-e); o código de UF
+# vale para todos.
 SIGNIFICADOS_DOS_EVENTOS = ler_campos("
-coluna_do_codigo campo coluna_do_contexto
-ambiente         tpAmb -
+coluna_do_codigo campo  coluna_do_contexto
+ambiente         tpAmb  -
+orgao            cOrgao documento
 ")
 
 CAMPOS_DE_DATA_DOS_EVENTOS = ler_campos("
@@ -149,8 +152,12 @@ FAMILIA_PELA_CHAVE = c(chNFe = "NF-e", chCTe = "CT-e", chMDFe = "MDF-e")
 #' `data_evento` e `registro` são data e hora (mostradas no horário de
 #' Brasília). Códigos e textos ficam como estão no XML (as descrições da SEFAZ
 #' vêm sem acento). O nome do tipo do evento é a `descricao` que o próprio
-#' evento traz, e o `ambiente` vem com o significado ao lado
-#' (`ambiente_descricao`).
+#' evento traz. O `ambiente` e o `orgao` vêm com o significado ao lado
+#' (`ambiente_descricao` e `orgao_descricao`): o órgão é a UF pelo código do
+#' IBGE ou um dos órgãos que o leiaute de cada documento lista (o Ambiente
+#' Nacional da NF-e, a SUFRAMA e a RFB no CT-e e no MDF-e...). Os códigos que
+#' o leiaute aceita sem dizer o que são (o 90 e o 92 na NF-e, o 93 no CT-e)
+#' ficam com o significado vazio.
 #'
 #' @section campos:
 #' Com `todos_os_campos = TRUE`, o padrão. Todos os campos de cada evento,

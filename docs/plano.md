@@ -235,7 +235,10 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   nota em papel, outros, DC-e), os de transporte anterior (com o emitente), o CT-e complementado, o
   substituído, o multimodal e, no CT-e OS, os referenciados e as GTV-e.
 - O `ICMSOutraUF` vai nas mesmas colunas de base, alíquota e valor do ICMS, e `grupo_icms` diz de qual grupo
-  veio. O CST do ICMS fica sem nome ao lado: a tabela do pacote é a da NF-e, que não tem o CST 45 do CT-e.
+  veio. O CST do ICMS ganhou o significado em 30/10/2026, pelo leiaute do CT-e e com o grupo como contexto
+  (veja "O significado de cada código"). Antes, o motivo escrito aqui para deixá-lo sem nome ("a tabela da NF-e
+  não tem o CST 45 do CT-e") estava errado: não existe CST 45; `ICMS45` é o nome do grupo, que leva o 40, o 41
+  e o 51.
 - **Exemplos:** três CT-e escritos à mão (com protocolo e IBS/CBS; subcontratação do Simples Nacional com
   tomador no `toma4` e documentos de transporte anterior; CT-e OS de fretamento) passam no schema oficial.
   `ferramentas/validar_exemplos.R` agora confere NF-e e CT-e. O `infModal` do CT-e aceita qualquer conteúdo
@@ -414,7 +417,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   `tPag` e ao `tBand` da NF-e e ao meio do pagamento vinculado da Reforma (NF-e e CT-e). A planilha guarda a
   data de vigência como número do Excel (dias desde 30/12/1899), e o significado sai pela data do documento:
   o PIX dinâmico (17) só existe desde 01/07/2024.
-- **Os outros códigos** (`codigos_dos_campos.csv`, 271 linhas) foram escritos à mão a partir da
+- **Os outros códigos** (`codigos_dos_campos.csv`, 271 linhas na primeira rodada e 332 com a segunda) foram escritos à mão a partir da
   documentação dos schemas, porque o schema traz o texto, não uma tabela. A escrita foi acertada sem mudar o
   sentido (maiúsculas, "à Prazo" virou "a prazo"). Onde a documentação do schema tinha erro, vale a fonte
   que corrige:
@@ -435,11 +438,32 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   documentos (`infOutros`) e outra para os de transporte anterior em papel (`idDocAntPap`). A tabela tem a
   coluna `contexto`, e o leitor procura primeiro o significado do contexto da linha.
 - **Fora de propósito:** o `tpCTe` 4 e o `tpServ` 9 (GTV-e) e o `tpCTe` 5 e 6 (CT-e simplificado), de
-  documentos que o RNfe não lê. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00.
+  documentos que o RNfe não lê. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
+  modelos das notas referenciadas da NF-e (`refNF`, `refNFP`, `refECF`: 01, 02, 04, 2B, 2C, 2D) também ficam
+  sem significado: só vão para a tabela `campos`, e o 01 muda de sentido entre os grupos.
+- **Segunda rodada (30/10/2026), achada cruzando cada coluna dos leitores com os valores que o schema aceita:**
+  - **CST do ICMS no CT-e**, com o grupo como contexto: o 90 é "ICMS outros" no `ICMS90`, o ICMS devido a
+    outra UF no `ICMSOutraUF` e o do Simples Nacional no `ICMSSN`. Os textos são os da documentação do schema
+    do CT-e, iguais no CT-e e no CT-e OS.
+  - **Modelo** do documento na NF-e (55, 65), no CT-e (57, 67, e o 01 e o 04 das notas em papel citadas), no
+    MDF-e (58).
+  - **Órgão dos eventos** (`cOrgao`): a UF pelo código do IBGE (as 27 linhas conferidas contra a tabela de
+    municípios), e os órgãos especiais pelo documento do evento, como cada leiaute os lista: no CT-e, 90
+    SUFRAMA, 91 RFB, 94 SVC-RS, 95 SVC-SP e 96 a sincronização das chaves do RS para a SVSP; no MDF-e, 90
+    SUFRAMA, 91 RFB, 92 BackOffice BRId, 93 ONE e 94 SVBA; na NF-e, 91 Ambiente Nacional. **Na NF-e os
+    schemas se contradizem:** o de eventos genérico diz "90 para identificar o Ambiente Nacional", o do
+    cancelamento e o da Distribuição dizem 91, e o tipo diz "90 RFB". Ficou o 91, que é o que a SEFAZ devolve:
+    numa amostra de 823 eventos reais do Fiscal (até 30 por tipo), todos os registrados no Ambiente Nacional
+    (manifestação, EPEC e outros) vêm com 91. O 90 e o 92 da NF-e (o 92 aparece no evento 510630) e o 93 do
+    CT-e ficam sem significado: nenhum documento diz o que são.
+  - O que mais o cruzamento apontou não é código: siglas de UF, textos, versões, o `tpMed` (lista fechada só
+    no CT-e simplificado; no CT-e é texto livre) e a situação do retorno do evento, que vem com o `motivo`
+    escrito pela SEFAZ.
 - **Conferência:** `ferramentas/conferir_codigos_dos_campos.R` compara a tabela com os valores que o schema
   aceita, campo por campo (cada versão da NFS-e lida à parte). Reprovou uma tabela estragada de propósito
   (um código que o schema não aceita, outro que faltava). Em 30/10/2026, com os pacotes oficiais baixados na
-  hora, os 63 campos conferem. Nos 16 exemplos, todo código preenchido achou o significado.
+  hora, os 63 campos conferem (66 depois da segunda rodada). Nos 16 exemplos, todo código preenchido achou o
+  significado.
 - **Comparação da documentação da NFS-e 1.00 com a 1.01**, campo por campo: além do `tribISSQN` e do CST 07,
   só a lista de códigos mudou: no `cStat` o 101 (só na 1.00) e o 107 (só na 1.01), o regime especial 9 e os
   campos da Reforma, na 1.01. Como o código de uma versão não aparece na outra, uma lista só serve às duas.

@@ -169,6 +169,7 @@ classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 # ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
 SIGNIFICADOS_DA_NOTA = ler_campos("
 coluna_do_codigo          campo     coluna_do_contexto
+modelo                    mod       -
 tipo_operacao             tpNF      -
 destino_operacao          idDest    -
 finalidade                finNFe    -
