@@ -182,7 +182,8 @@ autorizacao      card/cAut  texto
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 #' (CST, CFOP, forma de pagamento...) ficam como estão no XML; o significado de
 #' cada um está no Manual de Orientação do Contribuinte. Campo que a nota não
-#' tem fica `NA`.
+#' tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
+#' pedida (`todos_os_campos = TRUE`).
 #'
 #' @section notas:
 #' Uma linha por nota: `chave`, `versao`,
@@ -222,6 +223,17 @@ autorizacao      card/cAut  texto
 #' `r documentar_campos(CAMPOS_DO_PAGAMENTO_VINCULADO)`. O código do meio de
 #' pagamento é o da tabela do Informe Técnico 2026.001.
 #'
+#' @section campos:
+#' Só com `todos_os_campos = TRUE`. Todos os campos da nota, um por linha:
+#' `chave`, `caminho` (onde o campo está, a partir do `infNFe`, com a posição
+#' quando o grupo se repete, por exemplo `det[2]/prod/cProd`), `grupo` (o grupo
+#' logo acima do campo), `campo` (o nome no leiaute) e `valor` (o texto do
+#' XML). É onde ficam as notas referenciadas, os volumes do transporte, a
+#' rastreabilidade do produto e o que mais não tiver coluna própria. Uma nota
+#' tem, em média, uns 220 campos, e a tabela custa de 5 a 7 ms a mais por nota
+#' e uns 10 KB de memória (medido em 10 mil notas reais): por isso ela só vem
+#' quando pedida.
+#'
 #' @section arquivos:
 #' Uma linha por arquivo pedido: `arquivo`, `notas` (quantas notas tinha) e
 #' `problema` (`NA` quando deu certo). Um texto de XML aparece como
@@ -229,8 +241,11 @@ autorizacao      card/cAut  texto
 #'
 #' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
 #'   (começando por `<`).
+#' @param todos_os_campos `TRUE` devolve também a tabela `campos`, com todos os
+#'   campos de cada nota.
 #' @return Uma lista com os `data.frame`s `notas`, `itens`, `impostos`,
-#'   `parcelas`, `pagamentos`, `pagamentos_vinculados` e `arquivos`.
+#'   `parcelas`, `pagamentos`, `pagamentos_vinculados`, `campos` (só com
+#'   `todos_os_campos = TRUE`) e `arquivos`.
 #' @source Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
 #'   2026.006 e NT 2026.008), publicado no Portal Nacional da NF-e em
 #'   26/10/2026.
@@ -240,9 +255,9 @@ autorizacao      card/cAut  texto
 #' lida$notas[, c("chave", "emitente_nome", "valor_nota", "protocolo")]
 #' lida$itens[, c("item", "descricao", "cfop", "cst_icms", "valor_icms", "valor_cbs")]
 #' @export
-nfe_ler = function(arquivos) {
-  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS, "uma NF-e", colunas_da_nfe)
-  colunas_vazias = colunas_da_nfe(NULL, NA_character_)
+nfe_ler = function(arquivos, todos_os_campos = FALSE) {
+  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS, "uma NF-e", colunas_da_nfe, todos_os_campos)
+  colunas_vazias = colunas_da_nfe(NULL, NA_character_, todos_os_campos)
 
   tabelas_da_nfe = list(
     notas = juntar_tabela(arquivos_lidos, "notas", colunas_vazias$notas),
@@ -250,9 +265,12 @@ nfe_ler = function(arquivos) {
     impostos = juntar_tabela(arquivos_lidos, "impostos", colunas_vazias$impostos),
     parcelas = juntar_tabela(arquivos_lidos, "parcelas", colunas_vazias$parcelas),
     pagamentos = juntar_tabela(arquivos_lidos, "pagamentos", colunas_vazias$pagamentos),
-    pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados),
-    arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
+    pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados)
   )
+  if (todos_os_campos) {
+    tabelas_da_nfe$campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos)
+  }
+  tabelas_da_nfe$arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
   tabelas_da_nfe$notas = converter_datas(tabelas_da_nfe$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
   tabelas_da_nfe$parcelas = converter_datas(tabelas_da_nfe$parcelas, CAMPOS_DA_PARCELA)
   tabelas_da_nfe$pagamentos = converter_datas(tabelas_da_nfe$pagamentos, CAMPOS_DO_PAGAMENTO)
@@ -263,7 +281,7 @@ nfe_ler = function(arquivos) {
 
 # As colunas das tabelas de um arquivo de NF-e, cada uma num vetor. Com xml_lido NULL, vêm vazias, já com
 # os nomes e os tipos certos.
-colunas_da_nfe = function(xml_lido, nome_do_arquivo) {
+colunas_da_nfe = function(xml_lido, nome_do_arquivo, todos_os_campos) {
   if (is.null(xml_lido)) {
     xml_lido = xml2::read_xml("<vazio/>")
   }
@@ -279,7 +297,7 @@ colunas_da_nfe = function(xml_lido, nome_do_arquivo) {
   # O protocolo é casado com a nota pela chave; nota que veio sem protocolo fica com NA.
   protocolo_de_cada_nota = match(chaves, texto_de_cada(protocolos, "chNFe"))
 
-  list(
+  colunas_das_tabelas = list(
     notas = c(
       list(chave = chaves, versao = xml2::xml_attr(notas, "versao")),
       valores_dos_campos(notas, CAMPOS_DA_NOTA),
@@ -301,6 +319,10 @@ colunas_da_nfe = function(xml_lido, nome_do_arquivo) {
       valores_dos_campos(pagamentos_vinculados, CAMPOS_DO_PAGAMENTO_VINCULADO)
     )
   )
+  if (todos_os_campos) {
+    colunas_das_tabelas$campos = colunas_de_todos_os_campos(buscar_todos_os_campos(notas), "infNFe")
+  }
+  colunas_das_tabelas
 }
 
 # Um campo de imposto por linha. O tributo é o grupo logo abaixo de <imposto> (ICMS, PIS, IBSCBS...)

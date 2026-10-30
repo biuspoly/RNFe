@@ -1,6 +1,6 @@
 # RNfe
 
-Pacote em R de documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e): chave de acesso,
+Pacote em R de documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e): chave de acesso,
 leitura do XML, tabelas fiscais e, mais adiante, certificado e SEFAZ. Projeto pessoal do Marlon (biuspoly),
 parte do portfólio, irmão do `veiculosbr`. Só em R (decisão do usuário, 29/10/2026: no Python já existe o
 PyNFe). O plano e a situação ficam em `docs/plano.md`; o README é o que quem usa o pacote lê.

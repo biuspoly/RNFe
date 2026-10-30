@@ -146,6 +146,17 @@ test_that("a tabela campos tem todos os campos do MDF-e, com o caminho", {
   expect_identical(do_sp$valor[do_sp$caminho == "infModal/rodo/infANTT/infPag/Comp[2]/tpComp"], "01")
 })
 
+test_that("sem a tabela campos, quando ela n\u00e3o \u00e9 pedida, o resto n\u00e3o muda", {
+  com_campos = mdfe_ler(c(MDFE_SP, MDFE_CE))
+  sem_campos = mdfe_ler(c(MDFE_SP, MDFE_CE), todos_os_campos = FALSE)
+  expect_null(sem_campos$campos)
+  expect_identical(names(sem_campos), setdiff(names(com_campos), "campos"))
+  for (nome in names(sem_campos)) {
+    expect_identical(sem_campos[[nome]], com_campos[[nome]])
+  }
+  expect_identical(names(mdfe_ler(character(), todos_os_campos = FALSE)), names(sem_campos))
+})
+
 test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo", {
   lido = mdfe_ler(c(MDFE_SP, MDFE_CE))
   expect_identical(lido$mdfes$chave, c(CHAVE_SP, CHAVE_CE))

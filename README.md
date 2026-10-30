@@ -1,10 +1,11 @@
 # RNfe
 
-Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e) no **R**.
+Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e Nacional) no **R**.
 
 > **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e, do
-> CT-e OS e do MDF-e e as tabelas fiscais (CFOP, NCM, CSTs e as da Reforma). A NFS-e Nacional vem a seguir; o
-> plano está em [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
+> CT-e OS, do MDF-e e da NFS-e Nacional e as tabelas fiscais (CFOP, NCM, CSTs e as da Reforma). O certificado
+> digital e a SEFAZ vêm a seguir; o plano está em
+> [docs/plano.md](https://github.com/biuspoly/RNfe/blob/main/docs/plano.md).
 
 ## Instalar
 
@@ -28,6 +29,8 @@ chave_digito("35261011444777000161550010000001231123456789")     # 3: o dígito 
 `chave_decompor()` devolve uma linha por chave e, quando algo não confere, diz o quê na coluna `problema`
 (o dígito, o CNPJ do emitente, a UF, o mês ou o formato). Espaços e o prefixo do `Id` do XML (`NFe...`) são
 ignorados. Na NF-e avulsa, emitida pelo Fisco, o CNPJ da chave é o do órgão que a emitiu, não o do emitente.
+A chave de 50 posições da NFS-e Nacional fica de fora: a regra do dígito dela não está escrita nas fontes
+oficiais.
 
 Conferido com 135 mil chaves reais de NF-e e CT-e (que não estão no repositório): todas válidas, e as partes
 iguais às do XML de cada nota. As 135 mil são desmontadas em uns 2 segundos.
@@ -43,6 +46,8 @@ lida$parcelas     # as duplicatas
 lida$pagamentos   # as formas de pagamento
 lida$pagamentos_vinculados   # o pagamento vinculado da Reforma (split payment)
 lida$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
+
+nfe_ler("nota1.xml", todos_os_campos = TRUE)$campos   # todos os campos da nota, um por linha, com o caminho
 ```
 
 Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/2026), já com os campos da Reforma
@@ -63,6 +68,8 @@ lido$parcelas      # as duplicatas
 lido$pagamentos_vinculados   # o pagamento vinculado da Reforma (split payment)
 lido$observacoes   # os campos de uso livre (ObsCont e ObsFisco)
 lido$arquivos      # o que foi lido, e o motivo de cada arquivo que não deu
+
+cte_ler("cte1.xml", todos_os_campos = TRUE)$campos   # todos os campos do CT-e (o modal, o percurso...)
 ```
 
 Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), nos leiautes 3.00 e 4.00, pelo schema oficial mais recente
@@ -88,6 +95,24 @@ lido$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
 Lê o MDF-e (modelo 58, leiaute 3.00) pelo schema oficial mais recente (PL_MDFe_300b da NT 2025.001,
 publicado em 25/04/2026). Os exemplos passam no schema oficial; ainda não foi conferido com MDF-e reais.
 
+## Ler o XML da NFS-e Nacional
+
+```r
+lida = nfse_ler(c("nfse1.xml", "nfse2.xml"))   # ou o próprio texto do XML
+lida$nfses      # uma linha por NFS-e: prestador, tomador, serviço, ISSQN, retenções, IBS e CBS, valor líquido
+lida$campos     # todos os campos, um por linha, com o caminho (deduções, obra, comércio exterior...)
+lida$arquivos   # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+Lê a NFS-e do padrão nacional (leiautes 1.00 e 1.01) pelo schema oficial mais recente
+(NFSe-ESQUEMAS_XSD-v1.01, de 09/02/2026), com a chave de acesso de 50 posições. Junta o que quem emitiu
+declarou (a DPS) e o que o sistema nacional calculou (ISSQN, valor líquido, IBS e CBS). A NFS-e de prefeitura,
+no padrão próprio de cada município, não é lida. Conferido com 11 mil NFS-e reais (que não estão no
+repositório), contra outro sistema e contra um segundo leitor do XML: os campos comparados bateram em todas.
+
+No MDF-e e na NFS-e a tabela `campos` vem por padrão (`todos_os_campos = FALSE` a deixa de fora); na NF-e e
+no CT-e, que já têm tabelas para quase tudo, só com `todos_os_campos = TRUE`.
+
 ## Tabelas fiscais
 
 ```r
@@ -108,8 +133,10 @@ Das especificações públicas do [Portal Nacional da NF-e](https://www.nfe.faze
 Orientação do Contribuinte (a composição da chave) e a Nota Técnica Conjunta 2025.001, versão 1.00 (o CNPJ
 alfanumérico na chave e no cálculo dos dígitos: cada caractere vale o código ASCII menos 48). A leitura dos
 XMLs segue os schemas oficiais do Portal da NF-e, do
-[Portal Nacional do CT-e](https://www.cte.fazenda.gov.br/portal/) e do
-[Portal do MDF-e](https://dfe-portal.svrs.rs.gov.br/Mdfe). Nada aqui consulta a SEFAZ.
+[Portal Nacional do CT-e](https://www.cte.fazenda.gov.br/portal/), do
+[Portal do MDF-e](https://dfe-portal.svrs.rs.gov.br/Mdfe) e do
+[portal da NFS-e Nacional](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica). Nada aqui consulta
+a SEFAZ.
 
 Nos exemplos e nos testes, só CNPJs e CPFs fictícios; o 12.ABC.345/01DE-35 é o exemplo da Receita Federal.
 

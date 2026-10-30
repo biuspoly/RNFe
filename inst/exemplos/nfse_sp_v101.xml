@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NFS-e Nacional fictícia para os testes do RNfe (leiaute 1.01, com IBS e CBS): CNPJs de exemplo, ambiente de
+     homologação e assinatura de mentira. O dígito da chave segue o módulo 11 que as NFS-e reais seguem. -->
+<NFSe versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
+  <infNFSe Id="NFS35503082211222333000181000000000012326101234567898">
+    <xLocEmi>São Paulo</xLocEmi>
+    <xLocPrestacao>São Paulo</xLocPrestacao>
+    <nNFSe>123</nNFSe>
+    <cLocIncid>3550308</cLocIncid>
+    <xLocIncid>São Paulo</xLocIncid>
+    <xTribNac>Licenciamento ou cessão de direito de uso de programas de computação.</xTribNac>
+    <verAplic>RNfe-testes</verAplic>
+    <ambGer>2</ambGer>
+    <tpEmis>1</tpEmis>
+    <procEmi>1</procEmi>
+    <cStat>100</cStat>
+    <dhProc>2026-10-20T10:00:05-03:00</dhProc>
+    <nDFSe>456</nDFSe>
+    <emit>
+      <CNPJ>11222333000181</CNPJ>
+      <IM>12345</IM>
+      <xNome>EMPRESA DE TESTE LTDA</xNome>
+      <enderNac>
+        <xLgr>RUA DE TESTE</xLgr>
+        <nro>100</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>3550308</cMun>
+        <UF>SP</UF>
+        <CEP>01001000</CEP>
+      </enderNac>
+    </emit>
+    <valores>
+      <vBC>1000.00</vBC>
+      <pAliqAplic>2.00</pAliqAplic>
+      <vISSQN>20.00</vISSQN>
+      <vTotalRet>15.00</vTotalRet>
+      <vLiq>985.00</vLiq>
+    </valores>
+    <IBSCBS>
+      <cLocalidadeIncid>3550308</cLocalidadeIncid>
+      <xLocalidadeIncid>São Paulo</xLocalidadeIncid>
+      <valores>
+        <vBC>1000.00</vBC>
+        <uf>
+          <pIBSUF>0.10</pIBSUF>
+          <pAliqEfetUF>0.10</pAliqEfetUF>
+        </uf>
+        <mun>
+          <pIBSMun>0.00</pIBSMun>
+          <pAliqEfetMun>0.00</pAliqEfetMun>
+        </mun>
+        <fed>
+          <pCBS>0.90</pCBS>
+          <pAliqEfetCBS>0.90</pAliqEfetCBS>
+        </fed>
+      </valores>
+      <totCIBS>
+        <vTotNF>1010.00</vTotNF>
+        <gIBS>
+          <vIBSTot>1.00</vIBSTot>
+          <gIBSUFTot>
+            <vIBSUF>1.00</vIBSUF>
+          </gIBSUFTot>
+          <gIBSMunTot>
+            <vIBSMun>0.00</vIBSMun>
+          </gIBSMunTot>
+        </gIBS>
+        <gCBS>
+          <vCBS>9.00</vCBS>
+        </gCBS>
+      </totCIBS>
+    </IBSCBS>
+    <DPS versao="1.01">
+      <infDPS Id="DPS355030821122233300018100001000000000000123">
+        <tpAmb>2</tpAmb>
+        <dhEmi>2026-10-20T10:00:00-03:00</dhEmi>
+        <verAplic>RNfe-testes</verAplic>
+        <serie>1</serie>
+        <nDPS>123</nDPS>
+        <dCompet>2026-10-20</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>3550308</cLocEmi>
+        <prest>
+          <CNPJ>11222333000181</CNPJ>
+          <IM>12345</IM>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>11444777000161</CNPJ>
+          <xNome>NFS-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL</xNome>
+          <end>
+            <endNac>
+              <cMun>3304557</cMun>
+              <CEP>20010000</CEP>
+            </endNac>
+            <xLgr>AVENIDA DE TESTE</xLgr>
+            <nro>200</nro>
+            <xBairro>CENTRO</xBairro>
+          </end>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>3550308</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>010501</cTribNac>
+            <xDescServ>LICENCA DE USO DE SOFTWARE DE TESTE</xDescServ>
+          </cServ>
+          <infoCompl>
+            <xPed>PEDIDO-55</xPed>
+            <xInfComp>NFS-E DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</xInfComp>
+          </infoCompl>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>1000.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <tribFed>
+              <piscofins>
+                <CST>01</CST>
+                <vBCPisCofins>1000.00</vBCPisCofins>
+                <pAliqPis>0.65</pAliqPis>
+                <pAliqCofins>3.00</pAliqCofins>
+                <vPis>6.50</vPis>
+                <vCofins>30.00</vCofins>
+                <tpRetPisCofins>2</tpRetPisCofins>
+              </piscofins>
+              <vRetIRRF>15.00</vRetIRRF>
+            </tribFed>
+            <totTrib>
+              <pTotTrib>
+                <pTotTribFed>10.00</pTotTribFed>
+                <pTotTribEst>0.00</pTotTribEst>
+                <pTotTribMun>2.00</pTotTribMun>
+              </pTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+        <IBSCBS>
+          <finNFSe>0</finNFSe>
+          <indFinal>0</indFinal>
+          <cIndOp>100301</cIndOp>
+          <indDest>0</indDest>
+          <valores>
+            <trib>
+              <gIBSCBS>
+                <CST>000</CST>
+                <cClassTrib>000001</cClassTrib>
+              </gIBSCBS>
+            </trib>
+          </valores>
+        </IBSCBS>
+      </infDPS>
+      <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <SignedInfo>
+          <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+          <Reference URI="#DPS355030821122233300018100001000000000000123">
+            <Transforms>
+              <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+              <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+            </Transforms>
+            <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+            <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+          </Reference>
+        </SignedInfo>
+        <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+        <KeyInfo>
+          <X509Data>
+            <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+          </X509Data>
+        </KeyInfo>
+      </Signature>
+    </DPS>
+  </infNFSe>
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <Reference URI="#NFS35503082211222333000181000000000012326101234567898">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+    <KeyInfo>
+      <X509Data>
+        <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+      </X509Data>
+    </KeyInfo>
+  </Signature>
+</NFSe>

@@ -8,15 +8,20 @@ Schema oficial do MDF-e, pacote PL_MDFe_300b da NT 2025.001 v1.04,
 publicado no Portal Nacional do MDF-e em 25/04/2026.
 }
 \usage{
-mdfe_ler(arquivos)
+mdfe_ler(arquivos, todos_os_campos = TRUE)
 }
 \arguments{
 \item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
 (começando por \code{<}).}
+
+\item{todos_os_campos}{\code{FALSE} deixa de fora a tabela \code{campos}. O padrão é
+\code{TRUE} porque boa parte do MDF-e não tem coluna própria, e um MDF-e tem
+poucos campos.}
 }
 \value{
 Uma lista com os \code{data.frame}s \code{mdfes}, \code{locais}, \code{documentos},
-\code{veiculos}, \code{condutores}, \code{seguros}, \code{campos} e \code{arquivos}.
+\code{veiculos}, \code{condutores}, \code{seguros}, \code{campos} (só com
+\code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
 Lê arquivos XML de MDF-e (modelo 58, leiaute 3.00), com ou sem o protocolo
@@ -79,7 +84,8 @@ Uma linha por averbação, e uma para o seguro que não tem averbação: \code{c
 
 \section{campos}{
 
-Todos os campos do MDF-e, um por linha: \code{chave}, \code{caminho} (onde o campo
+Com \code{todos_os_campos = TRUE}, o padrão. Todos os campos do MDF-e, um por
+linha: \code{chave}, \code{caminho} (onde o campo
 está, a partir do \code{infMDFe}, com a posição quando o grupo se repete, por
 exemplo \code{infModal/rodo/veicTracao/condutor[2]/CPF}), \code{grupo} (o grupo logo
 acima do campo), \code{campo} (o nome no leiaute) e \code{valor} (o texto do XML). É

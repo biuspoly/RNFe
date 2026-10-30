@@ -48,16 +48,18 @@ cnpj_base_instituicao  CNPJBasePSP    texto
 # Lê cada arquivo e devolve, de cada um, as colunas das tabelas (o que `colunas_do_documento` monta), o
 # nome e o problema. `caminho_dos_documentos` acha cada documento no XML ("//NFe/infNFe") e
 # `nome_do_documento` vai na mensagem do arquivo que não é desse tipo ("uma NF-e", "um CT-e").
-ler_arquivos_xml = function(arquivos, caminho_dos_documentos, nome_do_documento, colunas_do_documento) {
+# `todos_os_campos` diz se `colunas_do_documento` monta também a tabela campos.
+ler_arquivos_xml = function(arquivos, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos) {
   arquivos = as.character(arquivos)
   arquivos_lidos = list()
   for (posicao in seq_along(arquivos)) {
-    arquivos_lidos[[posicao]] = ler_um_arquivo(arquivos[posicao], posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento)
+    arquivos_lidos[[posicao]] = ler_um_arquivo(arquivos[posicao], posicao, caminho_dos_documentos, nome_do_documento,
+                                               colunas_do_documento, todos_os_campos)
   }
   arquivos_lidos
 }
 
-ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento) {
+ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos) {
   e_texto_do_xml = !is.na(arquivo) && startsWith(trimws(arquivo), "<")
   if (e_texto_do_xml) {
     nome_do_arquivo = paste0("(texto ", posicao, ")")
@@ -87,7 +89,7 @@ ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_docu
     }
   }
 
-  arquivo_lido = colunas_do_documento(xml_lido, nome_do_arquivo)
+  arquivo_lido = colunas_do_documento(xml_lido, nome_do_arquivo, todos_os_campos)
   arquivo_lido$nome_do_arquivo = nome_do_arquivo
   arquivo_lido$problema = problema
   arquivo_lido
@@ -146,7 +148,26 @@ texto_de_cada = function(elementos, caminho_no_xml) {
   xml2::xml_text(xml2::xml_find_first(elementos, caminho_no_xml, ns = SEM_NAMESPACE))
 }
 
-# A chave vem do Id do elemento principal, sem o prefixo de letras (NFe, CTe, MDFe).
+# Todos os campos (os elementos sem filhos) de cada documento, menos os da assinatura digital: na NFS-e a
+# assinatura da DPS fica dentro do infNFSe.
+buscar_todos_os_campos = function(documentos) {
+  buscar_todos(documentos, ".//*[not(*)][not(ancestor::Signature)]")
+}
+
+# Um campo por linha, com o caminho a partir do elemento principal (infMDFe, infNFSe...). O xml2 põe a posição
+# no caminho só quando o grupo se repete (condutor[2]), o que basta para separar uma ocorrência da outra.
+colunas_de_todos_os_campos = function(campos_do_xml, elemento_principal) {
+  grupo_de_cada_campo = xml2::xml_find_first(campos_do_xml, "parent::*", ns = SEM_NAMESPACE)
+  list(
+    chave = chave_de_cada(campos_do_xml, elemento_principal),
+    caminho = sub(paste0("^.*/", elemento_principal, "/"), "", xml2::xml_path(campos_do_xml)),
+    grupo = xml2::xml_name(grupo_de_cada_campo),
+    campo = xml2::xml_name(campos_do_xml),
+    valor = xml2::xml_text(campos_do_xml)
+  )
+}
+
+# A chave vem do Id do elemento principal, sem o prefixo de letras (NFe, CTe, MDFe, NFS).
 chave_de_cada = function(elementos, elemento_principal) {
   documento_de_cada = xml2::xml_find_first(elementos, paste0("ancestor-or-self::", elemento_principal), ns = SEM_NAMESPACE)
   sub("^[A-Za-z]+", "", xml2::xml_attr(documento_de_cada, "Id"))

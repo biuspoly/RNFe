@@ -1,5 +1,5 @@
-# Olha as listas de schemas dos portais da NF-e, do CT-e e do MDF-e e escreve um aviso para cada publicação
-# que ainda não está em ferramentas/schemas_vistos.csv. Uso, na raiz do repositório:
+# Olha as listas de schemas dos portais da NF-e, do CT-e, do MDF-e e da NFS-e Nacional e escreve um aviso
+# para cada publicação que ainda não está em ferramentas/schemas_vistos.csv. Uso, na raiz do repositório:
 #   Rscript ferramentas/vigiar_schemas.R <pasta dos avisos>
 #   Rscript ferramentas/vigiar_schemas.R --registrar
 # Cada aviso é um arquivo .md: a primeira linha é o título, o resto é o texto. Quando a publicação traz o
@@ -11,7 +11,7 @@
 
 source("ferramentas/schemas.R", encoding = "UTF-8")
 
-NOME_DO_DOCUMENTO = c(nfe = "NF-e", cte = "CT-e", mdfe = "MDF-e")
+NOME_DO_PORTAL = c(nfe = "portal da NF-e", cte = "portal do CT-e", mdfe = "portal do MDF-e", nfse = "portal da NFS-e Nacional")
 # O texto da issue tem limite (65.536 caracteres); a lista de campos para antes.
 TAMANHO_MAXIMO_DO_AVISO = 60000
 
@@ -21,7 +21,7 @@ listar_todos_os_portais = function(pasta_temporaria) {
   for (documento in names(PAGINA_DOS_SCHEMAS)) {
     publicacoes_do_portal = tryCatch(listar_publicacoes(documento, pasta_temporaria), error = function(erro) erro)
     if (inherits(publicacoes_do_portal, "error")) {
-      portais_com_erro = c(portais_com_erro, paste0(NOME_DO_DOCUMENTO[[documento]], ": ", conditionMessage(publicacoes_do_portal)))
+      portais_com_erro = c(portais_com_erro, paste0(NOME_DO_PORTAL[[documento]], ": ", conditionMessage(publicacoes_do_portal)))
     } else {
       publicacoes = rbind(publicacoes, publicacoes_do_portal)
     }
@@ -69,11 +69,11 @@ cortar_texto = function(linhas_do_aviso) {
 }
 
 escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, pasta_temporaria, pasta_dos_avisos, numero_do_aviso) {
-  nome_do_documento = NOME_DO_DOCUMENTO[[publicacao$documento]]
-  titulo_do_aviso = substr(paste0("Schema novo no portal do ", nome_do_documento, ": ", publicacao$titulo), 1, 250)
+  nome_do_portal = NOME_DO_PORTAL[[publicacao$documento]]
+  titulo_do_aviso = substr(paste0("Schema novo no ", nome_do_portal, ": ", publicacao$titulo), 1, 250)
   linhas_do_aviso = c(
     titulo_do_aviso,
-    paste0("O portal do ", nome_do_documento, " publicou: **", publicacao$titulo, "**"),
+    paste0("O ", nome_do_portal, " publicou: **", publicacao$titulo, "**"),
     "",
     paste0("Endereço: ", publicacao$endereco),
     "",
@@ -83,15 +83,20 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
   pasta_do_pacote_novo = tryCatch(baixar_pacote(publicacao$documento, publicacao$endereco, pasta_temporaria), error = function(erro) erro)
   if (inherits(pasta_do_pacote_novo, "error")) {
     linhas_do_aviso = c(linhas_do_aviso, paste0("Não deu para baixar o arquivo: ", conditionMessage(pasta_do_pacote_novo)))
+  } else if (is.na(pasta_do_pacote_novo)) {
+    # O gov.br devolve uma página de "Conteúdo Restrito" no lugar do arquivo da área de produção restrita.
+    linhas_do_aviso = c(linhas_do_aviso, paste0("O endereço não devolveu um arquivo .zip (pode ser uma página de acesso restrito): ",
+                                                "abra o endereço e confira à mão."))
   } else {
-    pasta_do_schema_novo = pasta_do_arquivo(pasta_do_pacote_novo, pacote_usado$arquivo_principal)
-    if (is.na(pasta_do_schema_novo)) {
-      linhas_do_aviso = c(linhas_do_aviso, paste0("A publicação não traz o `", pacote_usado$arquivo_principal, "`: é de eventos, de ",
-                                                  "outro serviço ou de outro documento. Confira se ela afeta algum leitor do RNfe."))
+    arquivo_principal_novo = arquivo_na_versao_mais_nova(pasta_do_pacote_novo, pacote_usado$arquivo_principal)
+    if (is.na(arquivo_principal_novo)) {
+      linhas_do_aviso = c(linhas_do_aviso, paste0("A publicação não traz o `", pacote_usado$arquivo_principal, "` (nem em outra versão): ",
+                                                  "é de eventos, de outro serviço ou de outro documento. Confira se ela afeta algum leitor do RNfe."))
     } else {
       o_que_comparar = O_QUE_COMPARAR[[publicacao$documento]]
-      campos_do_pacote_novo = campos_do_schema(pasta_do_schema_novo, o_que_comparar)
-      linhas_do_aviso = c(linhas_do_aviso, paste0("Comparado com o pacote que o RNfe segue (", paste(o_que_comparar, collapse = ", "), "):"),
+      campos_do_pacote_novo = campos_do_schema(dirname(arquivo_principal_novo), o_que_comparar)
+      linhas_do_aviso = c(linhas_do_aviso, paste0("Comparado com o pacote que o RNfe segue (", paste(o_que_comparar, collapse = ", "),
+                                                  "), pelo `", basename(arquivo_principal_novo), "` da publicação:"),
                           "", texto_das_diferencas(comparar_campos(campos_do_pacote_usado, campos_do_pacote_novo)))
     }
   }

@@ -2,11 +2,14 @@
 # tirar de um schema a lista de campos, com as regras de cada um. Usado por baixar_schemas.R,
 # vigiar_schemas.R e validar_exemplos.R (com source()). Precisa dos pacotes httr2 e xml2.
 
-# A página de cada portal que lista os pacotes de schemas.
-PAGINA_DOS_SCHEMAS = c(
+# As páginas de cada portal que listam os pacotes de schemas. A NFS-e publica em duas: a da documentação
+# atual e a da Reforma Tributária (RTC).
+PAGINA_DOS_SCHEMAS = list(
   nfe = "https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=BMPFMBoln3w=",
   cte = "https://www.cte.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=0xlG1bdBass=",
-  mdfe = "https://dfe-portal.svrs.rs.gov.br/Mdfe/Documentos"
+  mdfe = "https://dfe-portal.svrs.rs.gov.br/Mdfe/Documentos",
+  nfse = c("https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+           "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc")
 )
 DOWNLOAD_DO_PORTAL_DO_MDFE = "https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArquivoEstatico/?sistema=MDFE&tipoArquivo=2&nomeArquivo="
 
@@ -17,7 +20,8 @@ SCHEMAS_VISTOS = "ferramentas/schemas_vistos.csv"
 O_QUE_COMPARAR = list(
   nfe = c("TNFe", "TProtNFe"),
   cte = c("TCTe", "TCTeOS", "TProtCTe", "rodo", "rodoOS"),
-  mdfe = c("TMDFe", "TProtMDFe", "rodo")
+  mdfe = c("TMDFe", "TProtMDFe", "rodo"),
+  nfse = "TCNFSe"
 )
 
 NAMESPACE_DO_XSD = c(xs = "http://www.w3.org/2001/XMLSchema")
@@ -40,45 +44,67 @@ arquivo_de_cookies_do_portal = function(documento, pasta_temporaria) {
 
 # Abre a página da lista guardando o cookie de sessão: o Portal da NF-e e o do CT-e só entregam o arquivo
 # para quem abriu a página antes.
-abrir_pagina = function(documento, pasta_temporaria) {
-  pedido_da_pagina = httr2::request(PAGINA_DOS_SCHEMAS[[documento]])
+abrir_pagina = function(documento, endereco_da_pagina, pasta_temporaria) {
+  pedido_da_pagina = httr2::request(endereco_da_pagina)
   pedido_da_pagina = httr2::req_cookie_preserve(pedido_da_pagina, arquivo_de_cookies_do_portal(documento, pasta_temporaria))
   pedido_da_pagina = httr2::req_timeout(pedido_da_pagina, 120)
   resposta_da_pagina = httr2::req_perform(pedido_da_pagina)
   xml2::read_html(httr2::resp_body_string(resposta_da_pagina))
 }
 
-# Uma linha por publicação da página: documento, título (o texto do link) e endereço para baixar.
+# No portal do MDF-e o link é montado por JavaScript: download_arquivo_estatico('MDFE', 2, 'arquivo.zip'), em
+# que o 2 é o tipo "schemas".
+links_do_portal_do_mdfe = function(pagina_da_lista) {
+  links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@onclick, 'download_arquivo_estatico')]")
+  chamadas_do_javascript = xml2::xml_attr(links_de_download, "onclick")
+  links_que_sao_schemas = grepl("download_arquivo_estatico\\('MDFE', *2, *'", chamadas_do_javascript)
+  nomes_dos_arquivos = sub("^.*download_arquivo_estatico\\('MDFE', *2, *'([^']+)'.*$", "\\1", chamadas_do_javascript[links_que_sao_schemas])
+  list(links = links_de_download[links_que_sao_schemas],
+       enderecos = paste0(DOWNLOAD_DO_PORTAL_DO_MDFE, vapply(nomes_dos_arquivos, utils::URLencode, character(1), reserved = TRUE)))
+}
+
+# Na página do gov.br o link vai direto ao .zip; o que termina em "/view" abre a página do arquivo, e sem o
+# "/view" vem o arquivo.
+links_do_portal_da_nfse = function(pagina_da_lista, endereco_da_pagina) {
+  links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@href, '.zip')]")
+  enderecos_dos_links = xml2::url_absolute(trimws(xml2::xml_attr(links_de_download, "href")), endereco_da_pagina)
+  list(links = links_de_download, enderecos = sub("/view$", "", enderecos_dos_links))
+}
+
+links_dos_portais_da_nfe_e_do_cte = function(pagina_da_lista, endereco_da_pagina) {
+  links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@href, 'exibirArquivo.aspx')]")
+  comeco_do_endereco = sub("listaConteudo\\.aspx.*$", "", endereco_da_pagina)
+  # O endereço vem com espaços e quebras de linha em volta. O código do arquivo é Base64, e o portal às
+  # vezes publica o "+" dele como espaço: os dois vão como %2B (o portal aceita, conferido em 30/10/2026).
+  codigos_dos_arquivos = gsub("[+ ]", "%2B", trimws(xml2::xml_attr(links_de_download, "href")))
+  list(links = links_de_download, enderecos = paste0(comeco_do_endereco, codigos_dos_arquivos))
+}
+
+# Uma linha por publicação das páginas do portal: documento, título (o texto do link) e endereço para baixar.
 listar_publicacoes = function(documento, pasta_temporaria) {
-  pagina_da_lista = abrir_pagina(documento, pasta_temporaria)
-  if (documento == "mdfe") {
-    # No portal do MDF-e o link é montado por JavaScript: download_arquivo_estatico('MDFE', 2, 'arquivo.zip'),
-    # em que o 2 é o tipo "schemas".
-    links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@onclick, 'download_arquivo_estatico')]")
-    chamadas_do_javascript = xml2::xml_attr(links_de_download, "onclick")
-    links_que_sao_schemas = grepl("download_arquivo_estatico\\('MDFE', *2, *'", chamadas_do_javascript)
-    links_de_download = links_de_download[links_que_sao_schemas]
-    nomes_dos_arquivos = sub("^.*download_arquivo_estatico\\('MDFE', *2, *'([^']+)'.*$", "\\1", chamadas_do_javascript[links_que_sao_schemas])
-    enderecos_para_baixar = paste0(DOWNLOAD_DO_PORTAL_DO_MDFE, vapply(nomes_dos_arquivos, utils::URLencode, character(1), reserved = TRUE))
-  } else {
-    links_de_download = xml2::xml_find_all(pagina_da_lista, "//a[contains(@href, 'exibirArquivo.aspx')]")
-    comeco_do_endereco = sub("listaConteudo\\.aspx.*$", "", PAGINA_DOS_SCHEMAS[[documento]])
-    # O endereço vem com espaços e quebras de linha em volta. O código do arquivo é Base64, e o portal às
-    # vezes publica o "+" dele como espaço: os dois vão como %2B (o portal aceita, conferido em 30/10/2026).
-    codigos_dos_arquivos = gsub("[+ ]", "%2B", trimws(xml2::xml_attr(links_de_download, "href")))
-    enderecos_para_baixar = paste0(comeco_do_endereco, codigos_dos_arquivos)
+  publicacoes = data.frame(documento = character(), titulo = character(), endereco = character())
+  for (endereco_da_pagina in PAGINA_DOS_SCHEMAS[[documento]]) {
+    pagina_da_lista = abrir_pagina(documento, endereco_da_pagina, pasta_temporaria)
+    if (documento == "mdfe") {
+      links_da_pagina = links_do_portal_do_mdfe(pagina_da_lista)
+    } else if (documento == "nfse") {
+      links_da_pagina = links_do_portal_da_nfse(pagina_da_lista, endereco_da_pagina)
+    } else {
+      links_da_pagina = links_dos_portais_da_nfe_e_do_cte(pagina_da_lista, endereco_da_pagina)
+    }
+    if (length(links_da_pagina$links) == 0) {
+      stop("A página de schemas do ", documento, " não tem mais os links de download: ", endereco_da_pagina, call. = FALSE)
+    }
+    titulos_das_publicacoes = gsub("\\s+", " ", trimws(xml2::xml_text(links_da_pagina$links)))
+    publicacoes = rbind(publicacoes, data.frame(documento = documento, titulo = titulos_das_publicacoes,
+                                                endereco = unname(links_da_pagina$enderecos)))
   }
-  if (length(links_de_download) == 0) {
-    stop("A página de schemas do ", documento, " não tem mais os links de download: ", PAGINA_DOS_SCHEMAS[[documento]], call. = FALSE)
-  }
-  titulos_das_publicacoes = gsub("\\s+", " ", trimws(xml2::xml_text(links_de_download)))
-  publicacoes = data.frame(documento = documento, titulo = titulos_das_publicacoes, endereco = unname(enderecos_para_baixar))
   publicacoes[!duplicated(publicacoes$endereco), ]
 }
 
 # Baixa o pacote e o abre numa pasta. Devolve a pasta, ou NA quando o arquivo não é um zip.
 baixar_pacote = function(documento, endereco, pasta_temporaria) {
-  abrir_pagina(documento, pasta_temporaria)
+  abrir_pagina(documento, PAGINA_DOS_SCHEMAS[[documento]][1], pasta_temporaria)
   arquivo_zip = tempfile(tmpdir = pasta_temporaria, fileext = ".zip")
   pedido_do_arquivo = httr2::request(endereco)
   pedido_do_arquivo = httr2::req_cookie_preserve(pedido_do_arquivo, arquivo_de_cookies_do_portal(documento, pasta_temporaria))
@@ -105,6 +131,22 @@ pasta_do_arquivo = function(pasta_do_pacote, arquivo_principal) {
     return(NA_character_)
   }
   dirname(arquivos_achados[1])
+}
+
+# Num pacote novo, o arquivo principal na versão mais nova que ele traz: o NFSe_v1.01.xsd vira
+# NFSe_v1.02.xsd, e um pacote pode trazer as duas versões, cada uma na sua pasta. NA quando não traz nenhuma.
+arquivo_na_versao_mais_nova = function(pasta_do_pacote, arquivo_principal) {
+  if (is.na(pasta_do_pacote)) {
+    return(NA_character_)
+  }
+  comeco_do_nome = sub("_v[0-9.]+\\.xsd$", "", arquivo_principal)
+  nome_em_qualquer_versao = paste0("^", comeco_do_nome, "_v[0-9.]+\\.xsd$")
+  arquivos_achados = list.files(pasta_do_pacote, pattern = nome_em_qualquer_versao, recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
+  if (length(arquivos_achados) == 0) {
+    return(NA_character_)
+  }
+  versoes_dos_arquivos = numeric_version(sub("^.*_v([0-9.]+)\\.xsd$", "\\1", basename(arquivos_achados), ignore.case = TRUE))
+  arquivos_achados[order(versoes_dos_arquivos, decreasing = TRUE)][1]
 }
 
 # ---- campos de um schema ----

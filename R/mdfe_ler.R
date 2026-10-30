@@ -173,7 +173,8 @@ averbacao              self::nAver                                              
 #' (`nAver`) ou do seguro (`seg`).
 #'
 #' @section campos:
-#' Todos os campos do MDF-e, um por linha: `chave`, `caminho` (onde o campo
+#' Com `todos_os_campos = TRUE`, o padrão. Todos os campos do MDF-e, um por
+#' linha: `chave`, `caminho` (onde o campo
 #' está, a partir do `infMDFe`, com a posição quando o grupo se repete, por
 #' exemplo `infModal/rodo/veicTracao/condutor[2]/CPF`), `grupo` (o grupo logo
 #' acima do campo), `campo` (o nome no leiaute) e `valor` (o texto do XML). É
@@ -188,8 +189,12 @@ averbacao              self::nAver                                              
 #'
 #' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
 #'   (começando por `<`).
+#' @param todos_os_campos `FALSE` deixa de fora a tabela `campos`. O padrão é
+#'   `TRUE` porque boa parte do MDF-e não tem coluna própria, e um MDF-e tem
+#'   poucos campos.
 #' @return Uma lista com os `data.frame`s `mdfes`, `locais`, `documentos`,
-#'   `veiculos`, `condutores`, `seguros`, `campos` e `arquivos`.
+#'   `veiculos`, `condutores`, `seguros`, `campos` (só com
+#'   `todos_os_campos = TRUE`) e `arquivos`.
 #' @source Schema oficial do MDF-e, pacote PL_MDFe_300b da NT 2025.001 v1.04,
 #'   publicado no Portal Nacional do MDF-e em 25/04/2026.
 #' @examples
@@ -198,9 +203,9 @@ averbacao              self::nAver                                              
 #' lido$mdfes[, c("chave", "emitente_nome", "placa", "valor_carga", "protocolo")]
 #' lido$documentos[, c("tipo", "documento_chave", "descarga_municipio")]
 #' @export
-mdfe_ler = function(arquivos) {
-  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DOS_MDFES, "um MDF-e", colunas_do_mdfe)
-  colunas_vazias = colunas_do_mdfe(NULL, NA_character_)
+mdfe_ler = function(arquivos, todos_os_campos = TRUE) {
+  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DOS_MDFES, "um MDF-e", colunas_do_mdfe, todos_os_campos)
+  colunas_vazias = colunas_do_mdfe(NULL, NA_character_, todos_os_campos)
 
   tabelas_do_mdfe = list(
     mdfes = juntar_tabela(arquivos_lidos, "mdfes", colunas_vazias$mdfes),
@@ -208,10 +213,12 @@ mdfe_ler = function(arquivos) {
     documentos = juntar_tabela(arquivos_lidos, "documentos", colunas_vazias$documentos),
     veiculos = juntar_tabela(arquivos_lidos, "veiculos", colunas_vazias$veiculos),
     condutores = juntar_tabela(arquivos_lidos, "condutores", colunas_vazias$condutores),
-    seguros = juntar_tabela(arquivos_lidos, "seguros", colunas_vazias$seguros),
-    campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos),
-    arquivos = resumo_dos_arquivos(arquivos_lidos, "mdfes", "mdfes")
+    seguros = juntar_tabela(arquivos_lidos, "seguros", colunas_vazias$seguros)
   )
+  if (todos_os_campos) {
+    tabelas_do_mdfe$campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos)
+  }
+  tabelas_do_mdfe$arquivos = resumo_dos_arquivos(arquivos_lidos, "mdfes", "mdfes")
   tabelas_do_mdfe$mdfes = converter_datas(tabelas_do_mdfe$mdfes, rbind(CAMPOS_DO_MDFE, CAMPOS_DO_PROTOCOLO))
   tabelas_do_mdfe$mdfes = acrescentar_descricoes(tabelas_do_mdfe$mdfes, tabelas_do_mdfe$mdfes$data_emissao, DESCRICOES_DO_MDFE)
   tabelas_do_mdfe
@@ -219,7 +226,7 @@ mdfe_ler = function(arquivos) {
 
 # As colunas das tabelas de um arquivo de MDF-e, cada uma num vetor. Com xml_lido NULL, vêm vazias, já com
 # os nomes e os tipos certos.
-colunas_do_mdfe = function(xml_lido, nome_do_arquivo) {
+colunas_do_mdfe = function(xml_lido, nome_do_arquivo, todos_os_campos) {
   if (is.null(xml_lido)) {
     xml_lido = xml2::read_xml("<vazio/>")
   }
@@ -230,13 +237,12 @@ colunas_do_mdfe = function(xml_lido, nome_do_arquivo) {
   veiculos = buscar_todos(mdfes, CAMINHO_DOS_VEICULOS)
   condutores = buscar_todos(mdfes, "infModal/rodo/veicTracao/condutor")
   seguros = buscar_todos(mdfes, CAMINHO_DOS_SEGUROS)
-  todos_os_campos = buscar_todos(mdfes, ".//*[not(*)]")
 
   chaves = chave_de_cada(mdfes, "infMDFe")
   # O protocolo é casado com o MDF-e pela chave; MDF-e que veio sem protocolo fica com NA.
   protocolo_de_cada_mdfe = match(chaves, texto_de_cada(protocolos, "chMDFe"))
 
-  list(
+  colunas_das_tabelas = list(
     mdfes = c(
       list(chave = chaves, versao = xml2::xml_attr(mdfes, "versao")),
       valores_dos_campos(mdfes, CAMPOS_DO_MDFE),
@@ -247,20 +253,10 @@ colunas_do_mdfe = function(xml_lido, nome_do_arquivo) {
     documentos = c(list(chave = chave_de_cada(documentos, "infMDFe")), valores_dos_campos(documentos, CAMPOS_DO_DOCUMENTO_DO_MDFE)),
     veiculos = c(list(chave = chave_de_cada(veiculos, "infMDFe")), valores_dos_campos(veiculos, CAMPOS_DO_VEICULO)),
     condutores = c(list(chave = chave_de_cada(condutores, "infMDFe")), valores_dos_campos(condutores, CAMPOS_DO_CONDUTOR)),
-    seguros = c(list(chave = chave_de_cada(seguros, "infMDFe")), valores_dos_campos(seguros, CAMPOS_DO_SEGURO)),
-    campos = colunas_de_todos_os_campos(todos_os_campos)
+    seguros = c(list(chave = chave_de_cada(seguros, "infMDFe")), valores_dos_campos(seguros, CAMPOS_DO_SEGURO))
   )
-}
-
-# Um campo por linha, com o caminho a partir do infMDFe. O xml2 põe a posição no caminho só quando o grupo
-# se repete (condutor[2]), o que basta para separar uma ocorrência da outra.
-colunas_de_todos_os_campos = function(campos_do_xml) {
-  grupo_de_cada_campo = xml2::xml_find_first(campos_do_xml, "parent::*", ns = SEM_NAMESPACE)
-  list(
-    chave = chave_de_cada(campos_do_xml, "infMDFe"),
-    caminho = sub("^.*/infMDFe/", "", xml2::xml_path(campos_do_xml)),
-    grupo = xml2::xml_name(grupo_de_cada_campo),
-    campo = xml2::xml_name(campos_do_xml),
-    valor = xml2::xml_text(campos_do_xml)
-  )
+  if (todos_os_campos) {
+    colunas_das_tabelas$campos = colunas_de_todos_os_campos(buscar_todos_os_campos(mdfes), "infMDFe")
+  }
+  colunas_das_tabelas
 }

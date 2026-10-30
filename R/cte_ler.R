@@ -221,7 +221,8 @@ texto  xTexto   texto
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 #' (CST, CFOP, modal...) ficam como estão no XML; o significado de cada um está
 #' no Manual de Orientação do Contribuinte do CT-e. Campo que o CT-e não tem
-#' fica `NA`.
+#' fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
+#' pedida (`todos_os_campos = TRUE`).
 #'
 #' @section ctes:
 #' Uma linha por CT-e: `chave`, `versao`,
@@ -290,6 +291,15 @@ texto  xTexto   texto
 #' `observacoes`, uma linha por campo de uso livre (`ObsCont` e `ObsFisco`):
 #' `chave`, `r documentar_campos(CAMPOS_DA_OBSERVACAO)`.
 #'
+#' @section campos:
+#' Só com `todos_os_campos = TRUE`. Todos os campos do CT-e, um por linha:
+#' `chave`, `caminho` (onde o campo está, a partir do `infCte`, com a posição
+#' quando o grupo se repete, por exemplo `vPrest/Comp[2]/vComp`), `grupo` (o
+#' grupo logo acima do campo), `campo` (o nome no leiaute) e `valor` (o texto
+#' do XML). É onde ficam os dados do modal (rodoviário, aéreo, aquaviário...),
+#' os passos do percurso, os autorizados a baixar o XML e o que mais não tiver
+#' coluna própria.
+#'
 #' @section arquivos:
 #' Uma linha por arquivo pedido: `arquivo`, `ctes` (quantos CT-e tinha) e
 #' `problema` (`NA` quando deu certo). Um texto de XML aparece como
@@ -297,9 +307,11 @@ texto  xTexto   texto
 #'
 #' @param arquivos Caminhos dos arquivos XML, ou o próprio texto do XML
 #'   (começando por `<`).
+#' @param todos_os_campos `TRUE` devolve também a tabela `campos`, com todos os
+#'   campos de cada CT-e.
 #' @return Uma lista com os `data.frame`s `ctes`, `componentes`, `documentos`,
-#'   `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`, `observacoes` e
-#'   `arquivos`.
+#'   `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`, `observacoes`,
+#'   `campos` (só com `todos_os_campos = TRUE`) e `arquivos`.
 #' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.004
 #'   RTC 1.00, publicado no Portal Nacional do CT-e (republicado em
 #'   16/10/2026).
@@ -309,9 +321,9 @@ texto  xTexto   texto
 #' lido$ctes[, c("chave", "emitente_nome", "tomador_nome", "valor_prestacao", "valor_icms")]
 #' lido$documentos[, c("tipo", "documento_chave")]
 #' @export
-cte_ler = function(arquivos) {
-  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DOS_CTES, "um CT-e", colunas_do_cte)
-  colunas_vazias = colunas_do_cte(NULL, NA_character_)
+cte_ler = function(arquivos, todos_os_campos = FALSE) {
+  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DOS_CTES, "um CT-e", colunas_do_cte, todos_os_campos)
+  colunas_vazias = colunas_do_cte(NULL, NA_character_, todos_os_campos)
 
   tabelas_do_cte = list(
     ctes = juntar_tabela(arquivos_lidos, "ctes", colunas_vazias$ctes),
@@ -321,9 +333,12 @@ cte_ler = function(arquivos) {
     impostos = juntar_tabela(arquivos_lidos, "impostos", colunas_vazias$impostos),
     parcelas = juntar_tabela(arquivos_lidos, "parcelas", colunas_vazias$parcelas),
     pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados),
-    observacoes = juntar_tabela(arquivos_lidos, "observacoes", colunas_vazias$observacoes),
-    arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
+    observacoes = juntar_tabela(arquivos_lidos, "observacoes", colunas_vazias$observacoes)
   )
+  if (todos_os_campos) {
+    tabelas_do_cte$campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos)
+  }
+  tabelas_do_cte$arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
   tabelas_do_cte$ctes = converter_datas(tabelas_do_cte$ctes, rbind(CAMPOS_DO_CTE, CAMPOS_DO_PROTOCOLO))
   tabelas_do_cte$ctes = preencher_tomador(tabelas_do_cte$ctes)
   tabelas_do_cte$ctes = acrescentar_descricoes(tabelas_do_cte$ctes, tabelas_do_cte$ctes$data_emissao, DESCRICOES_DO_CTE)
@@ -334,7 +349,7 @@ cte_ler = function(arquivos) {
 
 # As colunas das tabelas de um arquivo de CT-e, cada uma num vetor. Com xml_lido NULL, vêm vazias, já com
 # os nomes e os tipos certos.
-colunas_do_cte = function(xml_lido, nome_do_arquivo) {
+colunas_do_cte = function(xml_lido, nome_do_arquivo, todos_os_campos) {
   if (is.null(xml_lido)) {
     xml_lido = xml2::read_xml("<vazio/>")
   }
@@ -352,7 +367,7 @@ colunas_do_cte = function(xml_lido, nome_do_arquivo) {
   # O protocolo é casado com o CT-e pela chave; CT-e que veio sem protocolo fica com NA.
   protocolo_de_cada_cte = match(chaves, texto_de_cada(protocolos, "chCTe"))
 
-  list(
+  colunas_das_tabelas = list(
     ctes = c(
       list(chave = chaves, versao = xml2::xml_attr(ctes, "versao")),
       valores_dos_campos(ctes, CAMPOS_DO_CTE),
@@ -370,6 +385,10 @@ colunas_do_cte = function(xml_lido, nome_do_arquivo) {
     ),
     observacoes = c(list(chave = chave_de_cada(observacoes, "infCte")), valores_dos_campos(observacoes, CAMPOS_DA_OBSERVACAO))
   )
+  if (todos_os_campos) {
+    colunas_das_tabelas$campos = colunas_de_todos_os_campos(buscar_todos_os_campos(ctes), "infCte")
+  }
+  colunas_das_tabelas
 }
 
 # Um campo de imposto por linha. O tributo é o grupo logo abaixo de <imp> (ICMS, IBSCBS...) e o grupo é

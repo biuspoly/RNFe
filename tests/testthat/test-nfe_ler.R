@@ -181,6 +181,30 @@ test_that("nota sem protocolo, emitente com CNPJ alfanum\u00e9rico e destinat\u0
   expect_identical(lida$pagamentos$forma, "17")
 })
 
+test_that("a tabela campos s\u00f3 vem quando pedida, com todos os campos da nota", {
+  sem_campos = nfe_ler(c(NOTA_SP, NOTA_CE))
+  com_campos = nfe_ler(c(NOTA_SP, NOTA_CE), todos_os_campos = TRUE)
+  expect_null(sem_campos$campos)
+  expect_identical(names(com_campos), c(setdiff(names(sem_campos), "arquivos"), "campos", "arquivos"))
+  for (nome in names(sem_campos)) {
+    expect_identical(com_campos[[nome]], sem_campos[[nome]])
+  }
+  campos = com_campos$campos
+  for (arquivo in c(NOTA_SP, NOTA_CE)) {
+    documento = xml2::read_xml(arquivo)
+    xml2::xml_ns_strip(documento)
+    folhas = xml2::xml_find_all(documento, "//infNFe//*[not(*)]")
+    chave = nfe_ler(arquivo)$notas$chave
+    expect_identical(sum(campos$chave == chave), length(folhas))
+    expect_identical(campos$valor[campos$chave == chave], xml2::xml_text(folhas))
+  }
+  do_sp = campos[campos$chave == CHAVE_SP, ]
+  segundo_produto = do_sp[do_sp$caminho == "det[2]/prod/cProd", ]
+  expect_identical(segundo_produto$valor, "002")
+  expect_identical(segundo_produto$grupo, "prod")
+  expect_identical(segundo_produto$campo, "cProd")
+})
+
 test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo", {
   lida = nfe_ler(c(NOTA_SP, NOTA_CE))
   expect_identical(lida$notas$chave, c(CHAVE_SP, CHAVE_CE))
@@ -218,8 +242,8 @@ test_that("o CT-e cita NF-e (infNFe), mas n\u00e3o \u00e9 lido como nota", {
 })
 
 test_that("sem arquivo nenhum, as tabelas v\u00eam vazias com as colunas certas", {
-  vazia = nfe_ler(character())
-  cheia = nfe_ler(NOTA_SP)
+  vazia = nfe_ler(character(), todos_os_campos = TRUE)
+  cheia = nfe_ler(NOTA_SP, todos_os_campos = TRUE)
   for (nome in names(cheia)) {
     expect_identical(nrow(vazia[[nome]]), 0L)
     expect_identical(names(vazia[[nome]]), names(cheia[[nome]]))

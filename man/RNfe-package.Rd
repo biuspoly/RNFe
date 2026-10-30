@@ -7,15 +7,20 @@
 \title{RNfe: documentos fiscais eletrônicos brasileiros}
 \description{
 Funções para os documentos fiscais eletrônicos do Brasil (NF-e, NFC-e, CT-e,
-MDF-e). Nesta versão, a chave de acesso: conferir, desmontar e calcular o
-dígito, já com o CNPJ alfanumérico (veja \link{chave}). A leitura do XML da nota e
-as tabelas fiscais vêm nas próximas versões.
+MDF-e, NFS-e Nacional). Nesta versão:
+\itemize{
+\item a chave de acesso: conferir, desmontar e calcular o dígito, já com o CNPJ
+alfanumérico (veja \link{chave});
+\item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}} e
+\code{\link[=nfse_ler]{nfse_ler()}};
+\item as tabelas fiscais, com a vigência de cada código: \code{\link[=tabela_fiscal]{tabela_fiscal()}}.
+}
 }
 \section{De onde vêm as regras}{
 
-Das especificações públicas do Portal Nacional da NF-e: o Manual de
-Orientação do Contribuinte e as notas técnicas, citadas com a versão em cada
-função (\verb{@source}). Nada aqui consulta a SEFAZ.
+Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
+NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
+versão em cada função (\verb{@source}). Nada aqui consulta a SEFAZ.
 }
 
 \seealso{

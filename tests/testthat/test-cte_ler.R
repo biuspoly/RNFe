@@ -208,6 +208,29 @@ test_that("CT-e sem protocolo", {
   expect_identical(cte$tipo_servico, 1L)
 })
 
+test_that("a tabela campos s\u00f3 vem quando pedida, com todos os campos do CT-e e do CT-e OS", {
+  sem_campos = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
+  com_campos = cte_ler(c(CTE_SP, CTE_CE, CTE_OS), todos_os_campos = TRUE)
+  expect_null(sem_campos$campos)
+  expect_identical(names(com_campos), c(setdiff(names(sem_campos), "arquivos"), "campos", "arquivos"))
+  for (nome in names(sem_campos)) {
+    expect_identical(com_campos[[nome]], sem_campos[[nome]])
+  }
+  campos = com_campos$campos
+  for (arquivo in c(CTE_SP, CTE_CE, CTE_OS)) {
+    documento = xml2::read_xml(arquivo)
+    xml2::xml_ns_strip(documento)
+    folhas = xml2::xml_find_all(documento, "//infCte//*[not(*)]")
+    chave = cte_ler(arquivo)$ctes$chave
+    expect_identical(sum(campos$chave == chave), length(folhas))
+    expect_identical(campos$valor[campos$chave == chave], xml2::xml_text(folhas))
+  }
+  do_sp = campos[campos$chave == CHAVE_SP, ]
+  expect_identical(do_sp$valor[do_sp$caminho == "vPrest/Comp[2]/vComp"], "50.00")
+  do_os = campos[campos$chave == CHAVE_OS, ]
+  expect_identical(do_os$caminho[1], "ide/cUF")
+})
+
 test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo", {
   lido = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
   expect_identical(lido$ctes$chave, c(CHAVE_SP, CHAVE_CE, CHAVE_OS))
@@ -241,8 +264,8 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", 
 })
 
 test_that("sem arquivo nenhum, as tabelas v\u00eam vazias com as colunas certas", {
-  vazio = cte_ler(character())
-  cheio = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
+  vazio = cte_ler(character(), todos_os_campos = TRUE)
+  cheio = cte_ler(c(CTE_SP, CTE_CE, CTE_OS), todos_os_campos = TRUE)
   for (nome in names(cheio)) {
     expect_identical(nrow(vazio[[nome]]), 0L)
     expect_identical(names(vazio[[nome]]), names(cheio[[nome]]))

@@ -1,9 +1,10 @@
 # Plano do RNfe
 
-Situação em 29/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
-fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 em andamento:** a
-leitura do CT-e e do CT-e OS está pronta e conferida com 14.370 CT-e reais; a do MDF-e está pronta e
-conferida pelo schema oficial, sem MDF-e reais para comparar; falta a NFS-e Nacional.
+Situação em 30/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
+fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 concluída:** a
+leitura do CT-e e do CT-e OS, conferida com 14.370 CT-e reais; a do MDF-e, conferida pelo schema oficial,
+sem MDF-e reais para comparar; e a da NFS-e Nacional, conferida com 11.207 NFS-e reais. Os quatro leitores
+têm a tabela `campos` e o vigia olha os quatro portais. A próxima é a etapa 3 (certificado e SEFAZ).
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -22,7 +23,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST e as da Reforma), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | CT-e, CT-e OS e MDF-e prontos; falta a NFS-e |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional | Não | prontos (CT-e, CT-e OS, MDF-e e NFS-e Nacional) |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
@@ -41,7 +42,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 |---|---|---|---|---|
 | Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
 | Ler CT-e, CT-e OS e MDF-e em tabelas | não | não | não | pronto (etapa 2) |
-| Ler NFS-e Nacional em tabelas | não | não | não | etapa 2 |
+| Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
@@ -248,6 +249,68 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   achados são poucos e soltos. Fica para quando houver MDF-e reais para comparar.
 - Cada leitor recusa o documento dos outros: o MDF-e cita `infNFe` e `infCTe`, mas não vira nota nem CT-e.
 
+## Etapa 2, leitura da NFS-e Nacional: o que se decidiu
+
+- `nfse_ler()` lê a NFS-e do padrão nacional (raiz `NFSe`), leiautes 1.00 e 1.01, pelo pacote oficial
+  `NFSe-ESQUEMAS_XSD-v1.01-20260209` (página de documentação atual do portal da NFS-e, gov.br/nfse), que traz
+  um schema por versão, cada um na sua pasta. A NFS-e de prefeitura, no padrão próprio de cada município
+  (Abrasf, Ginfes...), não é lida: avisa em `arquivos` com a raiz que o XML tem.
+- Devolve `nfses` (uma linha por NFS-e), `campos` e `arquivos`. A NFS-e não tem itens: é um serviço por
+  documento. As colunas juntam as duas partes do XML: a DPS, que quem emitiu declarou (prestador, tomador,
+  intermediário, serviço, valores, tributos e o IBS e a CBS informados), e o que o sistema nacional gerou
+  (número, situação, base e valor do ISSQN, total retido, valor líquido e o IBS e a CBS calculados). Ao lado
+  do CST e da classificação do IBS/CBS vem o nome na data de emissão.
+- **Diferença entre as versões:** o `xOutInf` (informações do município) fica em `valores/xOutInf` na 1.00 e
+  direto no `infNFSe` na 1.01; a coluna `outras_informacoes` lê os dois lugares.
+- **A chave tem 50 posições:** "NFS" no `Id`, município (7), ambiente gerador (1), tipo de inscrição (1:
+  CPF, 2: CNPJ), inscrição federal (14), número da NFS-e (13), ano e mês (4), código numérico (9) e dígito
+  (1). A regra do dígito **não está escrita** em nenhuma fonte oficial lida (o schema, o Anexo I do leiaute e
+  três manuais das APIs). As 11.207 chaves reais seguem o módulo 11 da NF-e, mas sem a regra escrita o pacote
+  não confere o dígito da NFS-e, e as funções `chave_*` continuam só para a chave de 44 posições.
+- **O schema oficial não bate com as NFS-e reais.** Validadas 300 NFS-e reais sorteadas: 198 passaram e 102
+  não (100 da 1.00, 2 da 1.01). Os motivos são do schema e do próprio sistema nacional, não do RNfe:
+  - a lista de situações (`cStat`) é {100, 101, 102, 103} na 1.00 e {100, 102, 103, 107} na 1.01, mas
+    NFS-e 1.00 reais trazem 107 e uma 1.01 traz 101;
+  - a assinatura real usa SHA-256 e a canonicalização exclusiva, e o schema da assinatura que vem no pacote
+    fixa SHA-1;
+  - NFS-e antigas, do leiaute anterior, trazem campos fora do lugar (`pAliq`, `cLocIncid` vazio).
+  A leitura não depende do schema; o que importa é o caminho de cada campo.
+- **Achado no schema:** a série da DPS tem o padrão `^0{0,4}\d{1,5}$`. Em XML Schema o `^` e o `$` são
+  letras comuns, e o libxml2 recusaria até a série "1". O validador tira os dois na cópia que usa
+  (`tirar_ancoras`), o que dá a regra que o portal quis escrever.
+- **Exemplos:** duas NFS-e escritas à mão passam no schema oficial da sua versão: uma 1.01 com IBS e CBS,
+  ISSQN, PIS e COFINS e o IRRF retido; uma 1.00 de MEI, com tomador pessoa física, desconto e o
+  `xOutInf` no lugar antigo. `ferramentas/validar_exemplos.R` agora recebe também a pasta da NFS-e e valida cada uma pelo
+  schema da versão que ela declara.
+- **Conferido em 30/10/2026 com as 11.207 NFS-e nacionais reais** do app Fiscal (5.691 na 1.00, 5.516 na
+  1.01), que não entram no repositório. Todas foram lidas, por dois lados:
+  - contra o que o app Fiscal tirou dos mesmos XMLs: número, prestador, tomador, valor do serviço, valor
+    líquido, município e data de emissão bateram em todas. O nome do emitente diferiu em 23, todas por
+    espaços no começo ou no fim: o Fiscal tira os espaços e o RNfe deixa o nome como está no XML;
+  - contra um segundo leitor do XML (ElementTree, em Python): chave, versão, situação, processamento,
+    emissão, competência, prestador, tomador, intermediário, código e nome da tributação nacional, base,
+    alíquota e valor do ISSQN, total retido, retenção do ISSQN, PIS, IRRF, CST e classificação do IBS/CBS,
+    indicador da operação, IBS, CBS, total com IBS e CBS, outras informações e o número de campos de cada
+    NFS-e bateram em todas.
+  - CST e classificação do IBS/CBS acharam o nome em todas.
+- Velocidade: 7 ms por NFS-e (78 s para as 11.207).
+
+## Etapa 2, a tabela `campos` nos quatro leitores
+
+- Cada leitor tem colunas para os campos mais usados, e o resto do documento vai para `campos`: um campo por
+  linha, com o caminho a partir do grupo principal (`infNFe`, `infCte`, `infMDFe`, `infNFSe`) e a posição
+  quando o grupo se repete (`det[2]/prod/cProd`). A assinatura digital fica de fora. Assim nada se perde:
+  notas referenciadas, volumes, rastreabilidade, modais do CT-e, obra e dedução da NFS-e...
+- **O argumento `todos_os_campos` decide se ela vem.** Na NF-e e no CT-e começa desligado; no MDF-e e na
+  NFS-e, ligado. O motivo é o custo, medido nas 10 mil notas reais: uma NF-e tem em média 223 campos, e com a
+  tabela a leitura passa de 13 a 14 ms para 19 a 21 ms por nota; a tabela das 10 mil ocupa uns 100 MB. O CT-e fica
+  como a NF-e: já tem tabelas para quase tudo (componentes, documentos, cargas, impostos, observações). No
+  MDF-e e na NFS-e boa parte do documento não tem coluna própria, e o documento tem poucos campos.
+- Com o argumento desligado, as outras tabelas saem idênticas às de antes (conferido nas 10 mil NF-e reais
+  e em 3 mil CT-e de exemplo, contra a versão do commit anterior), e a velocidade é a mesma: três rodadas de
+  cada versão ficaram na mesma faixa (141 a 155 s antes, 146 a 152 s depois, nas 10 mil notas). Ligado, as
+  outras tabelas também saem iguais.
+
 ## O robô das tabelas
 
 - `.github/workflows/atualizar-tabelas.yml` roda toda segunda às 9h UTC (6h em Brasília), e também à mão. Ele
@@ -273,7 +336,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   leitores é escrito à mão a partir dele. Quando a SEFAZ publica um pacote novo, nada muda sozinho: o vigia
   avisa e uma pessoa atualiza.
 - `.github/workflows/vigiar-schemas.yml` roda toda segunda às 9h30 UTC (6h30 em Brasília), e também à mão.
-  Ele lê as listas de schemas dos portais da NF-e, do CT-e e do MDF-e (`ferramentas/vigiar_schemas.R`) e
+  Ele lê as listas de schemas dos portais da NF-e, do CT-e, do MDF-e e da NFS-e Nacional (`ferramentas/vigiar_schemas.R`) e
   abre um aviso (issue) para cada publicação que não está em `ferramentas/schemas_vistos.csv`. Quando a
   publicação traz o schema principal, o aviso diz os campos que entraram, que saíram e que mudaram de regra
   (ocorrências, tipo, padrão, valores aceitos, seguindo o tipo de origem). Nunca abre dois avisos com o mesmo
@@ -288,6 +351,16 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   idênticos, arquivo por arquivo, aos usados para validar os exemplos.
 - **Detalhes dos portais:** o do MDF-e monta os links por JavaScript (o nome do arquivo está no `onclick`);
   o da NF-e às vezes publica o `+` do código do arquivo como espaço (os dois vão como `%2B`, e o portal aceita).
+  A NFS-e publica no gov.br, em duas páginas (a documentação atual e a da Reforma, RTC), com o link direto
+  para o `.zip`. Em 30/10/2026 o link da página da RTC apontava para a área de produção restrita, que devolve
+  uma página de "Conteúdo Restrito" no lugar do arquivo; o aviso diz quando o endereço não devolve um `.zip`.
+- **NFS-e no vigia, testado em 30/10/2026:** os quatro portais responderam (207 publicações, as duas da NFS-e
+  novas). O aviso do pacote que o `nfse_ler()` segue saiu sem nenhuma diferença, e o da RTC disse que o
+  endereço não devolveu um `.zip`. Comparando a 1.00 com a 1.01 do mesmo pacote, o vigia achou o `xOutInf`
+  que mudou de lugar e a lista nova de situações (`cStat`). Depois, as duas foram registradas.
+- **O arquivo principal muda de nome com a versão** na NFS-e (`NFSe_v1.00.xsd`, `NFSe_v1.01.xsd`), e um
+  pacote pode trazer mais de uma versão. Num pacote novo, o vigia compara pela versão mais nova do arquivo
+  principal que o pacote traz, e o aviso diz qual foi.
 - **O primeiro uso já achou lacunas:** comparando o pacote 010f da NF-e com o 010g, que o `nfe_ler()` segue,
   entraram os valores líquidos (`vProdLiq`, `vUnComLiq`, `vProdLiqTot`) e o pagamento vinculado
   (`gPgtoVinc`), que o leitor ainda não lia; no CT-e, o `pgtoVinc`. **Resolvidas em 30/10/2026:** colunas
@@ -298,6 +371,10 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Grupos opcionais e escolhas:** as regras de cada campo dizem também se ele está num grupo que pode faltar
   ("num grupo [0..1]") ou numa escolha entre campos ("numa escolha"). Sem isso, o `vProdLiq` aparecia como
   obrigatório, e um grupo que passasse a ser obrigatório não apareceria no aviso.
+- **Node 24:** o GitHub avisou que as ações em Node 20 vão parar. Nos dois robôs, só o `actions/checkout@v4`
+  usava Node 20 (o `r-lib/actions/setup-r@v2` já usa o 24); os dois passaram para o `actions/checkout@v7`
+  em 30/10/2026. O que a v7 muda (recusar o checkout de pull request de fork em `pull_request_target` e
+  `workflow_run`) não afeta robôs que rodam por agenda ou à mão.
 
 ## CEST: adiado (decisão do usuário, 29/10/2026)
 

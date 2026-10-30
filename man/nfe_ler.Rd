@@ -9,15 +9,19 @@ Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
 26/10/2026.
 }
 \usage{
-nfe_ler(arquivos)
+nfe_ler(arquivos, todos_os_campos = FALSE)
 }
 \arguments{
 \item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
 (começando por \code{<}).}
+
+\item{todos_os_campos}{\code{TRUE} devolve também a tabela \code{campos}, com todos os
+campos de cada nota.}
 }
 \value{
 Uma lista com os \code{data.frame}s \code{notas}, \code{itens}, \code{impostos},
-\code{parcelas}, \code{pagamentos}, \code{pagamentos_vinculados} e \code{arquivos}.
+\code{parcelas}, \code{pagamentos}, \code{pagamentos_vinculados}, \code{campos} (só com
+\code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
 Lê arquivos XML de NF-e e NFC-e (leiaute 4.00), com ou sem o protocolo de
@@ -29,7 +33,8 @@ com o motivo.
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 (CST, CFOP, forma de pagamento...) ficam como estão no XML; o significado de
 cada um está no Manual de Orientação do Contribuinte. Campo que a nota não
-tem fica \code{NA}.
+tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
+pedida (\code{todos_os_campos = TRUE}).
 }
 \section{notas}{
 
@@ -75,6 +80,19 @@ sobra para quem precisa de um campo que não está em \code{itens}.
 liga a nota à transação de pagamento usada no split payment): \code{chave},
 \code{numero} (\verb{@nPag}), \code{transacao} (\verb{@idTransacao}), \code{meio_pagamento} (\code{tpMeioPgto}), \code{cnpj_recebedor} (\code{CNPJReceb}), \code{cnpj_base_instituicao} (\code{CNPJBasePSP}). O código do meio de
 pagamento é o da tabela do Informe Técnico 2026.001.
+}
+
+\section{campos}{
+
+Só com \code{todos_os_campos = TRUE}. Todos os campos da nota, um por linha:
+\code{chave}, \code{caminho} (onde o campo está, a partir do \code{infNFe}, com a posição
+quando o grupo se repete, por exemplo \code{det[2]/prod/cProd}), \code{grupo} (o grupo
+logo acima do campo), \code{campo} (o nome no leiaute) e \code{valor} (o texto do
+XML). É onde ficam as notas referenciadas, os volumes do transporte, a
+rastreabilidade do produto e o que mais não tiver coluna própria. Uma nota
+tem, em média, uns 220 campos, e a tabela custa de 5 a 7 ms a mais por nota
+e uns 10 KB de memória (medido em 10 mil notas reais): por isso ela só vem
+quando pedida.
 }
 
 \section{arquivos}{

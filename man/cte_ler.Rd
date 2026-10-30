@@ -9,16 +9,19 @@ RTC 1.00, publicado no Portal Nacional do CT-e (republicado em
 16/10/2026).
 }
 \usage{
-cte_ler(arquivos)
+cte_ler(arquivos, todos_os_campos = FALSE)
 }
 \arguments{
 \item{arquivos}{Caminhos dos arquivos XML, ou o próprio texto do XML
 (começando por \code{<}).}
+
+\item{todos_os_campos}{\code{TRUE} devolve também a tabela \code{campos}, com todos os
+campos de cada CT-e.}
 }
 \value{
 Uma lista com os \code{data.frame}s \code{ctes}, \code{componentes}, \code{documentos},
-\code{cargas}, \code{impostos}, \code{parcelas}, \code{pagamentos_vinculados}, \code{observacoes} e
-\code{arquivos}.
+\code{cargas}, \code{impostos}, \code{parcelas}, \code{pagamentos_vinculados}, \code{observacoes},
+\code{campos} (só com \code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
 Lê arquivos XML de CT-e (modelo 57) e de CT-e OS (modelo 67), leiautes 3.00
@@ -31,7 +34,8 @@ simplificado e a GTV-e, que têm outro conteúdo, não são lidos.
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Códigos
 (CST, CFOP, modal...) ficam como estão no XML; o significado de cada um está
 no Manual de Orientação do Contribuinte do CT-e. Campo que o CT-e não tem
-fica \code{NA}.
+fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
+pedida (\code{todos_os_campos = TRUE}).
 }
 \section{ctes}{
 
@@ -112,6 +116,17 @@ que liga o CT-e à transação de pagamento usada no split payment): \code{chave
 pagamento é o da tabela do Informe Técnico 2026.001.
 \code{observacoes}, uma linha por campo de uso livre (\code{ObsCont} e \code{ObsFisco}):
 \code{chave}, \code{tipo} (\verb{self::*}), \code{campo} (\verb{@xCampo}), \code{texto} (\code{xTexto}).
+}
+
+\section{campos}{
+
+Só com \code{todos_os_campos = TRUE}. Todos os campos do CT-e, um por linha:
+\code{chave}, \code{caminho} (onde o campo está, a partir do \code{infCte}, com a posição
+quando o grupo se repete, por exemplo \code{vPrest/Comp[2]/vComp}), \code{grupo} (o
+grupo logo acima do campo), \code{campo} (o nome no leiaute) e \code{valor} (o texto
+do XML). É onde ficam os dados do modal (rodoviário, aéreo, aquaviário...),
+os passos do percurso, os autorizados a baixar o XML e o que mais não tiver
+coluna própria.
 }
 
 \section{arquivos}{
