@@ -4,7 +4,8 @@
 #' GTV-e, MDF-e, NFS-e Nacional). Nesta versão:
 #' - a chave de acesso, já com o CNPJ alfanumérico: [chave_valida()] (está
 #'   certa?), [chave_decompor()] (as partes e o que está errado) e
-#'   [chave_digito()] (o dígito que ela deveria ter);
+#'   [chave_digito()] (o dígito que ela deveria ter) e [chave_extrair()] (a
+#'   chave achada num PDF ou numa foto, pelo texto, QR-Code ou OCR);
 #' - a leitura do XML em tabelas: [nfe_ler()] (também o resumo que a
 #'   Distribuição de DF-e entrega), [cte_ler()], [gtve_ler()], [mdfe_ler()],
 #'   [nfse_ler()] e, para os eventos de todos eles (cancelamento, carta de

@@ -3,6 +3,7 @@
 export(certificado_ler)
 export(chave_decompor)
 export(chave_digito)
+export(chave_extrair)
 export(chave_valida)
 export(cte_ler)
 export(eventos_ler)

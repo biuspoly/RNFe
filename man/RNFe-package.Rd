@@ -11,7 +11,8 @@ GTV-e, MDF-e, NFS-e Nacional). Nesta versão:
 \itemize{
 \item a chave de acesso, já com o CNPJ alfanumérico: \code{\link[=chave_valida]{chave_valida()}} (está
 certa?), \code{\link[=chave_decompor]{chave_decompor()}} (as partes e o que está errado) e
-\code{\link[=chave_digito]{chave_digito()}} (o dígito que ela deveria ter);
+\code{\link[=chave_digito]{chave_digito()}} (o dígito que ela deveria ter) e \code{\link[=chave_extrair]{chave_extrair()}} (a
+chave achada num PDF ou numa foto, pelo texto, QR-Code ou OCR);
 \item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}} (também o resumo que a
 Distribuição de DF-e entrega), \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=gtve_ler]{gtve_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}},
 \code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles (cancelamento, carta de

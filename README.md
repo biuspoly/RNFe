@@ -36,6 +36,17 @@ ignorados. Na NF-e avulsa, emitida pelo Fisco, o CNPJ da chave é o do órgão q
 A chave de 50 posições da NFS-e Nacional fica de fora: a regra do dígito dela não está escrita nas fontes
 oficiais.
 
+```r
+chave_extrair(c("danfe.pdf", "cupom.jpg"))   # a chave achada no PDF ou na foto
+```
+
+`chave_extrair()` acha a chave em PDFs (DANFE, DACTE, cupom da NFC-e) e em imagens (foto, digitalização): pelo texto
+do PDF, pelo QR-Code ou por OCR, nessa ordem, com os pacotes `pdftools`, `opencv` e `tesseract`, se estiverem
+instalados. Só devolve a chave que confere. O dígito verificador e o CNPJ dentro dela pegam quase toda leitura errada;
+um número com cara de chave que não confere aparece em `problema`. Os outros números do documento (valores,
+quantidades) não têm essa conferência e, lidos de uma imagem, podem vir errados sem aviso: por isso a função só
+procura a chave, e os dados da nota vêm do XML.
+
 Conferido com 135 mil chaves reais de NF-e e CT-e (que não estão no repositório): todas válidas, e as partes
 iguais às do XML de cada nota. As 135 mil são desmontadas em uns 2 segundos.
 

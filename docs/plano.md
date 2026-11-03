@@ -641,6 +641,27 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   7 UFs e a chave do cupom (PE) foram cada uma ao seu autorizador, em 3,7 s. O cupom volta 217 em homologação: é
   uma nota de produção.
 
+## A chave num PDF ou numa foto: `chave_extrair()` (03/11/2026)
+
+- **Pedido do usuário**, com a foto de um cupom de NFC-e em PDF: "ler QR-Code também e OCR pelo tesseract ... leitura
+  de PDF também ... se não for bom, me diga porque melhor não". A resposta foi: bom para achar a chave, não para ler o
+  resto. A chave tem dígito verificador e o CNPJ dentro, e pega quase toda leitura errada; valores, quantidades e
+  descrições não têm conferência, e lidos de uma imagem viriam errados sem aviso. Os dados da nota vêm do XML.
+- `chave_extrair(arquivos, ocr = TRUE)` procura em PDFs e imagens, nesta ordem, e para no primeiro jeito que acha:
+  o texto do PDF (`pdftools`); o QR-Code (`opencv`, com o decodificador `wechat`), na página do PDF virada imagem a
+  300 dpi ou na imagem; e o OCR (`tesseract`, com o inglês que vem no pacote: só os números importam). Os três ficam
+  em Suggests, e o jeito sem o pacote é pulado (dito em `problema`). O `quadrangle`, outro leitor de QR-Code, não
+  existe para o R 4.6.
+- **Como a chave é achada no texto:** emendada (o QR-Code, o texto do XML) ou em blocos de 4 separados por espaço
+  (o DANFE). Em cada sequência de blocos, cada janela de 11 blocos é uma candidata, para um número de 4 dígitos logo
+  antes da chave (um telefone) não a esconder. Só fica a candidata com o formato de chave e que passa no
+  `chave_valida()`; a que tem o formato e não confere vai para `problema`.
+- **No cupom do usuário (uma foto, sem texto):** o PDF não tinha texto; o QR-Code estava cortado no pé da foto e não
+  foi lido; o OCR achou a chave, que confere, em cerca de 1 s (5,6 s ao todo, com a tentativa do QR-Code). O cupom
+  não entra no repositório. Os testes usam imagens geradas com uma chave inventada
+  (`ferramentas/gerar_imagens_de_teste.R`, com o pacote `qrcode`): o QR-Code de uma NFC-e, um cupom com a chave em
+  blocos (OCR) e o mesmo com um dígito trocado (vai para `problema`); o PDF com texto é gerado no próprio teste.
+
 ## Etapa 3, terceiro passo: a consulta de cadastro (03/11/2026)
 
 - `sefaz_cadastro(documentos, ufs, certificado, senha, tipo = "CNPJ")` consulta o cadastro de contribuintes do

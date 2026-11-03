@@ -34,12 +34,16 @@ Encoding: UTF-8
 Language: pt-BR
 Depends: R (>= 4.1.0)
 Imports:
+    tools,
     utils,
     xml2
 Suggests:
     curl,
     httr2 (>= 1.0.0),
+    opencv,
     openssl,
+    pdftools,
+    tesseract,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
@@ -48,6 +52,7 @@ Collate:
     'RNFe-package.R'
     'chave.R'
     'certificado.R'
+    'chave_extrair.R'
     'ler_xml.R'
     'cte_ler.R'
     'eventos_ler.R'
