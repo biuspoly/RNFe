@@ -19,8 +19,9 @@ exemplo, a coluna \code{chave} que vem de \code{\link[=nfe_ler]{nfe_ler()}}).}
 Um vetor lógico, um valor por chave.
 }
 \description{
-Diz se cada chave de acesso de 44 posições (NF-e, NFC-e, CT-e, CT-e OS ou
-MDF-e) está certa: \code{TRUE} ou \code{FALSE}, uma resposta por chave. Confere, como a
+Diz se cada chave de acesso de 44 posições (NF-e, NFC-e, CT-e, CT-e OS,
+GTV-e ou MDF-e) está certa: \code{TRUE} ou \code{FALSE}, uma resposta por chave.
+Confere, como a
 SEFAZ, o formato, a UF, o mês, o CNPJ (ou CPF) do emitente que vai dentro da
 chave e o dígito verificador. Para saber o que está errado, use
 \code{\link[=chave_decompor]{chave_decompor()}}.

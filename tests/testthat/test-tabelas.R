@@ -120,7 +120,7 @@ test_that("meios de pagamento e bandeiras de cart\u00e3o como nas planilhas do P
 test_that("o significado dos c\u00f3digos de cada campo do leiaute", {
   codigos = tabela_fiscal("codigos_dos_campos")
   expect_identical(names(codigos), c("documento", "campo", "contexto", "codigo", "descricao", "inicio", "fim"))
-  expect_setequal(codigos$documento, c("NF-e", "CT-e", "MDF-e", "NFS-e", "evento"))
+  expect_setequal(codigos$documento, c("NF-e", "CT-e", "GTV-e", "MDF-e", "NFS-e", "evento"))
   expect_false(any(is.na(codigos$descricao) | is.na(codigos$codigo)))
   expect_false(any(duplicated(codigos[, c("documento", "campo", "contexto", "codigo")])))
   # O órgão dos eventos pelo código da UF: as 27 UFs, iguais às da tabela de municípios do IBGE.

@@ -21,12 +21,17 @@ if (length(argumentos) == 0) {
 PASTAS_DE_CADA_DOCUMENTO = list(
   "NF-e" = c(pasta_de_cada_pacote[["nfe"]], pasta_de_cada_pacote[["nfe_distribuicao"]]),
   "CT-e" = pasta_de_cada_pacote[["cte"]],
+  "GTV-e" = pasta_de_cada_pacote[["cte"]],
   "MDF-e" = pasta_de_cada_pacote[["mdfe"]],
   "NFS-e" = list.dirs(dirname(pasta_de_cada_pacote[["nfse"]]), recursive = FALSE),
   "evento" = c(pasta_de_cada_pacote[["nfe_eventos"]], pasta_de_cada_pacote[["cte"]], pasta_de_cada_pacote[["mdfe"]])
 )
+# A GTV-e está no pacote do CT-e, ao lado do CT-e, do CT-e OS e do CT-e simplificado: valem só as declarações de
+# dentro do tipo dela (o toma 1 é o destinatário na GTV-e e o expedidor no CT-e).
+TIPO_DE_CADA_DOCUMENTO = c("GTV-e" = "TGTVe")
 # Valores que o schema aceita em grupos que o RNFe não lê, ou que só vão para a tabela campos (as notas referenciadas
-# da NF-e): ficam sem significado na tabela de propósito.
+# da NF-e): ficam sem significado na tabela de propósito. No documento CT-e, os da GTV-e: ela tem os códigos dela no
+# documento GTV-e.
 VALORES_FORA_DOS_LEITORES = utils::read.table(header = TRUE, stringsAsFactors = FALSE, colClasses = "character", text = "
 documento campo codigo grupo
 CT-e      tpCTe 4      GTV-e
@@ -63,6 +68,11 @@ valores_aceitos_na_pasta = function(pasta_do_schema, nome_do_campo, documento) {
   if (documento != "evento") {
     arquivos_xsd = arquivos_xsd[!grepl("^ev|[Ee]vento", basename(arquivos_xsd))]
   }
+  caminho_das_declaracoes = paste0("//xs:element[@name='", nome_do_campo, "']")
+  tipo_do_documento = unname(TIPO_DE_CADA_DOCUMENTO[documento])
+  if (!is.na(tipo_do_documento)) {
+    caminho_das_declaracoes = paste0("//xs:complexType[@name='", tipo_do_documento, "']", caminho_das_declaracoes)
+  }
   tipos_simples = list()
   declaracoes = list()
   for (arquivo_xsd in arquivos_xsd) {
@@ -70,7 +80,7 @@ valores_aceitos_na_pasta = function(pasta_do_schema, nome_do_campo, documento) {
     for (tipo in xml2::xml_find_all(schema_lido, "/xs:schema/xs:simpleType[@name]", NAMESPACE_DO_XSD)) {
       tipos_simples[[xml2::xml_attr(tipo, "name")]] = tipo
     }
-    declaracoes = c(declaracoes, as.list(xml2::xml_find_all(schema_lido, paste0("//xs:element[@name='", nome_do_campo, "']"), NAMESPACE_DO_XSD)))
+    declaracoes = c(declaracoes, as.list(xml2::xml_find_all(schema_lido, caminho_das_declaracoes, NAMESPACE_DO_XSD)))
   }
   valores = character()
   for (declaracao in declaracoes) {

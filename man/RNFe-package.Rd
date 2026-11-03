@@ -7,23 +7,29 @@
 \title{RNFe: documentos fiscais eletrônicos brasileiros}
 \description{
 Funções para os documentos fiscais eletrônicos do Brasil (NF-e, NFC-e, CT-e,
-MDF-e, NFS-e Nacional). Nesta versão:
+GTV-e, MDF-e, NFS-e Nacional). Nesta versão:
 \itemize{
 \item a chave de acesso, já com o CNPJ alfanumérico: \code{\link[=chave_valida]{chave_valida()}} (está
 certa?), \code{\link[=chave_decompor]{chave_decompor()}} (as partes e o que está errado) e
 \code{\link[=chave_digito]{chave_digito()}} (o dígito que ela deveria ter);
-\item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}},
+\item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}} (também o resumo que a
+Distribuição de DF-e entrega), \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=gtve_ler]{gtve_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}},
 \code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles (cancelamento, carta de
 correção, manifestação, encerramento...), \code{\link[=eventos_ler]{eventos_ler()}};
 \item as tabelas fiscais, com a vigência de cada código, e os municípios do
-IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}}.
+IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}};
+\item o certificado digital A1: \code{\link[=certificado_ler]{certificado_ler()}} (titular, CNPJ ou CPF e
+validade);
+\item a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
+\code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?).
 }
 }
 \section{De onde vêm as regras}{
 
 Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
 NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
-versão em cada função (\verb{@source}). Nada aqui consulta a SEFAZ.
+versão em cada função (\verb{@source}). Só \code{\link[=sefaz_status]{sefaz_status()}} fala com a SEFAZ, e
+só no ambiente de homologação.
 }
 
 \seealso{

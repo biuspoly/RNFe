@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GTV-e fictícia para os testes do RNFe: CNPJs de exemplo, ambiente de homologação e assinatura de mentira.
+     Leva valores do emitente da NF-e de exemplo nfe_proc_sp.xml até um destinatário com CNPJ alfanumérico. -->
+<GTVeProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+  <GTVe versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+    <infCte versao="4.00" Id="CTe35261011444777000161640010000005011246813570">
+      <ide>
+        <cUF>35</cUF>
+        <cCT>24681357</cCT>
+        <CFOP>5353</CFOP>
+        <natOp>PRESTACAO DE SERVICO DE TRANSPORTE DE VALORES</natOp>
+        <mod>64</mod>
+        <serie>1</serie>
+        <nCT>501</nCT>
+        <dhEmi>2026-10-20T08:00:00-03:00</dhEmi>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>0</cDV>
+        <tpAmb>2</tpAmb>
+        <tpCTe>4</tpCTe>
+        <verProc>RNFe-testes</verProc>
+        <cMunEnv>3550308</cMunEnv>
+        <xMunEnv>SAO PAULO</xMunEnv>
+        <UFEnv>SP</UFEnv>
+        <modal>01</modal>
+        <tpServ>9</tpServ>
+        <indIEToma>1</indIEToma>
+        <dhSaidaOrig>2026-10-20T08:30:00-03:00</dhSaidaOrig>
+        <dhChegadaDest>2026-10-20T10:15:00-03:00</dhChegadaDest>
+        <toma>
+          <toma>0</toma>
+        </toma>
+      </ide>
+      <compl>
+        <xObs>RECOLHIMENTO DE TESTE</xObs>
+        <ObsCont xCampo="LACRE">
+          <xTexto>MALOTE 001</xTexto>
+        </ObsCont>
+      </compl>
+      <emit>
+        <CNPJ>11444777000161</CNPJ>
+        <IE>123456789110</IE>
+        <xNome>TRANSPORTADORA DE VALORES DE TESTE LTDA</xNome>
+        <enderEmit>
+          <xLgr>AVENIDA DE TESTE</xLgr>
+          <nro>200</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SAO PAULO</xMun>
+          <CEP>01002000</CEP>
+          <UF>SP</UF>
+        </enderEmit>
+      </emit>
+      <rem>
+        <CNPJ>11222333000181</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>EMPRESA DE TESTE LTDA</xNome>
+        <enderReme>
+          <xLgr>RUA DE TESTE</xLgr>
+          <nro>100</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SAO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderReme>
+      </rem>
+      <dest>
+        <CNPJ>12ABC34501DE35</CNPJ>
+        <xNome>DESTINATARIO DE TESTE S.A.</xNome>
+        <enderDest>
+          <xLgr>RUA DO DESTINO</xLgr>
+          <nro>50</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3509502</cMun>
+          <xMun>CAMPINAS</xMun>
+          <UF>SP</UF>
+        </enderDest>
+      </dest>
+      <origem>
+        <xLgr>RUA DE TESTE</xLgr>
+        <nro>100</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>3550308</cMun>
+        <xMun>SAO PAULO</xMun>
+        <UF>SP</UF>
+      </origem>
+      <destino>
+        <xLgr>RUA DO DESTINO</xLgr>
+        <nro>50</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>3509502</cMun>
+        <xMun>CAMPINAS</xMun>
+        <UF>SP</UF>
+      </destino>
+      <detGTV>
+        <infEspecie>
+          <tpEspecie>1</tpEspecie>
+          <vEspecie>1500.00</vEspecie>
+          <tpNumerario>1</tpNumerario>
+        </infEspecie>
+        <infEspecie>
+          <tpEspecie>3</tpEspecie>
+          <vEspecie>120.50</vEspecie>
+          <tpNumerario>1</tpNumerario>
+        </infEspecie>
+        <infEspecie>
+          <tpEspecie>1</tpEspecie>
+          <vEspecie>200.00</vEspecie>
+          <tpNumerario>2</tpNumerario>
+          <xMoedaEstr>DOLAR AMERICANO</xMoedaEstr>
+        </infEspecie>
+        <qCarga>3.0000</qCarga>
+        <infVeiculo>
+          <placa>ABC1D23</placa>
+          <UF>SP</UF>
+          <RNTRC>12345678</RNTRC>
+        </infVeiculo>
+      </detGTV>
+    </infCte>
+    <infCTeSupl>
+      <qrCodCTe>https://dfe-portal.svrs.rs.gov.br/cte/qrCode?chCTe=35261011444777000161640010000005011246813570&amp;tpAmb=2</qrCodCTe>
+    </infCTeSupl>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#CTe35261011444777000161640010000005011246813570">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </GTVe>
+  <protCTe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <chCTe>35261011444777000161640010000005011246813570</chCTe>
+      <dhRecbto>2026-10-20T08:01:10-03:00</dhRecbto>
+      <nProt>135260000054321</nProt>
+      <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso do CT-e</xMotivo>
+    </infProt>
+  </protCTe>
+</GTVeProc>

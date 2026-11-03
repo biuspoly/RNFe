@@ -16,15 +16,19 @@ UF_PELO_CODIGO = c(
   "28" = "SE", "29" = "BA", "31" = "MG", "32" = "ES", "33" = "RJ", "35" = "SP", "41" = "PR",
   "42" = "SC", "43" = "RS", "50" = "MS", "51" = "MT", "52" = "GO", "53" = "DF"
 )
-DOCUMENTO_PELO_MODELO = c("55" = "NF-e", "65" = "NFC-e", "57" = "CT-e", "67" = "CT-e OS", "58" = "MDF-e")
+# A GTV-e é um CT-e do tipo 4, com a chave do CT-e (MOC do CT-e 4.00, itens 2.1.2 e 2.1.4; conferida em 285 GTV-e
+# reais).
+DOCUMENTO_PELO_MODELO = c("55" = "NF-e", "65" = "NFC-e", "57" = "CT-e", "67" = "CT-e OS", "64" = "GTV-e", "58" = "MDF-e")
 # O leiaute de onde vem o significado da forma de emissão de cada documento: a NFC-e usa o da NF-e, e o CT-e OS o
-# do CT-e.
-LEIAUTE_DE_CADA_DOCUMENTO = c("NF-e" = "NF-e", "NFC-e" = "NF-e", "CT-e" = "CT-e", "CT-e OS" = "CT-e", "MDF-e" = "MDF-e")
+# do CT-e. A GTV-e tem a lista própria (só 1 e 2).
+LEIAUTE_DE_CADA_DOCUMENTO = c("NF-e" = "NF-e", "NFC-e" = "NF-e", "CT-e" = "CT-e", "CT-e OS" = "CT-e", "GTV-e" = "GTV-e",
+                              "MDF-e" = "MDF-e")
 
 #' Conferir chaves de acesso
 #'
-#' Diz se cada chave de acesso de 44 posições (NF-e, NFC-e, CT-e, CT-e OS ou
-#' MDF-e) está certa: `TRUE` ou `FALSE`, uma resposta por chave. Confere, como a
+#' Diz se cada chave de acesso de 44 posições (NF-e, NFC-e, CT-e, CT-e OS,
+#' GTV-e ou MDF-e) está certa: `TRUE` ou `FALSE`, uma resposta por chave.
+#' Confere, como a
 #' SEFAZ, o formato, a UF, o mês, o CNPJ (ou CPF) do emitente que vai dentro da
 #' chave e o dígito verificador. Para saber o que está errado, use
 #' [chave_decompor()].
@@ -92,7 +96,7 @@ chave_digito = function(chaves) {
 #' errado. Devolve um `data.frame` com uma linha por chave: `valida` (`TRUE` ou
 #' `FALSE`), `problema` (o que não confere), a `uf`, o `ano` e o `mes` de
 #' emissão, o CNPJ ou CPF do emitente (`documento_emitente`), o `modelo` e o
-#' nome do `documento` (NF-e, NFC-e, CT-e, CT-e OS ou MDF-e), a `serie`, o
+#' nome do `documento` (NF-e, NFC-e, CT-e, CT-e OS, GTV-e ou MDF-e), a `serie`, o
 #' `numero`, a `forma_emissao` com o que ela quer dizer naquele documento
 #' (`forma_emissao_descricao`), o `codigo_numerico` e o `digito`.
 #'
@@ -113,8 +117,8 @@ chave_digito = function(chaves) {
 #' @return Um `data.frame` com `chave`, `valida`, `problema`, `codigo_uf`,
 #'   `uf`, `ano`, `mes`, `documento_emitente` (o CNPJ ou CPF da chave; na NF-e
 #'   avulsa, o do órgão do Fisco), `tipo_documento` (`"CNPJ"` ou `"CPF"`),
-#'   `modelo`, `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`, `"CT-e OS"` ou
-#'   `"MDF-e"`; `NA` para outro modelo), `serie`, `numero`, `forma_emissao`,
+#'   `modelo`, `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`, `"CT-e OS"`,
+#'   `"GTV-e"` ou `"MDF-e"`; `NA` para outro modelo), `serie`, `numero`, `forma_emissao`,
 #'   `forma_emissao_descricao` (o significado da forma de emissão no leiaute do
 #'   documento: a NFC-e segue o da NF-e e o CT-e OS o do CT-e; `NA` para outro
 #'   modelo ou forma que o leiaute não prevê), `codigo_numerico` e `digito`. Chave com o formato errado fica com as partes
@@ -122,7 +126,9 @@ chave_digito = function(chaves) {
 #' @seealso [chave_valida()], [chave_digito()]
 #' @source Manual de Orientação do Contribuinte da NF-e (composição da chave) e
 #'   Nota Técnica Conjunta 2025.001, versão 1.00 de 25/04/2025 (CNPJ
-#'   alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
+#'   alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e;
+#'   a GTV-e (modelo 64), pelo Manual de Orientação do Contribuinte do CT-e,
+#'   versão 4.00 (fevereiro/2023), itens 2.1.2 e 2.1.4.
 #' @examples
 #' chave_decompor("35261011444777000161550010000001231123456783")
 #'

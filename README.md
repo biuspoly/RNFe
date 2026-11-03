@@ -1,9 +1,10 @@
 # RNFe
 
-Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, MDF-e, NFS-e Nacional) no **R**.
+Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NFS-e Nacional) no **R**.
 
-> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e, da NFC-e, do CT-e, do
-> CT-e OS, do MDF-e, da NFS-e Nacional e dos eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
+> **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e (e do resumo que a
+> Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, da GTV-e, do MDF-e, da NFS-e Nacional e dos
+> eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
 > SEFAZ, por enquanto, a leitura do certificado digital e o status do serviço, em homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
@@ -90,6 +91,22 @@ Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), nos leiautes 3.00 e 4.00, pelo s
 (remetente, expedidor, recebedor ou destinatário), os dados dessa pessoa são copiados para as colunas
 `tomador_`. Conferido com 14 mil CT-e reais (que não estão no repositório), contra outro sistema e contra um
 segundo leitor do XML: os campos e as contagens comparados bateram em todos.
+
+## Ler o XML da GTV-e
+
+```r
+lida = gtve_ler(c("gtve1.xml", "gtve2.xml"))   # ou o próprio texto do XML
+lida$gtves         # uma linha por GTV-e: pessoas, tomador, origem e destino, saída e chegada, malotes, protocolo
+lida$especies      # o valor levado de cada espécie (cédula, cheque, moeda...), nacional ou estrangeira
+lida$veiculos      # a placa, a UF e o RNTRC de cada veículo
+lida$observacoes   # os campos de uso livre (ObsCont e ObsFisco)
+lida$arquivos      # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+A GTV-e (Guia de Transporte de Valores Eletrônica, modelo 64) é um CT-e do tipo 4: tem a chave, o protocolo
+e os eventos do CT-e, mas no lugar do valor da prestação e dos impostos traz os valores levados. Por isso tem
+leitor próprio. Conferido com 285 GTV-e reais: todas lidas, e as espécies, a quantidade de malotes, a emissão,
+o protocolo e as partes da chave bateram com o XML em todas.
 
 ## Ler o XML do MDF-e
 

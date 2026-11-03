@@ -299,7 +299,7 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", 
   expect_true(is.na(problemas[2]))
   expect_match(problemas[3], "^n\u00e3o \u00e9 um XML v\u00e1lido")
   expect_identical(problemas[4], "n\u00e3o \u00e9 um CT-e (o XML come\u00e7a por <nfeProc>)")
-  expect_identical(problemas[5], "n\u00e3o \u00e9 um CT-e (o XML come\u00e7a por <GTVe>)")
+  expect_identical(problemas[5], "\u00e9 uma GTV-e, lida por gtve_ler()")
   expect_identical(problemas[6], "\u00e9 um CT-e simplificado, que ainda n\u00e3o \u00e9 lido")
   expect_identical(problemas[7], "vazio")
 })

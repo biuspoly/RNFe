@@ -6,7 +6,9 @@
 \source{
 Manual de Orientação do Contribuinte da NF-e (composição da chave) e
 Nota Técnica Conjunta 2025.001, versão 1.00 de 25/04/2025 (CNPJ
-alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e.
+alfanumérico na chave e no cálculo dos dígitos), do Portal Nacional da NF-e;
+a GTV-e (modelo 64), pelo Manual de Orientação do Contribuinte do CT-e,
+versão 4.00 (fevereiro/2023), itens 2.1.2 e 2.1.4.
 }
 \usage{
 chave_decompor(chaves)
@@ -18,8 +20,8 @@ chave_decompor(chaves)
 Um \code{data.frame} com \code{chave}, \code{valida}, \code{problema}, \code{codigo_uf},
 \code{uf}, \code{ano}, \code{mes}, \code{documento_emitente} (o CNPJ ou CPF da chave; na NF-e
 avulsa, o do órgão do Fisco), \code{tipo_documento} (\code{"CNPJ"} ou \code{"CPF"}),
-\code{modelo}, \code{documento} (\code{"NF-e"}, \code{"NFC-e"}, \code{"CT-e"}, \code{"CT-e OS"} ou
-\code{"MDF-e"}; \code{NA} para outro modelo), \code{serie}, \code{numero}, \code{forma_emissao},
+\code{modelo}, \code{documento} (\code{"NF-e"}, \code{"NFC-e"}, \code{"CT-e"}, \code{"CT-e OS"},
+\code{"GTV-e"} ou \code{"MDF-e"}; \code{NA} para outro modelo), \code{serie}, \code{numero}, \code{forma_emissao},
 \code{forma_emissao_descricao} (o significado da forma de emissão no leiaute do
 documento: a NFC-e segue o da NF-e e o CT-e OS o do CT-e; \code{NA} para outro
 modelo ou forma que o leiaute não prevê), \code{codigo_numerico} e \code{digito}. Chave com o formato errado fica com as partes
@@ -30,7 +32,7 @@ Separa cada chave de acesso de 44 posições nas partes dela e diz o que está
 errado. Devolve um \code{data.frame} com uma linha por chave: \code{valida} (\code{TRUE} ou
 \code{FALSE}), \code{problema} (o que não confere), a \code{uf}, o \code{ano} e o \code{mes} de
 emissão, o CNPJ ou CPF do emitente (\code{documento_emitente}), o \code{modelo} e o
-nome do \code{documento} (NF-e, NFC-e, CT-e, CT-e OS ou MDF-e), a \code{serie}, o
+nome do \code{documento} (NF-e, NFC-e, CT-e, CT-e OS, GTV-e ou MDF-e), a \code{serie}, o
 \code{numero}, a \code{forma_emissao} com o que ela quer dizer naquele documento
 (\code{forma_emissao_descricao}), o \code{codigo_numerico} e o \code{digito}.
 }

@@ -89,6 +89,16 @@ test_that("o cancelamento do CT-e e o encerramento do MDF-e, com o detalhe no gr
   expect_identical(do_mdfe$valor[do_mdfe$caminho == "retEventoMDFe/infEvento/cStat"], "135")
 })
 
+test_that("o cancelamento da GTV-e \u00e9 o evento do CT-e, com a chave de modelo 64", {
+  texto = paste(readLines(CANCELAMENTO_CTE, encoding = "UTF-8"), collapse = "\n")
+  texto = gsub("35261012ABC34501DE35570010000005551876543210", "35261011444777000161640010000005011246813570", texto, fixed = TRUE)
+  texto = sub("<cOrgao>35</cOrgao>", "<cOrgao>91</cOrgao>", texto, fixed = TRUE)
+  evento = eventos_ler(texto)$eventos
+  expect_identical(evento$documento, "GTV-e")
+  expect_identical(evento$tipo, "110111")
+  expect_identical(evento$orgao_descricao, "RFB (Receita Federal do Brasil)")
+})
+
 test_that("a presta\u00e7\u00e3o em desacordo do CT-e: o motivo vai em observacao", {
   texto = paste(readLines(CANCELAMENTO_CTE, encoding = "UTF-8"), collapse = "\n")
   grupo_do_desacordo = paste0("<evPrestDesacordo><descEvento>Prestacao do Servico em Desacordo</descEvento>",

@@ -6,7 +6,7 @@
 NULL
 
 # O CT-e (raiz CTe) e o CT-e OS (raiz CTeOS) têm o mesmo infCte. A GTV-e e o CT-e simplificado também
-# usam infCte, com outro conteúdo, e por isso ficam de fora.
+# usam infCte, com outro conteúdo, e por isso ficam de fora (a GTV-e tem leitor próprio, gtve_ler()).
 CAMINHO_DOS_CTES = "//CTe/infCte|//CTeOS/infCte"
 
 # Coluna, caminho a partir do infCte e tipo. "a|b" pega o que existir (o leiaute deixa um ou outro):
@@ -133,7 +133,7 @@ observacoes_gerais              compl/xObs                                      
 ")
 
 # No toma3, o tomador é uma das outras pessoas do CT-e: papel 0 a 3, nesta ordem.
-PESSOA_DE_CADA_PAPEL = c("remetente", "expedidor", "recebedor", "destinatario")
+PESSOA_DE_CADA_PAPEL_NO_CTE = c("remetente", "expedidor", "recebedor", "destinatario")
 DADOS_DO_TOMADOR = c("documento", "nome", "ie", "municipio", "codigo_municipio", "uf")
 
 # O nome de cada código, ao lado dele, como a tabela fiscal registrava na data de emissão do CT-e. O CST do ICMS
@@ -259,8 +259,8 @@ texto  xTexto   texto
 #' de um arquivo, de vários de uma vez ou do próprio texto do XML. Um arquivo
 #' que não dá para ler não interrompe os outros: fica em `arquivos`, com o
 #' motivo. O CT-e simplificado e a GTV-e, que têm outro conteúdo, não são
-#' lidos. Para saber se o CT-e foi cancelado, leia os eventos dele com
-#' [eventos_ler()].
+#' lidos aqui (a GTV-e é lida por [gtve_ler()]). Para saber se o CT-e foi
+#' cancelado, leia os eventos dele com [eventos_ler()].
 #'
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
 #' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
@@ -390,7 +390,7 @@ cte_ler = function(arquivos, todos_os_campos = FALSE) {
   }
   tabelas_do_cte$arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
   tabelas_do_cte$ctes = converter_datas(tabelas_do_cte$ctes, rbind(CAMPOS_DO_CTE, CAMPOS_DO_PROTOCOLO))
-  tabelas_do_cte$ctes = preencher_tomador(tabelas_do_cte$ctes)
+  tabelas_do_cte$ctes = preencher_tomador(tabelas_do_cte$ctes, PESSOA_DE_CADA_PAPEL_NO_CTE)
   tabelas_do_cte$ctes = acrescentar_descricoes(tabelas_do_cte$ctes, tabelas_do_cte$ctes$data_emissao, DESCRICOES_DO_CTE)
   tabelas_do_cte$documentos = converter_datas(tabelas_do_cte$documentos, CAMPOS_DO_DOCUMENTO)
   tabelas_do_cte$parcelas = converter_datas(tabelas_do_cte$parcelas, CAMPOS_DA_PARCELA)
@@ -462,16 +462,17 @@ colunas_dos_impostos_do_cte = function(campos_dos_impostos) {
   )
 }
 
-# No toma3 o XML só diz o papel do tomador; os dados dele são os da pessoa desse papel.
-preencher_tomador = function(ctes) {
-  for (papel in 0:3) {
-    linhas_do_papel = which(ctes$tomador_papel == papel)
-    pessoa_do_papel = PESSOA_DE_CADA_PAPEL[papel + 1]
+# No toma3 do CT-e e no toma da GTV-e o XML só diz o papel do tomador; os dados dele são os da pessoa desse papel.
+# `pessoa_de_cada_papel` diz a pessoa de cada papel, a partir do 0.
+preencher_tomador = function(documentos, pessoa_de_cada_papel) {
+  for (papel in seq_along(pessoa_de_cada_papel) - 1) {
+    linhas_do_papel = which(documentos$tomador_papel == papel)
+    pessoa_do_papel = pessoa_de_cada_papel[papel + 1]
     for (dado_do_tomador in DADOS_DO_TOMADOR) {
       coluna_do_tomador = paste0("tomador_", dado_do_tomador)
       coluna_da_pessoa = paste0(pessoa_do_papel, "_", dado_do_tomador)
-      ctes[[coluna_do_tomador]][linhas_do_papel] = ctes[[coluna_da_pessoa]][linhas_do_papel]
+      documentos[[coluna_do_tomador]][linhas_do_papel] = documentos[[coluna_da_pessoa]][linhas_do_papel]
     }
   }
-  ctes
+  documentos
 }

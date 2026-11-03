@@ -55,7 +55,8 @@ exemplos).
 \section{eventos}{
 
 Uma linha por evento: \code{documento} (\code{"NF-e"}, \code{"NFC-e"}, \code{"CT-e"},
-\code{"CT-e OS"}, \code{"MDF-e"} ou \code{"NFS-e"}, pelo modelo da chave), \code{chave} (a do
+\code{"CT-e OS"}, \code{"GTV-e"}, \code{"MDF-e"} ou \code{"NFS-e"}, pelo modelo da chave; o
+evento da GTV-e é o do CT-e, com a chave de modelo 64), \code{chave} (a do
 documento do evento), \code{tipo} (o código do evento, como \code{110111}, o
 cancelamento), \code{descricao}, \code{sequencia}, \code{data_evento}, \code{autor_documento}
 (CNPJ ou CPF de quem registrou), \code{orgao}, \code{ambiente}, \code{justificativa},

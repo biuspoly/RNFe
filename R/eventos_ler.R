@@ -127,7 +127,8 @@ FAMILIA_PELA_CHAVE = c(chNFe = "NF-e", chCTe = "CT-e", chMDFe = "MDF-e")
 #'
 #' @section eventos:
 #' Uma linha por evento: `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`,
-#' `"CT-e OS"`, `"MDF-e"` ou `"NFS-e"`, pelo modelo da chave), `chave` (a do
+#' `"CT-e OS"`, `"GTV-e"`, `"MDF-e"` ou `"NFS-e"`, pelo modelo da chave; o
+#' evento da GTV-e é o do CT-e, com a chave de modelo 64), `chave` (a do
 #' documento do evento), `tipo` (o código do evento, como `110111`, o
 #' cancelamento), `descricao`, `sequencia`, `data_evento`, `autor_documento`
 #' (CNPJ ou CPF de quem registrou), `orgao`, `ambiente`, `justificativa`,

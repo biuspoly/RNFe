@@ -104,6 +104,9 @@ ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_docu
 
 problema_sem_documento = function(xml_lido, nome_do_documento) {
   raiz_do_xml = xml2::xml_name(xml2::xml_root(xml_lido))
+  if (raiz_do_xml %in% c("GTVe", "GTVeProc")) {
+    return("\u00e9 uma GTV-e, lida por gtve_ler()")
+  }
   if (raiz_do_xml %in% c("CTeSimp", "cteSimpProc")) {
     return("\u00e9 um CT-e simplificado, que ainda n\u00e3o \u00e9 lido")
   }

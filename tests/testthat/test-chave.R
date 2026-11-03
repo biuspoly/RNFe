@@ -60,6 +60,18 @@ test_that("o significado da forma de emiss\u00e3o vem do leiaute de cada documen
   expect_identical(forma_2$forma_emissao_descricao, c("Conting\u00eancia FS", "Conting\u00eancia offline"))
 })
 
+test_that("a GTV-e (modelo 64) tem a chave do CT-e", {
+  partes = chave_decompor("CTe35261011444777000161640010000005011246813570")
+  expect_true(partes$valida)
+  expect_identical(partes$modelo, "64")
+  expect_identical(partes$documento, "GTV-e")
+  expect_identical(partes$numero, 501L)
+  expect_identical(partes$forma_emissao_descricao, "Normal")
+  # A GTV-e s\u00f3 tem as formas 1 e 2: a 4 (EPEC no CT-e) fica sem significado.
+  sem_digito = "3526101144477700016164001000000501424681357"
+  expect_true(is.na(chave_decompor(paste0(sem_digito, chave_digito(sem_digito)))$forma_emissao_descricao))
+})
+
 test_that("espa\u00e7os, min\u00fasculas e o prefixo do Id do XML s\u00e3o ignorados", {
   com_espacos = "3526 1011 4447 7700 0161 5500 1000 0001 2311 2345 6783"
   expect_identical(chave_decompor(com_espacos)$chave, NFE_SP)

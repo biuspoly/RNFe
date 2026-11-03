@@ -28,7 +28,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, MDF-e, NFS-e Nacional e eventos) |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado e status do serviço nas 27 UFs, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
@@ -46,7 +46,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | O que | PyNFe | brans-nfe | BrazilFiscalReport | RNFe |
 |---|---|---|---|---|
 | Ler o XML em tabelas (NF-e, NFC-e) | não | não | não | pronto (etapa 1) |
-| Ler CT-e, CT-e OS e MDF-e em tabelas | não | não | não | pronto (etapa 2) |
+| Ler CT-e, CT-e OS, GTV-e e MDF-e em tabelas | não | não | não | pronto (etapa 2) |
 | Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
@@ -59,7 +59,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | última (entrou agora no plano) |
 | CT-e: consultar e registrar desacordo | não | não | não | etapa 3 e última |
 | NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | etapa 3 e última |
-| NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | não previsto: o padrão nacional substitui |
+| NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | etapa 3 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
 | Calculadora da Reforma: conferir e simular | não | não | não | etapa 4 |
@@ -242,7 +242,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   `R/ler_xml.R`.
 - **O CT-e OS entrou junto** porque usa o mesmo `infCte` e quase os mesmos grupos; muda o tomador (grupo
   `toma`), o serviço (`infServico`) e os tributos federais (`infTribFed`). A GTV-e e o CT-e simplificado
-  também usam `infCte`, com outro conteúdo, e ficam de fora; o simplificado avisa que ainda não é lido.
+  também usam `infCte`, com outro conteúdo, e ficam de fora; o simplificado avisa que ainda não é lido, e a
+  GTV-e, desde 03/11/2026, tem leitor próprio (veja a seção dela).
 - **O tomador sai pronto.** No `toma3` o XML só diz o papel (0 remetente, 1 expedidor, 2 recebedor,
   3 destinatário, como está no schema) e o pacote copia os dados dessa pessoa; no `toma4` e no CT-e OS os
   dados vêm do próprio grupo.
@@ -273,6 +274,49 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     ficam sem o nome da classificação, que vale desde 01/01/2026; o CST do IBS/CBS tem nome porque a aba de
     CST da tabela oficial não tem datas de vigência.
 - Velocidade: 6,9 ms por CT-e (99 s para os 14.370).
+
+## Etapa 2, verificação de 03/11/2026: o que o acervo tinha e não era lido
+
+- **Pedido do usuário:** "verifique se a fase 2 terminou de fato, antes" de seguir na etapa 3. Pelo elemento raiz
+  de cada XML do acervo do Fiscal, tudo o que os leitores cobrem era lido. Ficavam de fora o resumo da NF-e
+  (`resNFe`, 2.000 arquivos), a GTV-e (285) e as NFS-e de prefeitura (Ginfes e formatos sem namespace, com raiz
+  `NFe`, `nfe`, `CompNfse` ou `CompNfe`).
+- **Decisão do usuário:** o resumo e a GTV-e agora (seções abaixo e "Etapa 1, leitura do XML"); a NFS-e de
+  prefeitura depois, começando pelos formatos que mais aparecem no acervo.
+
+## Etapa 2, leitura da GTV-e: o que se decidiu (03/11/2026)
+
+- `gtve_ler()` lê a GTV-e (Guia de Transporte de Valores Eletrônica, modelo 64), leiaute 4.00, pelo tipo `TGTVe`
+  do mesmo pacote do CT-e (`GTVe_v4.00.xsd` e `procGTVe_v4.00.xsd`). Devolve `gtves`, `especies`, `veiculos`,
+  `observacoes`, `campos` e `arquivos`.
+- **Leitor próprio, não o `cte_ler()`:** a GTV-e é um CT-e do tipo 4 (o schema a chama de "CT-e do tipo GTV-e"),
+  com a chave e o protocolo do CT-e, mas não tem valor da prestação nem impostos. No lugar deles traz os valores
+  levados por espécie (cédula, cheque, moeda, outros; nacional ou estrangeiro), a quantidade de malotes, os
+  veículos e os horários de saída e de chegada. No `ctes`, metade das colunas viria vazia.
+- **O tomador sai pronto, com outra lista de papéis:** no grupo `toma` da GTV-e, o 0 é o remetente e o 1 o
+  destinatário (no CT-e o 1 é o expedidor); no `tomaTerceiro` (papel 4) os dados vêm do grupo. O
+  `preencher_tomador()` do CT-e passou a receber a pessoa de cada papel, e serve aos dois.
+- **Significados:** todos da documentação do `TGTVe` (o significado fica na segunda `documentation` de cada
+  campo), num documento próprio, `GTV-e`, em `codigos_dos_campos`: 23 linhas. A ferramenta de conferência
+  passou a olhar, para a GTV-e, só as declarações de dentro do `TGTVe`: o pacote do CT-e tem outros `toma`.
+- **A chave:** o modelo 64 virou "GTV-e" em `chave_decompor()` e nos eventos. A fonte é o MOC do CT-e 4.00
+  (fevereiro/2023, baixado do Portal do CT-e): o item 2.1.2 põe a GTV-e no projeto do CT-e, o 2.1.4 dá a
+  composição da chave, e as regras da consulta separam CT-e, CT-e OS e GTV-e pelo "modelo do documento indicado
+  na chave de acesso". A forma de emissão segue a lista da GTV-e (só 1 e 2).
+- **Eventos:** o serviço de eventos do CT-e recebe os de "CTe de Carga (57), Outros Serviços (67) ou GTVe (64)"
+  (MOC, item 5), e o cancelamento (110111) vale para a GTV-e. O evento dela é lido pelo `eventos_ler()` com o
+  documento "GTV-e", e o órgão 90 em diante tem o significado do CT-e (5 linhas). O acervo não tem nenhum evento
+  de GTV-e; o teste usa o cancelamento do CT-e de exemplo com a chave da GTV-e.
+- **Exemplo:** uma GTV-e escrita à mão (três espécies, uma em moeda estrangeira, observação, origem e destino,
+  destinatário com CNPJ alfanumérico) passa no schema oficial. O validador pegou o `versao` que faltava no
+  `GTVe`.
+- **Conferido em 03/11/2026 com as 285 GTV-e reais** do acervo do Fiscal (todas `GTVeProc` 4.00, de produção),
+  que não entram no repositório: todas lidas; as 285 chaves válidas e iguais, parte a parte (UF, mês, CNPJ,
+  modelo, série, número, forma de emissão, código e dígito), aos campos do XML e à chave do protocolo; nenhuma
+  coluna que todo arquivo tem ficou vazia; o tomador do papel 0 é o remetente nas 197 que o usam, e as 88 do
+  `tomaTerceiro` trazem os dados do grupo. Contra uma leitura direta de cada arquivo, as 632 espécies (valor e
+  ordem), a quantidade, a emissão, o protocolo e o número de campos bateram em todas. 25 GTV-e aparecem em dois
+  arquivos cada (260 chaves distintas). Velocidade: 1,8 s para as 285, com a tabela `campos`.
 
 ## Etapa 2, leitura do MDF-e: o que se decidiu
 
@@ -309,7 +353,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - `nfse_ler()` lê a NFS-e do padrão nacional (raiz `NFSe`), leiautes 1.00 e 1.01, pelo pacote oficial
   `NFSe-ESQUEMAS_XSD-v1.01-20260209` (página de documentação atual do portal da NFS-e, gov.br/nfse), que traz
   um schema por versão, cada um na sua pasta. A NFS-e de prefeitura, no padrão próprio de cada município
-  (Abrasf, Ginfes...), não é lida: avisa em `arquivos` com a raiz que o XML tem.
+  (Abrasf, Ginfes...), não é lida: avisa em `arquivos` com a raiz que o XML tem. Ler essas fica para depois
+  (decisão do usuário, 03/11/2026), começando pelos formatos que mais aparecem no acervo do Fiscal.
 - Devolve `nfses` (uma linha por NFS-e), `campos` e `arquivos`. A NFS-e não tem itens: é um serviço por
   documento. As colunas juntam as duas partes do XML: a DPS, que quem emitiu declarou (prestador, tomador,
   intermediário, serviço, valores, tributos e o IBS e a CBS informados), e o que o sistema nacional gerou
@@ -452,8 +497,9 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   aplicativo do SEBRAE no modelo 57 e o do Fisco no CT-e OS (67); o `tpDoc` tem uma lista para outros
   documentos (`infOutros`) e outra para os de transporte anterior em papel (`idDocAntPap`). A tabela tem a
   coluna `contexto`, e o leitor procura primeiro o significado do contexto da linha.
-- **Fora de propósito:** o `tpCTe` 4 e o `tpServ` 9 (GTV-e) e o `tpCTe` 5 e 6 (CT-e simplificado), de
-  documentos que o RNFe não lê. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
+- **Fora de propósito:** o `tpCTe` 5 e 6 (CT-e simplificado), de um documento que o RNFe não lê, e, no
+  documento CT-e, o `tpCTe` 4 e o `tpServ` 9, que são da GTV-e: desde 03/11/2026 ela tem os códigos dela no
+  documento `GTV-e`. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
   modelos das notas referenciadas da NF-e (`refNF`, `refNFP`, `refECF`: 01, 02, 04, 2B, 2C, 2D) também ficam
   sem significado: só vão para a tabela `campos`, e o 01 muda de sentido entre os grupos.
 - **Segunda rodada (30/10/2026), achada cruzando cada coluna dos leitores com os valores que o schema aceita:**

@@ -1,14 +1,15 @@
 Package: RNFe
-Title: Documentos Fiscais Eletrônicos Brasileiros (NF-e, CT-e, MDF-e, NFS-e)
+Title: Documentos Fiscais Eletrônicos Brasileiros (NF-e, CT-e, GTV-e, MDF-e, NFS-e)
 Version: 0.0.0.9000
 Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role = c("aut", "cre"))
 Description: Confere e desmonta a chave de acesso de 44 posições dos documentos
-    fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e e MDF-e), já com o
+    fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e e MDF-e), já com o
     CNPJ alfanumérico da Nota Técnica Conjunta 2025.001. Lê o XML da NF-e e
     da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos, e o
     resumo que a Distribuição de DF-e entrega ao destinatário), o
     do CT-e e do CT-e OS (com o tomador, os componentes do frete, os
-    documentos transportados, a carga e os impostos), o do MDF-e (com o
+    documentos transportados, a carga e os impostos), o da GTV-e (com os
+    valores levados de cada espécie), o do MDF-e (com o
     percurso, os documentos de cada descarregamento, os veículos, os
     condutores e os seguros) e o da NFS-e Nacional (com a DPS declarada e o
     ISSQN, as retenções e o valor líquido calculados pelo sistema nacional),
@@ -48,6 +49,7 @@ Collate:
     'ler_xml.R'
     'cte_ler.R'
     'eventos_ler.R'
+    'gtve_ler.R'
     'mdfe_ler.R'
     'nfe_ler.R'
     'nfse_ler.R'
