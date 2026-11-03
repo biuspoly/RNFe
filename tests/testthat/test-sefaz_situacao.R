@@ -46,6 +46,7 @@ test_that("a chave que n\u00e3o consta: o pedido que vai e a resposta da SVRS em
   consulta = sefaz_situacao(paste0("NFe", CHAVE_INVENTADA_DO_CE), CERTIFICADO_DO_TESTE, "teste")
   situacao = consulta$situacoes
   expect_identical(situacao$chave, CHAVE_INVENTADA_DO_CE)
+  expect_identical(situacao$documento, "NF-e")
   expect_identical(situacao$uf, "CE")
   expect_identical(situacao$autorizador, "SVRS")
   expect_identical(situacao$ambiente, "homologacao")
@@ -108,16 +109,55 @@ test_that("chave errada, de outro modelo ou respondida com outra chave fica em p
     pedidos[[length(pedidos) + 1]] <<- req
     resposta_da_sefaz(texto_do_arquivo(CONSULTA_DA_SVRS))
   })
-  nfce = "23261011444777000161650030000000779135724686"
+  cte = "35261012ABC34501DE35570010000005551876543210"
   digito_errado = paste0(substr(CHAVE_INVENTADA_DO_CE, 1, 43), "0")
-  consulta = sefaz_situacao(c(digito_errado, nfce, NA, CHAVE_DA_NOTA_SP), CERTIFICADO_DO_TESTE, "teste")
+  consulta = sefaz_situacao(c(digito_errado, cte, NA, CHAVE_DA_NOTA_SP), CERTIFICADO_DO_TESTE, "teste")
   problemas = consulta$situacoes$problema
   expect_match(problemas[1], "^chave inv\u00e1lida: o d\u00edgito verificador n\u00e3o confere")
-  expect_identical(problemas[2], "por enquanto s\u00f3 a NF-e (modelo 55) \u00e9 consultada")
+  expect_identical(problemas[2], "por enquanto s\u00f3 a NF-e (modelo 55) e a NFC-e (modelo 65) s\u00e3o consultadas")
+  expect_identical(consulta$situacoes$documento[2], "CT-e")
   expect_match(problemas[3], "^chave inv\u00e1lida")
   # A SVRS (de mentira) respondeu sobre a chave do CE a uma pergunta sobre a de SP.
   expect_identical(problemas[4], "a SEFAZ respondeu sobre outra chave")
   expect_length(pedidos, 1)
+})
+
+# Uma chave inventada de NFC-e da UF (CNPJ de exemplo).
+chave_de_nfce = function(codigo_da_uf) {
+  sem_digito = paste0(codigo_da_uf, "2610", "11222333000181", "65", "001", "000001001", "1", "12345678")
+  paste0(sem_digito, chave_digito(sem_digito))
+}
+
+test_that("a NFC-e vai ao autorizador dela: SVRS, a SEFAZ pr\u00f3pria ou MG", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  pedidos = list()
+  # A resposta da SVRS gravada, com a chave que foi perguntada.
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    chave_perguntada = regmatches(rawToChar(req$body$data), regexpr("(?<=<chNFe>)[0-9]{44}", rawToChar(req$body$data), perl = TRUE))
+    resposta_da_sefaz(sub(CHAVE_INVENTADA_DO_CE, chave_perguntada, texto_do_arquivo(CONSULTA_DA_SVRS), fixed = TRUE))
+  })
+  # PE (o cupom de exemplo do usuário), MA (SVAN na NF-e, SVRS na NFC-e), SP (própria) e MG (fora do Portal da NFC-e).
+  consulta = sefaz_situacao(c(chave_de_nfce("26"), chave_de_nfce("21"), chave_de_nfce("35"), chave_de_nfce("31")),
+                            CERTIFICADO_DO_TESTE, "teste")
+  situacoes = consulta$situacoes
+  expect_identical(situacoes$documento, rep("NFC-e", 4))
+  expect_identical(situacoes$uf, c("PE", "MA", "SP", "MG"))
+  expect_identical(situacoes$autorizador, c("SVRS", "SVRS", "SP", "MG"))
+  urls = vapply(pedidos, function(pedido) pedido$url, character(1))
+  expect_identical(urls, c(
+    "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx",
+    "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx",
+    "https://homologacao.nfce.fazenda.sp.gov.br/ws/NFeConsultaProtocolo4.asmx",
+    "https://hnfce.fazenda.mg.gov.br/nfce/services/NFeConsultaProtocolo4"
+  ))
+  expect_identical(situacoes$situacao, rep(217L, 4))
+  expect_true(all(is.na(situacoes$problema)))
+  # O pedido é o mesmo da NF-e: o consSitNFe no NFeConsultaProtocolo4.
+  expect_match(rawToChar(pedidos[[1]]$body$data), paste0("<chNFe>", chave_de_nfce("26"), "</chNFe>"), fixed = TRUE)
+  expect_match(pedidos[[1]]$body$content_type, "NFeConsultaProtocolo4/nfeConsultaNF", fixed = TRUE)
 })
 
 test_that("sem chave nenhuma, as tabelas v\u00eam vazias com as colunas certas", {
@@ -127,8 +167,8 @@ test_that("sem chave nenhuma, as tabelas v\u00eam vazias com as colunas certas",
   httr2::local_mocked_responses(function(req) stop("n\u00e3o devia ter conectado"))
   vazia = sefaz_situacao(character(), CERTIFICADO_DO_TESTE, "teste")
   expect_identical(nrow(vazia$situacoes), 0L)
-  expect_identical(names(vazia$situacoes), c("chave", "uf", "autorizador", "ambiente", "situacao", "motivo", "recebimento",
-                                             "protocolo", "autorizacao", "digest_value", "versao_aplicativo", "endereco",
-                                             "problema"))
+  expect_identical(names(vazia$situacoes), c("chave", "documento", "uf", "autorizador", "ambiente", "situacao", "motivo",
+                                             "recebimento", "protocolo", "autorizacao", "digest_value", "versao_aplicativo",
+                                             "endereco", "problema"))
   expect_identical(nrow(vazia$eventos), 0L)
 })

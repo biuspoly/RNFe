@@ -157,27 +157,37 @@ completar_status = function(linha, resposta_lida, ambiente) {
   linha
 }
 
-#' Situação da NF-e na SEFAZ, pela chave
+#' Situação da NF-e e da NFC-e na SEFAZ, pela chave
 #'
-#' Pergunta à SEFAZ a situação de cada NF-e (modelo 55) pela chave de acesso:
-#' se está autorizada, cancelada, denegada ou se não consta. Devolve uma lista
+#' Pergunta à SEFAZ a situação de cada NF-e (modelo 55) ou NFC-e (modelo 65)
+#' pela chave de acesso: se está autorizada, cancelada, denegada ou se não
+#' consta. Devolve uma lista
 #' com `situacoes` (uma linha por chave: a resposta da SEFAZ e o protocolo de
 #' autorização, quando vem) e `eventos` (os eventos da nota que a SEFAZ manda
 #' junto, como o cancelamento, lidos por [eventos_ler()]).
 #'
-#' Cada chave vai ao autorizador da UF que está nela (a própria SEFAZ ou a
-#' SVRS ou a SVAN), como diz a Relação de Serviços Web do Portal da NF-e. Chave
-#' que não confere (veja [chave_decompor()]) nem é enviada: o motivo fica em
-#' `problema`. Por enquanto só a NF-e (modelo 55) e só o ambiente de
-#' **homologação**; a produção é recusada. A conexão é a mesma do
-#' [sefaz_status()], com as mesmas exigências e o mesmo processo separado no
-#' Windows.
+#' Cada chave vai ao autorizador da UF que está nela, conforme o modelo. A
+#' NF-e segue a Relação de Serviços Web do Portal da NF-e (a própria SEFAZ, a
+#' SVRS ou a SVAN). A NFC-e tem endereços próprios: AM, GO, MS, MT, PR, RS e
+#' SP têm autorizador próprio, listado no Portal da NFC-e; MG também, mas os
+#' endereços vêm da página da SEFAZ-MG, porque o Portal não a lista; as outras
+#' 19 UFs vão à SVRS (o MA, por exemplo, que na NF-e usa a SVAN). Isso foi
+#' conferido em homologação em 03/11/2026: cada UF respondeu no seu
+#' autorizador, e a SVRS recusou as 8 de autorizador próprio.
+#'
+#' Chave que não confere (veja [chave_decompor()]) nem é enviada: o motivo
+#' fica em `problema`. Por enquanto só o ambiente de **homologação**; a
+#' produção é recusada (por isso a chave de uma nota de verdade volta 217, "não
+#' consta": a homologação só tem as notas emitidas em teste). A conexão é a
+#' mesma do [sefaz_status()], com as mesmas exigências e o mesmo processo
+#' separado no Windows.
 #'
 #' @param chaves As chaves de acesso: um texto ou um vetor com várias (por
 #'   exemplo, a coluna `chave` que vem de [nfe_ler()]).
 #' @inheritParams sefaz_status
 #' @return Uma lista com dois `data.frame`s:
-#'   - `situacoes`: `chave`, `uf` (a da chave), `autorizador`, `ambiente`,
+#'   - `situacoes`: `chave`, `documento` (`"NF-e"` ou `"NFC-e"`, pelo modelo
+#'     da chave), `uf` (a da chave), `autorizador`, `ambiente`,
 #'     `situacao` (o código de status da resposta, `cStat`), `motivo` (o que a
 #'     SEFAZ escreveu; o 217, por exemplo, é a NF-e que não consta na base de
 #'     dados), `recebimento` (data e hora em que a SEFAZ recebeu a consulta, no
@@ -189,8 +199,9 @@ completar_status = function(linha, resposta_lida, ambiente) {
 #'     (`procEventoNFe`) que vieram nas respostas, ligados pela `chave`, sem a
 #'     coluna `arquivo`.
 #' @seealso [sefaz_status()], [eventos_ler()]
-#' @source Relação de Serviços Web do Portal da NF-e (endereços de
-#'   homologação); o schema `leiauteConsSitNFe_v4.00.xsd` do pacote de
+#' @source Relação de Serviços Web do Portal da NF-e e a do Portal da NFC-e
+#'   (endereços de homologação; os da NFC-e de MG, da página da SEFAZ-MG); o
+#'   schema `leiauteConsSitNFe_v4.00.xsd` do pacote de
 #'   liberação 010d v1.01 (NT 2026.004, 08/06/2026); o WSDL do serviço
 #'   NFeConsultaProtocolo4 (a mensagem em `nfeDadosMsg`, operação
 #'   `nfeConsultaNF`, SOAP 1.2).
@@ -247,10 +258,15 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   list(situacoes = situacoes, eventos = eventos)
 }
 
+# O nome do serviço de consulta na lista de cada documento: a do Portal da NF-e e a do Portal da NFC-e escrevem
+# diferente. O pedido e o WSDL são os mesmos.
+SERVICO_DA_CONSULTA_POR_MODELO = c("55" = "NfeConsultaProtocolo", "65" = "NFeConsultaProtocolo")
+
 # A linha da chave (a UF, o autorizador e o endereço, ou o problema) e o pedido de consulta, quando dá para pedir.
 comeco_da_situacao = function(chave, ambiente) {
   linha = data.frame(
-    chave = NA_character_, uf = NA_character_, autorizador = NA_character_, ambiente = ambiente, situacao = NA_integer_,
+    chave = NA_character_, documento = NA_character_, uf = NA_character_, autorizador = NA_character_,
+    ambiente = ambiente, situacao = NA_integer_,
     motivo = NA_character_, recebimento = as.POSIXct(NA), protocolo = NA_character_, autorizacao = as.POSIXct(NA),
     digest_value = NA_character_, versao_aplicativo = NA_character_, endereco = NA_character_, problema = NA_character_
   )
@@ -265,11 +281,13 @@ comeco_da_situacao = function(chave, ambiente) {
     return(list(linha = linha, pedido = NULL))
   }
   linha$uf = partes_da_chave$uf
-  if (partes_da_chave$modelo != "55") {
-    linha$problema = "por enquanto s\u00f3 a NF-e (modelo 55) \u00e9 consultada"
+  linha$documento = partes_da_chave$documento
+  if (!(partes_da_chave$modelo %in% names(SERVICO_DA_CONSULTA_POR_MODELO))) {
+    linha$problema = "por enquanto s\u00f3 a NF-e (modelo 55) e a NFC-e (modelo 65) s\u00e3o consultadas"
     return(list(linha = linha, pedido = NULL))
   }
-  servico = servico_da_uf(partes_da_chave$uf, "NfeConsultaProtocolo", ambiente)
+  servico = servico_da_uf(partes_da_chave$uf, SERVICO_DA_CONSULTA_POR_MODELO[[partes_da_chave$modelo]], ambiente,
+                          partes_da_chave$documento)
   if (is.null(servico)) {
     linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
     return(list(linha = linha, pedido = NULL))
@@ -787,19 +805,19 @@ conferir_certificado = function(certificado, senha) {
 # da lista "demais serviços". Na consulta de cadastro, a página só lista AC, ES, PB, RN e SC para a SVRS, mas a SVRS
 # atende todas as UFs dela: em homologação (03/11/2026) AL, AP, CE, DF, PA, PI, RJ, RO, RR, SE e TO responderam como as
 # da lista, e só o MA (da SVAN) voltou 410, "UF não é atendida"; em produção, o app Fiscal consulta CE, AL e PI por lá.
-servico_da_uf = function(uf, servico, ambiente) {
+servico_da_uf = function(uf, servico, ambiente, documento = "NF-e") {
   autorizadores = tabela_interna("autorizadores_sefaz")
   usos = c("todos os servi\u00e7os", "demais servi\u00e7os")
   if (servico == "NfeConsultaCadastro") {
     usos = c("todos os servi\u00e7os", "consulta de cadastro", "demais servi\u00e7os")
   }
-  da_uf = autorizadores[autorizadores$documento == "NF-e" & autorizadores$ambiente == ambiente &
+  da_uf = autorizadores[autorizadores$documento == documento & autorizadores$ambiente == ambiente &
                           autorizadores$uf == uf & autorizadores$uso %in% usos, ]
   if (nrow(da_uf) == 0) {
     return(NULL)
   }
   servicos = tabela_interna("servicos_sefaz")
-  do_autorizador = servicos[servicos$documento == "NF-e" & servicos$ambiente == ambiente &
+  do_autorizador = servicos[servicos$documento == documento & servicos$ambiente == ambiente &
                               servicos$autorizador == da_uf$autorizador[1] & servicos$servico == servico, ]
   if (nrow(do_autorizador) == 0) {
     return(NULL)

@@ -177,9 +177,11 @@ consulta$situacoes   # uma linha por chave: a resposta da SEFAZ e o protocolo de
 consulta$eventos     # os eventos que a SEFAZ manda junto (o cancelamento, por exemplo)
 ```
 
-A consulta pela chave vai ao autorizador da UF que está na chave; chave que não confere nem é enviada. Os eventos
-que vêm na resposta são lidos pelo `eventos_ler()`. Testado em 03/11/2026 com chaves inventadas nas 27 UFs: todas
-responderam (217, a NF-e não consta, como esperado numa chave que não existe).
+A consulta pela chave vale para a NF-e e a NFC-e e vai ao autorizador da UF que está na chave; chave que não
+confere nem é enviada. Os eventos que vêm na resposta são lidos pelo `eventos_ler()`. A NFC-e tem endereços
+próprios: os do Portal da NFC-e (AM, GO, MS, MT, PR, RS, SP e a SVRS para outras 19 UFs) e os da página da SEFAZ-MG,
+que o Portal não lista. Testado em 03/11/2026 com chaves inventadas nas 27 UFs, nos dois modelos: todas
+responderam (217, a nota não consta, como esperado numa chave que não existe).
 
 ```r
 cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx", senha)   # ou tipo = "CPF" ou "IE"

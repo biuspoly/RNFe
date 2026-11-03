@@ -624,6 +624,23 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   rede. A resposta da nota cancelada dos testes é montada com o protocolo de `nfe_proc_sp.xml` e o cancelamento
   de `evento_nfe_cancelamento.xml`, e passa no `retConsSitNFe_v4.00.xsd`.
 
+## Etapa 3, a NFC-e na consulta pela chave (03/11/2026)
+
+- **Pedido do usuário**, com um cupom de NFC-e de PE em mãos. A `sefaz_situacao()` passou a consultar a NFC-e
+  (modelo 65), com a coluna `documento` (`NF-e` ou `NFC-e`, pelo modelo da chave). O pedido e o WSDL são os da
+  NF-e (`consSitNFe` no NFeConsultaProtocolo4); mudam os endereços.
+- **De onde vêm os endereços da NFC-e:** o Portal da NF-e só lista os da NF-e. Os da NFC-e estão no Portal da NFC-e,
+  mantido pela SVRS (`dfe-portal.svrs.rs.gov.br/Nfce/Servicos`), uma tabela por autorizador e ambiente: AM, GO, MS,
+  MT, PR, RS, SP e SVRS. O portal não diz que UFs usam a SVRS, e não lista MG, que tem NFC-e própria: os endereços de
+  MG vêm da página da SEFAZ-MG (`portalsped.fazenda.mg.gov.br/spedmg/nfce/web-services/`). O `gerar_tabelas.R` lê as
+  duas páginas (o robô semanal passa a vigiar os endereços da NFC-e também) e grava as linhas com `documento`
+  `NFC-e` em `servicos_sefaz` e `autorizadores_sefaz`.
+- **Conferido em homologação (03/11/2026)**, com chaves inventadas de NFC-e: a SVRS respondeu às 19 UFs sem
+  autorizador próprio (entre elas o MA, que na NF-e usa a SVAN, e BA, PE, que têm SEFAZ própria na NF-e) e recusou
+  com 410 as 8 de autorizador próprio, inclusive MG; cada uma das 8 respondeu no seu endereço. Pela função pública,
+  7 UFs e a chave do cupom (PE) foram cada uma ao seu autorizador, em 3,7 s. O cupom volta 217 em homologação: é
+  uma nota de produção.
+
 ## Etapa 3, terceiro passo: a consulta de cadastro (03/11/2026)
 
 - `sefaz_cadastro(documentos, ufs, certificado, senha, tipo = "CNPJ")` consulta o cadastro de contribuintes do

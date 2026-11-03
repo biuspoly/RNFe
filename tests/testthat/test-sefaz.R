@@ -180,4 +180,13 @@ test_that("o autorizador de cada UF, como a Rela\u00e7\u00e3o de Servi\u00e7os W
   expect_identical(servico_da_uf("CE", "NfeConsultaCadastro", "homologacao")$autorizador, "SVRS")
   expect_identical(servico_da_uf("SP", "NfeConsultaCadastro", "homologacao")$autorizador, "SP")
   expect_null(servico_da_uf("MA", "NfeConsultaCadastro", "homologacao"))
+  # A NFC-e tem lista própria: 8 UFs com autorizador próprio (MG pela página da SEFAZ-MG) e as outras 19 na SVRS.
+  autorizadores_da_nfce = character()
+  for (uf in ufs) {
+    autorizadores_da_nfce = c(autorizadores_da_nfce, servico_da_uf(uf, "NFeConsultaProtocolo", "homologacao", "NFC-e")$autorizador)
+  }
+  expect_identical(sort(ufs[autorizadores_da_nfce != "SVRS"]), c("AM", "GO", "MG", "MS", "MT", "PR", "RS", "SP"))
+  expect_identical(sum(autorizadores_da_nfce == "SVRS"), 19L)
+  expect_identical(servico_da_uf("MA", "NFeConsultaProtocolo", "homologacao", "NFC-e")$endereco,
+                   "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx")
 })

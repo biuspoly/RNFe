@@ -2,10 +2,11 @@
 % Please edit documentation in R/sefaz.R
 \name{sefaz_situacao}
 \alias{sefaz_situacao}
-\title{Situação da NF-e na SEFAZ, pela chave}
+\title{Situação da NF-e e da NFC-e na SEFAZ, pela chave}
 \source{
-Relação de Serviços Web do Portal da NF-e (endereços de
-homologação); o schema \code{leiauteConsSitNFe_v4.00.xsd} do pacote de
+Relação de Serviços Web do Portal da NF-e e a do Portal da NFC-e
+(endereços de homologação; os da NFC-e de MG, da página da SEFAZ-MG); o
+schema \code{leiauteConsSitNFe_v4.00.xsd} do pacote de
 liberação 010d v1.01 (NT 2026.004, 08/06/2026); o WSDL do serviço
 NFeConsultaProtocolo4 (a mensagem em \code{nfeDadosMsg}, operação
 \code{nfeConsultaNF}, SOAP 1.2).
@@ -27,7 +28,8 @@ variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 \value{
 Uma lista com dois \code{data.frame}s:
 \itemize{
-\item \code{situacoes}: \code{chave}, \code{uf} (a da chave), \code{autorizador}, \code{ambiente},
+\item \code{situacoes}: \code{chave}, \code{documento} (\code{"NF-e"} ou \code{"NFC-e"}, pelo modelo
+da chave), \code{uf} (a da chave), \code{autorizador}, \code{ambiente},
 \code{situacao} (o código de status da resposta, \code{cStat}), \code{motivo} (o que a
 SEFAZ escreveu; o 217, por exemplo, é a NF-e que não consta na base de
 dados), \code{recebimento} (data e hora em que a SEFAZ recebeu a consulta, no
@@ -41,20 +43,29 @@ coluna \code{arquivo}.
 }
 }
 \description{
-Pergunta à SEFAZ a situação de cada NF-e (modelo 55) pela chave de acesso:
-se está autorizada, cancelada, denegada ou se não consta. Devolve uma lista
+Pergunta à SEFAZ a situação de cada NF-e (modelo 55) ou NFC-e (modelo 65)
+pela chave de acesso: se está autorizada, cancelada, denegada ou se não
+consta. Devolve uma lista
 com \code{situacoes} (uma linha por chave: a resposta da SEFAZ e o protocolo de
 autorização, quando vem) e \code{eventos} (os eventos da nota que a SEFAZ manda
 junto, como o cancelamento, lidos por \code{\link[=eventos_ler]{eventos_ler()}}).
 }
 \details{
-Cada chave vai ao autorizador da UF que está nela (a própria SEFAZ ou a
-SVRS ou a SVAN), como diz a Relação de Serviços Web do Portal da NF-e. Chave
-que não confere (veja \code{\link[=chave_decompor]{chave_decompor()}}) nem é enviada: o motivo fica em
-\code{problema}. Por enquanto só a NF-e (modelo 55) e só o ambiente de
-\strong{homologação}; a produção é recusada. A conexão é a mesma do
-\code{\link[=sefaz_status]{sefaz_status()}}, com as mesmas exigências e o mesmo processo separado no
-Windows.
+Cada chave vai ao autorizador da UF que está nela, conforme o modelo. A
+NF-e segue a Relação de Serviços Web do Portal da NF-e (a própria SEFAZ, a
+SVRS ou a SVAN). A NFC-e tem endereços próprios: AM, GO, MS, MT, PR, RS e
+SP têm autorizador próprio, listado no Portal da NFC-e; MG também, mas os
+endereços vêm da página da SEFAZ-MG, porque o Portal não a lista; as outras
+19 UFs vão à SVRS (o MA, por exemplo, que na NF-e usa a SVAN). Isso foi
+conferido em homologação em 03/11/2026: cada UF respondeu no seu
+autorizador, e a SVRS recusou as 8 de autorizador próprio.
+
+Chave que não confere (veja \code{\link[=chave_decompor]{chave_decompor()}}) nem é enviada: o motivo
+fica em \code{problema}. Por enquanto só o ambiente de \strong{homologação}; a
+produção é recusada (por isso a chave de uma nota de verdade volta 217, "não
+consta": a homologação só tem as notas emitidas em teste). A conexão é a
+mesma do \code{\link[=sefaz_status]{sefaz_status()}}, com as mesmas exigências e o mesmo processo
+separado no Windows.
 }
 \examples{
 \dontrun{
