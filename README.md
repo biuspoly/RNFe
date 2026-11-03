@@ -187,8 +187,9 @@ cadastro$consultas   # uma linha por documento consultado: a resposta da SEFAZ
 cadastro$cadastros   # uma linha por inscrição: situação, credenciamento na NF-e e no CT-e, nome, CNAE, endereço
 ```
 
-A consulta de cadastro só existe em 15 UFs (as 10 com SEFAZ própria, e AC, ES, PB, RN e SC pela SVRS); nas outras,
-a linha vem com o motivo. A SEFAZ pode recusar quem pergunta (257, "Solicitante não habilitado para emissão da
+A consulta de cadastro vai à SEFAZ própria da UF ou, nas 16 UFs da SVRS, à SVRS. A página do Portal lista só 5
+delas para o cadastro, mas a SVRS atende todas (testado em 03/11/2026). Só o MA, que usa a SVAN, fica sem o
+serviço: a linha vem com o motivo. A SEFAZ pode recusar quem pergunta (257, "Solicitante não habilitado para emissão da
 NF-e", sobre o CNPJ do certificado), e uma resposta que fala de outro documento não entra (na homologação, GO e AM
 respondem sobre o CNPJ do certificado). O MT pede o envelope de outro jeito, e o RNFe já manda assim.
 

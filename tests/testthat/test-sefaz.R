@@ -175,7 +175,9 @@ test_that("o autorizador de cada UF, como a Rela\u00e7\u00e3o de Servi\u00e7os W
   expect_identical(autorizadores[ufs == "SP"], "SP")
   expect_identical(sort(unique(autorizadores)),
                    c("AM", "BA", "GO", "MG", "MS", "MT", "PE", "PR", "RS", "SP", "SVAN", "SVRS"))
-  # A consulta de cadastro tem lista própria na SVRS: SC está nela, o CE não.
+  # A consulta de cadastro: a SVRS atende todas as UFs dela (a página só lista 5, entre elas SC); o MA, da SVAN, fica sem.
   expect_identical(servico_da_uf("SC", "NfeConsultaCadastro", "homologacao")$autorizador, "SVRS")
-  expect_null(servico_da_uf("CE", "NfeConsultaCadastro", "homologacao"))
+  expect_identical(servico_da_uf("CE", "NfeConsultaCadastro", "homologacao")$autorizador, "SVRS")
+  expect_identical(servico_da_uf("SP", "NfeConsultaCadastro", "homologacao")$autorizador, "SP")
+  expect_null(servico_da_uf("MA", "NfeConsultaCadastro", "homologacao"))
 })

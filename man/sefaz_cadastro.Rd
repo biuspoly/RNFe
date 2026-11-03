@@ -61,19 +61,39 @@ por documento consultado) e \code{cadastros} (uma linha por inscrição que a
 SEFAZ devolveu: um CNPJ pode ter mais de uma).
 }
 \details{
-Nem toda UF tem o serviço: pela Relação de Serviços Web do Portal da NF-e,
-ele existe nas UFs com SEFAZ própria e, pela SVRS, em algumas outras; nas
-demais, a linha vem com o motivo em \code{problema}. Por enquanto só o ambiente
-de \strong{homologação}; a produção é recusada. A conexão é a mesma do
-\code{\link[=sefaz_status]{sefaz_status()}}.
-
-A SEFAZ pode recusar a consulta por causa de quem pergunta: a 257
-("Solicitante não habilitado para emissão da NF-e") é sobre o CNPJ do
-certificado, não sobre o documento consultado. A resposta é conferida: se
-ela fala de outro documento, os cadastros dela não entram e o motivo vai em
-\code{problema} (na homologação, em 03/11/2026, GO e AM respondiam sobre o CNPJ
-do certificado).
+Cada documento vai à SEFAZ que atende a UF (veja a seção "Em cada UF").
+Por enquanto só o ambiente de \strong{homologação}; a produção é recusada. A
+conexão é a mesma do \code{\link[=sefaz_status]{sefaz_status()}}.
 }
+\section{Em cada UF}{
+
+O que se sabe de cada UF, testado em homologação em 03/11/2026 com um CNPJ
+inventado:
+\itemize{
+\item \strong{SEFAZ própria} (o pedido vai a ela): AM, BA, GO, MG, MS, MT, PE, PR, RS
+e SP. O MT quer a mensagem num envelope diferente, e o RNFe já manda
+assim.
+\item \strong{SVRS:} AC, AL, AP, CE, DF, ES, PA, PB, PI, RJ, RN, RO, RR, SC, SE e TO.
+A Relação de Serviços Web do Portal da NF-e põe só AC, ES, PB, RN e SC na
+consulta de cadastro da SVRS, mas ela atende todas essas (e responde ao
+CE, ao AL e ao PI também em produção).
+\item \strong{Sem o serviço:} o MA, que usa a SVAN para a NF-e. A SVAN não tem a
+consulta e a SVRS responde que não atende a UF; a linha vem com o motivo
+em \code{problema}, sem ir à SEFAZ.
+}
+
+A SEFAZ pode recusar por causa de quem pergunta: a \strong{257} ("Solicitante
+não habilitado para emissão da NF-e") é sobre o CNPJ do certificado, não
+sobre o documento consultado. Use o certificado de uma empresa que emite
+NF-e; no teste, 11 das 15 UFs consultadas recusaram assim o certificado
+usado. Já a \strong{259} ("CNPJ da consulta não cadastrado como
+contribuinte na UF") é sobre o documento consultado.
+
+A resposta é conferida: quando ela fala de outro documento, os cadastros
+dela não entram e \code{problema} diz "a SEFAZ respondeu sobre outro documento".
+Na homologação, \strong{GO e AM} respondiam assim, sobre o CNPJ do certificado.
+}
+
 \examples{
 \dontrun{
 cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx",

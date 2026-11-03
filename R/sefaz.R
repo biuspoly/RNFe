@@ -359,18 +359,34 @@ FORMATO_DO_DOCUMENTO_CONSULTADO = c(CNPJ = "^[0-9A-Z]{12}[0-9]{2}$", CPF = "^[0-
 #' por documento consultado) e `cadastros` (uma linha por inscrição que a
 #' SEFAZ devolveu: um CNPJ pode ter mais de uma).
 #'
-#' Nem toda UF tem o serviço: pela Relação de Serviços Web do Portal da NF-e,
-#' ele existe nas UFs com SEFAZ própria e, pela SVRS, em algumas outras; nas
-#' demais, a linha vem com o motivo em `problema`. Por enquanto só o ambiente
-#' de **homologação**; a produção é recusada. A conexão é a mesma do
-#' [sefaz_status()].
+#' Cada documento vai à SEFAZ que atende a UF (veja a seção "Em cada UF").
+#' Por enquanto só o ambiente de **homologação**; a produção é recusada. A
+#' conexão é a mesma do [sefaz_status()].
 #'
-#' A SEFAZ pode recusar a consulta por causa de quem pergunta: a 257
-#' ("Solicitante não habilitado para emissão da NF-e") é sobre o CNPJ do
-#' certificado, não sobre o documento consultado. A resposta é conferida: se
-#' ela fala de outro documento, os cadastros dela não entram e o motivo vai em
-#' `problema` (na homologação, em 03/11/2026, GO e AM respondiam sobre o CNPJ
-#' do certificado).
+#' @section Em cada UF:
+#' O que se sabe de cada UF, testado em homologação em 03/11/2026 com um CNPJ
+#' inventado:
+#' - **SEFAZ própria** (o pedido vai a ela): AM, BA, GO, MG, MS, MT, PE, PR, RS
+#'   e SP. O MT quer a mensagem num envelope diferente, e o RNFe já manda
+#'   assim.
+#' - **SVRS:** AC, AL, AP, CE, DF, ES, PA, PB, PI, RJ, RN, RO, RR, SC, SE e TO.
+#'   A Relação de Serviços Web do Portal da NF-e põe só AC, ES, PB, RN e SC na
+#'   consulta de cadastro da SVRS, mas ela atende todas essas (e responde ao
+#'   CE, ao AL e ao PI também em produção).
+#' - **Sem o serviço:** o MA, que usa a SVAN para a NF-e. A SVAN não tem a
+#'   consulta e a SVRS responde que não atende a UF; a linha vem com o motivo
+#'   em `problema`, sem ir à SEFAZ.
+#'
+#' A SEFAZ pode recusar por causa de quem pergunta: a **257** ("Solicitante
+#' não habilitado para emissão da NF-e") é sobre o CNPJ do certificado, não
+#' sobre o documento consultado. Use o certificado de uma empresa que emite
+#' NF-e; no teste, 11 das 15 UFs consultadas recusaram assim o certificado
+#' usado. Já a **259** ("CNPJ da consulta não cadastrado como
+#' contribuinte na UF") é sobre o documento consultado.
+#'
+#' A resposta é conferida: quando ela fala de outro documento, os cadastros
+#' dela não entram e `problema` diz "a SEFAZ respondeu sobre outro documento".
+#' Na homologação, **GO e AM** respondiam assim, sobre o CNPJ do certificado.
 #'
 #' @param documentos Os documentos a consultar, todos do mesmo `tipo`: um
 #'   texto ou um vetor. Pontos, barras e traços são ignorados.
@@ -580,12 +596,14 @@ conferir_certificado = function(certificado, senha) {
 }
 
 # O autorizador da UF e o endereço do serviço. A UF com SEFAZ própria usa a dela em tudo; as outras, a SEFAZ virtual
-# da lista "demais serviços" (a consulta de cadastro tem lista própria).
+# da lista "demais serviços". Na consulta de cadastro, a página só lista AC, ES, PB, RN e SC para a SVRS, mas a SVRS
+# atende todas as UFs dela: em homologação (03/11/2026) AL, AP, CE, DF, PA, PI, RJ, RO, RR, SE e TO responderam como as
+# da lista, e só o MA (da SVAN) voltou 410, "UF não é atendida"; em produção, o app Fiscal consulta CE, AL e PI por lá.
 servico_da_uf = function(uf, servico, ambiente) {
   autorizadores = tabela_interna("autorizadores_sefaz")
   usos = c("todos os servi\u00e7os", "demais servi\u00e7os")
   if (servico == "NfeConsultaCadastro") {
-    usos = c("todos os servi\u00e7os", "consulta de cadastro")
+    usos = c("todos os servi\u00e7os", "consulta de cadastro", "demais servi\u00e7os")
   }
   da_uf = autorizadores[autorizadores$documento == "NF-e" & autorizadores$ambiente == ambiente &
                           autorizadores$uf == uf & autorizadores$uso %in% usos, ]

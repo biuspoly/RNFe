@@ -125,7 +125,7 @@ test_that("documento fora do formato, UF desconhecida e UF sem o servi\u00e7o fi
   skip_if_not_installed("openssl")
   local_mocked_bindings(usar_processo_separado = function() FALSE)
   httr2::local_mocked_responses(function(req) stop("n\u00e3o devia ter conectado"))
-  consultas = sefaz_cadastro(c("123.456.789-09", CNPJ_DE_EXEMPLO, CNPJ_DE_EXEMPLO, NA), c("SP", "XX", "CE", "SP"),
+  consultas = sefaz_cadastro(c("123.456.789-09", CNPJ_DE_EXEMPLO, CNPJ_DE_EXEMPLO, NA), c("SP", "XX", "MA", "SP"),
                              CERTIFICADO_DO_CADASTRO, "teste")$consultas
   expect_identical(consultas$problema, c("n\u00e3o tem o formato de CNPJ", "UF desconhecida",
                                          "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF",

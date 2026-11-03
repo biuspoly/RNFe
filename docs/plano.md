@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs e consulta de cadastro nas 15 que têm o serviço, em homologação |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs e consulta de cadastro nas 26 que têm o serviço, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -633,8 +633,21 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   WSDL da SVRS de homologação. Devolve `consultas` (uma linha por documento) e `cadastros` (uma por inscrição; um
   CNPJ pode ter várias), com o significado da situação (`cSit`) e do credenciamento na NF-e e no CT-e
   (`indCredNFe`, `indCredCTe`) pela documentação do schema.
-- **Só 15 UFs têm o serviço** na Relação de Serviços Web: as 10 com SEFAZ própria (AM, BA, GO, MG, MS, MT, PE, PR,
-  RS, SP) e AC, ES, PB, RN e SC pela SVRS. Nas outras 12 (o MA entre elas) a linha vem com o motivo, sem pedido.
+- **26 UFs têm o serviço:** as 10 com SEFAZ própria (AM, BA, GO, MG, MS, MT, PE, PR, RS, SP) e as 16 da SVRS. A
+  Relação de Serviços Web (homologação e produção, conferidas em 03/11/2026) lista para a consulta de cadastro da
+  SVRS só AC, ES, PB, RN e SC, e a primeira versão seguiu a lista: o CE ficava "sem o serviço" (achado pelo usuário,
+  consultando o CE). Mas a SVRS atende todas as UFs dela: em homologação, AL, AP, CE, DF, PA, PI, RJ, RO, RR, SE e TO
+  responderam como AC e SC (257, sobre quem pergunta), e só o MA voltou 410 ("UF informada no campo cUF não é
+  atendida pelo Web Service"), o que mostra que a SVRS confere a UF antes de quem pergunta. Em produção, o app Fiscal
+  consulta CE, AL e PI pela SVRS desde 30/10/2026. Agora a consulta de cadastro usa a SVRS para toda UF que a usa nos
+  demais serviços. O MA (SVAN) fica sem: a linha vem com o motivo, sem pedido.
+  - **As 27 UFs na SVRS** (pedido do usuário: "é bom ver para os outros estados também"): a SVRS de homologação
+    aceita também AM, GO, MS, MT, PR e RS, que têm SEFAZ própria, e responde 410 a BA, MA, MG, PE e SP. O RNFe
+    continua mandando cada UF com SEFAZ própria à SEFAZ dela, que é o caminho da Relação de Serviços Web; a SVRS fica
+    anotada como alternativa para GO e AM, cuja SEFAZ responde sobre o CNPJ do certificado.
+  - **A ajuda diz o que acontece em cada UF** (pedido do usuário): a seção "Em cada UF" do `sefaz_cadastro()` lista
+    as UFs de SEFAZ própria, as da SVRS e o MA sem o serviço, e explica a 257 (sobre o certificado) e a 259 (sobre o
+    documento consultado).
 - **As SEFAZ não seguem o mesmo envelope** (WSDLs de homologação baixados em 03/11/2026):
   - o MT pede o `nfeDadosMsg` dentro de um `consultaCadastro` e responde com um `consultaCadastroResult` no meio;
     o pedido igual ao dos outros voltava 215, "Falha no schema XML". Fica em `ELEMENTO_EM_VOLTA_NO_CADASTRO`;
