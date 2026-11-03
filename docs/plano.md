@@ -125,7 +125,20 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - Os impostos principais vão em colunas de `itens`; `impostos` traz todos os campos de imposto de cada item,
   um por linha, para nada se perder (monofásico, diferimento, crédito presumido...).
 - Arquivo que não dá para ler não para os outros: vai para `arquivos` com o motivo (não encontrado, XML
-  quebrado, não é NF-e, só o resumo `resNFe`). Nunca vira nota vazia.
+  quebrado, não é NF-e). Nunca vira nota vazia.
+- **O resumo da NF-e (`resNFe`)**, desde 03/11/2026, vai para a tabela `resumos` do `nfe_ler()` (antes era
+  recusado como "só o resumo"). É o que a Distribuição de DF-e entrega ao destinatário enquanto ele não se
+  manifestou (NT 2014.002): emitente, IE, emissão, tipo, valor, `digVal`, autorização, protocolo e
+  `cSitNFe`. Segue o `resNFe_v1.01.xsd` do pacote da Distribuição v1.04. O schema lista o `cSitNFe` (1, 2 e
+  3) sem dizer o que cada um é; o significado (uso autorizado, uso denegado, NF-e cancelada) é o da NT
+  2014.002 v1.02d, baixada do Portal da NF-e. `arquivos` ganhou a coluna `resumos`, ao lado de `notas`.
+  - Conferido em 03/11/2026 com os 2.000 resumos do acervo do Fiscal (fora do repositório): todos lidos, sem
+    nenhum campo vazio, 1.917 na versão 1.01 e 83 na 1.00 (os mesmos campos); todo campo dos arquivos tem
+    coluna; 920 autorizadas, 8 denegadas e 1.072 canceladas. Em 251 a nota completa da mesma chave estava no
+    acervo: documento e IE do emitente, data, tipo, valor, protocolo, autorização e `digVal` (contra o do
+    protocolo da nota) bateram em todos. As três diferenças são dos próprios documentos: dois nomes do
+    emitente que só mudam maiúscula e minúscula, e uma emissão com o mesmo horário local, mas `-02:00` na nota
+    e `-03:00` no resumo.
 - Só o `infNFe` de dentro do `NFe` é nota: o CT-e e o MDF-e também têm `infNFe`, com a chave das notas que
   citam. Até 29/10/2026 um CT-e passado ao `nfe_ler()` virava duas notas vazias; achado ao escrever o
   `cte_ler()`, corrigido e conferido de novo com 10 mil NF-e reais (uma nota por arquivo, a chave certa).

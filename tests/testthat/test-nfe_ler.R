@@ -1,6 +1,7 @@
 # Os valores esperados são os escritos à mão nas notas de inst/exemplos (validadas contra o schema
 # oficial com ferramentas/validar_exemplos.R).
 NOTA_SP = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
+RESUMO_SP = system.file("exemplos", "nfe_resumo_sp.xml", package = "RNFe")
 NOTA_CE = system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNFe")
 CHAVE_SP = "35261011222333000181550010000010011123456785"
 CHAVE_CE = "23261012ABC34501DE35550020000000421876543213"
@@ -283,17 +284,54 @@ test_that("v\u00e1rios arquivos de uma vez, e o texto do XML no lugar do arquivo
 })
 
 test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", {
-  resumo = '<resNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><chNFe>1</chNFe></resNFe>'
-  lida = nfe_ler(c("nao_existe.xml", NOTA_SP, "<NFe><infNFe>", "<cteProc/>", resumo, NA))
+  lida = nfe_ler(c("nao_existe.xml", NOTA_SP, "<NFe><infNFe>", "<cteProc/>", NA))
   expect_identical(lida$notas$chave, CHAVE_SP)
-  expect_identical(lida$arquivos$notas, c(0L, 1L, 0L, 0L, 0L, 0L))
+  expect_identical(lida$arquivos$notas, c(0L, 1L, 0L, 0L, 0L))
+  expect_identical(lida$arquivos$resumos, c(0L, 0L, 0L, 0L, 0L))
   problemas = lida$arquivos$problema
   expect_identical(problemas[1], "arquivo n\u00e3o encontrado")
   expect_true(is.na(problemas[2]))
   expect_match(problemas[3], "^n\u00e3o \u00e9 um XML v\u00e1lido")
   expect_identical(problemas[4], "n\u00e3o \u00e9 uma NF-e (o XML come\u00e7a por <cteProc>)")
-  expect_identical(problemas[5], "\u00e9 o resumo da NF-e (resNFe), sem os itens")
-  expect_identical(problemas[6], "vazio")
+  expect_identical(problemas[5], "vazio")
+})
+
+test_that("o resumo da NF-e (resNFe) vira uma linha em resumos, com o que a nota completa tem", {
+  lida = nfe_ler(c(RESUMO_SP, NOTA_SP))
+  resumo = lida$resumos
+  nota = lida$notas
+  expect_identical(nrow(resumo), 1L)
+  expect_identical(resumo$chave, CHAVE_SP)
+  expect_identical(resumo$versao, "1.01")
+  expect_identical(resumo$emitente_documento, nota$emitente_documento)
+  expect_identical(resumo$emitente_nome, nota$emitente_nome)
+  expect_identical(resumo$emitente_ie, nota$emitente_ie)
+  expect_identical(resumo$emissao, nota$emissao)
+  expect_identical(resumo$data_emissao, nota$data_emissao)
+  expect_identical(resumo$tipo_operacao, 1L)
+  expect_identical(resumo$tipo_operacao_descricao, "Sa\u00edda")
+  expect_identical(resumo$valor_nota, nota$valor_nota)
+  expect_identical(resumo$digest_value, "AAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+  expect_identical(resumo$autorizacao, nota$autorizacao)
+  expect_identical(resumo$protocolo, nota$protocolo)
+  expect_identical(resumo$situacao_nfe, 1L)
+  expect_identical(resumo$situacao_nfe_descricao, "Uso autorizado")
+  expect_identical(resumo$arquivo, RESUMO_SP)
+  expect_identical(lida$arquivos$notas, c(0L, 1L))
+  expect_identical(lida$arquivos$resumos, c(1L, 0L))
+  expect_true(all(is.na(lida$arquivos$problema)))
+})
+
+test_that("o resumo da nota cancelada, da denegada e do emitente com CPF", {
+  texto_do_resumo = paste(readLines(RESUMO_SP, encoding = "UTF-8"), collapse = "\n")
+  cancelada = sub("<cSitNFe>1</cSitNFe>", "<cSitNFe>3</cSitNFe>", texto_do_resumo)
+  denegada = sub("<cSitNFe>1</cSitNFe>", "<cSitNFe>2</cSitNFe>", texto_do_resumo)
+  denegada_com_cpf = sub("<CNPJ>11222333000181</CNPJ>", "<CPF>12345678909</CPF>", denegada)
+  resumos = nfe_ler(c(cancelada, denegada_com_cpf))$resumos
+  expect_identical(resumos$situacao_nfe, c(3L, 2L))
+  expect_identical(resumos$situacao_nfe_descricao, c("NF-e Cancelada", "Uso denegado"))
+  expect_identical(resumos$emitente_documento, c("11222333000181", "12345678909"))
+  expect_identical(resumos$arquivo, c("(texto 1)", "(texto 2)"))
 })
 
 test_that("o CT-e cita NF-e (infNFe), mas n\u00e3o \u00e9 lido como nota", {
@@ -304,7 +342,7 @@ test_that("o CT-e cita NF-e (infNFe), mas n\u00e3o \u00e9 lido como nota", {
 
 test_that("sem arquivo nenhum, as tabelas v\u00eam vazias com as colunas certas", {
   vazia = nfe_ler(character(), todos_os_campos = TRUE)
-  cheia = nfe_ler(NOTA_SP, todos_os_campos = TRUE)
+  cheia = nfe_ler(c(NOTA_SP, RESUMO_SP), todos_os_campos = TRUE)
   for (nome in names(cheia)) {
     expect_identical(nrow(vazia[[nome]]), 0L)
     expect_identical(names(vazia[[nome]]), names(cheia[[nome]]))

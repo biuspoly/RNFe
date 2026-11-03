@@ -5,7 +5,8 @@ Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role
 Description: Confere e desmonta a chave de acesso de 44 posições dos documentos
     fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e e MDF-e), já com o
     CNPJ alfanumérico da Nota Técnica Conjunta 2025.001. Lê o XML da NF-e e
-    da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos), o
+    da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos, e o
+    resumo que a Distribuição de DF-e entrega ao destinatário), o
     do CT-e e do CT-e OS (com o tomador, os componentes do frete, os
     documentos transportados, a carga e os impostos), o do MDF-e (com o
     percurso, os documentos de cada descarregamento, os veículos, os

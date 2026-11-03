@@ -17,9 +17,9 @@ if (length(argumentos) == 0) {
 }
 
 # Onde ficam os schemas de cada documento da tabela. A NFS-e tem uma pasta por versão do leiaute (1.00 e 1.01), e
-# vale o que qualquer uma aceita.
+# vale o que qualquer uma aceita. A NF-e inclui o pacote da Distribuição de DF-e, que tem o resumo (resNFe).
 PASTAS_DE_CADA_DOCUMENTO = list(
-  "NF-e" = pasta_de_cada_pacote[["nfe"]],
+  "NF-e" = c(pasta_de_cada_pacote[["nfe"]], pasta_de_cada_pacote[["nfe_distribuicao"]]),
   "CT-e" = pasta_de_cada_pacote[["cte"]],
   "MDF-e" = pasta_de_cada_pacote[["mdfe"]],
   "NFS-e" = list.dirs(dirname(pasta_de_cada_pacote[["nfse"]]), recursive = FALSE),

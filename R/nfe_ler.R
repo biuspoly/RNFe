@@ -8,6 +8,10 @@ NULL
 # citam, e não são notas.
 CAMINHO_DAS_NOTAS = "//NFe/infNFe"
 
+# O resumo da NF-e que a Distribuição de DF-e entrega ao destinatário enquanto ele não se manifestou sobre a nota (NT
+# 2014.002): a nota numa linha, sem os itens.
+CAMINHO_DOS_RESUMOS_DA_NFE = "//resNFe"
+
 # Coluna, caminho a partir do infNFe e tipo. "a|b" pega o que existir (o leiaute deixa um ou outro). O QR-Code e a
 # URL de consulta da NFC-e ficam fora do infNFe, no infNFeSupl, ao lado dele.
 CAMPOS_DA_NOTA = ler_campos("
@@ -165,6 +169,25 @@ cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
 classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 ")
 
+# A partir do resNFe (schema resNFe_v1.01 do pacote da Distribuição de DF-e v1.04). O digVal, diz o schema, serve
+# para conferir a integridade da NF-e original.
+CAMPOS_DO_RESUMO_DA_NFE = ler_campos("
+coluna             caminho   tipo
+chave              chNFe     texto
+versao             @versao   texto
+emitente_documento CNPJ|CPF  texto
+emitente_nome      xNome     texto
+emitente_ie        IE        texto
+emissao            dhEmi     data_hora
+data_emissao       dhEmi     data
+tipo_operacao      tpNF      inteiro
+valor_nota         vNF       numero
+digest_value       digVal    texto
+autorizacao        dhRecbto  data_hora
+protocolo          nProt     texto
+situacao_nfe       cSitNFe   inteiro
+")
+
 # O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
 # ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
 SIGNIFICADOS_DA_NOTA = ler_campos("
@@ -192,6 +215,13 @@ compoe_total     indTot -
 SIGNIFICADOS_DO_PAGAMENTO = ler_campos("
 coluna_do_codigo campo  coluna_do_contexto
 indicador        indPag -
+")
+
+# O cSitNFe não tem a lista na documentação do schema: os textos são da NT 2014.002 (v1.02d).
+SIGNIFICADOS_DO_RESUMO_DA_NFE = ler_campos("
+coluna_do_codigo campo   coluna_do_contexto
+tipo_operacao    tpNF    -
+situacao_nfe     cSitNFe -
 ")
 
 # O nome da forma de pagamento e da bandeira do cartão, como as tabelas do Portal da NF-e registravam na data da
@@ -222,15 +252,16 @@ autorizacao      card/cAut  texto
 #' totais, IBS e CBS, protocolo e, na NFC-e, o QR-Code), `itens` (uma linha por
 #' item: produto, NCM, CFOP e os impostos em colunas, com o nome de cada
 #' código), `impostos` (todos os campos de imposto, um por linha), `parcelas`,
-#' `pagamentos`, `pagamentos_vinculados`, `campos` (todos os campos, só com
+#' `pagamentos`, `pagamentos_vinculados`, `resumos` (o resumo da NF-e que a
+#' Distribuição de DF-e entrega), `campos` (todos os campos, só com
 #' `todos_os_campos = TRUE`) e `arquivos` (o que foi lido e o motivo do que não
 #' deu).
 #'
 #' Lê o leiaute 4.00, com ou sem o protocolo de autorização (`nfeProc` ou só
-#' `NFe`), de um arquivo, de vários de uma vez ou do próprio texto do XML. Um
-#' arquivo que não dá para ler não interrompe os outros: fica em `arquivos`,
-#' com o motivo. Para saber se a nota foi cancelada, leia os eventos dela com
-#' [eventos_ler()].
+#' `NFe`), e o resumo da NF-e (`resNFe`), de um arquivo, de vários de uma vez
+#' ou do próprio texto do XML. Um arquivo que não dá para ler não interrompe os
+#' outros: fica em `arquivos`, com o motivo. Para saber se a nota foi
+#' cancelada, leia os eventos dela com [eventos_ler()].
 #'
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
 #' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
@@ -281,6 +312,18 @@ autorizacao      card/cAut  texto
 #' `r documentar_campos(CAMPOS_DO_PAGAMENTO_VINCULADO)`. O código do meio de
 #' pagamento é o da tabela do Informe Técnico 2026.001.
 #'
+#' @section resumos:
+#' Uma linha por resumo da NF-e (`resNFe`), o que a Distribuição de DF-e
+#' entrega ao destinatário enquanto ele não se manifestou sobre a nota: a nota
+#' numa linha, sem itens, impostos nem destinatário.
+#' `r documentar_campos(CAMPOS_DO_RESUMO_DA_NFE)` e `arquivo`. `emissao` e
+#' `autorizacao` são data e hora (mostradas no horário de Brasília);
+#' `data_emissao` é a data como está no resumo. `situacao_nfe` é a situação da
+#' nota no momento da consulta (1 autorizada, 2 denegada, 3 cancelada, pela NT
+#' 2014.002), e o significado dela e do `tipo_operacao` vem ao lado, em
+#' `*_descricao`. Com a chave, a nota completa e os eventos dela podem ser
+#' juntados depois.
+#'
 #' @section campos:
 #' Só com `todos_os_campos = TRUE`. Todos os campos da nota, um por linha:
 #' `chave`, `caminho` (onde o campo está, a partir do `infNFe`, com a posição
@@ -290,12 +333,13 @@ autorizacao      card/cAut  texto
 #' rastreabilidade do produto e o que mais não tiver coluna própria. Uma nota
 #' tem, em média, uns 220 campos, e a tabela custa de 5 a 7 ms a mais por nota
 #' e uns 10 KB de memória (medido em 10 mil notas reais): por isso ela só vem
-#' quando pedida.
+#' quando pedida. O resumo não entra nela: os campos dele já estão todos em
+#' `resumos`.
 #'
 #' @section arquivos:
-#' Uma linha por arquivo pedido: `arquivo`, `notas` (quantas notas tinha) e
-#' `problema` (`NA` quando deu certo). Um texto de XML aparece como
-#' `"(texto 1)"`, `"(texto 2)"`...
+#' Uma linha por arquivo pedido: `arquivo`, `notas` (quantas notas tinha),
+#' `resumos` (quantos resumos) e `problema` (`NA` quando deu certo). Um texto de
+#' XML aparece como `"(texto 1)"`, `"(texto 2)"`...
 #'
 #' @param arquivos Os XMLs a ler: o caminho de um arquivo, um vetor com vários
 #'   (por exemplo, `list.files("pasta", pattern = "xml$", full.names = TRUE)`)
@@ -303,11 +347,12 @@ autorizacao      card/cAut  texto
 #' @param todos_os_campos `TRUE` devolve também a tabela `campos`, com todos os
 #'   campos de cada nota.
 #' @return Uma lista com os `data.frame`s `notas`, `itens`, `impostos`,
-#'   `parcelas`, `pagamentos`, `pagamentos_vinculados`, `campos` (só com
-#'   `todos_os_campos = TRUE`) e `arquivos`.
+#'   `parcelas`, `pagamentos`, `pagamentos_vinculados`, `resumos`, `campos` (só
+#'   com `todos_os_campos = TRUE`) e `arquivos`.
 #' @source Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
 #'   2026.006 e NT 2026.008), publicado no Portal Nacional da NF-e em
-#'   26/10/2026.
+#'   26/10/2026; o resumo, pelo pacote da Distribuição de DF-e v1.04
+#'   (`resNFe_v1.01.xsd`, publicado em 03/07/2026) e pela NT 2014.002 v1.02d.
 #' @examples
 #' nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
 #' lida = nfe_ler(nota)
@@ -315,7 +360,8 @@ autorizacao      card/cAut  texto
 #' lida$itens[, c("item", "descricao", "cfop", "cst_icms", "valor_icms", "valor_cbs")]
 #' @export
 nfe_ler = function(arquivos, todos_os_campos = FALSE) {
-  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS, "uma NF-e", colunas_da_nfe, todos_os_campos)
+  caminho_das_notas_e_dos_resumos = paste(CAMINHO_DAS_NOTAS, CAMINHO_DOS_RESUMOS_DA_NFE, sep = "|")
+  arquivos_lidos = ler_arquivos_xml(arquivos, caminho_das_notas_e_dos_resumos, "uma NF-e", colunas_da_nfe, todos_os_campos)
   colunas_vazias = colunas_da_nfe(NULL, NA_character_, todos_os_campos)
 
   tabelas_da_nfe = list(
@@ -324,13 +370,19 @@ nfe_ler = function(arquivos, todos_os_campos = FALSE) {
     impostos = juntar_tabela(arquivos_lidos, "impostos", colunas_vazias$impostos),
     parcelas = juntar_tabela(arquivos_lidos, "parcelas", colunas_vazias$parcelas),
     pagamentos = juntar_tabela(arquivos_lidos, "pagamentos", colunas_vazias$pagamentos),
-    pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados)
+    pagamentos_vinculados = juntar_tabela(arquivos_lidos, "pagamentos_vinculados", colunas_vazias$pagamentos_vinculados),
+    resumos = juntar_tabela(arquivos_lidos, "resumos", colunas_vazias$resumos)
   )
   if (todos_os_campos) {
     tabelas_da_nfe$campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos)
   }
+  # O arquivo da Distribuição de DF-e traz o resumo sem a nota: os dois são contados, cada um na sua coluna.
   tabelas_da_nfe$arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
+  resumos_de_cada_arquivo = resumo_dos_arquivos(arquivos_lidos, "resumos", "resumos")$resumos
+  tabelas_da_nfe$arquivos = inserir_coluna_depois(tabelas_da_nfe$arquivos, "resumos", resumos_de_cada_arquivo, "notas")
   tabelas_da_nfe$notas = converter_datas(tabelas_da_nfe$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
+  tabelas_da_nfe$resumos = converter_datas(tabelas_da_nfe$resumos, CAMPOS_DO_RESUMO_DA_NFE)
+  tabelas_da_nfe$resumos = acrescentar_significados(tabelas_da_nfe$resumos, "NF-e", SIGNIFICADOS_DO_RESUMO_DA_NFE)
   tabelas_da_nfe$parcelas = converter_datas(tabelas_da_nfe$parcelas, CAMPOS_DA_PARCELA)
   tabelas_da_nfe$pagamentos = converter_datas(tabelas_da_nfe$pagamentos, CAMPOS_DO_PAGAMENTO)
   data_de_cada_item = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$itens$chave, tabelas_da_nfe$notas$chave)]
@@ -353,6 +405,7 @@ colunas_da_nfe = function(xml_lido, nome_do_arquivo, todos_os_campos) {
     xml_lido = xml2::read_xml("<vazio/>")
   }
   notas = buscar_todos(xml_lido, CAMINHO_DAS_NOTAS)
+  resumos_da_nfe = buscar_todos(xml_lido, CAMINHO_DOS_RESUMOS_DA_NFE)
   protocolos = buscar_todos(xml_lido, "//protNFe/infProt")
   itens = buscar_todos(notas, "det")
   campos_dos_impostos = buscar_todos(itens, "imposto//*[not(*)]")
@@ -384,6 +437,10 @@ colunas_da_nfe = function(xml_lido, nome_do_arquivo, todos_os_campos) {
     pagamentos_vinculados = c(
       list(chave = chave_de_cada(pagamentos_vinculados, "infNFe")),
       valores_dos_campos(pagamentos_vinculados, CAMPOS_DO_PAGAMENTO_VINCULADO)
+    ),
+    resumos = c(
+      valores_dos_campos(resumos_da_nfe, CAMPOS_DO_RESUMO_DA_NFE),
+      list(arquivo = rep(nome_do_arquivo, length(resumos_da_nfe)))
     )
   )
   if (todos_os_campos) {

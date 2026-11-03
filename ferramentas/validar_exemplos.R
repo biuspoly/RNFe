@@ -63,17 +63,19 @@ schema_da_nfe = schema_com_as_raizes(pasta_de_cada_pacote[["nfe"]], "schema_nfe"
 
 # Os eventos da NF-e têm pacotes à parte: o envelope (procEventoNFe) passa no leiaute genérico de 2026, que já
 # aceita o CNPJ com letras, e o detEvento no schema do tipo dele (e110111 é o cancelamento, e110110 a carta de
-# correção), que o declara como raiz. O resumo do evento (resEvento) é do pacote da Distribuição de DF-e.
+# correção), que o declara como raiz. O resumo do evento (resEvento) e o resumo da NF-e (resNFe) são do pacote da
+# Distribuição de DF-e.
 schema_dos_eventos_da_nfe = xml2::read_xml(file.path(pasta_de_cada_pacote[["nfe_eventos"]], "procEventoNFe_v1.00.xsd"))
 pastas_dos_tipos_de_evento_da_nfe = pasta_de_cada_pacote[c("nfe_cancelamento", "nfe_carta_correcao")]
-# O resEvento importa o xmldsig-core-schema_v1.01.xsd, que o pacote da Distribuição não traz: vai junto o do pacote
-# dos eventos.
+# O resEvento e o resNFe importam o xmldsig-core-schema_v1.01.xsd, que o pacote da Distribuição não traz: vai junto o
+# do pacote dos eventos.
 copia_da_distribuicao = file.path(tempdir(), "schema_distribuicao")
 dir.create(copia_da_distribuicao, showWarnings = FALSE)
 invisible(file.copy(c(list.files(pasta_de_cada_pacote[["nfe_distribuicao"]], full.names = TRUE),
                       file.path(pasta_de_cada_pacote[["nfe_eventos"]], "xmldsig-core-schema_v1.01.xsd")),
                     copia_da_distribuicao, overwrite = TRUE))
 schema_do_resumo_de_evento = xml2::read_xml(file.path(copia_da_distribuicao, "resEvento_v1.01.xsd"))
+schema_do_resumo_da_nfe = xml2::read_xml(file.path(copia_da_distribuicao, "resNFe_v1.01.xsd"))
 
 # O pacote do CT-e declara cada raiz num arquivo: o CTe e o CTeOS, o cteProc e o cteOSProc (com o
 # protocolo) e o rodo e o rodoOS (o modal rodoviário). O infModal e o detEvento aceitam qualquer coisa sem
@@ -181,6 +183,8 @@ for (arquivo_de_exemplo in arquivos_de_exemplo) {
       passou = validar_evento_da_nfe(arquivo_de_exemplo, documento_lido, schema_dos_eventos_da_nfe, pastas_dos_tipos_de_evento_da_nfe)
     } else if (raiz_do_documento == "resEvento") {
       passou = mostrar_resultado(basename(arquivo_de_exemplo), xml2::xml_validate(documento_lido, schema_do_resumo_de_evento))
+    } else if (raiz_do_documento == "resNFe") {
+      passou = mostrar_resultado(basename(arquivo_de_exemplo), xml2::xml_validate(documento_lido, schema_do_resumo_da_nfe))
     } else {
       passou = mostrar_resultado(basename(arquivo_de_exemplo), xml2::xml_validate(documento_lido, schema_da_nfe))
     }

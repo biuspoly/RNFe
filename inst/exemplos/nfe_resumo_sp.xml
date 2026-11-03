@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Resumo de NF-e fictício para os testes do RNFe, como a Distribuição de DF-e entrega ao destinatário: o da nota
+     de exemplo nfe_proc_sp.xml. CNPJ de exemplo. -->
+<resNFe versao="1.01" xmlns="http://www.portalfiscal.inf.br/nfe">
+  <chNFe>35261011222333000181550010000010011123456785</chNFe>
+  <CNPJ>11222333000181</CNPJ>
+  <xNome>EMPRESA DE TESTE LTDA</xNome>
+  <IE>123456789012</IE>
+  <dhEmi>2026-10-15T10:30:00-03:00</dhEmi>
+  <tpNF>1</tpNF>
+  <vNF>115.00</vNF>
+  <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+  <dhRecbto>2026-10-15T10:31:02-03:00</dhRecbto>
+  <nProt>135260000012345</nProt>
+  <cSitNFe>1</cSitNFe>
+</resNFe>

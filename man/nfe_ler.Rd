@@ -6,7 +6,8 @@
 \source{
 Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
 2026.006 e NT 2026.008), publicado no Portal Nacional da NF-e em
-26/10/2026.
+26/10/2026; o resumo, pelo pacote da Distribuição de DF-e v1.04
+(\code{resNFe_v1.01.xsd}, publicado em 03/07/2026) e pela NT 2014.002 v1.02d.
 }
 \usage{
 nfe_ler(arquivos, todos_os_campos = FALSE)
@@ -21,8 +22,8 @@ campos de cada nota.}
 }
 \value{
 Uma lista com os \code{data.frame}s \code{notas}, \code{itens}, \code{impostos},
-\code{parcelas}, \code{pagamentos}, \code{pagamentos_vinculados}, \code{campos} (só com
-\code{todos_os_campos = TRUE}) e \code{arquivos}.
+\code{parcelas}, \code{pagamentos}, \code{pagamentos_vinculados}, \code{resumos}, \code{campos} (só
+com \code{todos_os_campos = TRUE}) e \code{arquivos}.
 }
 \description{
 Lê o XML de NF-e e NFC-e e devolve uma lista de tabelas (\code{data.frame}s)
@@ -30,16 +31,17 @@ ligadas pela \code{chave}: \code{notas} (uma linha por nota: emitente, destinat�
 totais, IBS e CBS, protocolo e, na NFC-e, o QR-Code), \code{itens} (uma linha por
 item: produto, NCM, CFOP e os impostos em colunas, com o nome de cada
 código), \code{impostos} (todos os campos de imposto, um por linha), \code{parcelas},
-\code{pagamentos}, \code{pagamentos_vinculados}, \code{campos} (todos os campos, só com
+\code{pagamentos}, \code{pagamentos_vinculados}, \code{resumos} (o resumo da NF-e que a
+Distribuição de DF-e entrega), \code{campos} (todos os campos, só com
 \code{todos_os_campos = TRUE}) e \code{arquivos} (o que foi lido e o motivo do que não
 deu).
 }
 \details{
 Lê o leiaute 4.00, com ou sem o protocolo de autorização (\code{nfeProc} ou só
-\code{NFe}), de um arquivo, de vários de uma vez ou do próprio texto do XML. Um
-arquivo que não dá para ler não interrompe os outros: fica em \code{arquivos},
-com o motivo. Para saber se a nota foi cancelada, leia os eventos dela com
-\code{\link[=eventos_ler]{eventos_ler()}}.
+\code{NFe}), e o resumo da NF-e (\code{resNFe}), de um arquivo, de vários de uma vez
+ou do próprio texto do XML. Um arquivo que não dá para ler não interrompe os
+outros: fica em \code{arquivos}, com o motivo. Para saber se a nota foi
+cancelada, leia os eventos dela com \code{\link[=eventos_ler]{eventos_ler()}}.
 
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
 códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
@@ -98,6 +100,20 @@ liga a nota à transação de pagamento usada no split payment): \code{chave},
 pagamento é o da tabela do Informe Técnico 2026.001.
 }
 
+\section{resumos}{
+
+Uma linha por resumo da NF-e (\code{resNFe}), o que a Distribuição de DF-e
+entrega ao destinatário enquanto ele não se manifestou sobre a nota: a nota
+numa linha, sem itens, impostos nem destinatário.
+\code{chave} (\code{chNFe}), \code{versao} (\verb{@versao}), \code{emitente_documento} (\code{CNPJ|CPF}), \code{emitente_nome} (\code{xNome}), \code{emitente_ie} (\code{IE}), \code{emissao} (\code{dhEmi}), \code{data_emissao} (\code{dhEmi}), \code{tipo_operacao} (\code{tpNF}), \code{valor_nota} (\code{vNF}), \code{digest_value} (\code{digVal}), \code{autorizacao} (\code{dhRecbto}), \code{protocolo} (\code{nProt}), \code{situacao_nfe} (\code{cSitNFe}) e \code{arquivo}. \code{emissao} e
+\code{autorizacao} são data e hora (mostradas no horário de Brasília);
+\code{data_emissao} é a data como está no resumo. \code{situacao_nfe} é a situação da
+nota no momento da consulta (1 autorizada, 2 denegada, 3 cancelada, pela NT
+2014.002), e o significado dela e do \code{tipo_operacao} vem ao lado, em
+\verb{*_descricao}. Com a chave, a nota completa e os eventos dela podem ser
+juntados depois.
+}
+
 \section{campos}{
 
 Só com \code{todos_os_campos = TRUE}. Todos os campos da nota, um por linha:
@@ -108,14 +124,15 @@ XML). É onde ficam as notas referenciadas, os volumes do transporte, a
 rastreabilidade do produto e o que mais não tiver coluna própria. Uma nota
 tem, em média, uns 220 campos, e a tabela custa de 5 a 7 ms a mais por nota
 e uns 10 KB de memória (medido em 10 mil notas reais): por isso ela só vem
-quando pedida.
+quando pedida. O resumo não entra nela: os campos dele já estão todos em
+\code{resumos}.
 }
 
 \section{arquivos}{
 
-Uma linha por arquivo pedido: \code{arquivo}, \code{notas} (quantas notas tinha) e
-\code{problema} (\code{NA} quando deu certo). Um texto de XML aparece como
-\code{"(texto 1)"}, \code{"(texto 2)"}...
+Uma linha por arquivo pedido: \code{arquivo}, \code{notas} (quantas notas tinha),
+\code{resumos} (quantos resumos) e \code{problema} (\code{NA} quando deu certo). Um texto de
+XML aparece como \code{"(texto 1)"}, \code{"(texto 2)"}...
 }
 
 \examples{

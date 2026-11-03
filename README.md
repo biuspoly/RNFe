@@ -47,10 +47,17 @@ lida$impostos     # todos os campos de imposto de cada item, um por linha
 lida$parcelas     # as duplicatas
 lida$pagamentos   # as formas de pagamento
 lida$pagamentos_vinculados   # o pagamento vinculado da Reforma (split payment)
+lida$resumos      # o resumo da NF-e (resNFe) que a Distribuição de DF-e entrega ao destinatário
 lida$arquivos     # o que foi lido, e o motivo de cada arquivo que não deu
 
 nfe_ler("nota1.xml", todos_os_campos = TRUE)$campos   # todos os campos da nota, um por linha, com o caminho
 ```
+
+O resumo (`resNFe`) é o que a Distribuição de DF-e entrega ao destinatário enquanto ele não se manifestou
+sobre a nota: emitente, emissão, valor, protocolo e a situação da nota (autorizada, denegada ou cancelada).
+Vem em `resumos`, uma linha por resumo, ligado à nota completa e aos eventos pela chave. Conferido com 2 mil
+resumos reais (versões 1.00 e 1.01): todos lidos, e nos 251 que tinham a nota completa ao lado, os campos
+bateram com ela.
 
 Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/2026), já com os campos da Reforma
 Tributária. Ao lado de cada código do item vem o nome dele (`cfop_titulo`, `cst_icms_descricao`...), como a
