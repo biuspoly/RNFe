@@ -24,8 +24,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     Portal da NF-e, do Portal Único Siscomex, do SPED e do IBGE, com a
     vigência de cada código. Lê o certificado digital A1 (titular, CNPJ ou
     CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e, a
-    situação de cada nota pela chave e o cadastro de contribuintes, por
-    enquanto só no ambiente de homologação.
+    situação de cada nota pela chave, o cadastro de contribuintes e os
+    documentos emitidos contra um CNPJ (Distribuição de DF-e), por enquanto
+    só no ambiente de homologação.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues

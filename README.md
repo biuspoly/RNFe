@@ -6,8 +6,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, da GTV-e, do MDF-e, da NFS-e Nacional e dos
 > eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
-> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço, a consulta da NF-e pela chave e a
-> consulta de cadastro, em homologação; o plano está em
+> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço, a consulta da NF-e pela chave, a
+> consulta de cadastro e a Distribuição de DF-e, em homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -192,6 +192,20 @@ delas para o cadastro, mas a SVRS atende todas (testado em 03/11/2026). Só o MA
 serviço: a linha vem com o motivo. A SEFAZ pode recusar quem pergunta (257, "Solicitante não habilitado para emissão da
 NF-e", sobre o CNPJ do certificado), e uma resposta que fala de outro documento não entra (na homologação, GO e AM
 respondem sobre o CNPJ do certificado). O MT pede o envelope de outro jeito, e o RNFe já manda assim.
+
+```r
+distribuicao = sefaz_distribuicao("11222333000181", "empresa.pfx", senha)   # o que foi emitido contra o CNPJ
+distribuicao$consulta     # a resposta: 137 (nenhum documento) ou 138, o último NSU e o maior
+nfe_ler(distribuicao$documentos$xml)       # as notas e os resumos que vieram
+eventos_ler(distribuicao$documentos$xml)   # os eventos
+# o próximo pedido segue do último NSU recebido
+sefaz_distribuicao("11222333000181", "empresa.pfx", senha, ultimo_nsu = distribuicao$consulta$ultimo_nsu)
+```
+
+A Distribuição de DF-e (NT 2014.002) traz até 50 documentos por pedido, já descompactados. Depois de uma resposta
+"não há mais documentos", quem pede de novo pelo último NSU antes de passar uma hora tem o CNPJ bloqueado pela SEFAZ
+por uma hora; o RNFe recusa esse pedido nesta sessão do R, antes de ir à SEFAZ. Também dá para pedir um NSU que
+faltou (`nsu`) ou uma NF-e pela chave (`chave`).
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada

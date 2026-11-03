@@ -574,6 +574,194 @@ data_hora_da_consulta = function(texto) {
   as.POSIXct(texto, format = "%Y-%m-%dT%H:%M:%S", tz = "America/Sao_Paulo")
 }
 
+# Quando o Ambiente Nacional disse que não havia mais documentos para cada documento (CNPJ ou CPF) e ambiente, nesta
+# sessão. A NT 2014.002 manda esperar uma hora antes de perguntar de novo; antes disso, a SEFAZ pode bloquear o CNPJ
+# por uma hora (656, "Consumo Indevido").
+quando_nao_havia_mais_documentos = new.env(parent = emptyenv())
+ESPERA_DEPOIS_DE_NENHUM_DOCUMENTO = 3600
+
+#' Distribuição de DF-e: os documentos de interesse de um CNPJ
+#'
+#' Pergunta ao Ambiente Nacional os documentos de interesse de um CNPJ ou CPF
+#' (a Distribuição de DF-e da NT 2014.002): as NF-e em que ele é
+#' destinatário, transportador ou autorizado, os resumos das que ele ainda não
+#' manifestou e os eventos. Devolve uma lista com `consulta` (a resposta, numa
+#' linha) e `documentos` (um por linha, com o XML já descompactado). Leia os
+#' documentos com [nfe_ler()] (as notas e os resumos) e [eventos_ler()]:
+#' `nfe_ler(distribuicao$documentos$xml)`.
+#'
+#' Cada chamada faz um pedido, que traz até 50 documentos. Para seguir, chame
+#' de novo com `ultimo_nsu` igual ao `ultimo_nsu` da resposta, até ele ficar
+#' igual ao `maior_nsu`. Também dá para pedir um NSU que faltou (`nsu`) ou uma
+#' NF-e pela chave (`chave`).
+#'
+#' **A SEFAZ bloqueia quem pergunta demais.** Pela NT 2014.002, quando a
+#' resposta diz que não há mais documentos (137, ou o `ultimo_nsu` igual ao
+#' `maior_nsu`), é preciso esperar uma hora antes de pedir de novo a partir do
+#' último NSU; antes disso, ela pode responder 656 ("Consumo Indevido") e
+#' bloquear o CNPJ por uma hora. As consultas também têm de seguir o
+#' `ultimo_nsu` que ela devolveu. Por isso, nesta sessão do R, o RNFe recusa
+#' um novo pedido pelo último NSU do mesmo CNPJ antes de passar a hora (o
+#' pedido de um `nsu` ou de uma `chave` não entra nessa regra).
+#'
+#' Por enquanto só o ambiente de **homologação**; a produção é recusada. A
+#' conexão é a mesma do [sefaz_status()].
+#'
+#' @param documento O CNPJ ou CPF de quem pede (o interessado nos documentos),
+#'   em geral o do certificado. Pontos, barras e traços são ignorados.
+#' @param ultimo_nsu O último NSU já recebido: 0 na primeira vez (a SEFAZ
+#'   devolve só o que chegou nos últimos 3 meses) e, depois, o `ultimo_nsu` da
+#'   resposta anterior.
+#' @param nsu Um NSU específico, para buscar um documento que faltou. Quando
+#'   informado, `ultimo_nsu` não é usado.
+#' @param chave A chave de acesso de uma NF-e, para buscá-la direto. Quando
+#'   informada, `ultimo_nsu` e `nsu` não são usados.
+#' @inheritParams sefaz_status
+#' @return Uma lista com dois `data.frame`s:
+#'   - `consulta`, numa linha: `documento`, `ambiente`, `situacao` (o código de
+#'     status, `cStat`: 137 quando não há documentos, 138 quando há),
+#'     `motivo`, `processamento` (data e hora, no horário de Brasília),
+#'     `ultimo_nsu` (de onde seguir), `maior_nsu` (o maior NSU que o Ambiente
+#'     Nacional tem para o documento), `documentos` (quantos vieram),
+#'     `versao_aplicativo`, `endereco` e `problema` (por que a consulta não deu
+#'     certo; vazio quando deu);
+#'   - `documentos`, um por linha: `nsu`, `schema` (o schema que valida o
+#'     documento, como `resNFe_v1.01.xsd` ou `procNFe_v4.00.xsd`), `tipo` (o
+#'     nome do schema sem a versão: `resNFe`, `procNFe`, `resEvento`,
+#'     `procEventoNFe`...) e `xml` (o documento, descompactado).
+#' @seealso [nfe_ler()], [eventos_ler()], [sefaz_situacao()]
+#' @source NT 2014.002 v1.02d (Web Service de Distribuição de DF-e, Portal da
+#'   NF-e); os schemas `distDFeInt_v1.01.xsd` e `retDistDFeInt_v1.01.xsd` do
+#'   pacote da Distribuição de DF-e v1.04 (03/07/2026); o WSDL do serviço
+#'   NFeDistribuicaoDFe do Ambiente Nacional (operação `nfeDistDFeInteresse`,
+#'   com o `nfeDadosMsg` dentro de `nfeDistDFeInteresse`).
+#' @examples
+#' \dontrun{
+#' senha = Sys.getenv("SENHA_DO_CERTIFICADO")
+#' distribuicao = sefaz_distribuicao("11222333000181", "empresa.pfx", senha)
+#' distribuicao$consulta[, c("situacao", "motivo", "ultimo_nsu", "maior_nsu")]
+#' nfe_ler(distribuicao$documentos$xml)$resumos
+#' # O próximo pedido segue do último NSU recebido.
+#' seguinte = sefaz_distribuicao("11222333000181", "empresa.pfx", senha,
+#'                               ultimo_nsu = distribuicao$consulta$ultimo_nsu)
+#' }
+#' @export
+sefaz_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, nsu = NA, chave = NA,
+                              ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  documento = toupper(gsub("[^0-9A-Za-z]", "", as.character(documento)))
+  if (length(documento) != 1 || is.na(documento) || !grepl("^([0-9A-Z]{12}[0-9]{2}|[0-9]{11})$", documento)) {
+    stop("Informe um CNPJ (14 posi\u00e7\u00f5es) ou um CPF (11 d\u00edgitos) em `documento`.", call. = FALSE)
+  }
+  grupo_do_pedido = grupo_da_distribuicao(ultimo_nsu, nsu, chave)
+  memoria = paste(documento, ambiente)
+  if (grupo_do_pedido$pelo_ultimo_nsu && !is.null(quando_nao_havia_mais_documentos[[memoria]])) {
+    liberado_em = quando_nao_havia_mais_documentos[[memoria]] + ESPERA_DEPOIS_DE_NENHUM_DOCUMENTO
+    if (Sys.time() < liberado_em) {
+      stop("O Ambiente Nacional disse \u00e0s ", format(quando_nao_havia_mais_documentos[[memoria]], "%H:%M"),
+           " que n\u00e3o havia mais documentos para este CNPJ ou CPF. A NT 2014.002 manda esperar uma hora antes de pedir ",
+           "de novo (sen\u00e3o a SEFAZ bloqueia o CNPJ por uma hora): tente depois das ", format(liberado_em, "%H:%M"), ".",
+           call. = FALSE)
+    }
+  }
+  exigir_pacotes(c("httr2", "curl", "openssl"))
+  conferir_certificado(certificado, senha)
+  servicos = tabela_interna("servicos_sefaz")
+  do_ambiente_nacional = servicos[servicos$documento == "NF-e" & servicos$ambiente == ambiente &
+                                    servicos$autorizador == "AN" & servicos$servico == "NFeDistribuicaoDFe", ]
+  consulta = data.frame(
+    documento = documento, ambiente = ambiente, situacao = NA_integer_, motivo = NA_character_,
+    processamento = as.POSIXct(NA), ultimo_nsu = NA_character_, maior_nsu = NA_character_, documentos = NA_integer_,
+    versao_aplicativo = NA_character_, endereco = do_ambiente_nacional$endereco[1], problema = NA_character_
+  )
+  documentos = data.frame(nsu = character(), schema = character(), tipo = character(), xml = character())
+  if (nrow(do_ambiente_nacional) == 0) {
+    consulta$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz a Distribui\u00e7\u00e3o de DF-e"
+    return(list(consulta = consulta, documentos = documentos))
+  }
+  pasta_temporaria = tempfile("rnfe_")
+  dir.create(pasta_temporaria)
+  on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
+  conexao = preparar_conexao(certificado, senha, pasta_temporaria)
+  if (nchar(documento) == 14) {
+    tipo_do_documento = "CNPJ"
+  } else {
+    tipo_do_documento = "CPF"
+  }
+  mensagem = paste0(
+    '<distDFeInt xmlns="', NAMESPACE_DA_NFE, '" versao="1.01"><tpAmb>', AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb>",
+    "<", tipo_do_documento, ">", documento, "</", tipo_do_documento, ">", grupo_do_pedido$xml, "</distDFeInt>"
+  )
+  pedido = montar_pedido(consulta$endereco, "NFeDistribuicaoDFe", "nfeDistDFeInteresse", mensagem, "nfeDistDFeInteresse")
+  resposta_lida = ler_resposta(enviar_pedidos(list(pedido), conexao)[[1]], "retDistDFeInt")
+  if (!is.na(resposta_lida$problema)) {
+    consulta$problema = resposta_lida$problema
+    return(list(consulta = consulta, documentos = documentos))
+  }
+  retorno = resposta_lida$retorno
+  consulta$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
+  consulta$motivo = texto_do_retorno(retorno, "xMotivo")
+  consulta$processamento = data_hora(texto_do_retorno(retorno, "dhResp"))
+  consulta$ultimo_nsu = texto_do_retorno(retorno, "ultNSU")
+  consulta$maior_nsu = texto_do_retorno(retorno, "maxNSU")
+  consulta$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
+  if (!identical(texto_do_retorno(retorno, "tpAmb"), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
+    consulta$problema = "a SEFAZ respondeu de outro ambiente"
+    return(list(consulta = consulta, documentos = documentos))
+  }
+  documentos = documentos_da_distribuicao(xml2::xml_find_all(retorno, "./*[local-name()='loteDistDFeInt']/*[local-name()='docZip']"))
+  consulta$documentos = nrow(documentos)
+  # 137 (nenhum documento), o último NSU já igual ao maior ou o bloqueio (656): a próxima pergunta pelo último NSU só
+  # depois de uma hora.
+  sem_mais_documentos = consulta$situacao %in% c(137L, 656L) ||
+    (!is.na(consulta$ultimo_nsu) && identical(consulta$ultimo_nsu, consulta$maior_nsu))
+  if (grupo_do_pedido$pelo_ultimo_nsu && sem_mais_documentos) {
+    quando_nao_havia_mais_documentos[[memoria]] = Sys.time()
+  }
+  list(consulta = consulta, documentos = documentos)
+}
+
+# O grupo do pedido: o último NSU (distNSU), um NSU (consNSU) ou uma chave (consChNFe). O NSU tem 15 dígitos.
+grupo_da_distribuicao = function(ultimo_nsu, nsu, chave) {
+  if (length(chave) == 1 && !is.na(chave)) {
+    chave_limpa = limpar_chaves(chave)
+    if (!chave_valida(chave_limpa)) {
+      stop("A chave n\u00e3o confere: ", chave_decompor(chave_limpa)$problema, ".", call. = FALSE)
+    }
+    return(list(xml = paste0("<consChNFe><chNFe>", chave_limpa, "</chNFe></consChNFe>"), pelo_ultimo_nsu = FALSE))
+  }
+  if (length(nsu) == 1 && !is.na(nsu)) {
+    return(list(xml = paste0("<consNSU><NSU>", nsu_com_15_digitos(nsu), "</NSU></consNSU>"), pelo_ultimo_nsu = FALSE))
+  }
+  list(xml = paste0("<distNSU><ultNSU>", nsu_com_15_digitos(ultimo_nsu), "</ultNSU></distNSU>"), pelo_ultimo_nsu = TRUE)
+}
+
+nsu_com_15_digitos = function(nsu) {
+  if (is.numeric(nsu)) {
+    nsu = format(nsu, scientific = FALSE, trim = TRUE)
+  }
+  nsu = as.character(nsu)
+  if (length(nsu) != 1 || is.na(nsu) || !grepl("^[0-9]{1,15}$", nsu)) {
+    stop("O NSU tem de ter de 1 a 15 d\u00edgitos.", call. = FALSE)
+  }
+  paste0(strrep("0", 15 - nchar(nsu)), nsu)
+}
+
+# Cada docZip: o NSU, o schema e o XML, que vem em gzip dentro do base64.
+documentos_da_distribuicao = function(documentos_zipados) {
+  nsus = xml2::xml_attr(documentos_zipados, "NSU")
+  schemas = xml2::xml_attr(documentos_zipados, "schema")
+  textos = character(length(documentos_zipados))
+  for (posicao in seq_along(documentos_zipados)) {
+    compactado = openssl::base64_decode(xml2::xml_text(documentos_zipados[[posicao]]))
+    texto = rawToChar(memDecompress(compactado, type = "gzip"))
+    Encoding(texto) = "UTF-8"
+    textos[posicao] = texto
+  }
+  data.frame(nsu = as.character(nsus), schema = as.character(schemas), tipo = sub("_v?[0-9.]+\\.xsd$", "", as.character(schemas)),
+             xml = textos)
+}
+
 conferir_ambiente = function(ambiente) {
   if (length(ambiente) != 1 || is.na(ambiente) || !(ambiente %in% names(AMBIENTES_LIBERADOS))) {
     stop("Por enquanto o RNFe s\u00f3 fala com o ambiente de homologa\u00e7\u00e3o da SEFAZ: use ambiente = \"homologacao\".",

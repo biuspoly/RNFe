@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs e consulta de cadastro nas 26 que têm o serviço, em homologação |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs e consulta de cadastro nas 26 que têm o serviço, e a Distribuição de DF-e, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -51,7 +51,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e prontos em homologação; o resto na etapa 3 |
-| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
+| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e pronta em homologação; CT-e e NFS-e na etapa 3 |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
 | Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | última |
@@ -648,6 +648,27 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - **A ajuda diz o que acontece em cada UF** (pedido do usuário): a seção "Em cada UF" do `sefaz_cadastro()` lista
     as UFs de SEFAZ própria, as da SVRS e o MA sem o serviço, e explica a 257 (sobre o certificado) e a 259 (sobre o
     documento consultado).
+
+## Etapa 3, quarto passo: a Distribuição de DF-e (03/11/2026)
+
+- `sefaz_distribuicao(documento, certificado, senha, ultimo_nsu = 0, nsu, chave)` pede ao Ambiente Nacional os
+  documentos de interesse de um CNPJ ou CPF (NT 2014.002 v1.02d), só em homologação. Pedido `distDFeInt` 1.01 e
+  resposta `retDistDFeInt` pelo pacote da Distribuição v1.04; o WSDL do Ambiente Nacional (baixado em 03/11/2026)
+  pede o `nfeDadosMsg` dentro de `nfeDistDFeInteresse`, o mesmo jeito do MT na consulta de cadastro. Devolve
+  `consulta` (uma linha: `cStat`, último e maior NSU, quantos documentos) e `documentos` (NSU, schema, tipo e o XML
+  descompactado do gzip em base64, com o `memDecompress` do R e o `openssl`). Os documentos vão direto para o
+  `nfe_ler()` (notas e resumos) e o `eventos_ler()`.
+- **Um pedido por chamada, e a trava de uma hora.** A NT manda esperar uma hora depois de um 137, ou de o último NSU
+  chegar ao maior, antes de pedir de novo pelo último NSU, e seguir sempre o `ultNSU` devolvido; senão, 656
+  ("Consumo Indevido") e o CNPJ bloqueado por uma hora. Por isso a função não segue sozinha até o fim e, nesta sessão
+  do R, recusa antes de conectar um novo pedido pelo último NSU do mesmo CNPJ e ambiente dentro da hora (o 656
+  também conta). O pedido de um NSU (`consNSU`) ou de uma chave (`consChNFe`) fica fora da trava, como na NT.
+- **Teste real em homologação (03/11/2026)**, com o CNPJ do certificado de teste: um pedido pelo último NSU (0) voltou
+  137, "Nenhum documento localizado", com último e maior NSU zerados (ninguém emitiu nota de teste contra esse
+  CNPJ); um pela chave inventada voltou 217, "NF-e inexistente para a chave de acesso informada"; o segundo pedido
+  pelo último NSU foi recusado pelo RNFe, sem ir à SEFAZ (só dois pedidos saíram). A resposta do 137 ficou gravada
+  para os testes (não tem dado de empresa). A resposta com documentos dos testes é montada com o resumo e o
+  cancelamento de exemplo compactados como a SEFAZ manda, e passa no `retDistDFeInt_v1.01.xsd` (a real também).
 - **As SEFAZ não seguem o mesmo envelope** (WSDLs de homologação baixados em 03/11/2026):
   - o MT pede o `nfeDadosMsg` dentro de um `consultaCadastro` e responde com um `consultaCadastroResult` no meio;
     o pedido igual ao dos outros voltava 215, "Falha no schema XML". Fica em `ELEMENTO_EM_VOLTA_NO_CADASTRO`;

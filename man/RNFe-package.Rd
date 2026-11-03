@@ -22,8 +22,9 @@ IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}};
 validade);
 \item a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
 \code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?), \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a
-situação de cada NF-e, pela chave) e \code{\link[=sefaz_cadastro]{sefaz_cadastro()}} (o cadastro de
-contribuintes, pelo CNPJ, CPF ou IE).
+situação de cada NF-e, pela chave), \code{\link[=sefaz_cadastro]{sefaz_cadastro()}} (o cadastro de
+contribuintes, pelo CNPJ, CPF ou IE) e \code{\link[=sefaz_distribuicao]{sefaz_distribuicao()}} (os
+documentos emitidos contra um CNPJ).
 }
 }
 \section{De onde vêm as regras}{
