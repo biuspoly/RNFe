@@ -2,14 +2,17 @@
 % Please edit documentation in R/sefaz.R
 \name{sefaz_situacao}
 \alias{sefaz_situacao}
-\title{Situação da NF-e e da NFC-e na SEFAZ, pela chave}
+\title{Situação de NF-e, NFC-e, CT-e e MDF-e na SEFAZ, pela chave}
 \source{
-Relação de Serviços Web do Portal da NF-e e a do Portal da NFC-e
-(endereços de homologação; os da NFC-e de MG, da página da SEFAZ-MG); o
-schema \code{leiauteConsSitNFe_v4.00.xsd} do pacote de
-liberação 010d v1.01 (NT 2026.004, 08/06/2026); o WSDL do serviço
-NFeConsultaProtocolo4 (a mensagem em \code{nfeDadosMsg}, operação
-\code{nfeConsultaNF}, SOAP 1.2).
+Relação de Serviços Web do Portal da NF-e, a do Portal da NFC-e, a
+do Portal do CT-e e a do Portal do MDF-e (endereços de homologação; os da
+NFC-e de MG, da página da SEFAZ-MG); os schemas
+\code{leiauteConsSitNFe_v4.00.xsd} do pacote de liberação 010d v1.01 (NT
+2026.004, 08/06/2026), \code{consSitCTeTiposBasico_v4.00.xsd} do pacote do
+CT-e (NT 2026.004 RTC 1.00) e \code{consSitMDFeTiposBasico_v3.00.xsd} do
+pacote do MDF-e (NT 2025.001); os WSDL dos serviços
+NFeConsultaProtocolo4, CTeConsultaV4 e MDFeConsulta (a mensagem em
+\code{nfeDadosMsg}, \code{cteDadosMsg} ou \code{mdfeDadosMsg}, SOAP 1.2).
 }
 \usage{
 sefaz_situacao(chaves, certificado, senha, ambiente = "homologacao")
@@ -28,30 +31,36 @@ variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 \value{
 Uma lista com dois \code{data.frame}s:
 \itemize{
-\item \code{situacoes}: \code{chave}, \code{documento} (\code{"NF-e"} ou \code{"NFC-e"}, pelo modelo
-da chave), \code{uf} (a da chave), \code{autorizador}, \code{ambiente},
-\code{situacao} (o código de status da resposta, \code{cStat}), \code{motivo} (o que a
-SEFAZ escreveu; o 217, por exemplo, é a NF-e que não consta na base de
-dados), \code{recebimento} (data e hora em que a SEFAZ recebeu a consulta, no
-horário de Brasília), do protocolo de autorização (\code{protNFe}), quando
-vem: \code{protocolo}, \code{autorizacao} (data e hora) e \code{digest_value}; e
-\code{versao_aplicativo}, \code{endereco} e \code{problema} (por que a consulta não deu
-certo; vazio quando deu);
+\item \code{situacoes}: \code{chave}, \code{documento} (\code{"NF-e"}, \code{"NFC-e"}, \code{"CT-e"},
+\code{"CT-e OS"}, \code{"GTV-e"} ou \code{"MDF-e"}, pelo modelo da chave), \code{uf} (a da
+chave), \code{autorizador}, \code{ambiente}, \code{situacao} (o código de status da
+resposta, \code{cStat}), \code{motivo} (o que a SEFAZ escreveu; o 217, por
+exemplo, é o documento que não consta na base de dados), \code{recebimento}
+(data e hora em que a SEFAZ recebeu a consulta, no horário de Brasília;
+só a NF-e e a NFC-e mandam), do protocolo de autorização (\code{protNFe},
+\code{protCTe} ou \code{protMDFe}), quando vem: \code{protocolo}, \code{autorizacao} (data e
+hora) e \code{digest_value}; e \code{versao_aplicativo}, \code{endereco} e \code{problema}
+(por que a consulta não deu certo; vazio quando deu);
 \item \code{eventos}: a tabela \code{eventos} de \code{\link[=eventos_ler]{eventos_ler()}} com os eventos
-(\code{procEventoNFe}) que vieram nas respostas, ligados pela \code{chave}, sem a
-coluna \code{arquivo}.
+(\code{procEventoNFe}, \code{procEventoCTe}, \code{procEventoMDFe}) que vieram nas
+respostas, ligados pela \code{chave}, sem a coluna \code{arquivo}.
 }
 }
 \description{
-Pergunta à SEFAZ a situação de cada NF-e (modelo 55) ou NFC-e (modelo 65)
-pela chave de acesso: se está autorizada, cancelada, denegada ou se não
-consta. Devolve uma lista
+Pergunta à SEFAZ a situação de cada documento pela chave de acesso: NF-e
+(modelo 55), NFC-e (65), CT-e (57), CT-e OS (67), GTV-e (64) ou MDF-e (58).
+Diz se está autorizado, cancelado, denegado (ou encerrado, no MDF-e) ou se
+não consta. Devolve uma lista
 com \code{situacoes} (uma linha por chave: a resposta da SEFAZ e o protocolo de
 autorização, quando vem) e \code{eventos} (os eventos da nota que a SEFAZ manda
 junto, como o cancelamento, lidos por \code{\link[=eventos_ler]{eventos_ler()}}).
 }
 \details{
-Cada chave vai ao autorizador da UF que está nela, conforme o modelo. A
+Cada chave vai ao autorizador da UF que está nela, conforme o modelo. O CT-e,
+o CT-e OS e a GTV-e seguem a Relação de Serviços Web do Portal do CT-e (a
+própria SEFAZ, a SVRS ou a SVSP); o MDF-e vai sempre à SVRS. O retorno do
+CT-e e do MDF-e não repete a chave nem a hora do recebimento: a chave
+conferida é a do protocolo, quando ele vem, e \code{recebimento} fica vazio. A
 NF-e segue a Relação de Serviços Web do Portal da NF-e (a própria SEFAZ, a
 SVRS ou a SVAN). A NFC-e tem endereços próprios: AM, GO, MS, MT, PR, RS e
 SP têm autorizador próprio, listado no Portal da NFC-e; MG também, mas os
@@ -76,5 +85,5 @@ consulta$eventos[, c("chave", "tipo", "descricao", "data_evento")]
 }
 }
 \seealso{
-\code{\link[=sefaz_status]{sefaz_status()}}, \code{\link[=eventos_ler]{eventos_ler()}}
+\code{\link[=sefaz_status]{sefaz_status()}}, \code{\link[=eventos_ler]{eventos_ler()}}, \code{\link[=sefaz_mdfe_nao_encerrados]{sefaz_mdfe_nao_encerrados()}}
 }

@@ -357,9 +357,11 @@ SERVICO_PELO_NOME_DE_MG = c(
 )
 NOME_DE_CADA_AMBIENTE = c(homologacao = "Homologação", producao = "Produção")
 
-baixar_servicos_da_nfce = function(ambiente) {
+# Os portais que a SVRS mantém (NFC-e, MDF-e): uma tabela por autorizador e ambiente, com a legenda
+# "SEFAZ Amazonas (AM) - Homologação" e as linhas com o serviço, a versão e o endereço.
+servicos_do_portal_da_svrs = function(endereco_da_pagina, documento, ambiente) {
   nome_do_ambiente = NOME_DE_CADA_AMBIENTE[[ambiente]]
-  pagina = xml2::read_html(httr2::resp_body_raw(httr2::req_perform(httr2::req_timeout(httr2::request(PAGINA_DOS_SERVICOS_DA_NFCE), 120))))
+  pagina = xml2::read_html(httr2::resp_body_raw(httr2::req_perform(httr2::req_timeout(httr2::request(endereco_da_pagina), 120))))
   servicos = data.frame()
   for (tabela_do_autorizador in xml2::xml_find_all(pagina, "//table[caption]")) {
     legenda = trimws(gsub("\\s+", " ", xml2::xml_text(xml2::xml_find_first(tabela_do_autorizador, "caption"))))
@@ -370,11 +372,17 @@ baixar_servicos_da_nfce = function(ambiente) {
     for (linha in xml2::xml_find_all(tabela_do_autorizador, ".//tr[td]")) {
       celulas = trimws(xml2::xml_text(xml2::xml_find_all(linha, "td")))
       if (length(celulas) >= 4 && startsWith(celulas[4], "https://")) {
-        servicos = rbind(servicos, data.frame(documento = "NFC-e", ambiente = ambiente, autorizador = autorizador,
+        servicos = rbind(servicos, data.frame(documento = documento, ambiente = ambiente, autorizador = autorizador,
                                               servico = celulas[2], versao = celulas[3], endereco = celulas[4]))
       }
     }
   }
+  servicos
+}
+
+baixar_servicos_da_nfce = function(ambiente) {
+  nome_do_ambiente = NOME_DE_CADA_AMBIENTE[[ambiente]]
+  servicos = servicos_do_portal_da_svrs(PAGINA_DOS_SERVICOS_DA_NFCE, "NFC-e", ambiente)
   # MG: a página tem uma tabela por ambiente, logo depois do título "Ambiente de Homologação:"; ela não diz a versão.
   pagina_de_mg = xml2::read_html(httr2::resp_body_raw(httr2::req_perform(httr2::req_timeout(httr2::request(PAGINA_DOS_SERVICOS_DA_NFCE_DE_MG), 120))))
   for (tabela_de_mg in xml2::xml_find_all(pagina_de_mg, "//table")) {
@@ -401,6 +409,66 @@ baixar_servicos_da_nfce = function(ambiente) {
   ufs_da_svrs = setdiff(SIGLAS_DAS_UFS, ufs_com_sefaz_propria)
   autorizadores = data.frame(documento = "NFC-e", ambiente = ambiente, uf = c(ufs_com_sefaz_propria, ufs_da_svrs),
                              uso = "todos os serviços", autorizador = c(ufs_com_sefaz_propria, rep("SVRS", length(ufs_da_svrs))))
+  list(
+    servicos = servicos[order(servicos$autorizador, servicos$servico), ],
+    autorizadores = autorizadores[order(autorizadores$uf), ]
+  )
+}
+
+# O MDF-e tem um autorizador só, a SVRS, para todas as UFs; a página dela segue o molde da NFC-e.
+PAGINA_DOS_SERVICOS_DO_MDFE = "https://dfe-portal.svrs.rs.gov.br/Mdfe/Servicos"
+
+baixar_servicos_do_mdfe = function(ambiente) {
+  servicos = servicos_do_portal_da_svrs(PAGINA_DOS_SERVICOS_DO_MDFE, "MDF-e", ambiente)
+  if (nrow(servicos) == 0 || !identical(unique(servicos$autorizador), "SVRS")) {
+    stop("A página de serviços do MDF-e mudou de formato: ", PAGINA_DOS_SERVICOS_DO_MDFE, call. = FALSE)
+  }
+  list(
+    servicos = servicos[order(servicos$servico), ],
+    autorizadores = data.frame(documento = "MDF-e", ambiente = ambiente, uf = SIGLAS_DAS_UFS, uso = "todos os serviços",
+                               autorizador = "SVRS")
+  )
+}
+
+# A Relação de Serviços Web do Portal do CT-e, no molde da do Portal da NF-e. A legenda das SEFAZ virtuais traz duas
+# siglas ("Sefaz Virtual Rio Grande do Sul - (SVRS) e Sefaz Virtual de Contingência do RS (SVC-RS)"): vale a primeira.
+PAGINA_DOS_SERVICOS_DO_CTE_DE_HOMOLOGACAO = "https://hom.cte.fazenda.gov.br/portal/webServices.aspx"
+LISTAS_DE_UFS_DA_PAGINA_DO_CTE = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE, text = "
+id                                         ; autorizador
+ctl00_ContentPlaceHolder1_lblUsuariosSVSP   ; SVSP
+ctl00_ContentPlaceHolder1_lblUsuarioSVRS    ; SVRS
+")
+
+baixar_servicos_do_cte = function(endereco_da_pagina, ambiente) {
+  pagina = xml2::read_html(httr2::resp_body_raw(httr2::req_perform(httr2::req_timeout(httr2::request(endereco_da_pagina), 120))))
+  servicos = data.frame()
+  for (tabela_do_autorizador in xml2::xml_find_all(pagina, "//table[caption]")) {
+    legenda = trimws(gsub("\\s+", " ", xml2::xml_text(xml2::xml_find_first(tabela_do_autorizador, "caption"))))
+    autorizador = sub("^[^(]*\\(([^)]*)\\).*$", "\\1", legenda)
+    for (linha in xml2::xml_find_all(tabela_do_autorizador, ".//tr[td]")) {
+      celulas = trimws(xml2::xml_text(xml2::xml_find_all(linha, "td")))
+      if (length(celulas) == 3 && startsWith(celulas[3], "https://")) {
+        servicos = rbind(servicos, data.frame(documento = "CT-e", ambiente = ambiente, autorizador = autorizador,
+                                              servico = celulas[1], versao = celulas[2], endereco = celulas[3]))
+      }
+    }
+  }
+  ufs_com_sefaz_propria = intersect(SIGLAS_DAS_UFS, servicos$autorizador)
+  autorizadores = data.frame(documento = "CT-e", ambiente = ambiente, uf = ufs_com_sefaz_propria,
+                             uso = "todos os serviços", autorizador = ufs_com_sefaz_propria)
+  for (numero_da_lista in seq_len(nrow(LISTAS_DE_UFS_DA_PAGINA_DO_CTE))) {
+    lista = LISTAS_DE_UFS_DA_PAGINA_DO_CTE[numero_da_lista, ]
+    elemento = xml2::xml_find_first(pagina, paste0("//*[@id='", lista$id, "']"))
+    if (inherits(elemento, "xml_missing")) {
+      stop("A Relação de Serviços Web do CT-e não traz mais a lista ", lista$id, ": ", endereco_da_pagina, call. = FALSE)
+    }
+    ufs_da_lista = trimws(strsplit(xml2::xml_text(elemento), ",")[[1]])
+    autorizadores = rbind(autorizadores, data.frame(documento = "CT-e", ambiente = ambiente, uf = ufs_da_lista,
+                                                    uso = "todos os serviços", autorizador = lista$autorizador))
+  }
+  if (nrow(servicos) == 0 || !setequal(autorizadores$uf, SIGLAS_DAS_UFS) || anyDuplicated(autorizadores$uf) > 0) {
+    stop("A Relação de Serviços Web do CT-e mudou de formato: ", endereco_da_pagina, call. = FALSE)
+  }
   list(
     servicos = servicos[order(servicos$autorizador, servicos$servico), ],
     autorizadores = autorizadores[order(autorizadores$uf), ]
@@ -510,9 +578,12 @@ ncm_baixada = baixar_ncm()
 meios_do_portal = baixar_meios_de_pagamento(pasta_temporaria)
 bandeiras_do_portal = baixar_bandeiras_de_cartao(pasta_temporaria)
 servicos_de_homologacao = baixar_servicos_da_sefaz(PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO, "homologacao")
-servicos_da_nfce = baixar_servicos_da_nfce("homologacao")
-servicos_de_homologacao$servicos = rbind(servicos_de_homologacao$servicos, servicos_da_nfce$servicos)
-servicos_de_homologacao$autorizadores = rbind(servicos_de_homologacao$autorizadores, servicos_da_nfce$autorizadores)
+for (servicos_do_documento in list(baixar_servicos_da_nfce("homologacao"),
+                                    baixar_servicos_do_cte(PAGINA_DOS_SERVICOS_DO_CTE_DE_HOMOLOGACAO, "homologacao"),
+                                    baixar_servicos_do_mdfe("homologacao"))) {
+  servicos_de_homologacao$servicos = rbind(servicos_de_homologacao$servicos, servicos_do_documento$servicos)
+  servicos_de_homologacao$autorizadores = rbind(servicos_de_homologacao$autorizadores, servicos_do_documento$autorizadores)
+}
 fontes = rbind(fontes, data.frame(
   tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao", "servicos_sefaz",
              "autorizadores_sefaz"),
@@ -524,10 +595,12 @@ fontes = rbind(fontes, data.frame(
     paste0("Portal da NF-e, ", bandeiras_do_portal$titulo),
     paste0("Portal da NF-e, Relação de Serviços Web de homologação (", PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO,
            "); NFC-e: Portal da NFC-e (", PAGINA_DOS_SERVICOS_DA_NFCE, ") e, para MG, a página da SEFAZ-MG (",
-           PAGINA_DOS_SERVICOS_DA_NFCE_DE_MG, ")"),
+           PAGINA_DOS_SERVICOS_DA_NFCE_DE_MG, "); CT-e: Portal do CT-e (", PAGINA_DOS_SERVICOS_DO_CTE_DE_HOMOLOGACAO,
+           "); MDF-e: Portal do MDF-e (", PAGINA_DOS_SERVICOS_DO_MDFE, ")"),
     paste0("Portal da NF-e, Relação de Serviços Web de homologação (", PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO,
            "), UFs de cada SEFAZ virtual; NFC-e: as UFs com autorizador próprio no Portal da NFC-e e em MG, e as outras ",
-           "na SVRS (conferido em homologação em 03/11/2026)")
+           "na SVRS (conferido em homologação em 03/11/2026); CT-e: as UFs de cada SEFAZ virtual da página do Portal do ",
+           "CT-e; MDF-e: todas na SVRS")
   ),
   versao = NA,
   data_da_versao = NA,

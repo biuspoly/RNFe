@@ -100,7 +100,7 @@ test_that("a nota cancelada: o protocolo de autoriza\u00e7\u00e3o e o evento de 
   expect_identical(eventos, do_arquivo)
 })
 
-test_that("chave errada, de outro modelo ou respondida com outra chave fica em problema", {
+test_that("chave errada ou respondida com outra chave fica em problema", {
   skip_if_not_installed("httr2")
   skip_if_not_installed("openssl")
   local_mocked_bindings(usar_processo_separado = function() FALSE)
@@ -109,22 +109,19 @@ test_that("chave errada, de outro modelo ou respondida com outra chave fica em p
     pedidos[[length(pedidos) + 1]] <<- req
     resposta_da_sefaz(texto_do_arquivo(CONSULTA_DA_SVRS))
   })
-  cte = "35261012ABC34501DE35570010000005551876543210"
   digito_errado = paste0(substr(CHAVE_INVENTADA_DO_CE, 1, 43), "0")
-  consulta = sefaz_situacao(c(digito_errado, cte, NA, CHAVE_DA_NOTA_SP), CERTIFICADO_DO_TESTE, "teste")
+  consulta = sefaz_situacao(c(digito_errado, NA, CHAVE_DA_NOTA_SP), CERTIFICADO_DO_TESTE, "teste")
   problemas = consulta$situacoes$problema
   expect_match(problemas[1], "^chave inv\u00e1lida: o d\u00edgito verificador n\u00e3o confere")
-  expect_identical(problemas[2], "por enquanto s\u00f3 a NF-e (modelo 55) e a NFC-e (modelo 65) s\u00e3o consultadas")
-  expect_identical(consulta$situacoes$documento[2], "CT-e")
-  expect_match(problemas[3], "^chave inv\u00e1lida")
+  expect_match(problemas[2], "^chave inv\u00e1lida")
   # A SVRS (de mentira) respondeu sobre a chave do CE a uma pergunta sobre a de SP.
-  expect_identical(problemas[4], "a SEFAZ respondeu sobre outra chave")
+  expect_identical(problemas[3], "a SEFAZ respondeu sobre outra chave")
   expect_length(pedidos, 1)
 })
 
-# Uma chave inventada de NFC-e da UF (CNPJ de exemplo).
-chave_de_nfce = function(codigo_da_uf) {
-  sem_digito = paste0(codigo_da_uf, "2610", "11222333000181", "65", "001", "000001001", "1", "12345678")
+# Uma chave inventada do modelo e da UF (CNPJ de exemplo).
+chave_inventada = function(codigo_da_uf, modelo) {
+  sem_digito = paste0(codigo_da_uf, "2610", "11222333000181", modelo, "001", "000001001", "1", "12345678")
   paste0(sem_digito, chave_digito(sem_digito))
 }
 
@@ -140,7 +137,7 @@ test_that("a NFC-e vai ao autorizador dela: SVRS, a SEFAZ pr\u00f3pria ou MG", {
     resposta_da_sefaz(sub(CHAVE_INVENTADA_DO_CE, chave_perguntada, texto_do_arquivo(CONSULTA_DA_SVRS), fixed = TRUE))
   })
   # PE (o cupom de exemplo do usuário), MA (SVAN na NF-e, SVRS na NFC-e), SP (própria) e MG (fora do Portal da NFC-e).
-  consulta = sefaz_situacao(c(chave_de_nfce("26"), chave_de_nfce("21"), chave_de_nfce("35"), chave_de_nfce("31")),
+  consulta = sefaz_situacao(c(chave_inventada("26", "65"), chave_inventada("21", "65"), chave_inventada("35", "65"), chave_inventada("31", "65")),
                             CERTIFICADO_DO_TESTE, "teste")
   situacoes = consulta$situacoes
   expect_identical(situacoes$documento, rep("NFC-e", 4))
@@ -156,8 +153,136 @@ test_that("a NFC-e vai ao autorizador dela: SVRS, a SEFAZ pr\u00f3pria ou MG", {
   expect_identical(situacoes$situacao, rep(217L, 4))
   expect_true(all(is.na(situacoes$problema)))
   # O pedido é o mesmo da NF-e: o consSitNFe no NFeConsultaProtocolo4.
-  expect_match(rawToChar(pedidos[[1]]$body$data), paste0("<chNFe>", chave_de_nfce("26"), "</chNFe>"), fixed = TRUE)
+  expect_match(rawToChar(pedidos[[1]]$body$data), paste0("<chNFe>", chave_inventada("26", "65"), "</chNFe>"), fixed = TRUE)
   expect_match(pedidos[[1]]$body$content_type, "NFeConsultaProtocolo4/nfeConsultaNF", fixed = TRUE)
+})
+
+# respostas/consulta_cte_homologacao_svrs.xml, consulta_cte_homologacao_sp.xml e consulta_mdfe_homologacao_svrs.xml são
+# as respostas reais de homologação (03/11/2026) a chaves inventadas do CE e de SP (CNPJ de exemplo), que não constam lá.
+CONSULTA_DO_CTE_NA_SVRS = test_path("respostas", "consulta_cte_homologacao_svrs.xml")
+CONSULTA_DO_CTE_EM_SP = test_path("respostas", "consulta_cte_homologacao_sp.xml")
+CONSULTA_DO_MDFE_NA_SVRS = test_path("respostas", "consulta_mdfe_homologacao_svrs.xml")
+CHAVE_DO_CTE_SP = "35261012ABC34501DE35570010000005551876543210"
+CHAVE_DO_MDFE_SP = "35261033344455500070580010000003211112233448"
+
+test_that("o CT-e, o CT-e OS e a GTV-e v\u00e3o ao autorizador do CT-e; o MDF-e, \u00e0 SVRS", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    if (grepl("mdfe", req$url, fixed = TRUE)) {
+      return(resposta_da_sefaz(texto_do_arquivo(CONSULTA_DO_MDFE_NA_SVRS)))
+    }
+    if (grepl("fazenda.sp.gov.br", req$url, fixed = TRUE)) {
+      return(resposta_da_sefaz(texto_do_arquivo(CONSULTA_DO_CTE_EM_SP)))
+    }
+    resposta_da_sefaz(texto_do_arquivo(CONSULTA_DO_CTE_NA_SVRS))
+  })
+  # CT-e do CE (SVRS), de PE (SVSP) e de SP (própria), CT-e OS do RS (própria), GTV-e de SP e MDF-e do CE.
+  chaves = c(chave_inventada("23", "57"), chave_inventada("26", "57"), chave_inventada("35", "57"),
+             chave_inventada("43", "67"), chave_inventada("35", "64"), chave_inventada("23", "58"))
+  consulta = sefaz_situacao(chaves, CERTIFICADO_DO_TESTE, "teste")
+  situacoes = consulta$situacoes
+  expect_identical(situacoes$documento, c("CT-e", "CT-e", "CT-e", "CT-e OS", "GTV-e", "MDF-e"))
+  expect_identical(situacoes$autorizador, c("SVRS", "SVSP", "SP", "RS", "SP", "SVRS"))
+  urls = vapply(pedidos, function(pedido) pedido$url, character(1))
+  expect_identical(urls, c(
+    "https://cte-homologacao.svrs.rs.gov.br/ws/CTeConsultaV4/CTeConsultaV4.asmx",
+    "https://homologacao.nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx",
+    "https://homologacao.nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx",
+    "https://cte-homologacao.svrs.rs.gov.br/ws/CTeConsultaV4/CTeConsultaV4.asmx",
+    "https://homologacao.nfe.fazenda.sp.gov.br/CTeWS/WS/CTeConsultaV4.asmx",
+    "https://mdfe-homologacao.svrs.rs.gov.br/ws/MDFeConsulta/MDFeConsulta.asmx"
+  ))
+  expect_identical(situacoes$situacao, rep(217L, 6))
+  expect_identical(situacoes$motivo[1], "Rejeicao: CT-e nao consta na base de dados da SEFAZ")
+  expect_identical(situacoes$motivo[3], "Rejei\u00e7\u00e3o: CTe n\u00e3o consta na base de dados da SEFAZ.")
+  expect_identical(situacoes$motivo[6], "Rejeicao: MDF-e nao consta na base de dados da SEFAZ")
+  # O retorno do CT-e e do MDF-e não traz a hora do recebimento.
+  expect_true(all(is.na(situacoes$recebimento)))
+  expect_true(all(is.na(situacoes$problema)))
+  # O pedido do CT-e: o consSitCTe no CTeConsultaV4, sem cabeçalho.
+  corpo = rawToChar(pedidos[[1]]$body$data)
+  expect_match(corpo, '<cteDadosMsg xmlns="http://www.portalfiscal.inf.br/cte/wsdl/CTeConsultaV4">', fixed = TRUE)
+  expect_match(corpo, paste0('<consSitCTe xmlns="http://www.portalfiscal.inf.br/cte" versao="4.00"><tpAmb>2</tpAmb>',
+                             "<xServ>CONSULTAR</xServ><chCTe>", chaves[1], "</chCTe></consSitCTe>"), fixed = TRUE)
+  expect_false(grepl("Header", corpo, fixed = TRUE))
+  expect_match(pedidos[[1]]$body$content_type,
+               'action="http://www.portalfiscal.inf.br/cte/wsdl/CTeConsultaV4/cteConsultaCT"', fixed = TRUE)
+  # O do MDF-e: o consSitMDFe no MDFeConsulta, com a UF da chave e a versão no cabeçalho mdfeCabecMsg.
+  corpo = rawToChar(pedidos[[6]]$body$data)
+  expect_match(corpo, paste0('<soap12:Header><mdfeCabecMsg xmlns="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeConsulta">',
+                             "<cUF>23</cUF><versaoDados>3.00</versaoDados></mdfeCabecMsg></soap12:Header>"), fixed = TRUE)
+  expect_match(corpo, paste0('<mdfeDadosMsg xmlns="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeConsulta">',
+                             '<consSitMDFe xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><tpAmb>2</tpAmb>',
+                             "<xServ>CONSULTAR</xServ><chMDFe>", chaves[6], "</chMDFe></consSitMDFe></mdfeDadosMsg>"),
+               fixed = TRUE)
+  expect_match(pedidos[[6]]$body$content_type,
+               'action="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeConsulta/mdfeConsultaMDF"', fixed = TRUE)
+})
+
+# O retConsSitCTe de um CT-e cancelado: o protocolo de cte_proc_sp.xml e o cancelamento de evento_cte_cancelamento.xml.
+resposta_do_cte_cancelado = function() {
+  cte = texto_do_arquivo(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))
+  cancelamento = texto_do_arquivo(system.file("exemplos", "evento_cte_cancelamento.xml", package = "RNFe"))
+  protocolo = regmatches(cte, regexpr("(?s)<protCTe.*</protCTe>", cte, perl = TRUE))
+  evento = regmatches(cancelamento, regexpr("(?s)<procEventoCTe.*</procEventoCTe>", cancelamento, perl = TRUE))
+  paste0(
+    '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body>',
+    '<cteConsultaCTResult xmlns="http://www.portalfiscal.inf.br/cte/wsdl/CTeConsultaV4">',
+    '<retConsSitCTe versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte"><tpAmb>2</tpAmb><verAplic>TESTE</verAplic>',
+    "<cStat>101</cStat><xMotivo>Cancelamento de CT-e homologado</xMotivo><cUF>35</cUF>", protocolo, evento,
+    "</retConsSitCTe></cteConsultaCTResult></soap:Body></soap:Envelope>"
+  )
+}
+
+# O retConsSitMDFe de um MDF-e encerrado: o protocolo de mdfe_proc_sp.xml e o encerramento de evento_mdfe_encerramento.xml.
+resposta_do_mdfe_encerrado = function() {
+  mdfe = texto_do_arquivo(system.file("exemplos", "mdfe_proc_sp.xml", package = "RNFe"))
+  encerramento = texto_do_arquivo(system.file("exemplos", "evento_mdfe_encerramento.xml", package = "RNFe"))
+  protocolo = regmatches(mdfe, regexpr("(?s)<protMDFe.*</protMDFe>", mdfe, perl = TRUE))
+  evento = regmatches(encerramento, regexpr("(?s)<procEventoMDFe.*</procEventoMDFe>", encerramento, perl = TRUE))
+  paste0(
+    '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body>',
+    '<mdfeConsultaMDFResult xmlns="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeConsulta">',
+    '<retConsSitMDFe versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe"><tpAmb>2</tpAmb><verAplic>TESTE</verAplic>',
+    "<cStat>132</cStat><xMotivo>Encerramento de MDF-e homologado</xMotivo><cUF>35</cUF>", protocolo, evento,
+    "</retConsSitMDFe></mdfeConsultaMDFResult></soap:Body></soap:Envelope>"
+  )
+}
+
+test_that("o CT-e cancelado e o MDF-e encerrado: o protocolo, a chave dele e o evento", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  httr2::local_mocked_responses(function(req) {
+    if (grepl("mdfe", req$url, fixed = TRUE)) {
+      return(resposta_da_sefaz(resposta_do_mdfe_encerrado()))
+    }
+    resposta_da_sefaz(resposta_do_cte_cancelado())
+  })
+  # A terceira chave é de outro CT-e de SP, respondida com o protocolo do cancelado.
+  consulta = sefaz_situacao(c(CHAVE_DO_CTE_SP, CHAVE_DO_MDFE_SP, chave_inventada("35", "57")), CERTIFICADO_DO_TESTE, "teste")
+  situacoes = consulta$situacoes
+  expect_identical(situacoes$documento, c("CT-e", "MDF-e", "CT-e"))
+  expect_identical(situacoes$situacao, c(101L, 132L, 101L))
+  expect_identical(situacoes$protocolo[1:2], c("135260000098765", "935260000011111"))
+  expect_equal(as.numeric(situacoes$autorizacao[1]), as.numeric(as.POSIXct("2026-10-15 17:01:30", tz = "UTC")))
+  expect_equal(as.numeric(situacoes$autorizacao[2]), as.numeric(as.POSIXct("2026-10-15 18:00:40", tz = "UTC")))
+  expect_identical(situacoes$digest_value[1], "AAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+  expect_true(all(is.na(situacoes$problema[1:2])))
+  # O retorno do CT-e não repete a chave: é a do protocolo que mostra que a SEFAZ respondeu sobre outra.
+  expect_identical(situacoes$problema[3], "a SEFAZ respondeu sobre outra chave")
+  # Os eventos das duas respostas certas, iguais aos lidos dos arquivos.
+  eventos = consulta$eventos
+  expect_identical(eventos$chave, c(CHAVE_DO_CTE_SP, CHAVE_DO_MDFE_SP))
+  expect_identical(eventos$tipo, c("110111", "110112"))
+  do_arquivo = eventos_ler(system.file("exemplos", c("evento_cte_cancelamento.xml", "evento_mdfe_encerramento.xml"),
+                                       package = "RNFe"), todos_os_campos = FALSE)$eventos
+  do_arquivo$arquivo = NULL
+  expect_identical(eventos, do_arquivo)
 })
 
 test_that("sem chave nenhuma, as tabelas v\u00eam vazias com as colunas certas", {

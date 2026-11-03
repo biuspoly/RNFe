@@ -53,6 +53,58 @@ test_that("o status pela SVRS: o pedido que vai e a resposta da SEFAZ em colunas
   expect_identical(pedidos[[1]]$options$keypasswd, "teste")
 })
 
+# respostas/status_cte_homologacao_svrs.xml e status_mdfe_homologacao_svrs.xml: as respostas reais da SVRS de
+# homologação ao status do CE (03/11/2026).
+test_that("o status do CT-e e do MDF-e: o pedido de cada um e a resposta em colunas", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    if (grepl("mdfe", req$url, fixed = TRUE)) {
+      arquivo = test_path("respostas", "status_mdfe_homologacao_svrs.xml")
+    } else {
+      arquivo = test_path("respostas", "status_cte_homologacao_svrs.xml")
+    }
+    resposta_gravada(paste(readLines(arquivo, encoding = "UTF-8", warn = FALSE), collapse = ""))
+  })
+  # O CT-e do CE vai à SVRS, o de PE à SVSP e o de SP à SEFAZ de SP.
+  cte = sefaz_status(c("CE", "PE", "SP"), CERTIFICADO_DE_TESTE, "teste", documento = "CT-e")
+  expect_identical(cte$documento, rep("CT-e", 3))
+  expect_identical(cte$autorizador, c("SVRS", "SVSP", "SP"))
+  expect_identical(cte$situacao, rep(107L, 3))
+  expect_identical(cte$versao_aplicativo[1], "RS20240708154036")
+  expect_true(all(is.na(cte$problema)))
+  expect_identical(pedidos[[1]]$url, "https://cte-homologacao.svrs.rs.gov.br/ws/CTeStatusServicoV4/CTeStatusServicoV4.asmx")
+  expect_identical(pedidos[[2]]$url, "https://homologacao.nfe.fazenda.sp.gov.br/CTeWS/WS/CTeStatusServicoV4.asmx")
+  corpo = rawToChar(pedidos[[1]]$body$data)
+  expect_match(corpo, '<cteDadosMsg xmlns="http://www.portalfiscal.inf.br/cte/wsdl/CTeStatusServicoV4">', fixed = TRUE)
+  expect_match(corpo, paste0('<consStatServCTe xmlns="http://www.portalfiscal.inf.br/cte" versao="4.00"><tpAmb>2</tpAmb>',
+                             "<cUF>23</cUF><xServ>STATUS</xServ></consStatServCTe>"), fixed = TRUE)
+  expect_false(grepl("Header", corpo, fixed = TRUE))
+  expect_match(pedidos[[1]]$body$content_type,
+               'action="http://www.portalfiscal.inf.br/cte/wsdl/CTeStatusServicoV4/cteStatusServicoCT"', fixed = TRUE)
+  # O MDF-e vai sempre à SVRS, com a UF no cabeçalho mdfeCabecMsg em vez do pedido.
+  mdfe = sefaz_status("CE", CERTIFICADO_DE_TESTE, "teste", documento = "MDF-e")
+  expect_identical(mdfe$documento, "MDF-e")
+  expect_identical(mdfe$autorizador, "SVRS")
+  expect_identical(mdfe$situacao, 107L)
+  expect_true(is.na(mdfe$problema))
+  expect_identical(pedidos[[4]]$url, "https://mdfe-homologacao.svrs.rs.gov.br/ws/MDFeStatusServico/MDFeStatusServico.asmx")
+  corpo = rawToChar(pedidos[[4]]$body$data)
+  expect_match(corpo, paste0('<soap12:Header><mdfeCabecMsg xmlns="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeStatusServico">',
+                             "<cUF>23</cUF><versaoDados>3.00</versaoDados></mdfeCabecMsg></soap12:Header>"), fixed = TRUE)
+  expect_match(corpo, paste0('<mdfeDadosMsg xmlns="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeStatusServico">',
+                             '<consStatServMDFe xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><tpAmb>2</tpAmb>',
+                             "<xServ>STATUS</xServ></consStatServMDFe></mdfeDadosMsg>"), fixed = TRUE)
+  expect_match(pedidos[[4]]$body$content_type,
+               'action="http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeStatusServico/mdfeStatusServicoMDF"', fixed = TRUE)
+  # Documento que não tem status para antes de conectar.
+  expect_error(sefaz_status("CE", CERTIFICADO_DE_TESTE, "teste", documento = "NFS-e"), "Informe documento")
+  expect_length(pedidos, 4)
+})
+
 test_that("o motor de TLS pelo texto do curl: o que est\u00e1 entre par\u00eanteses est\u00e1 desligado", {
   expect_identical(motor_de_tls("(OpenSSL/3.5.8) Schannel"), "Schannel")
   expect_identical(motor_de_tls("OpenSSL/3.5.8 (Schannel)"), "OpenSSL")
@@ -189,4 +241,16 @@ test_that("o autorizador de cada UF, como a Rela\u00e7\u00e3o de Servi\u00e7os W
   expect_identical(sum(autorizadores_da_nfce == "SVRS"), 19L)
   expect_identical(servico_da_uf("MA", "NFeConsultaProtocolo", "homologacao", "NFC-e")$endereco,
                    "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx")
+  # O CT-e: 6 UFs com autorizador próprio, AP, PE e RR na SVSP e as outras 18 na SVRS. O MDF-e é todo da SVRS.
+  autorizadores_do_cte = character()
+  autorizadores_do_mdfe = character()
+  for (uf in ufs) {
+    autorizadores_do_cte = c(autorizadores_do_cte, servico_da_uf(uf, "CteConsultaV4", "homologacao", "CT-e")$autorizador)
+    autorizadores_do_mdfe = c(autorizadores_do_mdfe, servico_da_uf(uf, "MDFeConsulta", "homologacao", "MDF-e")$autorizador)
+  }
+  expect_identical(ufs[!(autorizadores_do_cte %in% c("SVRS", "SVSP"))], c("MG", "MS", "MT", "PR", "RS", "SP"))
+  expect_identical(ufs[autorizadores_do_cte == "SVSP"], c("AP", "PE", "RR"))
+  expect_identical(sum(autorizadores_do_cte == "SVRS"), 18L)
+  expect_identical(unique(autorizadores_do_mdfe), "SVRS")
+  expect_length(autorizadores_do_mdfe, 27)
 })

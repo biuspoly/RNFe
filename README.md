@@ -6,8 +6,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, da GTV-e, do MDF-e, da NFS-e Nacional e dos
 > eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
-> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço, a consulta da NF-e pela chave, a
-> consulta de cadastro e a Distribuição de DF-e, em homologação; o plano está em
+> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta pela chave (NF-e, NFC-e,
+> CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e, em homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -182,17 +182,26 @@ sempre é o de Brasília).
 senha = Sys.getenv("SENHA_DO_CERTIFICADO")   # nunca escrita no script
 certificado_ler("empresa.pfx", senha)          # titular, CNPJ ou CPF, emissor e validade
 sefaz_status(c("SP", "CE"), "empresa.pfx", senha)   # o serviço da NF-e está no ar em cada UF?
+sefaz_status(c("SP", "CE"), "empresa.pfx", senha, documento = "CT-e")   # ou "NFC-e" ou "MDF-e"
 
-consulta = sefaz_situacao(chaves, "empresa.pfx", senha)   # a situação de cada NF-e, pela chave
+consulta = sefaz_situacao(chaves, "empresa.pfx", senha)   # a situação de cada documento, pela chave
 consulta$situacoes   # uma linha por chave: a resposta da SEFAZ e o protocolo de autorização
 consulta$eventos     # os eventos que a SEFAZ manda junto (o cancelamento, por exemplo)
 ```
 
-A consulta pela chave vale para a NF-e e a NFC-e e vai ao autorizador da UF que está na chave; chave que não
-confere nem é enviada. Os eventos que vêm na resposta são lidos pelo `eventos_ler()`. A NFC-e tem endereços
-próprios: os do Portal da NFC-e (AM, GO, MS, MT, PR, RS, SP e a SVRS para outras 19 UFs) e os da página da SEFAZ-MG,
-que o Portal não lista. Testado em 03/11/2026 com chaves inventadas nas 27 UFs, nos dois modelos: todas
-responderam (217, a nota não consta, como esperado numa chave que não existe).
+A consulta pela chave vale para a NF-e, a NFC-e, o CT-e, o CT-e OS, a GTV-e e o MDF-e (o modelo vem da chave) e vai
+ao autorizador da UF que está na chave; chave que não confere nem é enviada. Os eventos que vêm na resposta são lidos
+pelo `eventos_ler()`. A NFC-e tem endereços próprios: os do Portal da NFC-e (AM, GO, MS, MT, PR, RS, SP e a SVRS para
+outras 19 UFs) e os da página da SEFAZ-MG, que o Portal não lista. O CT-e segue o Portal do CT-e (MG, MS, MT, PR, RS
+e SP têm autorizador próprio; AP, PE e RR vão à SVSP; as outras 18 UFs, à SVRS); o MDF-e vai sempre à SVRS. Testado
+em 03/11/2026 com chaves inventadas: o status nas 27 UFs para NF-e, NFC-e, CT-e e MDF-e (107, em operação) e a
+consulta nas 27 UFs para NF-e, NFC-e e CT-e, e em algumas para CT-e OS, GTV-e e MDF-e (217, o documento não consta,
+como esperado numa chave que não existe).
+
+```r
+abertos = sefaz_mdfe_nao_encerrados("11222333000181", "empresa.pfx", senha)   # MDF-e ainda não encerrados
+abertos$mdfes   # a chave e o protocolo de cada um (nenhuma linha e situação 112 quando não há)
+```
 
 ```r
 cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx", senha)   # ou tipo = "CPF" ou "IE"
@@ -222,8 +231,8 @@ faltou (`nsu`) ou uma NF-e pela chave (`chave`).
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada
-serviço e o autorizador de cada UF (a própria SEFAZ, a SVRS ou a SVAN) vêm da Relação de Serviços Web do Portal
-da NF-e, que o robô das tabelas confere toda semana.
+serviço e o autorizador de cada UF (a própria SEFAZ ou uma SEFAZ virtual) vêm das Relações de Serviços Web dos
+portais de cada documento (e da página da SEFAZ-MG, na NFC-e), que o robô das tabelas confere toda semana.
 
 Não é preciso configurar nada, nem no Windows. Testado em 30/10/2026: as 27 UFs responderam numa sessão comum do R
 no Windows. Lá o curl do R usa o motor de conexão segura do próprio Windows (Schannel), que não conecta com BA, MA,

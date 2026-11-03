@@ -22,10 +22,12 @@ IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}};
 \item o certificado digital A1: \code{\link[=certificado_ler]{certificado_ler()}} (titular, CNPJ ou CPF e
 validade);
 \item a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
-\code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?), \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a
-situação de cada NF-e, pela chave), \code{\link[=sefaz_cadastro]{sefaz_cadastro()}} (o cadastro de
-contribuintes, pelo CNPJ, CPF ou IE) e \code{\link[=sefaz_distribuicao]{sefaz_distribuicao()}} (os
-documentos emitidos contra um CNPJ).
+\code{\link[=sefaz_status]{sefaz_status()}} (o serviço da NF-e, da NFC-e, do CT-e ou do MDF-e está
+no ar?), \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a situação de cada documento, pela chave),
+\code{\link[=sefaz_mdfe_nao_encerrados]{sefaz_mdfe_nao_encerrados()}} (os MDF-e que um emitente ainda não
+encerrou), \code{\link[=sefaz_cadastro]{sefaz_cadastro()}} (o cadastro de contribuintes, pelo CNPJ,
+CPF ou IE) e \code{\link[=sefaz_distribuicao]{sefaz_distribuicao()}} (os documentos emitidos contra um
+CNPJ).
 }
 }
 \section{De onde vêm as regras}{

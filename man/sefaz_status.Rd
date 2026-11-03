@@ -2,15 +2,23 @@
 % Please edit documentation in R/sefaz.R
 \name{sefaz_status}
 \alias{sefaz_status}
-\title{Status do serviço da NF-e na SEFAZ}
+\title{Status do serviço da SEFAZ (NF-e, NFC-e, CT-e e MDF-e)}
 \source{
-Relação de Serviços Web do Portal da NF-e (endereços de
-homologação); o schema \code{leiauteConsStatServ_v4.00.xsd} do pacote de
-liberação 9q (pedido e resposta); o WSDL do serviço NFeStatusServico4
-(a mensagem em \code{nfeDadosMsg}, SOAP 1.2).
+As Relações de Serviços Web dos portais da NF-e, da NFC-e, do CT-e e
+do MDF-e (endereços de homologação); os schemas do pedido e da resposta do
+status (\code{leiauteConsStatServ_v4.00.xsd} do pacote de liberação 9q da NF-e,
+\code{consStatServCTe_v4.00.xsd} do CT-e e \code{consStatServMDFe_v3.00.xsd} do
+MDF-e); os WSDLs de cada serviço (SOAP 1.2; no MDF-e, com o cabeçalho
+\code{mdfeCabecMsg}).
 }
 \usage{
-sefaz_status(ufs, certificado, senha, ambiente = "homologacao")
+sefaz_status(
+  ufs,
+  certificado,
+  senha,
+  ambiente = "homologacao",
+  documento = "NF-e"
+)
 }
 \arguments{
 \item{ufs}{As UFs pela sigla (\code{"SP"}, \code{"CE"}...): um texto ou um vetor.}
@@ -21,10 +29,12 @@ sefaz_status(ufs, certificado, senha, ambiente = "homologacao")
 variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 
 \item{ambiente}{\code{"homologacao"}, o único liberado por enquanto.}
+
+\item{documento}{\code{"NF-e"} (o padrão), \code{"NFC-e"}, \code{"CT-e"} ou \code{"MDF-e"}.}
 }
 \value{
-Um \code{data.frame} com \code{uf}, \code{autorizador} (a sigla da UF ou da SEFAZ
-virtual), \code{ambiente}, \code{situacao} (o código de status, \code{cStat}),
+Um \code{data.frame} com \code{uf}, \code{documento}, \code{autorizador} (a sigla da UF
+ou da SEFAZ virtual), \code{ambiente}, \code{situacao} (o código de status, \code{cStat}),
 \code{motivo}, \code{recebimento} (data e hora em que a SEFAZ recebeu a consulta, no
 horário de Brasília), \code{tempo_medio} (em segundos, dos últimos 5 minutos),
 \code{retorno_previsto} e \code{observacao} (quando o serviço está parado),
@@ -32,7 +42,8 @@ horário de Brasília), \code{tempo_medio} (em segundos, dos últimos 5 minutos)
 \code{problema} (por que a consulta não deu certo; vazio quando deu).
 }
 \description{
-Pergunta à SEFAZ de cada UF se o serviço da NF-e (modelo 55) está no ar e
+Pergunta à SEFAZ de cada UF se o serviço de um documento (a NF-e, se nada
+for dito; a NFC-e, o CT-e ou o MDF-e com \code{documento}) está no ar e
 devolve um \code{data.frame} com uma linha por UF: o autorizador que atende a UF,
 a \code{situacao} (107 quando está em operação), o \code{motivo} escrito pela SEFAZ, o
 tempo médio de resposta e, quando a SEFAZ informa, a previsão de volta e uma
@@ -42,8 +53,10 @@ observação.
 Por enquanto o RNFe só fala com o ambiente de \strong{homologação} (testes, sem
 valor fiscal); o ambiente de produção é recusado.
 
-Cada UF é atendida pela própria SEFAZ ou por uma SEFAZ virtual (a SVRS ou a
-SVAN), como diz a Relação de Serviços Web do Portal da NF-e. A conexão usa
+Cada UF é atendida pela própria SEFAZ ou por uma SEFAZ virtual, como diz a
+Relação de Serviços Web do portal de cada documento: na NF-e, a SVRS ou a
+SVAN; na NFC-e, a SVRS (os endereços de MG vêm da página da SEFAZ-MG); no
+CT-e, a SVRS ou a SVSP; o MDF-e é todo da SVRS. A conexão usa
 o certificado digital A1 (veja \code{\link[=certificado_ler]{certificado_ler()}}). Uma UF que não responde
 não atrapalha as outras: o motivo fica em \code{problema}.
 

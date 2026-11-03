@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs e consulta de cadastro nas 26 que têm o serviço, e a Distribuição de DF-e, em homologação |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e, em homologação; a chave num PDF ou numa foto |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -50,14 +50,14 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
-| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e prontos em homologação; o resto na etapa 3 |
+| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e, da NFC-e, do CT-e e do MDF-e, e os MDF-e não encerrados, prontos em homologação; a NFS-e na etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e pronta em homologação; CT-e e NFS-e na etapa 3 |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
 | Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | última |
 | Manifestação do destinatário | sim | não | não | última |
 | MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | última (entrou agora no plano) |
-| CT-e: consultar e registrar desacordo | não | não | não | etapa 3 e última |
+| CT-e: consultar e registrar desacordo | não | não | não | consultar: pronto em homologação (etapa 3); desacordo: última |
 | NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | etapa 3 e última |
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | etapa 3 |
@@ -686,6 +686,23 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - **A ajuda diz o que acontece em cada UF** (pedido do usuário): a seção "Em cada UF" do `sefaz_cadastro()` lista
     as UFs de SEFAZ própria, as da SVRS e o MA sem o serviço, e explica a 257 (sobre o certificado) e a 259 (sobre o
     documento consultado).
+- **As SEFAZ não seguem o mesmo envelope** (WSDLs de homologação baixados em 03/11/2026):
+  - o MT pede o `nfeDadosMsg` dentro de um `consultaCadastro` e responde com um `consultaCadastroResult` no meio;
+    o pedido igual ao dos outros voltava 215, "Falha no schema XML". Fica em `ELEMENTO_EM_VOLTA_NO_CADASTRO`;
+  - o AM e MG respondem num `consultaCadastro4Result`, sem o `nfeResultMsg` (o WSDL do AM chama a operação de
+    `consultaCadastro4`, mas ele responde igual às duas);
+  - por isso o `ler_resposta()` passou a achar o retorno pelo nome (`retConsStatServ`, `retConsSitNFe`,
+    `retConsCad`), em qualquer envelope;
+  - MG manda a hora sem fuso (é a de Brasília: a mesma do AM, que manda com fuso, na mesma consulta) e o PR manda
+    milésimos; os dois são lidos.
+- **Teste real em homologação (03/11/2026)**, com o CNPJ de exemplo inventado, nas 15 UFs: 11 responderam 257
+  ("Solicitante não habilitado para emissão da NF-e"), que é sobre o CNPJ do certificado, não sobre o consultado;
+  MT e PR responderam 259 ("CNPJ não cadastrado como contribuinte na UF"), sobre o CNPJ consultado; **GO e AM
+  responderam sobre o CNPJ do certificado** (conferido comparando os dois, sem mostrá-los). Por isso a resposta é
+  conferida: se ela traz outro documento, os cadastros dela não entram e a linha vai com "a SEFAZ respondeu sobre
+  outro documento". Nenhuma UF devolveu um cadastro (o CNPJ é inventado): o caso com cadastro é testado com uma
+  resposta montada com dados inventados, no envelope de MG, que passa no `retConsCad_v2.00.xsd` (as duas respostas
+  reais gravadas para os testes, da SVRS e do PR, também passam).
 
 ## Etapa 3, quarto passo: a Distribuição de DF-e (03/11/2026)
 
@@ -707,23 +724,39 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   pelo último NSU foi recusado pelo RNFe, sem ir à SEFAZ (só dois pedidos saíram). A resposta do 137 ficou gravada
   para os testes (não tem dado de empresa). A resposta com documentos dos testes é montada com o resumo e o
   cancelamento de exemplo compactados como a SEFAZ manda, e passa no `retDistDFeInt_v1.01.xsd` (a real também).
-- **As SEFAZ não seguem o mesmo envelope** (WSDLs de homologação baixados em 03/11/2026):
-  - o MT pede o `nfeDadosMsg` dentro de um `consultaCadastro` e responde com um `consultaCadastroResult` no meio;
-    o pedido igual ao dos outros voltava 215, "Falha no schema XML". Fica em `ELEMENTO_EM_VOLTA_NO_CADASTRO`;
-  - o AM e MG respondem num `consultaCadastro4Result`, sem o `nfeResultMsg` (o WSDL do AM chama a operação de
-    `consultaCadastro4`, mas ele responde igual às duas);
-  - por isso o `ler_resposta()` passou a achar o retorno pelo nome (`retConsStatServ`, `retConsSitNFe`,
-    `retConsCad`), em qualquer envelope;
-  - MG manda a hora sem fuso (é a de Brasília: a mesma do AM, que manda com fuso, na mesma consulta) e o PR manda
-    milésimos; os dois são lidos.
-- **Teste real em homologação (03/11/2026)**, com o CNPJ de exemplo inventado, nas 15 UFs: 11 responderam 257
-  ("Solicitante não habilitado para emissão da NF-e"), que é sobre o CNPJ do certificado, não sobre o consultado;
-  MT e PR responderam 259 ("CNPJ não cadastrado como contribuinte na UF"), sobre o CNPJ consultado; **GO e AM
-  responderam sobre o CNPJ do certificado** (conferido comparando os dois, sem mostrá-los). Por isso a resposta é
-  conferida: se ela traz outro documento, os cadastros dela não entram e a linha vai com "a SEFAZ respondeu sobre
-  outro documento". Nenhuma UF devolveu um cadastro (o CNPJ é inventado): o caso com cadastro é testado com uma
-  resposta montada com dados inventados, no envelope de MG, que passa no `retConsCad_v2.00.xsd` (as duas respostas
-  reais gravadas para os testes, da SVRS e do PR, também passam).
+
+## Etapa 3, quinto passo: CT-e e MDF-e no status e na consulta pela chave (03/11/2026)
+
+- **Pedido do usuário** ("e depois prossiga com o resto"). O `sefaz_status()` ganhou o argumento `documento` (`"NF-e"`,
+  o padrão, `"NFC-e"`, `"CT-e"` ou `"MDF-e"`) e a coluna `documento`; a `sefaz_situacao()` consulta também o CT-e (57),
+  o CT-e OS (67), a GTV-e (64) e o MDF-e (58), pelo modelo da chave. Cada documento é uma linha de uma tabela no topo
+  do `R/sefaz.R` (`STATUS_DE_CADA_DOCUMENTO` e `CONSULTA_DE_CADA_DOCUMENTO`): a lista de endereços, o nome do serviço
+  nela, o WSDL, a operação, a família (`nfe`, `cte`, `mdfe`, que dá o `<família>DadosMsg` e o namespace), o pedido, a
+  versão, o retorno, o protocolo e o campo da chave. Como todo modelo que a chave conhece agora é consultado, saiu o
+  aviso de "modelo que não é consultado".
+- **Pedidos e respostas pelos schemas:** no CT-e, `consStatServCTe` e `consSitCTe` 4.00 do pacote PL_CTe_400 NT
+  2026.004 RTC 1.00; no MDF-e, `consStatServMDFe` e `consSitMDFe` 3.00 do PL_MDFe_300b (NT 2025.001). O CT-e OS e a
+  GTV-e vão ao serviço de consulta do CT-e, que separa os três pelo modelo da chave (MOC do CT-e 4.00). Pelos WSDLs de
+  homologação (baixados em 03/11/2026), o MDF-e pede o cabeçalho `mdfeCabecMsg` com a UF e a versão; no status do
+  MDF-e a UF vai só no cabeçalho, porque o `consStatServMDFe` não tem `cUF`. O CT-e 4.00 não tem cabeçalho.
+- **O retorno do CT-e e do MDF-e é mais curto:** o `retConsSitCTe` e o `retConsSitMDFe` não repetem a chave nem
+  trazem a hora do recebimento. `recebimento` fica vazio, e a chave conferida é a do `infProt` do protocolo, quando
+  ele vem (há teste com a resposta de outra chave). Os eventos que vêm junto (`procEventoCTe`, `procEventoMDFe`)
+  passam pelo `eventos_ler()`, como os da NF-e.
+- **Os endereços:** o `gerar_tabelas.R` lê a Relação de Serviços Web de homologação do Portal do CT-e (no molde da
+  da NF-e: MG, MS, MT, PR, RS e SP com autorizador próprio, e as UFs de cada SEFAZ virtual, SVSP para AP, PE e RR e
+  SVRS para as outras 18) e a página de serviços do Portal do MDF-e (a SVRS, para todas as UFs). As linhas entram em
+  `servicos_sefaz` e `autorizadores_sefaz` com `documento` `CT-e` e `MDF-e`, e o robô semanal vigia as duas páginas.
+- **`sefaz_mdfe_nao_encerrados(documento, certificado, senha)`** pergunta à SVRS os MDF-e de um CNPJ ou CPF emitente
+  que ainda não foram encerrados (`consMDFeNaoEnc` 3.00, `xServ` "CONSULTAR NÃO ENCERRADOS"). Devolve `consulta` (a
+  resposta, numa linha) e `mdfes` (a chave e o protocolo de cada um). O WSDL deixa a UF do cabeçalho opcional, e a do
+  emitente não é sabida: vai só a versão. Em homologação a SVRS respondeu igual com a UF, sem ela e sem cabeçalho.
+- **Teste real em homologação (03/11/2026)**, com chaves inventadas (CNPJ de exemplo): o status nas 27 UFs para
+  CT-e, MDF-e e NFC-e voltou 107 em todas; a consulta voltou 217 (o documento não consta) para o CT-e nas 27 UFs, o
+  CT-e OS de SP e do RS, a GTV-e de SP e do CE e o MDF-e de SP, do CE e do MA. Os MDF-e não encerrados, com o CNPJ do
+  certificado de teste e pela função pública, voltaram 112 ("não localizou MDF-e nessa situação") em 0,9 s. As
+  respostas da SVRS e de SP ficaram gravadas para os testes (não têm dado de empresa); as do CT-e cancelado e do
+  MDF-e encerrado são montadas com o protocolo e o evento dos exemplos do pacote.
 
 ## O robô das tabelas
 

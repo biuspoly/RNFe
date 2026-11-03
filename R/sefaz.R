@@ -1,5 +1,5 @@
-# A conversa com os serviços web da SEFAZ (NF-e, modelo 55): o envelope SOAP 1.2, o certificado de cliente e o
-# endereço de cada serviço, tirado da Relação de Serviços Web do Portal da NF-e (as tabelas servicos_sefaz e
+# A conversa com os serviços web da SEFAZ (NF-e, NFC-e, CT-e e MDF-e): o envelope SOAP 1.2, o certificado de cliente e
+# o endereço de cada serviço, tirado das Relações de Serviços Web dos portais (as tabelas servicos_sefaz e
 # autorizadores_sefaz, geradas por ferramentas/gerar_tabelas.R). Por enquanto, só o ambiente de homologação.
 
 #' @include chave.R certificado.R ler_xml.R
@@ -10,9 +10,32 @@ AMBIENTES_LIBERADOS = c(homologacao = 2L)
 NAMESPACE_DA_NFE = "http://www.portalfiscal.inf.br/nfe"
 TEMPO_LIMITE_DA_SEFAZ = 60
 
-#' Status do serviço da NF-e na SEFAZ
+# Como cada documento conversa com a SEFAZ: a lista de endereços dele (o documento em servicos_sefaz), o nome do serviço
+# nela, o WSDL e a operação, a família (o "nfe" de nfeDadosMsg e do namespace), o pedido, a versão e o retorno. Os nomes
+# vêm das Relações de Serviços Web dos portais e dos WSDLs de homologação (baixados em 03/11/2026). A NFC-e usa o pedido
+# da NF-e; o CT-e OS e a GTV-e, o do CT-e.
+STATUS_DE_CADA_DOCUMENTO = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE, text = "
+documento ; lista ; servico_da_lista   ; wsdl               ; operacao             ; familia ; pedido           ; versao ; retorno
+NF-e      ; NF-e  ; NfeStatusServico   ; NFeStatusServico4  ; nfeStatusServicoNF   ; nfe     ; consStatServ     ; 4.00   ; retConsStatServ
+NFC-e     ; NFC-e ; NFeStatusServico   ; NFeStatusServico4  ; nfeStatusServicoNF   ; nfe     ; consStatServ     ; 4.00   ; retConsStatServ
+CT-e      ; CT-e  ; CteStatusServicoV4 ; CTeStatusServicoV4 ; cteStatusServicoCT   ; cte     ; consStatServCTe  ; 4.00   ; retConsStatServCTe
+MDF-e     ; MDF-e ; MDFeStatusServico  ; MDFeStatusServico  ; mdfeStatusServicoMDF ; mdfe    ; consStatServMDFe ; 3.00   ; retConsStatServMDFe
+", colClasses = "character")
+
+CONSULTA_DE_CADA_DOCUMENTO = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE, text = "
+documento ; lista ; servico_da_lista     ; wsdl                  ; operacao        ; familia ; pedido      ; versao ; retorno        ; protocolo ; campo_da_chave
+NF-e      ; NF-e  ; NfeConsultaProtocolo ; NFeConsultaProtocolo4 ; nfeConsultaNF   ; nfe     ; consSitNFe  ; 4.00   ; retConsSitNFe  ; protNFe   ; chNFe
+NFC-e     ; NFC-e ; NFeConsultaProtocolo ; NFeConsultaProtocolo4 ; nfeConsultaNF   ; nfe     ; consSitNFe  ; 4.00   ; retConsSitNFe  ; protNFe   ; chNFe
+CT-e      ; CT-e  ; CteConsultaV4        ; CTeConsultaV4         ; cteConsultaCT   ; cte     ; consSitCTe  ; 4.00   ; retConsSitCTe  ; protCTe   ; chCTe
+CT-e OS   ; CT-e  ; CteConsultaV4        ; CTeConsultaV4         ; cteConsultaCT   ; cte     ; consSitCTe  ; 4.00   ; retConsSitCTe  ; protCTe   ; chCTe
+GTV-e     ; CT-e  ; CteConsultaV4        ; CTeConsultaV4         ; cteConsultaCT   ; cte     ; consSitCTe  ; 4.00   ; retConsSitCTe  ; protCTe   ; chCTe
+MDF-e     ; MDF-e ; MDFeConsulta         ; MDFeConsulta          ; mdfeConsultaMDF ; mdfe    ; consSitMDFe ; 3.00   ; retConsSitMDFe ; protMDFe  ; chMDFe
+", colClasses = "character")
+
+#' Status do serviço da SEFAZ (NF-e, NFC-e, CT-e e MDF-e)
 #'
-#' Pergunta à SEFAZ de cada UF se o serviço da NF-e (modelo 55) está no ar e
+#' Pergunta à SEFAZ de cada UF se o serviço de um documento (a NF-e, se nada
+#' for dito; a NFC-e, o CT-e ou o MDF-e com `documento`) está no ar e
 #' devolve um `data.frame` com uma linha por UF: o autorizador que atende a UF,
 #' a `situacao` (107 quando está em operação), o `motivo` escrito pela SEFAZ, o
 #' tempo médio de resposta e, quando a SEFAZ informa, a previsão de volta e uma
@@ -21,8 +44,10 @@ TEMPO_LIMITE_DA_SEFAZ = 60
 #' Por enquanto o RNFe só fala com o ambiente de **homologação** (testes, sem
 #' valor fiscal); o ambiente de produção é recusado.
 #'
-#' Cada UF é atendida pela própria SEFAZ ou por uma SEFAZ virtual (a SVRS ou a
-#' SVAN), como diz a Relação de Serviços Web do Portal da NF-e. A conexão usa
+#' Cada UF é atendida pela própria SEFAZ ou por uma SEFAZ virtual, como diz a
+#' Relação de Serviços Web do portal de cada documento: na NF-e, a SVRS ou a
+#' SVAN; na NFC-e, a SVRS (os endereços de MG vêm da página da SEFAZ-MG); no
+#' CT-e, a SVRS ou a SVSP; o MDF-e é todo da SVRS. A conexão usa
 #' o certificado digital A1 (veja [certificado_ler()]). Uma UF que não responde
 #' não atrapalha as outras: o motivo fica em `problema`.
 #'
@@ -49,25 +74,29 @@ TEMPO_LIMITE_DA_SEFAZ = 60
 #' @param senha A senha do certificado. Não escreva no script: leia de uma
 #'   variável de ambiente com [Sys.getenv()].
 #' @param ambiente `"homologacao"`, o único liberado por enquanto.
-#' @return Um `data.frame` com `uf`, `autorizador` (a sigla da UF ou da SEFAZ
-#'   virtual), `ambiente`, `situacao` (o código de status, `cStat`),
+#' @param documento `"NF-e"` (o padrão), `"NFC-e"`, `"CT-e"` ou `"MDF-e"`.
+#' @return Um `data.frame` com `uf`, `documento`, `autorizador` (a sigla da UF
+#'   ou da SEFAZ virtual), `ambiente`, `situacao` (o código de status, `cStat`),
 #'   `motivo`, `recebimento` (data e hora em que a SEFAZ recebeu a consulta, no
 #'   horário de Brasília), `tempo_medio` (em segundos, dos últimos 5 minutos),
 #'   `retorno_previsto` e `observacao` (quando o serviço está parado),
 #'   `versao_aplicativo` (o sistema da SEFAZ que respondeu), `endereco` e
 #'   `problema` (por que a consulta não deu certo; vazio quando deu).
 #' @seealso [certificado_ler()]
-#' @source Relação de Serviços Web do Portal da NF-e (endereços de
-#'   homologação); o schema `leiauteConsStatServ_v4.00.xsd` do pacote de
-#'   liberação 9q (pedido e resposta); o WSDL do serviço NFeStatusServico4
-#'   (a mensagem em `nfeDadosMsg`, SOAP 1.2).
+#' @source As Relações de Serviços Web dos portais da NF-e, da NFC-e, do CT-e e
+#'   do MDF-e (endereços de homologação); os schemas do pedido e da resposta do
+#'   status (`leiauteConsStatServ_v4.00.xsd` do pacote de liberação 9q da NF-e,
+#'   `consStatServCTe_v4.00.xsd` do CT-e e `consStatServMDFe_v3.00.xsd` do
+#'   MDF-e); os WSDLs de cada serviço (SOAP 1.2; no MDF-e, com o cabeçalho
+#'   `mdfeCabecMsg`).
 #' @examples
 #' \dontrun{
 #' sefaz_status(c("SP", "CE"), "empresa.pfx", Sys.getenv("SENHA_DO_CERTIFICADO"))
 #' }
 #' @export
-sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
+sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao", documento = "NF-e") {
   conferir_ambiente(ambiente)
+  configuracao = configuracao_do_documento(STATUS_DE_CADA_DOCUMENTO, documento)
   exigir_pacotes(c("httr2", "curl", "openssl"))
   conferir_certificado(certificado, senha)
   # Os arquivos da conexão (o certificado em PEM, a lista de raízes, a tarefa do processo separado) ficam numa pasta
@@ -82,7 +111,7 @@ sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
   pedidos = list()
   linha_de_cada_pedido = integer()
   for (posicao in seq_along(ufs)) {
-    comeco = comeco_do_status(ufs[posicao], ambiente)
+    comeco = comeco_do_status(ufs[posicao], ambiente, configuracao)
     linhas[[posicao]] = comeco$linha
     if (!is.null(comeco$pedido)) {
       pedidos[[length(pedidos) + 1]] = comeco$pedido
@@ -92,10 +121,11 @@ sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
   respostas = enviar_pedidos(pedidos, conexao)
   for (numero_do_pedido in seq_along(respostas)) {
     posicao = linha_de_cada_pedido[numero_do_pedido]
-    linhas[[posicao]] = completar_status(linhas[[posicao]], ler_resposta(respostas[[numero_do_pedido]], "retConsStatServ"), ambiente)
+    resposta_lida = ler_resposta(respostas[[numero_do_pedido]], configuracao$retorno)
+    linhas[[posicao]] = completar_status(linhas[[posicao]], resposta_lida, ambiente)
   }
   if (length(linhas) == 0) {
-    status = comeco_do_status(character(), ambiente)$linha
+    status = comeco_do_status(character(), ambiente, configuracao)$linha
   } else {
     status = do.call(rbind, linhas)
   }
@@ -105,12 +135,22 @@ sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
   status
 }
 
-# A linha da UF (o autorizador e o endereço, ou o problema) e o pedido de status, quando dá para pedir.
-comeco_do_status = function(uf, ambiente) {
+# A linha do documento na tabela de configuração, como lista. Documento que a tabela não tem para tudo antes de conectar.
+configuracao_do_documento = function(tabela, documento) {
+  if (length(documento) != 1 || is.na(documento) || !(documento %in% tabela$documento)) {
+    stop("Informe documento = ", paste0('"', tabela$documento, '"', collapse = ", "), ".", call. = FALSE)
+  }
+  as.list(tabela[tabela$documento == documento, ])
+}
+
+# A linha da UF (o autorizador e o endereço, ou o problema) e o pedido de status, quando dá para pedir. No MDF-e a UF vai
+# no cabeçalho, não no pedido.
+comeco_do_status = function(uf, ambiente, configuracao) {
   linha = data.frame(
-    uf = NA_character_, autorizador = NA_character_, ambiente = ambiente, situacao = NA_integer_, motivo = NA_character_,
-    recebimento = as.POSIXct(NA), tempo_medio = NA_integer_, retorno_previsto = as.POSIXct(NA), observacao = NA_character_,
-    versao_aplicativo = NA_character_, endereco = NA_character_, problema = NA_character_
+    uf = NA_character_, documento = configuracao$documento, autorizador = NA_character_, ambiente = ambiente,
+    situacao = NA_integer_, motivo = NA_character_, recebimento = as.POSIXct(NA), tempo_medio = NA_integer_,
+    retorno_previsto = as.POSIXct(NA), observacao = NA_character_, versao_aplicativo = NA_character_,
+    endereco = NA_character_, problema = NA_character_
   )
   # Sem UF, a tabela vazia com as mesmas colunas.
   if (length(uf) == 0) {
@@ -122,22 +162,36 @@ comeco_do_status = function(uf, ambiente) {
     linha$problema = "UF desconhecida"
     return(list(linha = linha, pedido = NULL))
   }
-  servico = servico_da_uf(uf, "NfeStatusServico", ambiente)
+  servico = servico_da_uf(uf, configuracao$servico_da_lista, ambiente, configuracao$lista)
   if (is.null(servico)) {
     linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
     return(list(linha = linha, pedido = NULL))
   }
   linha$autorizador = servico$autorizador
   linha$endereco = servico$endereco
-  mensagem = paste0(
-    '<consStatServ xmlns="', NAMESPACE_DA_NFE, '" versao="4.00">',
-    "<tpAmb>", AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><cUF>", codigo_da_uf, "</cUF><xServ>STATUS</xServ>",
-    "</consStatServ>"
-  )
-  list(linha = linha, pedido = montar_pedido(servico$endereco, "NFeStatusServico4", "nfeStatusServicoNF", mensagem))
+  conteudo = "<xServ>STATUS</xServ>"
+  if (configuracao$familia != "mdfe") {
+    conteudo = paste0("<cUF>", codigo_da_uf, "</cUF>", conteudo)
+  }
+  list(linha = linha, pedido = pedido_do_documento(servico$endereco, configuracao, ambiente, conteudo, codigo_da_uf))
 }
 
-# Os campos do retConsStatServ na linha da UF.
+# O pedido de um documento: a mensagem (o elemento do pedido, no namespace da família, com o ambiente e o conteúdo) no
+# envelope do WSDL. No MDF-e, o WSDL pede o cabeçalho com a UF e a versão.
+pedido_do_documento = function(endereco, configuracao, ambiente, conteudo, codigo_da_uf) {
+  mensagem = paste0(
+    "<", configuracao$pedido, ' xmlns="http://www.portalfiscal.inf.br/', configuracao$familia, '" versao="',
+    configuracao$versao, '"><tpAmb>', AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb>", conteudo, "</", configuracao$pedido, ">"
+  )
+  cabecalho = NA_character_
+  if (configuracao$familia == "mdfe") {
+    cabecalho = paste0("<cUF>", codigo_da_uf, "</cUF><versaoDados>", configuracao$versao, "</versaoDados>")
+  }
+  montar_pedido(endereco, configuracao$wsdl, configuracao$operacao, mensagem, familia = configuracao$familia,
+                cabecalho = cabecalho)
+}
+
+# Os campos do retorno do status (retConsStatServ, retConsStatServCTe, retConsStatServMDFe) na linha da UF.
 completar_status = function(linha, resposta_lida, ambiente) {
   if (!is.na(resposta_lida$problema)) {
     linha$problema = resposta_lida$problema
@@ -157,16 +211,21 @@ completar_status = function(linha, resposta_lida, ambiente) {
   linha
 }
 
-#' Situação da NF-e e da NFC-e na SEFAZ, pela chave
+#' Situação de NF-e, NFC-e, CT-e e MDF-e na SEFAZ, pela chave
 #'
-#' Pergunta à SEFAZ a situação de cada NF-e (modelo 55) ou NFC-e (modelo 65)
-#' pela chave de acesso: se está autorizada, cancelada, denegada ou se não
-#' consta. Devolve uma lista
+#' Pergunta à SEFAZ a situação de cada documento pela chave de acesso: NF-e
+#' (modelo 55), NFC-e (65), CT-e (57), CT-e OS (67), GTV-e (64) ou MDF-e (58).
+#' Diz se está autorizado, cancelado, denegado (ou encerrado, no MDF-e) ou se
+#' não consta. Devolve uma lista
 #' com `situacoes` (uma linha por chave: a resposta da SEFAZ e o protocolo de
 #' autorização, quando vem) e `eventos` (os eventos da nota que a SEFAZ manda
 #' junto, como o cancelamento, lidos por [eventos_ler()]).
 #'
-#' Cada chave vai ao autorizador da UF que está nela, conforme o modelo. A
+#' Cada chave vai ao autorizador da UF que está nela, conforme o modelo. O CT-e,
+#' o CT-e OS e a GTV-e seguem a Relação de Serviços Web do Portal do CT-e (a
+#' própria SEFAZ, a SVRS ou a SVSP); o MDF-e vai sempre à SVRS. O retorno do
+#' CT-e e do MDF-e não repete a chave nem a hora do recebimento: a chave
+#' conferida é a do protocolo, quando ele vem, e `recebimento` fica vazio. A
 #' NF-e segue a Relação de Serviços Web do Portal da NF-e (a própria SEFAZ, a
 #' SVRS ou a SVAN). A NFC-e tem endereços próprios: AM, GO, MS, MT, PR, RS e
 #' SP têm autorizador próprio, listado no Portal da NFC-e; MG também, mas os
@@ -186,25 +245,29 @@ completar_status = function(linha, resposta_lida, ambiente) {
 #'   exemplo, a coluna `chave` que vem de [nfe_ler()]).
 #' @inheritParams sefaz_status
 #' @return Uma lista com dois `data.frame`s:
-#'   - `situacoes`: `chave`, `documento` (`"NF-e"` ou `"NFC-e"`, pelo modelo
-#'     da chave), `uf` (a da chave), `autorizador`, `ambiente`,
-#'     `situacao` (o código de status da resposta, `cStat`), `motivo` (o que a
-#'     SEFAZ escreveu; o 217, por exemplo, é a NF-e que não consta na base de
-#'     dados), `recebimento` (data e hora em que a SEFAZ recebeu a consulta, no
-#'     horário de Brasília), do protocolo de autorização (`protNFe`), quando
-#'     vem: `protocolo`, `autorizacao` (data e hora) e `digest_value`; e
-#'     `versao_aplicativo`, `endereco` e `problema` (por que a consulta não deu
-#'     certo; vazio quando deu);
+#'   - `situacoes`: `chave`, `documento` (`"NF-e"`, `"NFC-e"`, `"CT-e"`,
+#'     `"CT-e OS"`, `"GTV-e"` ou `"MDF-e"`, pelo modelo da chave), `uf` (a da
+#'     chave), `autorizador`, `ambiente`, `situacao` (o código de status da
+#'     resposta, `cStat`), `motivo` (o que a SEFAZ escreveu; o 217, por
+#'     exemplo, é o documento que não consta na base de dados), `recebimento`
+#'     (data e hora em que a SEFAZ recebeu a consulta, no horário de Brasília;
+#'     só a NF-e e a NFC-e mandam), do protocolo de autorização (`protNFe`,
+#'     `protCTe` ou `protMDFe`), quando vem: `protocolo`, `autorizacao` (data e
+#'     hora) e `digest_value`; e `versao_aplicativo`, `endereco` e `problema`
+#'     (por que a consulta não deu certo; vazio quando deu);
 #'   - `eventos`: a tabela `eventos` de [eventos_ler()] com os eventos
-#'     (`procEventoNFe`) que vieram nas respostas, ligados pela `chave`, sem a
-#'     coluna `arquivo`.
-#' @seealso [sefaz_status()], [eventos_ler()]
-#' @source Relação de Serviços Web do Portal da NF-e e a do Portal da NFC-e
-#'   (endereços de homologação; os da NFC-e de MG, da página da SEFAZ-MG); o
-#'   schema `leiauteConsSitNFe_v4.00.xsd` do pacote de
-#'   liberação 010d v1.01 (NT 2026.004, 08/06/2026); o WSDL do serviço
-#'   NFeConsultaProtocolo4 (a mensagem em `nfeDadosMsg`, operação
-#'   `nfeConsultaNF`, SOAP 1.2).
+#'     (`procEventoNFe`, `procEventoCTe`, `procEventoMDFe`) que vieram nas
+#'     respostas, ligados pela `chave`, sem a coluna `arquivo`.
+#' @seealso [sefaz_status()], [eventos_ler()], [sefaz_mdfe_nao_encerrados()]
+#' @source Relação de Serviços Web do Portal da NF-e, a do Portal da NFC-e, a
+#'   do Portal do CT-e e a do Portal do MDF-e (endereços de homologação; os da
+#'   NFC-e de MG, da página da SEFAZ-MG); os schemas
+#'   `leiauteConsSitNFe_v4.00.xsd` do pacote de liberação 010d v1.01 (NT
+#'   2026.004, 08/06/2026), `consSitCTeTiposBasico_v4.00.xsd` do pacote do
+#'   CT-e (NT 2026.004 RTC 1.00) e `consSitMDFeTiposBasico_v3.00.xsd` do
+#'   pacote do MDF-e (NT 2025.001); os WSDL dos serviços
+#'   NFeConsultaProtocolo4, CTeConsultaV4 e MDFeConsulta (a mensagem em
+#'   `nfeDadosMsg`, `cteDadosMsg` ou `mdfeDadosMsg`, SOAP 1.2).
 #' @examples
 #' \dontrun{
 #' consulta = sefaz_situacao(nfe_ler("nota.xml")$notas$chave, "empresa.pfx",
@@ -225,23 +288,26 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   linhas = list()
   pedidos = list()
   linha_de_cada_pedido = integer()
+  configuracao_de_cada_pedido = list()
   for (posicao in seq_along(chaves_limpas)) {
     comeco = comeco_da_situacao(chaves_limpas[posicao], ambiente)
     linhas[[posicao]] = comeco$linha
     if (!is.null(comeco$pedido)) {
       pedidos[[length(pedidos) + 1]] = comeco$pedido
       linha_de_cada_pedido = c(linha_de_cada_pedido, posicao)
+      configuracao_de_cada_pedido[[length(configuracao_de_cada_pedido) + 1]] = comeco$configuracao
     }
   }
   respostas = enviar_pedidos(pedidos, conexao)
-  # Os retornos que trazem eventos vão, como texto, para o eventos_ler().
+  # Os retornos que trazem eventos (procEventoNFe, procEventoCTe, procEventoMDFe) vão, como texto, para o eventos_ler().
   retornos_com_eventos = character()
   for (numero_do_pedido in seq_along(respostas)) {
     posicao = linha_de_cada_pedido[numero_do_pedido]
-    resposta_lida = ler_resposta(respostas[[numero_do_pedido]], "retConsSitNFe")
-    linhas[[posicao]] = completar_situacao(linhas[[posicao]], resposta_lida, ambiente)
+    configuracao = configuracao_de_cada_pedido[[numero_do_pedido]]
+    resposta_lida = ler_resposta(respostas[[numero_do_pedido]], configuracao$retorno)
+    linhas[[posicao]] = completar_situacao(linhas[[posicao]], resposta_lida, ambiente, configuracao)
     if (is.na(linhas[[posicao]]$problema) &&
-        !inherits(xml2::xml_find_first(resposta_lida$retorno, "./*[local-name()='procEventoNFe']"), "xml_missing")) {
+        !inherits(xml2::xml_find_first(resposta_lida$retorno, "./*[starts-with(local-name(), 'procEvento')]"), "xml_missing")) {
       retornos_com_eventos = c(retornos_com_eventos, as.character(resposta_lida$retorno))
     }
   }
@@ -258,11 +324,8 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   list(situacoes = situacoes, eventos = eventos)
 }
 
-# O nome do serviço de consulta na lista de cada documento: a do Portal da NF-e e a do Portal da NFC-e escrevem
-# diferente. O pedido e o WSDL são os mesmos.
-SERVICO_DA_CONSULTA_POR_MODELO = c("55" = "NfeConsultaProtocolo", "65" = "NFeConsultaProtocolo")
-
-# A linha da chave (a UF, o autorizador e o endereço, ou o problema) e o pedido de consulta, quando dá para pedir.
+# A linha da chave (a UF, o autorizador e o endereço, ou o problema), o pedido de consulta, quando dá para pedir, e a
+# configuração do documento da chave.
 comeco_da_situacao = function(chave, ambiente) {
   linha = data.frame(
     chave = NA_character_, documento = NA_character_, uf = NA_character_, autorizador = NA_character_,
@@ -282,28 +345,22 @@ comeco_da_situacao = function(chave, ambiente) {
   }
   linha$uf = partes_da_chave$uf
   linha$documento = partes_da_chave$documento
-  if (!(partes_da_chave$modelo %in% names(SERVICO_DA_CONSULTA_POR_MODELO))) {
-    linha$problema = "por enquanto s\u00f3 a NF-e (modelo 55) e a NFC-e (modelo 65) s\u00e3o consultadas"
-    return(list(linha = linha, pedido = NULL))
-  }
-  servico = servico_da_uf(partes_da_chave$uf, SERVICO_DA_CONSULTA_POR_MODELO[[partes_da_chave$modelo]], ambiente,
-                          partes_da_chave$documento)
+  configuracao = as.list(CONSULTA_DE_CADA_DOCUMENTO[CONSULTA_DE_CADA_DOCUMENTO$documento == partes_da_chave$documento, ])
+  servico = servico_da_uf(partes_da_chave$uf, configuracao$servico_da_lista, ambiente, configuracao$lista)
   if (is.null(servico)) {
     linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
     return(list(linha = linha, pedido = NULL))
   }
   linha$autorizador = servico$autorizador
   linha$endereco = servico$endereco
-  mensagem = paste0(
-    '<consSitNFe xmlns="', NAMESPACE_DA_NFE, '" versao="4.00">',
-    "<tpAmb>", AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><xServ>CONSULTAR</xServ><chNFe>", chave, "</chNFe>",
-    "</consSitNFe>"
-  )
-  list(linha = linha, pedido = montar_pedido(servico$endereco, "NFeConsultaProtocolo4", "nfeConsultaNF", mensagem))
+  conteudo = paste0("<xServ>CONSULTAR</xServ><", configuracao$campo_da_chave, ">", chave, "</", configuracao$campo_da_chave, ">")
+  list(linha = linha, configuracao = configuracao,
+       pedido = pedido_do_documento(servico$endereco, configuracao, ambiente, conteudo, partes_da_chave$codigo_uf))
 }
 
-# Os campos do retConsSitNFe e do protocolo de autorização (protNFe/infProt) na linha da chave.
-completar_situacao = function(linha, resposta_lida, ambiente) {
+# Os campos do retorno da consulta e do protocolo de autorização (protNFe, protCTe ou protMDFe, com o infProt) na linha da
+# chave. O retorno da NF-e repete a chave e traz a hora; o do CT-e e o do MDF-e, não: a chave conferida é a do protocolo.
+completar_situacao = function(linha, resposta_lida, ambiente, configuracao) {
   if (!is.na(resposta_lida$problema)) {
     linha$problema = resposta_lida$problema
     return(linha)
@@ -313,18 +370,109 @@ completar_situacao = function(linha, resposta_lida, ambiente) {
   linha$motivo = texto_do_retorno(retorno, "xMotivo")
   linha$recebimento = data_hora(texto_do_retorno(retorno, "dhRecbto"))
   linha$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
-  protocolo = xml2::xml_find_first(retorno, "./*[local-name()='protNFe']/*[local-name()='infProt']")
+  chave_da_resposta = texto_do_retorno(retorno, configuracao$campo_da_chave)
+  protocolo = xml2::xml_find_first(retorno, paste0("./*[local-name()='", configuracao$protocolo, "']/*[local-name()='infProt']"))
   if (!inherits(protocolo, "xml_missing")) {
     linha$protocolo = texto_do_retorno(protocolo, "nProt")
     linha$autorizacao = data_hora(texto_do_retorno(protocolo, "dhRecbto"))
     linha$digest_value = texto_do_retorno(protocolo, "digVal")
+    if (is.na(chave_da_resposta)) {
+      chave_da_resposta = texto_do_retorno(protocolo, configuracao$campo_da_chave)
+    }
   }
   if (!identical(texto_do_retorno(retorno, "tpAmb"), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
     linha$problema = "a SEFAZ respondeu de outro ambiente"
-  } else if (!identical(texto_do_retorno(retorno, "chNFe"), linha$chave)) {
+  } else if (!is.na(chave_da_resposta) && !identical(chave_da_resposta, linha$chave)) {
     linha$problema = "a SEFAZ respondeu sobre outra chave"
   }
   linha
+}
+
+#' MDF-e não encerrados de um emitente
+#'
+#' Pergunta à SVRS, o autorizador do MDF-e de todas as UFs, que MDF-e de um
+#' CNPJ ou CPF emitente ainda não foram encerrados: a chave e o protocolo de
+#' cada um. Um MDF-e aberto impede emitir outro para o mesmo veículo e a mesma
+#' UF de descarregamento.
+#'
+#' Por enquanto só o ambiente de **homologação**; a produção é recusada. A
+#' conexão é a mesma do [sefaz_status()].
+#'
+#' @param documento O CNPJ ou CPF do emitente dos MDF-e (em geral, o do
+#'   certificado). Pontos, barras e traços são ignorados.
+#' @inheritParams sefaz_status
+#' @return Uma lista com dois `data.frame`s:
+#'   - `consulta`, numa linha: `documento`, `ambiente`, `situacao` (o código
+#'     de status, `cStat`: 112 quando não há MDF-e aberto), `motivo`, `mdfes`
+#'     (quantos vieram), `versao_aplicativo`, `endereco` e `problema` (por que a
+#'     consulta não deu certo; vazio quando deu);
+#'   - `mdfes`, um por linha: `chave` e `protocolo` (o da autorização).
+#' @seealso [sefaz_situacao()], [mdfe_ler()]
+#' @source O schema `consMDFeNaoEnc_v3.00.xsd` do pacote do MDF-e
+#'   (PL_MDFe_300b, NT 2025.001); a página de serviços do Portal do MDF-e
+#'   (SVRS); o WSDL do serviço MDFeConsNaoEnc (operação `mdfeConsNaoEnc`, com o
+#'   cabeçalho `mdfeCabecMsg`).
+#' @examples
+#' \dontrun{
+#' abertos = sefaz_mdfe_nao_encerrados("11222333000181", "empresa.pfx",
+#'                                     Sys.getenv("SENHA_DO_CERTIFICADO"))
+#' abertos$mdfes
+#' }
+#' @export
+sefaz_mdfe_nao_encerrados = function(documento, certificado, senha, ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  documento = toupper(gsub("[^0-9A-Za-z]", "", as.character(documento)))
+  if (length(documento) != 1 || is.na(documento) || !grepl("^([0-9A-Z]{12}[0-9]{2}|[0-9]{11})$", documento)) {
+    stop("Informe um CNPJ (14 posi\u00e7\u00f5es) ou um CPF (11 d\u00edgitos) em `documento`.", call. = FALSE)
+  }
+  exigir_pacotes(c("httr2", "curl", "openssl"))
+  conferir_certificado(certificado, senha)
+  servicos = tabela_interna("servicos_sefaz")
+  da_svrs = servicos[servicos$documento == "MDF-e" & servicos$ambiente == ambiente & servicos$servico == "MDFeConsNaoEnc", ]
+  consulta = data.frame(documento = documento, ambiente = ambiente, situacao = NA_integer_, motivo = NA_character_,
+                        mdfes = NA_integer_, versao_aplicativo = NA_character_, endereco = da_svrs$endereco[1],
+                        problema = NA_character_)
+  mdfes = data.frame(chave = character(), protocolo = character())
+  if (nrow(da_svrs) == 0) {
+    consulta$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz a consulta de MDF-e n\u00e3o encerrados"
+    return(list(consulta = consulta, mdfes = mdfes))
+  }
+  pasta_temporaria = tempfile("rnfe_")
+  dir.create(pasta_temporaria)
+  on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
+  conexao = preparar_conexao(certificado, senha, pasta_temporaria)
+  if (nchar(documento) == 14) {
+    tipo_do_documento = "CNPJ"
+  } else {
+    tipo_do_documento = "CPF"
+  }
+  mensagem = paste0(
+    '<consMDFeNaoEnc xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><tpAmb>', AMBIENTES_LIBERADOS[[ambiente]],
+    "</tpAmb><xServ>CONSULTAR N\u00c3O ENCERRADOS</xServ><", tipo_do_documento, ">", documento, "</", tipo_do_documento, ">",
+    "</consMDFeNaoEnc>"
+  )
+  # O cabeçalho do WSDL deixa a UF opcional, e a do emitente não é sabida: vai só a versão (em homologação, 03/11/2026,
+  # a SVRS respondeu igual com a UF, sem ela e sem cabeçalho).
+  pedido = montar_pedido(consulta$endereco, "MDFeConsNaoEnc", "mdfeConsNaoEnc", mensagem, familia = "mdfe",
+                         cabecalho = "<versaoDados>3.00</versaoDados>")
+  resposta_lida = ler_resposta(enviar_pedidos(list(pedido), conexao)[[1]], "retConsMDFeNaoEnc")
+  if (!is.na(resposta_lida$problema)) {
+    consulta$problema = resposta_lida$problema
+    return(list(consulta = consulta, mdfes = mdfes))
+  }
+  retorno = resposta_lida$retorno
+  consulta$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
+  consulta$motivo = texto_do_retorno(retorno, "xMotivo")
+  consulta$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
+  abertos = xml2::xml_find_all(retorno, "./*[local-name()='infMDFe']")
+  for (aberto in abertos) {
+    mdfes = rbind(mdfes, data.frame(chave = texto_do_retorno(aberto, "chMDFe"), protocolo = texto_do_retorno(aberto, "nProt")))
+  }
+  consulta$mdfes = nrow(mdfes)
+  if (!identical(texto_do_retorno(retorno, "tpAmb"), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
+    consulta$problema = "a SEFAZ respondeu de outro ambiente"
+  }
+  list(consulta = consulta, mdfes = mdfes)
 }
 
 # A consulta de cadastro do MT segue outro WSDL: o nfeDadosMsg vai dentro de consultaCadastro (WSDL de homologação do MT,
@@ -886,19 +1034,29 @@ lista_de_raizes_padrao = function() {
   lugares[1]
 }
 
-# A mensagem no envelope SOAP 1.2: o elemento nfeDadosMsg, no namespace do serviço, e a action do WSDL. Quando o WSDL
-# de uma SEFAZ pede o nfeDadosMsg dentro de outro elemento (o consultaCadastro do MT), `elemento_em_volta` diz qual.
-montar_pedido = function(endereco, servico_do_wsdl, operacao, mensagem, elemento_em_volta = NA) {
-  namespace_do_servico = paste0("http://www.portalfiscal.inf.br/nfe/wsdl/", servico_do_wsdl)
+# A mensagem no envelope SOAP 1.2, como o WSDL do serviço pede: o elemento <família>DadosMsg (nfeDadosMsg, cteDadosMsg,
+# mdfeDadosMsg) no namespace do serviço, e a action. Quando o WSDL pede a mensagem dentro de outro elemento (o
+# consultaCadastro do MT, o nfeDistDFeInteresse do Ambiente Nacional), `elemento_em_volta` diz qual; quando pede o
+# cabeçalho <família>CabecMsg (o MDF-e), `cabecalho` traz o conteúdo dele.
+montar_pedido = function(endereco, servico_do_wsdl, operacao, mensagem, elemento_em_volta = NA, familia = "nfe",
+                         cabecalho = NA) {
+  namespace_do_servico = paste0("http://www.portalfiscal.inf.br/", familia, "/wsdl/", servico_do_wsdl)
+  elemento_da_mensagem = paste0(familia, "DadosMsg")
   if (is.na(elemento_em_volta)) {
-    corpo_do_envelope = paste0('<nfeDadosMsg xmlns="', namespace_do_servico, '">', mensagem, "</nfeDadosMsg>")
+    corpo_do_envelope = paste0("<", elemento_da_mensagem, ' xmlns="', namespace_do_servico, '">', mensagem, "</",
+                               elemento_da_mensagem, ">")
   } else {
-    corpo_do_envelope = paste0('<', elemento_em_volta, ' xmlns="', namespace_do_servico, '"><nfeDadosMsg>', mensagem,
-                               "</nfeDadosMsg></", elemento_em_volta, ">")
+    corpo_do_envelope = paste0('<', elemento_em_volta, ' xmlns="', namespace_do_servico, '"><', elemento_da_mensagem, ">",
+                               mensagem, "</", elemento_da_mensagem, "></", elemento_em_volta, ">")
+  }
+  cabecalho_do_envelope = ""
+  if (!is.na(cabecalho)) {
+    cabecalho_do_envelope = paste0("<soap12:Header><", familia, 'CabecMsg xmlns="', namespace_do_servico, '">', cabecalho,
+                                   "</", familia, "CabecMsg></soap12:Header>")
   }
   envelope = paste0(
     '<?xml version="1.0" encoding="utf-8"?>',
-    '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>',
+    '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">', cabecalho_do_envelope, "<soap12:Body>",
     corpo_do_envelope,
     "</soap12:Body></soap12:Envelope>"
   )
