@@ -92,7 +92,7 @@ sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao") {
   respostas = enviar_pedidos(pedidos, conexao)
   for (numero_do_pedido in seq_along(respostas)) {
     posicao = linha_de_cada_pedido[numero_do_pedido]
-    linhas[[posicao]] = completar_status(linhas[[posicao]], ler_resposta(respostas[[numero_do_pedido]]), ambiente)
+    linhas[[posicao]] = completar_status(linhas[[posicao]], ler_resposta(respostas[[numero_do_pedido]], "retConsStatServ"), ambiente)
   }
   if (length(linhas) == 0) {
     status = comeco_do_status(character(), ambiente)$linha
@@ -144,10 +144,6 @@ completar_status = function(linha, resposta_lida, ambiente) {
     return(linha)
   }
   retorno = resposta_lida$retorno
-  if (nome_local(retorno) != "retConsStatServ") {
-    linha$problema = paste("a SEFAZ respondeu", nome_local(retorno), "no lugar de retConsStatServ")
-    return(linha)
-  }
   linha$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
   linha$motivo = texto_do_retorno(retorno, "xMotivo")
   linha$recebimento = data_hora(texto_do_retorno(retorno, "dhRecbto"))
@@ -231,7 +227,7 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   retornos_com_eventos = character()
   for (numero_do_pedido in seq_along(respostas)) {
     posicao = linha_de_cada_pedido[numero_do_pedido]
-    resposta_lida = ler_resposta(respostas[[numero_do_pedido]])
+    resposta_lida = ler_resposta(respostas[[numero_do_pedido]], "retConsSitNFe")
     linhas[[posicao]] = completar_situacao(linhas[[posicao]], resposta_lida, ambiente)
     if (is.na(linhas[[posicao]]$problema) &&
         !inherits(xml2::xml_find_first(resposta_lida$retorno, "./*[local-name()='procEventoNFe']"), "xml_missing")) {
@@ -295,10 +291,6 @@ completar_situacao = function(linha, resposta_lida, ambiente) {
     return(linha)
   }
   retorno = resposta_lida$retorno
-  if (nome_local(retorno) != "retConsSitNFe") {
-    linha$problema = paste("a SEFAZ respondeu", nome_local(retorno), "no lugar de retConsSitNFe")
-    return(linha)
-  }
   linha$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
   linha$motivo = texto_do_retorno(retorno, "xMotivo")
   linha$recebimento = data_hora(texto_do_retorno(retorno, "dhRecbto"))
@@ -315,6 +307,255 @@ completar_situacao = function(linha, resposta_lida, ambiente) {
     linha$problema = "a SEFAZ respondeu sobre outra chave"
   }
   linha
+}
+
+# A consulta de cadastro do MT segue outro WSDL: o nfeDadosMsg vai dentro de consultaCadastro (WSDL de homologação do MT,
+# baixado em 03/11/2026; o pedido igual ao das outras SEFAZ voltava 215, "Falha no schema XML").
+ELEMENTO_EM_VOLTA_NO_CADASTRO = c(MT = "consultaCadastro")
+
+# Cada contribuinte (infCad) da resposta da consulta de cadastro (leiauteConsultaCadastro_v2.00 do pacote 010d).
+CAMPOS_DO_CADASTRO = ler_campos("
+coluna                 caminho       tipo
+ie                     IE            texto
+contribuinte_documento CNPJ|CPF      texto
+uf                     UF            texto
+situacao_cadastral     cSit          inteiro
+credenciado_nfe        indCredNFe    inteiro
+credenciado_cte        indCredCTe    inteiro
+nome                   xNome         texto
+fantasia               xFant         texto
+regime_apuracao        xRegApur      texto
+cnae                   CNAE          texto
+inicio_atividade       dIniAtiv      data
+ultima_situacao        dUltSit       data
+baixa                  dBaixa        data
+ie_unica               IEUnica       texto
+ie_atual               IEAtual       texto
+logradouro             ender/xLgr    texto
+numero                 ender/nro     texto
+complemento            ender/xCpl    texto
+bairro                 ender/xBairro texto
+codigo_municipio       ender/cMun    texto
+municipio              ender/xMun    texto
+cep                    ender/CEP     texto
+")
+
+SIGNIFICADOS_DO_CADASTRO = ler_campos("
+coluna_do_codigo   campo      coluna_do_contexto
+situacao_cadastral cSit       -
+credenciado_nfe    indCredNFe -
+credenciado_cte    indCredCTe -
+")
+
+# O formato de cada tipo de documento consultado, como o schema da consulta aceita.
+FORMATO_DO_DOCUMENTO_CONSULTADO = c(CNPJ = "^[0-9A-Z]{12}[0-9]{2}$", CPF = "^[0-9]{3,11}$", IE = "^[0-9]{2,14}$")
+
+#' Cadastro de contribuintes na SEFAZ
+#'
+#' Pergunta à SEFAZ de uma UF o cadastro de contribuintes do ICMS pelo CNPJ,
+#' pelo CPF ou pela inscrição estadual: a inscrição, a situação (habilitado ou
+#' não), se é credenciado a emitir NF-e e CT-e, o nome, o regime de apuração, o
+#' CNAE, as datas e o endereço. Devolve uma lista com `consultas` (uma linha
+#' por documento consultado) e `cadastros` (uma linha por inscrição que a
+#' SEFAZ devolveu: um CNPJ pode ter mais de uma).
+#'
+#' Nem toda UF tem o serviço: pela Relação de Serviços Web do Portal da NF-e,
+#' ele existe nas UFs com SEFAZ própria e, pela SVRS, em algumas outras; nas
+#' demais, a linha vem com o motivo em `problema`. Por enquanto só o ambiente
+#' de **homologação**; a produção é recusada. A conexão é a mesma do
+#' [sefaz_status()].
+#'
+#' A SEFAZ pode recusar a consulta por causa de quem pergunta: a 257
+#' ("Solicitante não habilitado para emissão da NF-e") é sobre o CNPJ do
+#' certificado, não sobre o documento consultado. A resposta é conferida: se
+#' ela fala de outro documento, os cadastros dela não entram e o motivo vai em
+#' `problema` (na homologação, em 03/11/2026, GO e AM respondiam sobre o CNPJ
+#' do certificado).
+#'
+#' @param documentos Os documentos a consultar, todos do mesmo `tipo`: um
+#'   texto ou um vetor. Pontos, barras e traços são ignorados.
+#' @param ufs A UF em que cada documento é consultado (a sigla): uma para cada
+#'   documento, ou uma só para todos.
+#' @param tipo `"CNPJ"` (o padrão), `"CPF"` ou `"IE"`.
+#' @inheritParams sefaz_status
+#' @return Uma lista com dois `data.frame`s:
+#'   - `consultas`: `documento`, `tipo`, `uf`, `autorizador`, `ambiente`,
+#'     `situacao` (o código de status da resposta, `cStat`), `motivo` (o que a
+#'     SEFAZ escreveu), `consulta` (data e hora da consulta, no horário de
+#'     Brasília; quando a SEFAZ manda sem o fuso, ele é lido como o de
+#'     Brasília), `contribuintes` (quantas inscrições vieram),
+#'     `versao_aplicativo`, `endereco` e `problema` (por que a consulta não deu
+#'     certo; vazio quando deu);
+#'   - `cadastros`: `documento` (o consultado, para ligar com `consultas`) e
+#'     `r documentar_campos(CAMPOS_DO_CADASTRO)`. `situacao_cadastral`,
+#'     `credenciado_nfe` e `credenciado_cte` vêm com o significado ao lado,
+#'     em `*_descricao`, pela documentação do schema.
+#' @seealso [sefaz_status()], [sefaz_situacao()]
+#' @source Relação de Serviços Web do Portal da NF-e (endereços de
+#'   homologação); o schema `leiauteConsultaCadastro_v2.00.xsd` do pacote de
+#'   liberação 010d v1.01 (NT 2026.004, 08/06/2026); o WSDL do serviço
+#'   CadConsultaCadastro4 (operação `consultaCadastro`, SOAP 1.2) e, no MT, o
+#'   WSDL de homologação de lá.
+#' @examples
+#' \dontrun{
+#' cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx",
+#'                           Sys.getenv("SENHA_DO_CERTIFICADO"))
+#' cadastro$consultas[, c("documento", "uf", "situacao", "motivo")]
+#' cadastro$cadastros[, c("ie", "nome", "situacao_cadastral_descricao", "municipio")]
+#' }
+#' @export
+sefaz_cadastro = function(documentos, ufs, certificado, senha, tipo = "CNPJ", ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  if (length(tipo) != 1 || is.na(tipo) || !(tipo %in% names(FORMATO_DO_DOCUMENTO_CONSULTADO))) {
+    stop('Informe tipo = "CNPJ", "CPF" ou "IE".', call. = FALSE)
+  }
+  documentos = toupper(gsub("[^0-9A-Za-z]", "", as.character(documentos)))
+  ufs = toupper(trimws(as.character(ufs)))
+  if (length(ufs) == 1) {
+    ufs = rep(ufs, length(documentos))
+  }
+  if (length(ufs) != length(documentos)) {
+    stop("Informe uma UF para cada documento, ou uma s\u00f3 para todos.", call. = FALSE)
+  }
+  exigir_pacotes(c("httr2", "curl", "openssl"))
+  conferir_certificado(certificado, senha)
+  pasta_temporaria = tempfile("rnfe_")
+  dir.create(pasta_temporaria)
+  on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
+  conexao = preparar_conexao(certificado, senha, pasta_temporaria)
+  linhas = list()
+  pedidos = list()
+  linha_de_cada_pedido = integer()
+  for (posicao in seq_along(documentos)) {
+    comeco = comeco_do_cadastro(documentos[posicao], ufs[posicao], tipo, ambiente)
+    linhas[[posicao]] = comeco$linha
+    if (!is.null(comeco$pedido)) {
+      pedidos[[length(pedidos) + 1]] = comeco$pedido
+      linha_de_cada_pedido = c(linha_de_cada_pedido, posicao)
+    }
+  }
+  respostas = enviar_pedidos(pedidos, conexao)
+  cadastros_de_cada_resposta = list()
+  for (numero_do_pedido in seq_along(respostas)) {
+    posicao = linha_de_cada_pedido[numero_do_pedido]
+    completado = completar_cadastro(linhas[[posicao]], ler_resposta(respostas[[numero_do_pedido]], "retConsCad"))
+    linhas[[posicao]] = completado$linha
+    cadastros_de_cada_resposta[[numero_do_pedido]] = completado$cadastros
+  }
+  if (length(linhas) == 0) {
+    consultas = comeco_do_cadastro(character(), character(), tipo, ambiente)$linha
+  } else {
+    consultas = do.call(rbind, linhas)
+  }
+  # Juntar as linhas tira o fuso das datas: volta o de Brasília.
+  attr(consultas$consulta, "tzone") = "America/Sao_Paulo"
+  cadastros = do.call(rbind, c(list(colunas_do_cadastro(list(), character())), cadastros_de_cada_resposta))
+  cadastros = acrescentar_significados(cadastros, "NF-e", SIGNIFICADOS_DO_CADASTRO)
+  list(consultas = consultas, cadastros = cadastros)
+}
+
+# A linha do documento (a UF, o autorizador e o endereço, ou o problema) e o pedido de consulta, quando dá para pedir.
+comeco_do_cadastro = function(documento, uf, tipo, ambiente) {
+  linha = data.frame(
+    documento = NA_character_, tipo = tipo, uf = NA_character_, autorizador = NA_character_, ambiente = ambiente,
+    situacao = NA_integer_, motivo = NA_character_, consulta = as.POSIXct(NA), contribuintes = NA_integer_,
+    versao_aplicativo = NA_character_, endereco = NA_character_, problema = NA_character_
+  )
+  # Sem documento, a tabela vazia com as mesmas colunas.
+  if (length(documento) == 0) {
+    return(list(linha = linha[0, ], pedido = NULL))
+  }
+  linha$documento = documento
+  linha$uf = uf
+  if (is.na(documento) || !grepl(FORMATO_DO_DOCUMENTO_CONSULTADO[[tipo]], documento)) {
+    linha$problema = paste("n\u00e3o tem o formato de", tipo)
+    return(list(linha = linha, pedido = NULL))
+  }
+  if (!(uf %in% UF_PELO_CODIGO)) {
+    linha$problema = "UF desconhecida"
+    return(list(linha = linha, pedido = NULL))
+  }
+  servico = servico_da_uf(uf, "NfeConsultaCadastro", ambiente)
+  if (is.null(servico)) {
+    linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
+    return(list(linha = linha, pedido = NULL))
+  }
+  linha$autorizador = servico$autorizador
+  linha$endereco = servico$endereco
+  mensagem = paste0(
+    '<ConsCad xmlns="', NAMESPACE_DA_NFE, '" versao="2.00">',
+    "<infCons><xServ>CONS-CAD</xServ><UF>", uf, "</UF><", tipo, ">", documento, "</", tipo, "></infCons>",
+    "</ConsCad>"
+  )
+  elemento_em_volta = unname(ELEMENTO_EM_VOLTA_NO_CADASTRO[servico$autorizador])
+  list(linha = linha, pedido = montar_pedido(servico$endereco, "CadConsultaCadastro4", "consultaCadastro", mensagem,
+                                             elemento_em_volta))
+}
+
+# Os campos do infCons na linha do documento e os contribuintes (infCad) da resposta. A consulta não tem tpAmb: o
+# ambiente é o do endereço.
+completar_cadastro = function(linha, resposta_lida) {
+  if (!is.na(resposta_lida$problema)) {
+    linha$problema = resposta_lida$problema
+    return(list(linha = linha, cadastros = NULL))
+  }
+  informacoes = xml2::xml_find_first(resposta_lida$retorno, "./*[local-name()='infCons']")
+  linha$situacao = as.integer(texto_do_retorno(informacoes, "cStat"))
+  linha$motivo = texto_do_retorno(informacoes, "xMotivo")
+  linha$consulta = data_hora_da_consulta(texto_do_retorno(informacoes, "dhCons"))
+  linha$versao_aplicativo = texto_do_retorno(informacoes, "verAplic")
+  cadastros_do_xml = xml2::xml_find_all(informacoes, "./*[local-name()='infCad']")
+  linha$contribuintes = length(cadastros_do_xml)
+  documento_da_resposta = texto_do_retorno(informacoes, linha$tipo)
+  if (!is.na(documento_da_resposta) && documento_da_resposta != linha$documento) {
+    linha$problema = "a SEFAZ respondeu sobre outro documento"
+    return(list(linha = linha, cadastros = NULL))
+  }
+  list(linha = linha, cadastros = colunas_do_cadastro(cadastros_do_xml, rep(linha$documento, length(cadastros_do_xml))))
+}
+
+# Um contribuinte por linha, já no tipo certo. Os campos são buscados pelo nome local, porque o prefixo de namespace muda
+# de SEFAZ para SEFAZ.
+colunas_do_cadastro = function(cadastros_do_xml, documentos_consultados) {
+  colunas = list(documento = documentos_consultados)
+  for (numero_do_campo in seq_len(nrow(CAMPOS_DO_CADASTRO))) {
+    campo = CAMPOS_DO_CADASTRO[numero_do_campo, ]
+    textos = character(length(cadastros_do_xml))
+    for (posicao in seq_along(cadastros_do_xml)) {
+      textos[posicao] = texto_pelo_caminho(cadastros_do_xml[[posicao]], campo$caminho)
+    }
+    if (campo$tipo == "inteiro") {
+      colunas[[campo$coluna]] = as.integer(textos)
+    } else if (campo$tipo == "data") {
+      colunas[[campo$coluna]] = as.Date(textos)
+    } else {
+      colunas[[campo$coluna]] = textos
+    }
+  }
+  list2DF(colunas)
+}
+
+# O texto do campo pelo caminho, só com nomes locais ("ender/xLgr"); "CNPJ|CPF" pega o que existir.
+texto_pelo_caminho = function(elemento, caminho) {
+  for (caminho_possivel in strsplit(caminho, "|", fixed = TRUE)[[1]]) {
+    passos = strsplit(caminho_possivel, "/", fixed = TRUE)[[1]]
+    caminho_do_xml = paste0("./", paste0("*[local-name()='", passos, "']", collapse = "/"))
+    achado = xml2::xml_find_first(elemento, caminho_do_xml)
+    if (!inherits(achado, "xml_missing")) {
+      return(xml2::xml_text(achado))
+    }
+  }
+  NA_character_
+}
+
+# A data e hora da consulta. Algumas SEFAZ mandam sem o fuso (MG, em 03/11/2026, mandou a hora de Brasília: a mesma do
+# AM, que manda com o fuso, consultado na mesma hora); sem ele, vale o de Brasília. O PR manda os milésimos, que saem.
+data_hora_da_consulta = function(texto) {
+  texto = sub("(T[0-9]{2}:[0-9]{2}:[0-9]{2})\\.[0-9]+", "\\1", texto)
+  if (is.na(texto) || grepl("([+-][0-9]{2}:?[0-9]{2}|Z)$", texto)) {
+    return(data_hora(sub("Z$", "+00:00", texto)))
+  }
+  as.POSIXct(texto, format = "%Y-%m-%dT%H:%M:%S", tz = "America/Sao_Paulo")
 }
 
 conferir_ambiente = function(ambiente) {
@@ -421,13 +662,20 @@ lista_de_raizes_padrao = function() {
   lugares[1]
 }
 
-# A mensagem no envelope SOAP 1.2: o elemento nfeDadosMsg, no namespace do serviço, e a action do WSDL.
-montar_pedido = function(endereco, servico_do_wsdl, operacao, mensagem) {
+# A mensagem no envelope SOAP 1.2: o elemento nfeDadosMsg, no namespace do serviço, e a action do WSDL. Quando o WSDL
+# de uma SEFAZ pede o nfeDadosMsg dentro de outro elemento (o consultaCadastro do MT), `elemento_em_volta` diz qual.
+montar_pedido = function(endereco, servico_do_wsdl, operacao, mensagem, elemento_em_volta = NA) {
   namespace_do_servico = paste0("http://www.portalfiscal.inf.br/nfe/wsdl/", servico_do_wsdl)
+  if (is.na(elemento_em_volta)) {
+    corpo_do_envelope = paste0('<nfeDadosMsg xmlns="', namespace_do_servico, '">', mensagem, "</nfeDadosMsg>")
+  } else {
+    corpo_do_envelope = paste0('<', elemento_em_volta, ' xmlns="', namespace_do_servico, '"><nfeDadosMsg>', mensagem,
+                               "</nfeDadosMsg></", elemento_em_volta, ">")
+  }
   envelope = paste0(
     '<?xml version="1.0" encoding="utf-8"?>',
     '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>',
-    '<nfeDadosMsg xmlns="', namespace_do_servico, '">', mensagem, "</nfeDadosMsg>",
+    corpo_do_envelope,
     "</soap12:Body></soap12:Envelope>"
   )
   list(
@@ -514,8 +762,10 @@ restaurar_variaveis = function(variaveis_de_antes) {
   }
 }
 
-# O retorno de dentro do nfeResultMsg; sem ele, o motivo vai em `problema`.
-ler_resposta = function(resposta) {
+# O retorno pedido (`nome_do_retorno`: retConsStatServ, retConsSitNFe, retConsCad) onde estiver na resposta; sem ele, o
+# motivo vai em `problema`. Ele costuma vir no nfeResultMsg, mas o envelope muda de SEFAZ para SEFAZ (na consulta de
+# cadastro, o AM e MG usam consultaCadastro4Result e o MT põe um consultaCadastroResult no meio).
+ler_resposta = function(resposta, nome_do_retorno) {
   if (!is.na(resposta$erro)) {
     return(list(retorno = NULL, problema = paste("sem resposta da SEFAZ:", gsub("\\s+", " ", resposta$erro))))
   }
@@ -524,12 +774,15 @@ ler_resposta = function(resposta) {
     return(list(retorno = NULL, problema = paste0("HTTP ", resposta$situacao_http, ": a SEFAZ n\u00e3o respondeu em XML")))
   }
   # As buscas são pelo nome local: cada SEFAZ põe o prefixo de namespace que quer (soap:, ns2:...) ou nenhum.
-  retorno = xml2::xml_find_first(xml_da_resposta, "//*[local-name()='nfeResultMsg']/*[1]")
+  retorno = xml2::xml_find_first(xml_da_resposta, paste0("//*[local-name()='", nome_do_retorno, "']"))
   if (inherits(retorno, "xml_missing")) {
-    falha = xml2::xml_text(xml2::xml_find_first(
+    falha = xml2::xml_find_first(
       xml_da_resposta, "//*[local-name()='Fault']//*[local-name()='Text' or local-name()='faultstring']"
-    ))
-    return(list(retorno = NULL, problema = paste0("HTTP ", resposta$situacao_http, ": ", trimws(falha))))
+    )
+    if (inherits(falha, "xml_missing")) {
+      return(list(retorno = NULL, problema = paste0("HTTP ", resposta$situacao_http, ": a resposta n\u00e3o traz o ", nome_do_retorno)))
+    }
+    return(list(retorno = NULL, problema = paste0("HTTP ", resposta$situacao_http, ": ", trimws(xml2::xml_text(falha)))))
   }
   list(retorno = retorno, problema = NA_character_)
 }

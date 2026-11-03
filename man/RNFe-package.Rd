@@ -21,8 +21,9 @@ IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}};
 \item o certificado digital A1: \code{\link[=certificado_ler]{certificado_ler()}} (titular, CNPJ ou CPF e
 validade);
 \item a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
-\code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?) e \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a
-situação de cada NF-e, pela chave).
+\code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?), \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a
+situação de cada NF-e, pela chave) e \code{\link[=sefaz_cadastro]{sefaz_cadastro()}} (o cadastro de
+contribuintes, pelo CNPJ, CPF ou IE).
 }
 }
 \section{De onde vêm as regras}{

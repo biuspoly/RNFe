@@ -14,8 +14,9 @@
 #' - o certificado digital A1: [certificado_ler()] (titular, CNPJ ou CPF e
 #'   validade);
 #' - a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
-#'   [sefaz_status()] (o serviço está no ar?) e [sefaz_situacao()] (a
-#'   situação de cada NF-e, pela chave).
+#'   [sefaz_status()] (o serviço está no ar?), [sefaz_situacao()] (a
+#'   situação de cada NF-e, pela chave) e [sefaz_cadastro()] (o cadastro de
+#'   contribuintes, pelo CNPJ, CPF ou IE).
 #'
 #' @section De onde vêm as regras:
 #' Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da

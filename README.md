@@ -6,8 +6,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, da GTV-e, do MDF-e, da NFS-e Nacional e dos
 > eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
-> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta da NF-e pela chave, em
-> homologação; o plano está em
+> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço, a consulta da NF-e pela chave e a
+> consulta de cadastro, em homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -180,6 +180,17 @@ consulta$eventos     # os eventos que a SEFAZ manda junto (o cancelamento, por e
 A consulta pela chave vai ao autorizador da UF que está na chave; chave que não confere nem é enviada. Os eventos
 que vêm na resposta são lidos pelo `eventos_ler()`. Testado em 03/11/2026 com chaves inventadas nas 27 UFs: todas
 responderam (217, a NF-e não consta, como esperado numa chave que não existe).
+
+```r
+cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx", senha)   # ou tipo = "CPF" ou "IE"
+cadastro$consultas   # uma linha por documento consultado: a resposta da SEFAZ
+cadastro$cadastros   # uma linha por inscrição: situação, credenciamento na NF-e e no CT-e, nome, CNAE, endereço
+```
+
+A consulta de cadastro só existe em 15 UFs (as 10 com SEFAZ própria, e AC, ES, PB, RN e SC pela SVRS); nas outras,
+a linha vem com o motivo. A SEFAZ pode recusar quem pergunta (257, "Solicitante não habilitado para emissão da
+NF-e", sobre o CNPJ do certificado), e uma resposta que fala de outro documento não entra (na homologação, GO e AM
+respondem sobre o CNPJ do certificado). O MT pede o envelope de outro jeito, e o RNFe já manda assim.
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada

@@ -94,7 +94,7 @@ test_that("o processo separado roda com o OpenSSL, devolve o erro da conex\u00e3
   expect_match(resultado$motor, "^OpenSSL")
   expect_length(resultado$respostas, 1)
   expect_false(is.na(resultado$respostas[[1]]$erro))
-  expect_match(ler_resposta(resultado$respostas[[1]])$problema, "^sem resposta da SEFAZ")
+  expect_match(ler_resposta(resultado$respostas[[1]], "retConsStatServ")$problema, "^sem resposta da SEFAZ")
   expect_identical(Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DO_CERTIFICADO"), unset = NA), variaveis_de_antes)
   # A senha não vai para o arquivo da tarefa.
   tarefa = readRDS(file.path(pasta, "tarefa.rds"))

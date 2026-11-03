@@ -16,10 +16,16 @@ if (length(argumentos) == 0) {
   names(pasta_de_cada_pacote) = sub("=.*$", "", argumentos)
 }
 
+# A consulta de cadastro vem no mesmo zip dos eventos da NF-e (pacote 010d), numa pasta ao lado da deles.
+raiz_do_pacote_dos_eventos = dirname(dirname(pasta_de_cada_pacote[["nfe_eventos"]]))
+pasta_do_cadastro = dirname(list.files(raiz_do_pacote_dos_eventos, "^leiauteConsultaCadastro_v2\\.00\\.xsd$", recursive = TRUE,
+                                       full.names = TRUE))
+
 # Onde ficam os schemas de cada documento da tabela. A NFS-e tem uma pasta por versão do leiaute (1.00 e 1.01), e
-# vale o que qualquer uma aceita. A NF-e inclui o pacote da Distribuição de DF-e, que tem o resumo (resNFe).
+# vale o que qualquer uma aceita. A NF-e inclui o pacote da Distribuição de DF-e, que tem o resumo (resNFe), e a pasta
+# da consulta de cadastro.
 PASTAS_DE_CADA_DOCUMENTO = list(
-  "NF-e" = c(pasta_de_cada_pacote[["nfe"]], pasta_de_cada_pacote[["nfe_distribuicao"]]),
+  "NF-e" = c(pasta_de_cada_pacote[["nfe"]], pasta_de_cada_pacote[["nfe_distribuicao"]], pasta_do_cadastro),
   "CT-e" = pasta_de_cada_pacote[["cte"]],
   "GTV-e" = pasta_de_cada_pacote[["cte"]],
   "MDF-e" = pasta_de_cada_pacote[["mdfe"]],

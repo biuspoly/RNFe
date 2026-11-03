@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs, em homologação |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs e consulta de cadastro nas 15 que têm o serviço, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -623,6 +623,35 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   em 26 s pelo processo separado (um pedido depois do outro). A resposta da SVRS ficou gravada para os testes sem
   rede. A resposta da nota cancelada dos testes é montada com o protocolo de `nfe_proc_sp.xml` e o cancelamento
   de `evento_nfe_cancelamento.xml`, e passa no `retConsSitNFe_v4.00.xsd`.
+
+## Etapa 3, terceiro passo: a consulta de cadastro (03/11/2026)
+
+- `sefaz_cadastro(documentos, ufs, certificado, senha, tipo = "CNPJ")` consulta o cadastro de contribuintes do
+  ICMS pelo CNPJ, CPF ou IE (um tipo por chamada, para não confundir uma IE com um CPF), só em homologação. Pedido
+  (`ConsCad` 2.00, com C maiúsculo, sem `tpAmb`: o ambiente é o do endereço) e resposta (`retConsCad`) pelo
+  `leiauteConsultaCadastro_v2.00.xsd`, que vem no zip do pacote 010d; namespace e operação (`consultaCadastro`) pelo
+  WSDL da SVRS de homologação. Devolve `consultas` (uma linha por documento) e `cadastros` (uma por inscrição; um
+  CNPJ pode ter várias), com o significado da situação (`cSit`) e do credenciamento na NF-e e no CT-e
+  (`indCredNFe`, `indCredCTe`) pela documentação do schema.
+- **Só 15 UFs têm o serviço** na Relação de Serviços Web: as 10 com SEFAZ própria (AM, BA, GO, MG, MS, MT, PE, PR,
+  RS, SP) e AC, ES, PB, RN e SC pela SVRS. Nas outras 12 (o MA entre elas) a linha vem com o motivo, sem pedido.
+- **As SEFAZ não seguem o mesmo envelope** (WSDLs de homologação baixados em 03/11/2026):
+  - o MT pede o `nfeDadosMsg` dentro de um `consultaCadastro` e responde com um `consultaCadastroResult` no meio;
+    o pedido igual ao dos outros voltava 215, "Falha no schema XML". Fica em `ELEMENTO_EM_VOLTA_NO_CADASTRO`;
+  - o AM e MG respondem num `consultaCadastro4Result`, sem o `nfeResultMsg` (o WSDL do AM chama a operação de
+    `consultaCadastro4`, mas ele responde igual às duas);
+  - por isso o `ler_resposta()` passou a achar o retorno pelo nome (`retConsStatServ`, `retConsSitNFe`,
+    `retConsCad`), em qualquer envelope;
+  - MG manda a hora sem fuso (é a de Brasília: a mesma do AM, que manda com fuso, na mesma consulta) e o PR manda
+    milésimos; os dois são lidos.
+- **Teste real em homologação (03/11/2026)**, com o CNPJ de exemplo inventado, nas 15 UFs: 11 responderam 257
+  ("Solicitante não habilitado para emissão da NF-e"), que é sobre o CNPJ do certificado, não sobre o consultado;
+  MT e PR responderam 259 ("CNPJ não cadastrado como contribuinte na UF"), sobre o CNPJ consultado; **GO e AM
+  responderam sobre o CNPJ do certificado** (conferido comparando os dois, sem mostrá-los). Por isso a resposta é
+  conferida: se ela traz outro documento, os cadastros dela não entram e a linha vai com "a SEFAZ respondeu sobre
+  outro documento". Nenhuma UF devolveu um cadastro (o CNPJ é inventado): o caso com cadastro é testado com uma
+  resposta montada com dados inventados, no envelope de MG, que passa no `retConsCad_v2.00.xsd` (as duas respostas
+  reais gravadas para os testes, da SVRS e do PR, também passam).
 
 ## O robô das tabelas
 
