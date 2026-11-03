@@ -524,7 +524,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   aceita, campo por campo (cada versão da NFS-e lida à parte). Reprovou uma tabela estragada de propósito
   (um código que o schema não aceita, outro que faltava). Em 30/10/2026, com os pacotes oficiais baixados na
   hora, os 63 campos conferem (66 depois da segunda rodada). Nos 16 exemplos, todo código preenchido achou o
-  significado.
+  significado. Em 03/11/2026, com o `cSitNFe` do resumo e os 11 campos da GTV-e, a ferramenta aprova 79 campos.
 - **Comparação da documentação da NFS-e 1.00 com a 1.01**, campo por campo: além do `tribISSQN` e do CST 07,
   só a lista de códigos mudou: no `cStat` o 101 (só na 1.00) e o 107 (só na 1.01), o regime especial 9 e os
   campos da Reforma, na 1.01. Como o código de uma versão não aparece na outra, uma lista só serve às duas.
