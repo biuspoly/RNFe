@@ -21,15 +21,16 @@ IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}};
 \item o certificado digital A1: \code{\link[=certificado_ler]{certificado_ler()}} (titular, CNPJ ou CPF e
 validade);
 \item a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
-\code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?).
+\code{\link[=sefaz_status]{sefaz_status()}} (o serviço está no ar?) e \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a
+situação de cada NF-e, pela chave).
 }
 }
 \section{De onde vêm as regras}{
 
 Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
 NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
-versão em cada função (\verb{@source}). Só \code{\link[=sefaz_status]{sefaz_status()}} fala com a SEFAZ, e
-só no ambiente de homologação.
+versão em cada função (\verb{@source}). Só as funções \code{sefaz_} falam com a
+SEFAZ, e só no ambiente de homologação.
 }
 
 \seealso{

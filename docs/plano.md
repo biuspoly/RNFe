@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado e status do serviço nas 27 UFs, em homologação |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs, em homologação |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -50,7 +50,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
-| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status da NF-e pronto em homologação; o resto na etapa 3 |
+| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e prontos em homologação; o resto na etapa 3 |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | etapa 3 |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
@@ -603,6 +603,26 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   resposta real da SVRS gravada (não tem dado de empresa) e o `httr2` devolvendo essa resposta no lugar da
   SEFAZ (esses testes forçam o envio nesta sessão, porque o processo separado não veria o httr2 simulado).
   `httr2`, `curl` e `openssl` ficam em Suggests.
+
+## Etapa 3, segundo passo: a consulta pela chave (03/11/2026)
+
+- `sefaz_situacao(chaves, certificado, senha)` pergunta a situação de cada NF-e (modelo 55) pelo serviço
+  NFeConsultaProtocolo4, só em homologação. O pedido (`consSitNFe` 4.00: `tpAmb`, `xServ` CONSULTAR, `chNFe`) e a
+  resposta (`retConsSitNFe`) seguem o `leiauteConsSitNFe_v4.00.xsd` do pacote 010d v1.01 (o mesmo dos eventos, com
+  o CNPJ alfanumérico); o namespace e a operação (`nfeConsultaNF`) vêm do WSDL baixado da SVRS de homologação. A
+  conexão, o envelope e o processo separado são os do `sefaz_status()`.
+- **Cada chave vai ao autorizador da UF da chave.** Chave que não confere (`chave_decompor()`), de outro modelo
+  (a NFC-e tem outra lista de endereços) ou sem o serviço na Relação de Serviços Web não é enviada: o motivo vai
+  em `problema`. A resposta é conferida: ambiente diferente ou outra chave na resposta também vão em `problema`.
+- **Devolve `situacoes` e `eventos`.** Em `situacoes`, a resposta (`cStat`, `xMotivo`, a hora do recebimento) e o
+  protocolo de autorização (`protNFe`: número, data e `digVal`). Os eventos que a SEFAZ manda junto
+  (`procEventoNFe`, como o cancelamento) passam pelo `eventos_ler()`, sem a coluna `arquivo`. O `retCancNFe`, do
+  cancelamento de antes dos eventos, não tem coluna.
+- **Teste real em homologação (03/11/2026):** uma chave inventada por UF (CNPJ de exemplo, nada da empresa), nas
+  27: todas responderam `retConsSitNFe` com 217 ("NF-e não consta na base de dados"), ambiente 2 e a mesma chave,
+  em 26 s pelo processo separado (um pedido depois do outro). A resposta da SVRS ficou gravada para os testes sem
+  rede. A resposta da nota cancelada dos testes é montada com o protocolo de `nfe_proc_sp.xml` e o cancelamento
+  de `evento_nfe_cancelamento.xml`, e passa no `retConsSitNFe_v4.00.xsd`.
 
 ## O robô das tabelas
 

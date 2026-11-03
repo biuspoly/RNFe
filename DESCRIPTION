@@ -23,8 +23,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     a classificação tributária do IBS e da CBS e os municípios) copiadas do
     Portal da NF-e, do Portal Único Siscomex, do SPED e do IBGE, com a
     vigência de cada código. Lê o certificado digital A1 (titular, CNPJ ou
-    CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e, por
-    enquanto só no ambiente de homologação.
+    CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e e a
+    situação de cada nota pela chave, por enquanto só no ambiente de
+    homologação.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues

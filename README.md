@@ -6,7 +6,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, da GTV-e, do MDF-e, da NFS-e Nacional e dos
 > eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
-> SEFAZ, por enquanto, a leitura do certificado digital e o status do serviço, em homologação; o plano está em
+> SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta da NF-e pela chave, em
+> homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -170,7 +171,15 @@ sempre é o de Brasília).
 senha = Sys.getenv("SENHA_DO_CERTIFICADO")   # nunca escrita no script
 certificado_ler("empresa.pfx", senha)          # titular, CNPJ ou CPF, emissor e validade
 sefaz_status(c("SP", "CE"), "empresa.pfx", senha)   # o serviço da NF-e está no ar em cada UF?
+
+consulta = sefaz_situacao(chaves, "empresa.pfx", senha)   # a situação de cada NF-e, pela chave
+consulta$situacoes   # uma linha por chave: a resposta da SEFAZ e o protocolo de autorização
+consulta$eventos     # os eventos que a SEFAZ manda junto (o cancelamento, por exemplo)
 ```
+
+A consulta pela chave vai ao autorizador da UF que está na chave; chave que não confere nem é enviada. Os eventos
+que vêm na resposta são lidos pelo `eventos_ler()`. Testado em 03/11/2026 com chaves inventadas nas 27 UFs: todas
+responderam (217, a NF-e não consta, como esperado numa chave que não existe).
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada

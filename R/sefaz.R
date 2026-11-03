@@ -161,6 +161,162 @@ completar_status = function(linha, resposta_lida, ambiente) {
   linha
 }
 
+#' Situação da NF-e na SEFAZ, pela chave
+#'
+#' Pergunta à SEFAZ a situação de cada NF-e (modelo 55) pela chave de acesso:
+#' se está autorizada, cancelada, denegada ou se não consta. Devolve uma lista
+#' com `situacoes` (uma linha por chave: a resposta da SEFAZ e o protocolo de
+#' autorização, quando vem) e `eventos` (os eventos da nota que a SEFAZ manda
+#' junto, como o cancelamento, lidos por [eventos_ler()]).
+#'
+#' Cada chave vai ao autorizador da UF que está nela (a própria SEFAZ ou a
+#' SVRS ou a SVAN), como diz a Relação de Serviços Web do Portal da NF-e. Chave
+#' que não confere (veja [chave_decompor()]) nem é enviada: o motivo fica em
+#' `problema`. Por enquanto só a NF-e (modelo 55) e só o ambiente de
+#' **homologação**; a produção é recusada. A conexão é a mesma do
+#' [sefaz_status()], com as mesmas exigências e o mesmo processo separado no
+#' Windows.
+#'
+#' @param chaves As chaves de acesso: um texto ou um vetor com várias (por
+#'   exemplo, a coluna `chave` que vem de [nfe_ler()]).
+#' @inheritParams sefaz_status
+#' @return Uma lista com dois `data.frame`s:
+#'   - `situacoes`: `chave`, `uf` (a da chave), `autorizador`, `ambiente`,
+#'     `situacao` (o código de status da resposta, `cStat`), `motivo` (o que a
+#'     SEFAZ escreveu; o 217, por exemplo, é a NF-e que não consta na base de
+#'     dados), `recebimento` (data e hora em que a SEFAZ recebeu a consulta, no
+#'     horário de Brasília), do protocolo de autorização (`protNFe`), quando
+#'     vem: `protocolo`, `autorizacao` (data e hora) e `digest_value`; e
+#'     `versao_aplicativo`, `endereco` e `problema` (por que a consulta não deu
+#'     certo; vazio quando deu);
+#'   - `eventos`: a tabela `eventos` de [eventos_ler()] com os eventos
+#'     (`procEventoNFe`) que vieram nas respostas, ligados pela `chave`, sem a
+#'     coluna `arquivo`.
+#' @seealso [sefaz_status()], [eventos_ler()]
+#' @source Relação de Serviços Web do Portal da NF-e (endereços de
+#'   homologação); o schema `leiauteConsSitNFe_v4.00.xsd` do pacote de
+#'   liberação 010d v1.01 (NT 2026.004, 08/06/2026); o WSDL do serviço
+#'   NFeConsultaProtocolo4 (a mensagem em `nfeDadosMsg`, operação
+#'   `nfeConsultaNF`, SOAP 1.2).
+#' @examples
+#' \dontrun{
+#' consulta = sefaz_situacao(nfe_ler("nota.xml")$notas$chave, "empresa.pfx",
+#'                           Sys.getenv("SENHA_DO_CERTIFICADO"))
+#' consulta$situacoes[, c("chave", "situacao", "motivo", "protocolo")]
+#' consulta$eventos[, c("chave", "tipo", "descricao", "data_evento")]
+#' }
+#' @export
+sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  exigir_pacotes(c("httr2", "curl", "openssl"))
+  conferir_certificado(certificado, senha)
+  pasta_temporaria = tempfile("rnfe_")
+  dir.create(pasta_temporaria)
+  on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
+  conexao = preparar_conexao(certificado, senha, pasta_temporaria)
+  chaves_limpas = limpar_chaves(chaves)
+  linhas = list()
+  pedidos = list()
+  linha_de_cada_pedido = integer()
+  for (posicao in seq_along(chaves_limpas)) {
+    comeco = comeco_da_situacao(chaves_limpas[posicao], ambiente)
+    linhas[[posicao]] = comeco$linha
+    if (!is.null(comeco$pedido)) {
+      pedidos[[length(pedidos) + 1]] = comeco$pedido
+      linha_de_cada_pedido = c(linha_de_cada_pedido, posicao)
+    }
+  }
+  respostas = enviar_pedidos(pedidos, conexao)
+  # Os retornos que trazem eventos vão, como texto, para o eventos_ler().
+  retornos_com_eventos = character()
+  for (numero_do_pedido in seq_along(respostas)) {
+    posicao = linha_de_cada_pedido[numero_do_pedido]
+    resposta_lida = ler_resposta(respostas[[numero_do_pedido]])
+    linhas[[posicao]] = completar_situacao(linhas[[posicao]], resposta_lida, ambiente)
+    if (is.na(linhas[[posicao]]$problema) &&
+        !inherits(xml2::xml_find_first(resposta_lida$retorno, "./*[local-name()='procEventoNFe']"), "xml_missing")) {
+      retornos_com_eventos = c(retornos_com_eventos, as.character(resposta_lida$retorno))
+    }
+  }
+  if (length(linhas) == 0) {
+    situacoes = comeco_da_situacao(character(), ambiente)$linha
+  } else {
+    situacoes = do.call(rbind, linhas)
+  }
+  # Juntar as linhas tira o fuso das datas: volta o de Brasília.
+  attr(situacoes$recebimento, "tzone") = "America/Sao_Paulo"
+  attr(situacoes$autorizacao, "tzone") = "America/Sao_Paulo"
+  eventos = eventos_ler(retornos_com_eventos, todos_os_campos = FALSE)$eventos
+  eventos$arquivo = NULL
+  list(situacoes = situacoes, eventos = eventos)
+}
+
+# A linha da chave (a UF, o autorizador e o endereço, ou o problema) e o pedido de consulta, quando dá para pedir.
+comeco_da_situacao = function(chave, ambiente) {
+  linha = data.frame(
+    chave = NA_character_, uf = NA_character_, autorizador = NA_character_, ambiente = ambiente, situacao = NA_integer_,
+    motivo = NA_character_, recebimento = as.POSIXct(NA), protocolo = NA_character_, autorizacao = as.POSIXct(NA),
+    digest_value = NA_character_, versao_aplicativo = NA_character_, endereco = NA_character_, problema = NA_character_
+  )
+  # Sem chave, a tabela vazia com as mesmas colunas.
+  if (length(chave) == 0) {
+    return(list(linha = linha[0, ], pedido = NULL))
+  }
+  linha$chave = chave
+  partes_da_chave = chave_decompor(chave)
+  if (!partes_da_chave$valida) {
+    linha$problema = paste("chave inv\u00e1lida:", partes_da_chave$problema)
+    return(list(linha = linha, pedido = NULL))
+  }
+  linha$uf = partes_da_chave$uf
+  if (partes_da_chave$modelo != "55") {
+    linha$problema = "por enquanto s\u00f3 a NF-e (modelo 55) \u00e9 consultada"
+    return(list(linha = linha, pedido = NULL))
+  }
+  servico = servico_da_uf(partes_da_chave$uf, "NfeConsultaProtocolo", ambiente)
+  if (is.null(servico)) {
+    linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
+    return(list(linha = linha, pedido = NULL))
+  }
+  linha$autorizador = servico$autorizador
+  linha$endereco = servico$endereco
+  mensagem = paste0(
+    '<consSitNFe xmlns="', NAMESPACE_DA_NFE, '" versao="4.00">',
+    "<tpAmb>", AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><xServ>CONSULTAR</xServ><chNFe>", chave, "</chNFe>",
+    "</consSitNFe>"
+  )
+  list(linha = linha, pedido = montar_pedido(servico$endereco, "NFeConsultaProtocolo4", "nfeConsultaNF", mensagem))
+}
+
+# Os campos do retConsSitNFe e do protocolo de autorização (protNFe/infProt) na linha da chave.
+completar_situacao = function(linha, resposta_lida, ambiente) {
+  if (!is.na(resposta_lida$problema)) {
+    linha$problema = resposta_lida$problema
+    return(linha)
+  }
+  retorno = resposta_lida$retorno
+  if (nome_local(retorno) != "retConsSitNFe") {
+    linha$problema = paste("a SEFAZ respondeu", nome_local(retorno), "no lugar de retConsSitNFe")
+    return(linha)
+  }
+  linha$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
+  linha$motivo = texto_do_retorno(retorno, "xMotivo")
+  linha$recebimento = data_hora(texto_do_retorno(retorno, "dhRecbto"))
+  linha$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
+  protocolo = xml2::xml_find_first(retorno, "./*[local-name()='protNFe']/*[local-name()='infProt']")
+  if (!inherits(protocolo, "xml_missing")) {
+    linha$protocolo = texto_do_retorno(protocolo, "nProt")
+    linha$autorizacao = data_hora(texto_do_retorno(protocolo, "dhRecbto"))
+    linha$digest_value = texto_do_retorno(protocolo, "digVal")
+  }
+  if (!identical(texto_do_retorno(retorno, "tpAmb"), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
+    linha$problema = "a SEFAZ respondeu de outro ambiente"
+  } else if (!identical(texto_do_retorno(retorno, "chNFe"), linha$chave)) {
+    linha$problema = "a SEFAZ respondeu sobre outra chave"
+  }
+  linha
+}
+
 conferir_ambiente = function(ambiente) {
   if (length(ambiente) != 1 || is.na(ambiente) || !(ambiente %in% names(AMBIENTES_LIBERADOS))) {
     stop("Por enquanto o RNFe s\u00f3 fala com o ambiente de homologa\u00e7\u00e3o da SEFAZ: use ambiente = \"homologacao\".",

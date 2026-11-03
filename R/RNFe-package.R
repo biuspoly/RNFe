@@ -14,13 +14,14 @@
 #' - o certificado digital A1: [certificado_ler()] (titular, CNPJ ou CPF e
 #'   validade);
 #' - a conversa com a SEFAZ, por enquanto só no ambiente de homologação:
-#'   [sefaz_status()] (o serviço está no ar?).
+#'   [sefaz_status()] (o serviço está no ar?) e [sefaz_situacao()] (a
+#'   situação de cada NF-e, pela chave).
 #'
 #' @section De onde vêm as regras:
 #' Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
 #' NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
-#' versão em cada função (`@source`). Só [sefaz_status()] fala com a SEFAZ, e
-#' só no ambiente de homologação.
+#' versão em cada função (`@source`). Só as funções `sefaz_` falam com a
+#' SEFAZ, e só no ambiente de homologação.
 #'
 #' @keywords internal
 "_PACKAGE"
