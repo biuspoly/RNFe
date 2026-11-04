@@ -194,8 +194,8 @@ test_that("distribui\u00e7\u00e3o: nenhum documento (resposta real), o pedido co
   expect_identical(nrow(distribuicao$documentos), 0L)
   expect_identical(pedidos[[1]]$url, paste0(ENDERECO_DO_ADN, "/DFe/0?cnpjConsulta=11222333000181"))
   expect_null(pedidos[[1]]$body)
-  nfse_distribuicao("111.444.777-35", CERTIFICADO_DA_NFSE, "teste", ultimo_nsu = "000000000000012")
-  expect_identical(pedidos[[2]]$url, paste0(ENDERECO_DO_ADN, "/DFe/12?cpfConsulta=11144477735"))
+  nfse_distribuicao("123.456.789-09", CERTIFICADO_DA_NFSE, "teste", ultimo_nsu = "000000000000012")
+  expect_identical(pedidos[[2]]$url, paste0(ENDERECO_DO_ADN, "/DFe/12?cpfConsulta=12345678909"))
 })
 
 test_that("distribui\u00e7\u00e3o: os documentos chegam descompactados, e o \u00faltimo NSU \u00e9 o maior que veio", {

@@ -29,7 +29,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     emitidos contra um CNPJ (Distribuição de DF-e), e pergunta ao Sistema
     Nacional NFS-e a nota pela chave, com os eventos, e as notas de um CNPJ,
     por enquanto só no ambiente de homologação (a Produção Restrita, na
-    NFS-e). Acha a chave de acesso num PDF ou numa imagem,
+    NFS-e). Diz a situação cadastral do CNPJ na Receita Federal pelas fontes
+    públicas que republicam o cadastro (a BrasilAPI e, quando ela está fora
+    do ar, as outras). Acha a chave de acesso num PDF ou numa imagem,
     pelo texto, pelo QR-Code ou por OCR.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
@@ -59,12 +61,13 @@ Collate:
     'certificado.R'
     'chave_extrair.R'
     'ler_xml.R'
+    'sefaz.R'
+    'nfse_nacional.R'
+    'cnpj.R'
     'cte_ler.R'
     'eventos_ler.R'
     'gtve_ler.R'
     'mdfe_ler.R'
     'nfe_ler.R'
     'nfse_ler.R'
-    'sefaz.R'
-    'nfse_nacional.R'
     'tabelas.R'

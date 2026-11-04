@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -827,6 +827,44 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   montadas com a NFS-e e o cancelamento de exemplo, no formato da especificação. O que não foi visto na resposta real,
   porque a Produção Restrita não tem nota desse CNPJ: o `ArquivoXml` do ADN em gzip e base64 (é o padrão que a
   especificação diz para as mensagens) e o formato do `DataHoraGeracao`.
+
+## Etapa 3, oitavo passo: a situação do CNPJ na Receita Federal (04/11/2026)
+
+- **Decisão do usuário:** "a situação do cnpj deve ser uma nova funcao que le do brasilapi e outras caso esteja fora do
+  ar". A `cnpj_situacao(cnpjs, fontes)`, em `R/cnpj.R`, devolve uma linha por CNPJ: se foi encontrado, a situação
+  cadastral (ATIVA, BAIXADA, INAPTA, SUSPENSA, NULA), a data e o motivo, a situação especial, a razão social, o nome
+  fantasia, de quando são os dados (quando a fonte diz), a fonte que respondeu e as que estavam fora do ar. Não usa
+  certificado. Precisa do `httr2` e do `jsonlite`.
+- **As fontes, nesta ordem:** a BrasilAPI (`/api/cnpj/v1/<cnpj>`), o Minha Receita, a CNPJá (`open.cnpja.com`), a
+  ReceitaWS e a CNPJ.ws (`publica.cnpj.ws`). Pelo código da BrasilAPI no GitHub, ela busca o CNPJ no Minha Receita e
+  responde 503 quando ele não responde: o Minha Receita direto cobre só a queda da própria BrasilAPI, e as outras três
+  são independentes. Todas são públicas, sem cadastro nem chave. A documentação do Minha Receita diz que nenhuma
+  consulta é recusada por limite; a ReceitaWS e a CNPJ.ws mandaram, nos cabeçalhos, limite de 3 por minuto, por isso
+  vão por último. O argumento `fontes` escolhe quais e em que ordem.
+- **Fora do ar** (vai para a próxima): sem resposta (inclui o tempo limite de 15 s), 429, 5xx, ou uma resposta que não
+  é a de sempre (sem JSON, ou um 404 sem a mensagem da fonte). **Não achou** é resposta e para ali: 404 com a mensagem
+  da fonte (`message` na BrasilAPI, no Minha Receita e na CNPJá; `detalhes` na CNPJ.ws), ou, na ReceitaWS, o 200 com
+  `status` "ERROR" ("CNPJ rejeitado pela Receita Federal"). Procurar na fonte seguinte o CNPJ que uma não achou não foi
+  pedido: o pedido foi passar para a próxima quando a fonte estiver fora do ar.
+- **Cada fonte no seu formato**, conferido em 04/11/2026 com a matriz do Banco do Brasil (ativa desde 03/11/2005), uma
+  filial baixada em 29/07/2020 e um CNPJ com o dígito certo que não existe; as cinco deram a mesma situação e a mesma
+  data:
+  - a BrasilAPI e o Minha Receita: `descricao_situacao_cadastral`, `data_situacao_cadastral`,
+    `descricao_motivo_situacao_cadastral` (sem acento, "SEM MOTIVO" na ativa); não dizem a data dos dados no
+    registro;
+  - a CNPJá: `status.text` ("Baixada"), `statusDate`, `reason.text` (com acento), `company.name`, `alias` e `updated`;
+  - a ReceitaWS: `situacao`, `data_situacao` em DD/MM/AAAA, `motivo_situacao` (com acento, em maiúsculas),
+    `ultima_atualizacao`;
+  - a CNPJ.ws: a situação no `estabelecimento`, e o motivo veio vazio também na filial baixada: a função não lê motivo
+    dela.
+  A situação sai em maiúsculas; o motivo, como a fonte escreve; o vazio vira NA.
+- **CNPJ que não confere** (o formato ou o dígito, também o alfanumérico, pelo `cnpj_confere()` da chave) nem é
+  perguntado.
+- **Teste real (04/11/2026)**, pela função pública: a BrasilAPI respondeu os quatro CNPJs (ativo, baixado, inexistente
+  e um de dígito errado, que não foi perguntado) em 1 s; cada fonte sozinha achou a filial baixada em 0,6 a 0,9 s.
+- **Os testes não usam esses CNPJs** (regra do repositório: só os fictícios): as respostas de `tests/testthat/respostas/cnpj`
+  são montadas à mão, com os mesmos campos que cada fonte devolveu, para 11.222.333/0001-81 (ativo), 11.444.777/0001-61
+  (baixado) e o exemplo da Receita, 12.ABC.345/01DE-35 (que as fontes não acham). A queda de cada fonte é simulada.
 
 ## O robô das tabelas
 

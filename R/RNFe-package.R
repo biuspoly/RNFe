@@ -23,7 +23,10 @@
 #'   um CNPJ);
 #' - a NFS-e Nacional, pelas APIs do Sistema Nacional NFS-e, por enquanto só
 #'   na Produção Restrita: [nfse_situacao()] (a nota pela chave, com os
-#'   eventos) e [nfse_distribuicao()] (as notas e os eventos de um CNPJ).
+#'   eventos) e [nfse_distribuicao()] (as notas e os eventos de um CNPJ);
+#' - a situação do CNPJ na Receita Federal, sem certificado:
+#'   [cnpj_situacao()] (a BrasilAPI e, quando ela está fora do ar, as outras
+#'   fontes públicas).
 #'
 #' @section De onde vêm as regras:
 #' Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da

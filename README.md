@@ -8,7 +8,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
 > SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta pela chave (NF-e, NFC-e,
 > CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e (NF-e e CT-e), em homologação;
-> da NFS-e Nacional, a consulta pela chave e a distribuição, na Produção Restrita; o plano está em
+> da NFS-e Nacional, a consulta pela chave e a distribuição, na Produção Restrita; e a situação do CNPJ na Receita
+> Federal, pelas fontes públicas; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -257,6 +258,19 @@ a nota, e o ADN, o Ambiente de Dados Nacional, que guarda e distribui), com o me
 `ambiente = "homologacao"`. A NFS-e não tem código de situação: o cancelamento e os outros fatos vêm em eventos. Só
 quem aparece na nota consegue consultá-la. O DANFSe oficial não é mais baixado do sistema nacional: a API dele foi
 desativada em 03/08/2026, e pela NT 008/2026 cada sistema gera o seu.
+
+```r
+# a situação do CNPJ na Receita Federal (sem certificado)
+cnpj_situacao(c("11.222.333/0001-81", "11.444.777/0001-61"))
+# cnpj, encontrado, situacao (ATIVA, BAIXADA...), data_situacao, motivo_situacao, razao_social, nome_fantasia,
+# atualizado_em, fonte (a que respondeu), fontes_fora_do_ar e problema
+```
+
+A situação vem da BrasilAPI e, quando ela está fora do ar, do Minha Receita, da CNPJá, da ReceitaWS e da CNPJ.ws,
+uma depois da outra: todas públicas, republicando o cadastro da Receita. Fora do ar é sem resposta, limite de
+consultas (429), erro do servidor ou resposta fora do formato; um CNPJ que a fonte não tem é resposta (`encontrado`
+`FALSE`) e não vai para a próxima. A ReceitaWS e a CNPJ.ws aceitam poucas consultas por minuto (3, em 04/11/2026), e
+por isso vêm por último; dá para escolher as fontes e a ordem com `fontes`.
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada

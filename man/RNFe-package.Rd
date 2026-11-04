@@ -30,7 +30,10 @@ CPF ou IE) e \code{\link[=sefaz_distribuicao]{sefaz_distribuicao()}} (as NF-e e 
 um CNPJ);
 \item a NFS-e Nacional, pelas APIs do Sistema Nacional NFS-e, por enquanto só
 na Produção Restrita: \code{\link[=nfse_situacao]{nfse_situacao()}} (a nota pela chave, com os
-eventos) e \code{\link[=nfse_distribuicao]{nfse_distribuicao()}} (as notas e os eventos de um CNPJ).
+eventos) e \code{\link[=nfse_distribuicao]{nfse_distribuicao()}} (as notas e os eventos de um CNPJ);
+\item a situação do CNPJ na Receita Federal, sem certificado:
+\code{\link[=cnpj_situacao]{cnpj_situacao()}} (a BrasilAPI e, quando ela está fora do ar, as outras
+fontes públicas).
 }
 }
 \section{De onde vêm as regras}{
