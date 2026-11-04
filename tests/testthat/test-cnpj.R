@@ -204,7 +204,7 @@ test_that("o 200 fora do formato conta como fora do ar, e o campo de outro tipo 
                              body = charToRaw('{"message":"Servico em manutencao"}')))
     }
     if (fonte == "cnpja") {
-      # O status como texto, e n\u00e3o o objeto de sempre.
+      # O status como texto, e não o objeto de sempre.
       return(httr2::response(status_code = 200, headers = "Content-Type: application/json",
                              body = charToRaw('{"status":"Ativa","company":"x"}')))
     }

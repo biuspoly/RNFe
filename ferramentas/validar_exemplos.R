@@ -78,8 +78,9 @@ schema_do_resumo_de_evento = xml2::read_xml(file.path(copia_da_distribuicao, "re
 schema_do_resumo_da_nfe = xml2::read_xml(file.path(copia_da_distribuicao, "resNFe_v1.01.xsd"))
 
 # O pacote do CT-e declara cada raiz num arquivo: o CTe e o CTeOS, o cteProc e o cteOSProc (com o
-# protocolo), a GTVe e o GTVeProc e o rodo e o rodoOS (o modal rodoviário). O infModal e o detEvento aceitam
-# qualquer coisa sem conferir, então o modal e o grupo do evento são validados à parte.
+# protocolo), a GTVe e o GTVeProc, o CTeSimp e o cteSimpProc (o CT-e simplificado) e o rodo e o rodoOS (o modal
+# rodoviário). O infModal e o detEvento aceitam qualquer coisa sem conferir, então o modal e o grupo do evento são
+# validados à parte.
 schema_do_cte = schema_com_as_raizes(pasta_de_cada_pacote[["cte"]], "schema_cte", "http://www.portalfiscal.inf.br/cte", c(
   '  <xs:include schemaLocation="cte_v4.00.xsd"/>',
   '  <xs:include schemaLocation="procCTe_v4.00.xsd"/>',
@@ -87,6 +88,8 @@ schema_do_cte = schema_com_as_raizes(pasta_de_cada_pacote[["cte"]], "schema_cte"
   '  <xs:include schemaLocation="procCTeOS_v4.00.xsd"/>',
   '  <xs:include schemaLocation="GTVe_v4.00.xsd"/>',
   '  <xs:include schemaLocation="procGTVe_v4.00.xsd"/>',
+  '  <xs:include schemaLocation="cteSimp_v4.00.xsd"/>',
+  '  <xs:include schemaLocation="procCTeSimp_v4.00.xsd"/>',
   '  <xs:include schemaLocation="cteModalRodoviario_v4.00.xsd"/>',
   '  <xs:include schemaLocation="cteModalRodoviarioOS_v4.00.xsd"/>'
 ))

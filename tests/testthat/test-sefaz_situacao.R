@@ -297,17 +297,17 @@ test_that("modelo que n\u00e3o \u00e9 consultado, chave repetida, hora com mil\u
     pedidos[[length(pedidos) + 1]] <<- req
     resposta_da_sefaz(com_milesimos)
   })
-  # A chave do CF-e SAT (modelo 59) confere, mas n\u00e3o \u00e9 consultada: n\u00e3o derruba as outras.
+  # A chave do CF-e SAT (modelo 59) confere, mas não é consultada: não derruba as outras.
   cupom_sat = chave_inventada("35", "59")
   consulta = sefaz_situacao(c(CHAVE_DA_NOTA_SP, cupom_sat, CHAVE_DA_NOTA_SP), CERTIFICADO_DO_TESTE, "teste")
   situacoes = consulta$situacoes
   expect_identical(situacoes$problema[2], "o modelo 59 n\u00e3o \u00e9 consultado pelo RNFe")
-  # A chave repetida foi uma vez s\u00f3, e a linha dela \u00e9 igual \u00e0 da primeira; o evento n\u00e3o sai em dobro.
+  # A chave repetida foi uma vez só, e a linha dela é igual à da primeira; o evento não sai em dobro.
   expect_length(pedidos, 1)
   expect_identical(as.list(situacoes[3, ]), as.list(situacoes[1, ]))
   expect_identical(nrow(consulta$eventos), 1L)
   expect_equal(as.numeric(situacoes$recebimento[1]), as.numeric(as.POSIXct("2026-10-16 12:00:00", tz = "UTC")))
-  # Um evento que veio e n\u00e3o foi lido n\u00e3o some calado.
+  # Um evento que veio e não foi lido não some calado.
   evento_vazio = sub("(?s)<procEventoNFe.*</procEventoNFe>", '<procEventoNFe versao="1.00"></procEventoNFe>',
                      resposta_da_nota_cancelada(), perl = TRUE)
   httr2::local_mocked_responses(function(req) resposta_da_sefaz(evento_vazio))

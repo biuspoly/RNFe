@@ -66,7 +66,7 @@ test_that("munic\u00edpios como na API de localidades do IBGE", {
   expect_identical(names(municipios), c("codigo", "nome", "uf", "codigo_uf", "inicio", "fim"))
   expect_s3_class(municipios$inicio, "Date")
   expect_true(all(is.na(municipios$inicio) & is.na(municipios$fim)))
-  # 5.571 em 30/10/2026; o rob\u00f4 atualiza a lista, ent\u00e3o o teste s\u00f3 confere que ela est\u00e1 inteira.
+  # 5.571 em 30/10/2026; o robô atualiza a lista, então o teste só confere que ela está inteira.
   expect_gt(nrow(municipios), 5500)
   expect_true(all(grepl("^[0-9]{7}$", municipios$codigo)))
   expect_false(any(duplicated(municipios$codigo)))
@@ -75,7 +75,7 @@ test_that("munic\u00edpios como na API de localidades do IBGE", {
   expect_identical(municipios$nome[municipios$codigo == "3550308"], "S\u00e3o Paulo")
   expect_identical(municipios$uf[municipios$codigo == "2304400"], "CE")
   expect_identical(municipios$nome[municipios$codigo == "3304557"], "Rio de Janeiro")
-  # Os munic\u00edpios dos documentos de exemplo est\u00e3o todos na tabela.
+  # Os municípios dos documentos de exemplo estão todos na tabela.
   exemplos = system.file("exemplos", c("nfe_proc_sp.xml", "cte_proc_sp.xml", "mdfe_proc_sp.xml"), package = "RNFe")
   codigos_nos_exemplos = c(nfe_ler(exemplos[1])$notas$emitente_codigo_municipio, cte_ler(exemplos[2])$ctes$fim_codigo_municipio,
                            mdfe_ler(exemplos[3])$locais$codigo_municipio)
@@ -94,7 +94,7 @@ test_that("IBS e CBS como na tabela de classifica\u00e7\u00e3o tribut\u00e1ria d
   expect_identical(integral$inicio, as.Date("2026-01-01"))
   expect_type(classificacao$reducao_ibs, "double")
   expect_false(any(duplicated(classificacao$codigo)))
-  # O Excel guardava alguns CST como n\u00famero (400): voltam com tr\u00eas d\u00edgitos.
+  # O Excel guardava alguns CST como número (400): voltam com três dígitos.
   expect_true(all(nchar(classificacao$cst) == 3))
   expect_true(all(classificacao$cst[startsWith(classificacao$codigo, "400")] == "400"))
   expect_true(all(classificacao$cst %in% cst$codigo))
@@ -107,7 +107,7 @@ test_that("meios de pagamento e bandeiras de cart\u00e3o como nas planilhas do P
   expect_false(any(duplicated(meios$codigo)))
   expect_identical(meios$descricao[meios$codigo == "17"], "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico")
   expect_identical(meios$descricao[meios$codigo == "24"], "TEF - \"Book Transfer\"")
-  # A planilha guarda a data como n\u00famero do Excel: 45474 \u00e9 01/07/2024 e 46146, 04/05/2026.
+  # A planilha guarda a data como número do Excel: 45474 é 01/07/2024 e 46146, 04/05/2026.
   expect_identical(meios$inicio[meios$codigo %in% c("05", "17", "23", "99")], as.Date(c("2024-07-01", "2024-07-01", "2026-05-04", "2020-01-01")))
   expect_match(meios$observacao[meios$codigo == "05"], "^Cart\u00e3o da loja \\(na forma de credi\u00e1rio\\)")
   bandeiras = tabela_fiscal("bandeiras_cartao")
@@ -152,8 +152,8 @@ test_that("a descri\u00e7\u00e3o muda com a data da nota", {
                    c(NA, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico"))
 })
 
-# O reposit\u00f3rio de mentira: cada tabela do pacote como est\u00e1, menos as que o teste troca. A pasta de cache do R vai para
-# uma pasta tempor\u00e1ria, que \u00e9 apagada no fim.
+# O repositório de mentira: cada tabela do pacote como está, menos as que o teste troca. A pasta de cache do R vai para
+# uma pasta temporária, que é apagada no fim.
 texto_da_tabela_do_pacote = function(nome_da_tabela) {
   arquivo = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
   readBin(arquivo, "raw", file.size(arquivo))
@@ -197,10 +197,10 @@ test_that("tabelas_atualizar(): baixa do reposit\u00f3rio, usa a nova e volta \u
   expect_identical(atualizacao$tabela[atualizacao$mudou], "cst_icms")
   expect_true(all(is.na(atualizacao$problema)))
   expect_identical(pedidos[1], "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/cfop.csv")
-  # A tabela nova j\u00e1 vale nesta sess\u00e3o e nas leituras dos documentos.
+  # A tabela nova já vale nesta sessão e nas leituras dos documentos.
   expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente (texto novo)")
   expect_identical(descricao_na_data("cst_icms", "00", as.Date("2026-01-01")), "Tributada integralmente (texto novo)")
-  # De novo, nada mudou; e a volta \u00e0s do pacote.
+  # De novo, nada mudou; e a volta às do pacote.
   expect_false(any(tabelas_atualizar()$mudou))
   tabelas_atualizar(usar_as_do_pacote = TRUE)
   expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente")
@@ -230,10 +230,10 @@ test_that("tabelas_atualizar(): formato novo, tabela que n\u00e3o baixa e c\u00f
   expect_identical(problemas[["cfop"]], "a tabela mudou de formato: atualize o pacote RNFe para usar a nova")
   expect_identical(problemas[["ncm"]], "n\u00e3o baixou: HTTP 404")
   expect_match(problemas[["origem"]], "^n\u00e3o baixou: .*Could not resolve host")
-  # As que n\u00e3o foram trocadas seguem as do pacote.
+  # As que não foram trocadas seguem as do pacote.
   expect_true("titulo" %in% names(tabela_fiscal("cfop")))
   expect_false(file.exists(file.path(pasta, "R", "RNFe", "tabelas", "cfop.csv")))
-  # Uma c\u00f3pia baixada antes da instala\u00e7\u00e3o do pacote n\u00e3o vale.
+  # Uma cópia baixada antes da instalação do pacote não vale.
   baixada = arquivo_da_tabela("cst_icms")
   expect_true(startsWith(normalizePath(baixada, winslash = "/"), normalizePath(pasta, winslash = "/")))
   Sys.setFileTime(baixada, as.POSIXct("2020-01-01"))

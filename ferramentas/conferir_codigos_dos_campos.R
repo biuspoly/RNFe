@@ -37,12 +37,10 @@ PASTAS_DE_CADA_DOCUMENTO = list(
 TIPO_DE_CADA_DOCUMENTO = c("GTV-e" = "TGTVe")
 # Valores que o schema aceita em grupos que o RNFe não lê, ou que só vão para a tabela campos (as notas referenciadas
 # da NF-e): ficam sem significado na tabela de propósito. No documento CT-e, os da GTV-e: ela tem os códigos dela no
-# documento GTV-e.
+# documento GTV-e. O CT-e simplificado usa os do documento CT-e.
 VALORES_FORA_DOS_LEITORES = utils::read.table(header = TRUE, stringsAsFactors = FALSE, colClasses = "character", text = "
 documento campo codigo grupo
 CT-e      tpCTe 4      GTV-e
-CT-e      tpCTe 5      CT-e_simplificado
-CT-e      tpCTe 6      CT-e_simplificado
 CT-e      tpServ 9     GTV-e
 NF-e      mod   01     refNF_e_refNFP
 NF-e      mod   02     refNF

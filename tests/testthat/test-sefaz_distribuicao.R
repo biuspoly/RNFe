@@ -59,7 +59,7 @@ resposta_do_cte_com_documentos = function() {
   )
 }
 
-# A resposta real de cada distribui\u00e7\u00e3o, pelo endere\u00e7o pedido.
+# A resposta real de cada distribuição, pelo endereço pedido.
 resposta_real_sem_documentos = function(req) {
   arquivo = "distribuicao_homologacao_an.xml"
   if (grepl("hom1.cte.fazenda.gov.br", req$url, fixed = TRUE)) {
@@ -77,7 +77,7 @@ test_that("a produ\u00e7\u00e3o, um documento, um NSU ou uma chave fora do forma
                                   chave = "35261011222333000181550010000010011123456780"), "d\u00edgito verificador")
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "MDF-e"), "distribuicao")
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", uf = "XX"), "UF desconhecida")
-  # O CT-e: a UF de quem pede \u00e9 obrigat\u00f3ria, o CNPJ s\u00f3 com n\u00fameros e n\u00e3o h\u00e1 busca pela chave.
+  # O CT-e: a UF de quem pede é obrigatória, o CNPJ só com números e não há busca pela chave.
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "CT-e"), "cUFAutor")
   expect_error(sefaz_distribuicao("12ABC34501DE35", "qualquer.pfx", "senha", distribuicao = "CT-e", uf = "SP"), "letras")
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "CT-e", uf = "SP",

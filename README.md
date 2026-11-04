@@ -3,9 +3,9 @@
 Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NFS-e Nacional) no **R**.
 
 > **Em construção.** Esta versão traz a chave de acesso, a leitura do XML da NF-e (e do resumo que a
-> Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, da GTV-e, do MDF-e, da NFS-e Nacional e dos
-> eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
-> da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
+> Distribuição de DF-e entrega), da NFC-e, do CT-e, do CT-e OS, do CT-e simplificado, da GTV-e, do MDF-e, da
+> NFS-e Nacional e dos eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as da Reforma, os
+> municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
 > SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta pela chave (NF-e, NFC-e,
 > CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e (NF-e e CT-e), em homologação;
 > da NFS-e Nacional, a consulta pela chave e a distribuição, na Produção Restrita; e a situação do CNPJ na Receita
@@ -106,6 +106,25 @@ Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), nos leiautes 3.00 e 4.00, pelo s
 (remetente, expedidor, recebedor ou destinatário), os dados dessa pessoa são copiados para as colunas
 `tomador_`. Conferido com 14 mil CT-e reais (que não estão no repositório), contra outro sistema e contra um
 segundo leitor do XML: os campos e as contagens comparados bateram em todos.
+
+## Ler o XML do CT-e simplificado
+
+```r
+lido = cte_simplificado_ler(c("simp1.xml", "simp2.xml"))   # ou o próprio texto do XML
+lido$ctes          # uma linha por CT-e: tomador, emitente, totais, ICMS, IBS e CBS, carga, protocolo
+lido$entregas      # uma linha por entrega: municípios de início e de fim, valor, IBS e CBS
+lido$componentes   # os componentes do valor de cada entrega (frete peso, pedágio...)
+lido$documentos    # as NF-e de cada entrega, o CT-e anterior e o CT-e substituído
+lido$cargas        # as quantidades da carga, com o tipo da medida em código (peso bruto da NF-e, caixas...)
+lido$impostos      # todos os campos de imposto, um por linha, com a entrega
+lido$arquivos      # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+O CT-e simplificado (modelo 57, tipo 5, e o de substituição, tipo 6) tem a chave, o protocolo e os eventos do
+CT-e, mas no lugar do remetente, do destinatário e dos documentos de uma prestação só traz o tomador e até 999
+entregas, cada uma com o seu valor, o IBS e a CBS e os seus documentos. Por isso tem leitor próprio. Segue o
+schema oficial (tipo `TCTeSimp`); nenhum CT-e simplificado real passou por ele ainda, só o exemplo do pacote,
+validado contra o schema.
 
 ## Ler o XML da GTV-e
 
@@ -229,6 +248,7 @@ sefaz_distribuicao("11222333000181", "empresa.pfx", senha, ultimo_nsu = distribu
 # os CT-e, CT-e OS e GTV-e em que o CNPJ aparece (remetente, destinatário, tomador...); a UF de quem pede é obrigatória
 ctes = sefaz_distribuicao("11222333000181", "empresa.pfx", senha, distribuicao = "CT-e", uf = "SP")
 cte_ler(ctes$documentos$xml)       # os CT-e e CT-e OS que vieram
+cte_simplificado_ler(ctes$documentos$xml)   # os CT-e simplificados (vêm para o tomador e os autorizados)
 gtve_ler(ctes$documentos$xml)      # as GTV-e
 eventos_ler(ctes$documentos$xml)   # os eventos
 ```

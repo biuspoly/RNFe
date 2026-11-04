@@ -8,7 +8,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos, e o
     resumo que a Distribuição de DF-e entrega ao destinatário), o
     do CT-e e do CT-e OS (com o tomador, os componentes do frete, os
-    documentos transportados, a carga e os impostos), o da GTV-e (com os
+    documentos transportados, a carga e os impostos), o do CT-e
+    simplificado (com as entregas, cada uma com o valor, o IBS e a CBS e os
+    documentos), o da GTV-e (com os
     valores levados de cada espécie), o do MDF-e (com o
     percurso, os documentos de cada descarregamento, os veículos, os
     condutores e os seguros) e o da NFS-e Nacional (com a DPS declarada e o
@@ -66,6 +68,7 @@ Collate:
     'nfse_nacional.R'
     'cnpj.R'
     'cte_ler.R'
+    'cte_simplificado_ler.R'
     'eventos_ler.R'
     'gtve_ler.R'
     'mdfe_ler.R'

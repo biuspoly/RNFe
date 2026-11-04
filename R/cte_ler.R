@@ -6,7 +6,8 @@
 NULL
 
 # O CT-e (raiz CTe) e o CT-e OS (raiz CTeOS) têm o mesmo infCte. A GTV-e e o CT-e simplificado também
-# usam infCte, com outro conteúdo, e por isso ficam de fora (a GTV-e tem leitor próprio, gtve_ler()).
+# usam infCte, com outro conteúdo, e por isso ficam de fora: têm leitor próprio (gtve_ler() e
+# cte_simplificado_ler()).
 CAMINHO_DOS_CTES = "//CTe/infCte|//CTeOS/infCte"
 
 # Coluna, caminho a partir do infCte e tipo. "a|b" pega o que existir (o leiaute deixa um ou outro):
@@ -259,8 +260,9 @@ texto  xTexto   texto
 #' de um arquivo, de vários de uma vez ou do próprio texto do XML. Um arquivo
 #' que não dá para ler não interrompe os outros: fica em `arquivos`, com o
 #' motivo. O CT-e simplificado e a GTV-e, que têm outro conteúdo, não são
-#' lidos aqui (a GTV-e é lida por [gtve_ler()]). Para saber se o CT-e foi
-#' cancelado, leia os eventos dele com [eventos_ler()].
+#' lidos aqui: têm leitor próprio, [cte_simplificado_ler()] e [gtve_ler()].
+#' Para saber se o CT-e foi cancelado, leia os eventos dele com
+#' [eventos_ler()].
 #'
 #' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
 #' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer

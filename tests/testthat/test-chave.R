@@ -67,7 +67,7 @@ test_that("a GTV-e (modelo 64) tem a chave do CT-e", {
   expect_identical(partes$documento, "GTV-e")
   expect_identical(partes$numero, 501L)
   expect_identical(partes$forma_emissao_descricao, "Normal")
-  # A GTV-e s\u00f3 tem as formas 1 e 2: a 4 (EPEC no CT-e) fica sem significado.
+  # A GTV-e só tem as formas 1 e 2: a 4 (EPEC no CT-e) fica sem significado.
   sem_digito = "3526101144477700016164001000000501424681357"
   expect_true(is.na(chave_decompor(paste0(sem_digito, chave_digito(sem_digito)))$forma_emissao_descricao))
 })

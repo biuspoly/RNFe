@@ -14,9 +14,10 @@ certa?), \code{\link[=chave_decompor]{chave_decompor()}} (as partes e o que est�
 \code{\link[=chave_digito]{chave_digito()}} (o dígito que ela deveria ter) e \code{\link[=chave_extrair]{chave_extrair()}} (a
 chave achada num PDF ou numa foto, pelo texto, QR-Code ou OCR);
 \item a leitura do XML em tabelas: \code{\link[=nfe_ler]{nfe_ler()}} (também o resumo que a
-Distribuição de DF-e entrega), \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=gtve_ler]{gtve_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}},
-\code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles (cancelamento, carta de
-correção, manifestação, encerramento...), \code{\link[=eventos_ler]{eventos_ler()}};
+Distribuição de DF-e entrega), \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=cte_simplificado_ler]{cte_simplificado_ler()}},
+\code{\link[=gtve_ler]{gtve_ler()}}, \code{\link[=mdfe_ler]{mdfe_ler()}}, \code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles
+(cancelamento, carta de correção, manifestação, encerramento...),
+\code{\link[=eventos_ler]{eventos_ler()}};
 \item as tabelas fiscais, com a vigência de cada código, e os municípios do
 IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}}, e as mais novas do repositório, sem esperar
 versão nova do pacote: \code{\link[=tabelas_atualizar]{tabelas_atualizar()}};

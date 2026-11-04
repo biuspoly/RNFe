@@ -114,8 +114,11 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros", 
   expect_match(problemas[3], "^n\u00e3o \u00e9 um XML v\u00e1lido")
   expect_identical(problemas[4], "n\u00e3o \u00e9 uma GTV-e (o XML come\u00e7a por <cteProc>)")
   expect_identical(problemas[5], "vazio")
-  # Os outros leitores dizem onde a GTV-e é lida.
+  # Os outros leitores dizem onde a GTV-e é lida; o próprio leitor dela, com a raiz certa e sem o infCte, diz o que
+  # falta.
   expect_identical(nfe_ler(GTVE_SP)$arquivos$problema, "\u00e9 uma GTV-e, lida por gtve_ler()")
+  sem_infcte = gtve_ler('<GTVeProc xmlns="http://www.portalfiscal.inf.br/cte"/>')$arquivos$problema
+  expect_identical(sem_infcte, "o XML come\u00e7a por <GTVeProc>, mas sem o infCte")
 })
 
 test_that("sem arquivo nenhum, as tabelas v\u00eam vazias com as colunas certas", {

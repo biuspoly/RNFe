@@ -811,10 +811,10 @@ CT-e      ; CTeDistribuicaoDFe ; cteDistDFeInteresse ; cte     ; 1.00   ; NT 201
 #' o emitente não recebe os próprios. Devolve uma lista com `consulta` (a
 #' resposta, numa linha) e `documentos` (um por linha, com o XML já
 #' descompactado). Leia os documentos com [nfe_ler()] (as notas e os
-#' resumos), [cte_ler()] (o CT-e e o CT-e OS), [gtve_ler()] e [eventos_ler()]:
-#' `nfe_ler(distribuicao$documentos$xml)`. O CT-e simplificado também vem
-#' (para o tomador e os autorizados), mas o RNFe ainda não o lê: ele fica só
-#' em `documentos`, com o XML.
+#' resumos), [cte_ler()] (o CT-e e o CT-e OS), [cte_simplificado_ler()] (o
+#' CT-e simplificado, que também vem, para o tomador e os autorizados),
+#' [gtve_ler()] e [eventos_ler()]: `nfe_ler(distribuicao$documentos$xml)`.
+#' Cada leitor lê só o seu tipo e deixa os outros em `arquivos`, com o motivo.
 #'
 #' Cada chamada faz um pedido, que traz até 50 documentos. Para seguir, chame
 #' de novo com `ultimo_nsu` igual ao `ultimo_nsu` da resposta, até ele ficar
@@ -872,8 +872,8 @@ CT-e      ; CTeDistribuicaoDFe ; cteDistDFeInteresse ; cte     ; 1.00   ; NT 201
 #'     `procCTe_v4.00.xsd`), `tipo` (o nome do schema sem a versão: `resNFe`,
 #'     `procNFe`, `resEvento`, `procEventoNFe`, `procCTe`,
 #'     `procEventoCTe`...) e `xml` (o documento, descompactado).
-#' @seealso [nfe_ler()], [cte_ler()], [gtve_ler()], [eventos_ler()],
-#'   [sefaz_situacao()]
+#' @seealso [nfe_ler()], [cte_ler()], [cte_simplificado_ler()], [gtve_ler()],
+#'   [eventos_ler()], [sefaz_situacao()]
 #' @source NF-e: NT 2014.002 v1.02d (Web Service de Distribuição de DF-e,
 #'   Portal da NF-e); os schemas `distDFeInt_v1.01.xsd` e
 #'   `retDistDFeInt_v1.01.xsd` do pacote da Distribuição de DF-e v1.04

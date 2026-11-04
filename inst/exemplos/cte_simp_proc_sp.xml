@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CT-e simplificado fictício para os testes do RNFe: CNPJs de exemplo, ambiente de homologação e assinatura de
+     mentira. Duas entregas do mesmo emitente do CT-e de exemplo (cte_proc_sp.xml): a primeira leva a NF-e de exemplo
+     nfe_proc_sp.xml; a segunda leva em parte a NF-e de nfe_ce_simples_cpf.xml, que veio no CT-e de exemplo. -->
+<cteSimpProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+  <CTeSimp xmlns="http://www.portalfiscal.inf.br/cte">
+    <infCte versao="4.00" Id="CTe35261012ABC34501DE35570010000007771135792467">
+      <ide>
+        <cUF>35</cUF>
+        <cCT>13579246</cCT>
+        <CFOP>6353</CFOP>
+        <natOp>PRESTACAO DE SERVICO DE TRANSPORTE</natOp>
+        <mod>57</mod>
+        <serie>1</serie>
+        <nCT>777</nCT>
+        <dhEmi>2026-10-22T09:00:00-03:00</dhEmi>
+        <tpImp>1</tpImp>
+        <tpEmis>1</tpEmis>
+        <cDV>7</cDV>
+        <tpAmb>2</tpAmb>
+        <tpCTe>5</tpCTe>
+        <procEmi>0</procEmi>
+        <verProc>RNFe-testes</verProc>
+        <cMunEnv>3550308</cMunEnv>
+        <xMunEnv>SÃO PAULO</xMunEnv>
+        <UFEnv>SP</UFEnv>
+        <modal>01</modal>
+        <tpServ>0</tpServ>
+        <UFIni>SP</UFIni>
+        <UFFim>RJ</UFFim>
+        <retira>1</retira>
+      </ide>
+      <compl>
+        <xObs>CT-E SIMPLIFICADO DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</xObs>
+        <ObsCont xCampo="ROTA">
+          <xTexto>LITORAL</xTexto>
+        </ObsCont>
+      </compl>
+      <emit>
+        <CNPJ>12ABC34501DE35</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>TRANSPORTADORA DE TESTE LTDA</xNome>
+        <enderEmit>
+          <xLgr>RUA DA TRANSPORTADORA</xLgr>
+          <nro>500</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderEmit>
+        <CRT>3</CRT>
+      </emit>
+      <toma>
+        <toma>4</toma>
+        <indIEToma>1</indIEToma>
+        <CNPJ>11222333000181</CNPJ>
+        <IE>123456789012</IE>
+        <xNome>EMPRESA DE TESTE LTDA</xNome>
+        <enderToma>
+          <xLgr>RUA DE TESTE</xLgr>
+          <nro>100</nro>
+          <xBairro>CENTRO</xBairro>
+          <cMun>3550308</cMun>
+          <xMun>SÃO PAULO</xMun>
+          <CEP>01001000</CEP>
+          <UF>SP</UF>
+        </enderToma>
+      </toma>
+      <infCarga>
+        <vCarga>1500.00</vCarga>
+        <proPred>BEBIDAS</proPred>
+        <infQ>
+          <cUnid>01</cUnid>
+          <tpMed>02</tpMed>
+          <qCarga>320.0000</qCarga>
+        </infQ>
+        <infQ>
+          <cUnid>03</cUnid>
+          <tpMed>07</tpMed>
+          <qCarga>48.0000</qCarga>
+        </infQ>
+      </infCarga>
+      <det nItem="1">
+        <cMunIni>3550308</cMunIni>
+        <xMunIni>SÃO PAULO</xMunIni>
+        <cMunFim>3304557</cMunFim>
+        <xMunFim>RIO DE JANEIRO</xMunFim>
+        <vPrest>200.00</vPrest>
+        <vRec>200.00</vRec>
+        <Comp>
+          <xNome>FRETE PESO</xNome>
+          <vComp>180.00</vComp>
+        </Comp>
+        <Comp>
+          <xNome>PEDAGIO</xNome>
+          <vComp>20.00</vComp>
+        </Comp>
+        <IBSCBS>
+          <CST>000</CST>
+          <cClassTrib>000001</cClassTrib>
+          <gIBSCBS>
+            <vBC>200.00</vBC>
+            <gIBSUF>
+              <pIBSUF>0.10</pIBSUF>
+              <vIBSUF>0.20</vIBSUF>
+            </gIBSUF>
+            <gIBSMun>
+              <pIBSMun>0.00</pIBSMun>
+              <vIBSMun>0.00</vIBSMun>
+            </gIBSMun>
+            <vIBS>0.20</vIBS>
+            <gCBS>
+              <pCBS>0.90</pCBS>
+              <vCBS>1.80</vCBS>
+            </gCBS>
+          </gIBSCBS>
+        </IBSCBS>
+        <infNFe>
+          <chNFe>35261011222333000181550010000010011123456785</chNFe>
+          <dPrev>2026-10-24</dPrev>
+        </infNFe>
+      </det>
+      <det nItem="2">
+        <cMunIni>3550308</cMunIni>
+        <xMunIni>SÃO PAULO</xMunIni>
+        <cMunFim>3303302</cMunFim>
+        <xMunFim>NITERÓI</xMunFim>
+        <vPrest>150.00</vPrest>
+        <vRec>150.00</vRec>
+        <Comp>
+          <xNome>FRETE PESO</xNome>
+          <vComp>150.00</vComp>
+        </Comp>
+        <IBSCBS>
+          <CST>000</CST>
+          <cClassTrib>000001</cClassTrib>
+          <gIBSCBS>
+            <vBC>150.00</vBC>
+            <gIBSUF>
+              <pIBSUF>0.10</pIBSUF>
+              <vIBSUF>0.15</vIBSUF>
+            </gIBSUF>
+            <gIBSMun>
+              <pIBSMun>0.00</pIBSMun>
+              <vIBSMun>0.00</vIBSMun>
+            </gIBSMun>
+            <vIBS>0.15</vIBS>
+            <gCBS>
+              <pCBS>0.90</pCBS>
+              <vCBS>1.35</vCBS>
+            </gCBS>
+          </gIBSCBS>
+        </IBSCBS>
+        <infDocAnt>
+          <chCTe>35261012ABC34501DE35570010000005551876543210</chCTe>
+          <tpPrest>2</tpPrest>
+          <infNFeTranspParcial>
+            <chNFe>23261012ABC34501DE35550020000000421876543213</chNFe>
+          </infNFeTranspParcial>
+        </infDocAnt>
+      </det>
+      <infModal versaoModal="4.00">
+        <rodo>
+          <RNTRC>12345678</RNTRC>
+        </rodo>
+      </infModal>
+      <cobr>
+        <fat>
+          <nFat>FAT-777</nFat>
+          <vOrig>350.00</vOrig>
+          <vDesc>10.00</vDesc>
+          <vLiq>340.00</vLiq>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-11-21</dVenc>
+          <vDup>340.00</vDup>
+        </dup>
+      </cobr>
+      <imp>
+        <ICMS>
+          <ICMS00>
+            <CST>00</CST>
+            <vBC>350.00</vBC>
+            <pICMS>12.00</pICMS>
+            <vICMS>42.00</vICMS>
+          </ICMS00>
+        </ICMS>
+      </imp>
+      <pgtoVinc>
+        <pgto nPag="1" idTransacao="TRANSACAO-DE-TESTE-3">
+          <tpMeioPgto>17</tpMeioPgto>
+          <CNPJReceb>12ABC34501DE35</CNPJReceb>
+          <CNPJBasePSP>11444777</CNPJBasePSP>
+        </pgto>
+      </pgtoVinc>
+      <total>
+        <vTPrest>350.00</vTPrest>
+        <vTRec>350.00</vTRec>
+        <IBSCBSTot>
+          <vBCIBSCBS>350.00</vBCIBSCBS>
+          <gIBS>
+            <gIBSUF>
+              <vDif>0.00</vDif>
+              <vDevTrib>0.00</vDevTrib>
+              <vIBSUF>0.35</vIBSUF>
+            </gIBSUF>
+            <gIBSMun>
+              <vDif>0.00</vDif>
+              <vDevTrib>0.00</vDevTrib>
+              <vIBSMun>0.00</vIBSMun>
+            </gIBSMun>
+            <vIBS>0.35</vIBS>
+          </gIBS>
+          <gCBS>
+            <vDif>0.00</vDif>
+            <vDevTrib>0.00</vDevTrib>
+            <vCBS>3.15</vCBS>
+          </gCBS>
+        </IBSCBSTot>
+      </total>
+    </infCte>
+    <infCTeSupl>
+      <qrCodCTe>https://dfe-portal.svrs.rs.gov.br/cte/qrCode?chCTe=35261012ABC34501DE35570010000007771135792467&amp;tpAmb=2</qrCodCTe>
+    </infCTeSupl>
+    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+      <SignedInfo>
+        <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+        <Reference URI="#CTe35261012ABC34501DE35570010000007771135792467">
+          <Transforms>
+            <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </Transforms>
+          <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+          <DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</DigestValue>
+        </Reference>
+      </SignedInfo>
+      <SignatureValue>QVNTSU5BVFVSQSBERSBURVNURQ==</SignatureValue>
+      <KeyInfo>
+        <X509Data>
+          <X509Certificate>Q0VSVElGSUNBRE8gREUgVEVTVEU=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </Signature>
+  </CTeSimp>
+  <protCTe versao="4.00">
+    <infProt>
+      <tpAmb>2</tpAmb>
+      <verAplic>TESTE</verAplic>
+      <chCTe>35261012ABC34501DE35570010000007771135792467</chCTe>
+      <dhRecbto>2026-10-22T09:01:15-03:00</dhRecbto>
+      <nProt>135260000077777</nProt>
+      <digVal>AAAAAAAAAAAAAAAAAAAAAAAAAAA=</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso do CT-e</xMotivo>
+    </infProt>
+  </protCTe>
+</cteSimpProc>

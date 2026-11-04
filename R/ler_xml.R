@@ -102,13 +102,22 @@ ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_docu
   arquivo_lido
 }
 
+# A GTV-e e o CT-e simplificado têm leitor próprio: os outros leitores dizem qual é. O próprio leitor deles, com a
+# raiz certa mas sem o infCte, diz o que falta.
 problema_sem_documento = function(xml_lido, nome_do_documento) {
   raiz_do_xml = xml2::xml_name(xml2::xml_root(xml_lido))
-  if (raiz_do_xml %in% c("GTVe", "GTVeProc")) {
-    return("\u00e9 uma GTV-e, lida por gtve_ler()")
-  }
-  if (raiz_do_xml %in% c("CTeSimp", "cteSimpProc")) {
-    return("\u00e9 um CT-e simplificado, que ainda n\u00e3o \u00e9 lido")
+  if (raiz_do_xml %in% c("GTVe", "GTVeProc", "CTeSimp", "cteSimpProc")) {
+    if (raiz_do_xml %in% c("GTVe", "GTVeProc")) {
+      documento_da_raiz = "uma GTV-e"
+      leitor_da_raiz = "\u00e9 uma GTV-e, lida por gtve_ler()"
+    } else {
+      documento_da_raiz = "um CT-e simplificado"
+      leitor_da_raiz = "\u00e9 um CT-e simplificado, lido por cte_simplificado_ler()"
+    }
+    if (nome_do_documento == documento_da_raiz) {
+      return(paste0("o XML come\u00e7a por <", raiz_do_xml, ">, mas sem o infCte"))
+    }
+    return(leitor_da_raiz)
   }
   # A NFS-e de prefeitura (o padrão Abrasf, o Ginfes e os formatos próprios) usa estes nomes; algumas, o NFe da NF-e,
   # mas sem o infNFe dela.

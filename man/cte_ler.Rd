@@ -40,8 +40,9 @@ sem o protocolo de autorização (\code{cteProc}, \code{cteOSProc} ou só o docu
 de um arquivo, de vários de uma vez ou do próprio texto do XML. Um arquivo
 que não dá para ler não interrompe os outros: fica em \code{arquivos}, com o
 motivo. O CT-e simplificado e a GTV-e, que têm outro conteúdo, não são
-lidos aqui (a GTV-e é lida por \code{\link[=gtve_ler]{gtve_ler()}}). Para saber se o CT-e foi
-cancelado, leia os eventos dele com \code{\link[=eventos_ler]{eventos_ler()}}.
+lidos aqui: têm leitor próprio, \code{\link[=cte_simplificado_ler]{cte_simplificado_ler()}} e \code{\link[=gtve_ler]{gtve_ler()}}.
+Para saber se o CT-e foi cancelado, leia os eventos dele com
+\code{\link[=eventos_ler]{eventos_ler()}}.
 
 Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
 códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer

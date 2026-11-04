@@ -118,7 +118,7 @@ test_that("uma UF que responde sem corpo (um 503 vazio) n\u00e3o derruba as outr
   status = sefaz_status(c("CE", "SP", "PB"), CERTIFICADO_DE_TESTE, "teste")
   expect_identical(status$situacao, c(107L, NA, 107L))
   expect_identical(status$problema, c(NA, "HTTP 503: a SEFAZ n\u00e3o respondeu em XML", NA))
-  # A hora com mil\u00e9simos tamb\u00e9m abre.
+  # A hora com milésimos também abre.
   com_milesimos = sub("(<dhRecbto>[^<]*T[0-9:]{8})", "\\1.218", paste(readLines(RESPOSTA_DA_SVRS, warn = FALSE), collapse = ""))
   httr2::local_mocked_responses(function(req) resposta_gravada(com_milesimos))
   expect_false(is.na(sefaz_status("CE", CERTIFICADO_DE_TESTE, "teste")$recebimento))

@@ -3,8 +3,9 @@
 Situação em 04/11/2026: **etapas 1, 2 e 3 feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
 das da etapa 3). Etapa 1: chave de acesso, leitura do XML da NF-e/NFC-e e tabelas fiscais, conferidas com
 notas reais; o CEST foi adiado por decisão do usuário. Etapa 2: a leitura do CT-e e do CT-e OS (14.370 CT-e
-reais), da GTV-e, do MDF-e (pelo schema oficial, sem MDF-e reais para comparar), da NFS-e Nacional (11.207
-reais) e dos eventos de todos; a NFS-e de prefeitura fica para depois, por decisão do usuário. Etapa 3:
+reais), da GTV-e, do CT-e simplificado e do MDF-e (os dois pelo schema oficial, sem documentos reais para
+comparar), da NFS-e Nacional (11.207 reais) e dos eventos de todos; a NFS-e de prefeitura fica para depois, por
+decisão do usuário. Etapa 3:
 certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados, Distribuição da NF-e e do
 CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
 deixou em aberto está no fim dela.
@@ -28,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
@@ -243,8 +244,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   `R/ler_xml.R`.
 - **O CT-e OS entrou junto** porque usa o mesmo `infCte` e quase os mesmos grupos; muda o tomador (grupo
   `toma`), o serviço (`infServico`) e os tributos federais (`infTribFed`). A GTV-e e o CT-e simplificado
-  também usam `infCte`, com outro conteúdo, e ficam de fora; o simplificado avisa que ainda não é lido, e a
-  GTV-e, desde 03/11/2026, tem leitor próprio (veja a seção dela).
+  também usam `infCte`, com outro conteúdo, e ficam de fora: têm leitor próprio, a GTV-e desde 03/11/2026 e o
+  simplificado desde 04/11/2026 (veja as seções deles).
 - **O tomador sai pronto.** No `toma3` o XML só diz o papel (0 remetente, 1 expedidor, 2 recebedor,
   3 destinatário, como está no schema) e o pacote copia os dados dessa pessoa; no `toma4` e no CT-e OS os
   dados vêm do próprio grupo.
@@ -318,6 +319,39 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   `tomaTerceiro` trazem os dados do grupo. Contra uma leitura direta de cada arquivo, as 632 espécies (valor e
   ordem), a quantidade, a emissão, o protocolo e o número de campos bateram em todas. 25 GTV-e aparecem em dois
   arquivos cada (260 chaves distintas). Velocidade: 1,8 s para as 285, com a tabela `campos`.
+
+## Etapa 2, leitura do CT-e simplificado: o que se decidiu (04/11/2026)
+
+- **Pedido do usuário** ("faça todos", sobre as brechas da revisão de 04/11/2026). `cte_simplificado_ler()` lê o
+  CT-e simplificado (modelo 57, `tpCTe` 5, e o de substituição, 6), leiaute 4.00, pelo tipo `TCTeSimp` do mesmo
+  pacote do CT-e (`cteSimp_v4.00.xsd` e `procCTeSimp_v4.00.xsd`). Devolve `ctes`, `entregas`, `componentes`,
+  `documentos`, `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`, `observacoes`, `campos` e `arquivos`.
+- **Leitor próprio, não o `cte_ler()`:** tem a chave, o protocolo e os eventos do CT-e, mas não tem o remetente, o
+  expedidor, o recebedor nem o destinatário. Traz o tomador, com os dados no próprio grupo `toma` (o papel só diz
+  quem ele é), e um grupo `det` por entrega (até 999), cada um com os municípios de início e de fim, o valor, os
+  componentes, o IBS e a CBS e os documentos. O valor e o IBS e a CBS do CT-e inteiro vêm do grupo `total`; o ICMS
+  é um só, como no CT-e. No `ctes` do `cte_ler()`, as entregas não caberiam.
+- **A entrega liga as tabelas:** `entregas` tem o número dela (`nItem`), e `componentes`, `documentos` e `impostos`
+  trazem a coluna `entrega`. Em `documentos`, a NF-e da entrega (`infNFe`, com a previsão de entrega), o CT-e
+  anterior (`infDocAnt`, com a prestação total ou parcial) e as NF-e dentro dele (`infNFeTranspParcial`, com a chave
+  do CT-e anterior ao lado), e o CT-e substituído (`infCteSub`, sem entrega). Em `impostos`, o `tributo` é
+  `IBSCBS` no de cada entrega e `IBSCBSTot` nos totais (o diferimento e a devolução de tributos ficam lá).
+- **Significados no documento `CT-e`** de `codigos_dos_campos`, porque os códigos são os do CT-e: o `tpCTe` 5 e 6
+  saíram da lista "fora de propósito"; o `tpMed`, que aqui é código (17 valores, de "Cubagem da NF-e" a "Outros"),
+  e o `tpPrest` (total ou parcial). O `toma` 4 é "Terceiro" no simplificado e "Outros" no CT-e: entrou com o tipo do
+  CT-e (5 e 6) como contexto, e o `cte_ler()` continua com "Outros". 23 linhas, todas da documentação do
+  `TCTeSimp`; a ferramenta de conferência aprovou.
+- **As outras mensagens:** o `cte_ler()`, o `nfe_ler()` e os outros leitores dizem "é um CT-e simplificado, lido por
+  cte_simplificado_ler()"; a distribuição do CT-e manda lê-lo por ele. Junto, um defeito pequeno: o próprio leitor
+  da GTV-e (e agora o do simplificado), com a raiz certa e sem o `infCte`, dizia que o arquivo era lido por ele
+  mesmo; agora diz que falta o `infCte`.
+- **Exemplo:** um CT-e simplificado escrito à mão (duas entregas, uma com NF-e e outra com o CT-e anterior parcial,
+  tomador terceiro, carga com o tipo da medida em código, fatura com desconto, pagamento vinculado, IBS e CBS por
+  entrega e nos totais) passa no schema oficial. O validador pegou o desconto 0.00 da fatura, que o schema não
+  aceita.
+- **Sem documento real:** o acervo do Fiscal não tem nenhum CT-e simplificado (a revisão de 04/11/2026 contou os
+  tipos pela raiz), como no MDF-e. O MOC do CT-e 4.00 (fevereiro/2023) não fala dele; o que a ajuda diz vem do
+  schema.
 
 ## Etapa 2, leitura do MDF-e: o que se decidiu
 
@@ -497,10 +531,11 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Contexto:** alguns códigos mudam de sentido dentro do mesmo documento. No CT-e, o `procEmi` 3 é o
   aplicativo do SEBRAE no modelo 57 e o do Fisco no CT-e OS (67); o `tpDoc` tem uma lista para outros
   documentos (`infOutros`) e outra para os de transporte anterior em papel (`idDocAntPap`). A tabela tem a
-  coluna `contexto`, e o leitor procura primeiro o significado do contexto da linha.
-- **Fora de propósito:** o `tpCTe` 5 e 6 (CT-e simplificado), de um documento que o RNFe não lê, e, no
-  documento CT-e, o `tpCTe` 4 e o `tpServ` 9, que são da GTV-e: desde 03/11/2026 ela tem os códigos dela no
-  documento `GTV-e`. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
+  coluna `contexto`, e o leitor procura primeiro o significado do contexto da linha. O `toma` 4 é "Outros" no CT-e
+  e "Terceiro" no CT-e simplificado (contexto: o tipo do CT-e, 5 ou 6).
+- **Fora de propósito:** no documento CT-e, o `tpCTe` 4 e o `tpServ` 9, que são da GTV-e: desde 03/11/2026 ela
+  tem os códigos dela no documento `GTV-e`. O `tpCTe` 5 e 6 (CT-e simplificado) ficaram aqui até 04/11/2026, quando
+  ganharam leitor e significado. O `tpCTe` 2 (anulação, do leiaute 3.00) fica, porque o leitor lê o 3.00. Os
   modelos das notas referenciadas da NF-e (`refNF`, `refNFP`, `refECF`: 01, 02, 04, 2B, 2C, 2D) também ficam
   sem significado: só vão para a tabela `campos`, e o 01 muda de sentido entre os grupos.
 - **Segunda rodada (30/10/2026), achada cruzando cada coluna dos leitores com os valores que o schema aceita:**
@@ -519,8 +554,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     (manifestação, EPEC e outros) vêm com 91. O 90 e o 92 da NF-e (o 92 aparece no evento 510630) e o 93 do
     CT-e ficam sem significado: nenhum documento diz o que são.
   - O que mais o cruzamento apontou não é código: siglas de UF, textos, versões, o `tpMed` (lista fechada só
-    no CT-e simplificado; no CT-e é texto livre) e a situação do retorno do evento, que vem com o `motivo`
-    escrito pela SEFAZ.
+    no CT-e simplificado, com significado desde 04/11/2026; no CT-e é texto livre) e a situação do retorno do
+    evento, que vem com o `motivo` escrito pela SEFAZ.
 - **Conferência:** `ferramentas/conferir_codigos_dos_campos.R` compara a tabela com os valores que o schema
   aceita, campo por campo (cada versão da NFS-e lida à parte). Reprovou uma tabela estragada de propósito
   (um código que o schema não aceita, outro que faltava). Em 30/10/2026, com os pacotes oficiais baixados na
@@ -776,7 +811,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - o CNPJ do schema 1.00 é só de números. O CNPJ com letras é recusado antes de conectar, com o motivo;
   - o emitente não recebe os próprios CT-e. Recebem o remetente, o destinatário, o expedidor, o recebedor, o tomador e
     quem está no `autXML`. Para quem só está no `autXML`, as chaves citadas no documento chegam trocadas por 44 noves.
-    O CT-e simplificado também vem (para o tomador e os autorizados), mas o RNFe ainda não o lê;
+    O CT-e simplificado também vem (para o tomador e os autorizados), lido por `cte_simplificado_ler()` desde
+    04/11/2026;
   - **o `dhResp` vem sem o fuso** (o schema não tem). A resposta real disse 09:44:12 às 09:44 de Brasília, então ele é
     lido como hora de Brasília. Só o teste real mostrou isso.
 - **A trava de uma hora é de cada distribuição:** a NT 2015.002 também manda esperar uma hora depois de "não há mais
@@ -926,10 +962,11 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Sem correção, porque não aconteceu de verdade:** os eventos com prefixo de namespace declarado no envelope
   (`ns2:`). Nenhuma das respostas reais (27 UFs) faz isso, e a SEFAZ proíbe prefixo nos documentos (rejeição 404).
   Se acontecer, agora vira `problema` em vez de sumir.
-- **Brechas que ficam em aberto** (para o usuário decidir): o **CT-e simplificado** (tpCTe 5 e 6) não é lido, e a
-  distribuição do CT-e o entrega ao tomador (nenhum no acervo); a NFS-e de prefeitura (decisão do usuário: depois);
-  a terceira camada das tabelas (o pacote buscar sozinho a tabela mais nova; feita no mesmo dia, veja "O robô das
-  tabelas"); o MDF-e sem documento real para
+- **Brechas que ficaram em aberto**, e o que o usuário decidiu no mesmo dia ("faça todos"): o **CT-e simplificado**
+  (tpCTe 5 e 6), que a distribuição do CT-e entrega ao tomador, ganhou leitor (veja a seção dele, na etapa 2); a
+  terceira camada das tabelas virou o `tabelas_atualizar()` (veja "O robô das tabelas"); e a `cnpj_situacao()`
+  passou a tentar a fonte seguinte também quando uma não acha o CNPJ (veja o oitavo passo da etapa 3). **Seguem em
+  aberto:** a NFS-e de prefeitura (decisão do usuário: depois); o MDF-e e o CT-e simplificado sem documento real para
   conferir; o dígito da chave da NFS-e, sem regra publicada.
 
 ## O robô das tabelas

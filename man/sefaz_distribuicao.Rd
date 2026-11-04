@@ -85,10 +85,10 @@ expedidor, recebedor, tomador ou autorizado (\code{autXML}), e os eventos deles;
 o emitente não recebe os próprios. Devolve uma lista com \code{consulta} (a
 resposta, numa linha) e \code{documentos} (um por linha, com o XML já
 descompactado). Leia os documentos com \code{\link[=nfe_ler]{nfe_ler()}} (as notas e os
-resumos), \code{\link[=cte_ler]{cte_ler()}} (o CT-e e o CT-e OS), \code{\link[=gtve_ler]{gtve_ler()}} e \code{\link[=eventos_ler]{eventos_ler()}}:
-\code{nfe_ler(distribuicao$documentos$xml)}. O CT-e simplificado também vem
-(para o tomador e os autorizados), mas o RNFe ainda não o lê: ele fica só
-em \code{documentos}, com o XML.
+resumos), \code{\link[=cte_ler]{cte_ler()}} (o CT-e e o CT-e OS), \code{\link[=cte_simplificado_ler]{cte_simplificado_ler()}} (o
+CT-e simplificado, que também vem, para o tomador e os autorizados),
+\code{\link[=gtve_ler]{gtve_ler()}} e \code{\link[=eventos_ler]{eventos_ler()}}: \code{nfe_ler(distribuicao$documentos$xml)}.
+Cada leitor lê só o seu tipo e deixa os outros em \code{arquivos}, com o motivo.
 }
 \details{
 Cada chamada faz um pedido, que traz até 50 documentos. Para seguir, chame
@@ -133,6 +133,6 @@ cte_ler(ctes$documentos$xml)
 }
 }
 \seealso{
-\code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=gtve_ler]{gtve_ler()}}, \code{\link[=eventos_ler]{eventos_ler()}},
-\code{\link[=sefaz_situacao]{sefaz_situacao()}}
+\code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=cte_simplificado_ler]{cte_simplificado_ler()}}, \code{\link[=gtve_ler]{gtve_ler()}},
+\code{\link[=eventos_ler]{eventos_ler()}}, \code{\link[=sefaz_situacao]{sefaz_situacao()}}
 }

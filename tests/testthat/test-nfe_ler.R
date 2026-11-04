@@ -238,7 +238,7 @@ test_that("a NFC-e em conting\u00eancia offline: modelo 65, QR-Code, URL de cons
   expect_identical(lida$pagamentos$forma, "01")
   expect_equal(lida$pagamentos$valor, 50)
   expect_equal(lida$pagamentos$valor - nota$valor_troco, nota$valor_nota)
-  # A NF-e (modelo 55) n\u00e3o tem o infNFeSupl.
+  # A NF-e (modelo 55) não tem o infNFeSupl.
   expect_true(is.na(nfe_ler(NOTA_SP)$notas$qrcode))
   expect_true(is.na(nfe_ler(NOTA_SP)$notas$contingencia_entrada))
 })
