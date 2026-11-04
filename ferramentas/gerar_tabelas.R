@@ -11,6 +11,10 @@
 # - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e; e o que
 #   mudou de uma versão publicada da tabela para a seguinte, desde a 1.20 (mudancas_ibs_cbs). O crédito presumido
 #   (cCredPres): a tabela de crédito presumido do mesmo IT.
+# - O local da operação da Reforma (cIndOp): o Anexo VII da documentação da NFS-e Nacional (gov.br/nfse), a versão
+#   mais alta publicada; se a página não responder, fica a cópia do pacote, com um aviso.
+# - O etanol anidro obrigatório na gasolina C: a Tabela de Índice de Biocombustível (IT 2025.004), com o histórico; os
+#   combustíveis do ICMS monofásico: a tabela do Portal da NF-e, com os dados históricos e os atuais.
 # - NCM: a nomenclatura vigente do Portal Único Siscomex.
 # - Meios de pagamento e bandeiras de cartão: as tabelas do Portal da NF-e (seção Diversos).
 # - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
@@ -223,6 +227,113 @@ baixar_bandeiras_de_cartao = function(pasta_temporaria) {
   list(tabela = bandeiras_cartao, titulo = planilha_baixada$titulo)
 }
 
+# Repete para baixo o valor da linha de cima onde a célula está vazia (as planilhas com histórico só escrevem o código
+# na primeira linha de cada um).
+repetir_para_baixo = function(valores) {
+  for (posicao in seq_along(valores)[-1]) {
+    if (is.na(valores[posicao])) {
+      valores[posicao] = valores[posicao - 1]
+    }
+  }
+  valores
+}
+
+# A Tabela de Código de Índice de Biocombustível do IBS e CBS (Informe Técnico 2025.004): o percentual obrigatório de
+# etanol anidro em cada gasolina C (o pBioObrig das regras da NT 2025.002), como fração (0,32 = 32%), com a vigência.
+# A aba principal tem o de hoje e a de histórico os anteriores.
+baixar_indice_biocombustivel = function(pasta_temporaria) {
+  planilha_baixada = baixar_do_portal("Tabela de Código de Índice de Biocombustível", pasta_temporaria)
+  partes = list()
+  for (nome_da_aba in c("pBioObrigatorio", "pBioObrigatorio_Historico")) {
+    aba = readxl::read_excel(planilha_baixada$arquivo, sheet = nome_da_aba)
+    names(aba) = gsub("\\s+", " ", names(aba))
+    conferir_colunas(aba, c("cProdANP", "Descrição", "pBio (% Anidro Obrigatorio)", "Início de vigência", "Fim de vigência"),
+                     paste("de índice de biocombustível, aba", nome_da_aba))
+    aba = aba[!(is.na(aba[["cProdANP"]]) & is.na(aba[["pBio (% Anidro Obrigatorio)"]])), ]
+    partes[[nome_da_aba]] = data.frame(
+      codigo = repetir_para_baixo(as.character(aba[["cProdANP"]])),
+      descricao = repetir_para_baixo(trimws(aba[["Descrição"]])),
+      mistura_obrigatoria = as.numeric(aba[["pBio (% Anidro Obrigatorio)"]]),
+      inicio = data_da_planilha(aba[["Início de vigência"]]),
+      fim = data_da_planilha(aba[["Fim de vigência"]])
+    )
+  }
+  biocombustivel = do.call(rbind, partes)
+  biocombustivel = biocombustivel[order(biocombustivel$codigo, biocombustivel$inicio), ]
+  list(tabela = biocombustivel, titulo = planilha_baixada$titulo)
+}
+
+# A Tabela de códigos de combustíveis sujeitos à tributação monofásica de ICMS (a da regra N12-110): cada produto da
+# ANP com a alíquota ad rem do ICMS de cada período (aba de histórico) e, da aba de hoje, se ele pede o pBio, a origem do
+# combustível e a unidade tributável.
+baixar_combustiveis_monofasicos = function(pasta_temporaria) {
+  planilha_baixada = baixar_do_portal("Tabela de códigos de combustíveis sujeitos à tributação monofásica de ICMS",
+                                      pasta_temporaria)
+  historico = readxl::read_excel(planilha_baixada$arquivo, sheet = "Dados históricos")
+  conferir_colunas(historico, c("cProdANP", "Descrição", "adRemICMS", "Início da vigência", "Fim da vigência"),
+                   "de combustíveis monofásicos, aba Dados históricos")
+  atuais = readxl::read_excel(planilha_baixada$arquivo, sheet = "Dados atuais", col_types = "text")
+  conferir_colunas(atuais, c("cProdANP", "pBio", "origComb", "uTrib"), "de combustíveis monofásicos, aba Dados atuais")
+  historico = historico[!is.na(historico[["cProdANP"]]), ]
+  codigos = as.character(historico[["cProdANP"]])
+  do_atual = match(codigos, atuais[["cProdANP"]])
+  origem = atuais[["origComb"]][do_atual]
+  origem[origem %in% "-"] = NA
+  combustiveis = data.frame(
+    codigo = codigos,
+    descricao = trimws(historico[["Descrição"]]),
+    aliquota_ad_rem_icms = as.numeric(historico[["adRemICMS"]]),
+    inicio = data_da_planilha(historico[["Início da vigência"]]),
+    fim = data_da_planilha(historico[["Fim da vigência"]]),
+    exige_pbio = as.integer(atuais[["pBio"]][do_atual]),
+    origem_combustivel = origem,
+    unidade_tributavel = atuais[["uTrib"]][do_atual]
+  )
+  list(tabela = combustiveis[order(combustiveis$codigo, combustiveis$inicio), ], titulo = planilha_baixada$titulo)
+}
+
+# A tabela do código indicador do local da operação (cIndOp, art. 11 da LC 214/2025) é o Anexo VII da documentação da
+# NFS-e Nacional (Portal da NFS-e, documentação técnica da RTC); a NT 2025.002 manda consultá-la na regra B25d-20. A
+# página tem as versões; vale a de número maior. Só ela traz em que documento cada código vale (indNFe, indNFSe).
+PAGINA_DA_DOCUMENTACAO_DA_NFSE = "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc"
+
+baixar_local_operacao = function(pasta_temporaria) {
+  pagina = xml2::read_html(httr2::resp_body_string(httr2::req_perform(httr2::request(PAGINA_DA_DOCUMENTACAO_DA_NFSE))))
+  enderecos = xml2::xml_attr(xml2::xml_find_all(pagina, "//a[contains(@href, 'anexovii-indop')]"), "href")
+  if (length(enderecos) == 0) {
+    stop("A página da documentação da NFS-e não tem mais o Anexo VII (anexovii-indop)", call. = FALSE)
+  }
+  versoes = regmatches(enderecos, regexpr("v[0-9]+-[0-9]+-[0-9]+", enderecos))
+  if (length(versoes) != length(enderecos)) {
+    stop("Link do Anexo VII sem a versão no nome: ", paste(enderecos, collapse = ", "), call. = FALSE)
+  }
+  partes_da_versao = do.call(rbind, lapply(strsplit(sub("^v", "", versoes), "-"), as.integer))
+  mais_nova = order(partes_da_versao[, 1], partes_da_versao[, 2], partes_da_versao[, 3], decreasing = TRUE)[1]
+  arquivo_baixado = tempfile(tmpdir = pasta_temporaria, fileext = ".xlsx")
+  httr2::req_perform(httr2::request(enderecos[mais_nova]), path = arquivo_baixado)
+  anexo = readxl::read_excel(arquivo_baixado, sheet = 1, col_types = "text")
+  colunas = c("Código indOp", "Tipo de operação", "Característica do fornecimento",
+              "Local do fornecimento a ser identificado no DFe", "Dispositivo Legal: LC 214/2025", "Observação", "indNFe",
+              "indNFSe", "indNFSe Via", "NFSeLocIncidIBS")
+  conferir_colunas(anexo, colunas, "do código indicador do local da operação (Anexo VII da NFS-e)")
+  anexo = anexo[!is.na(anexo[["Código indOp"]]), ]
+  local_operacao = data.frame(
+    codigo = formatC(as.integer(anexo[["Código indOp"]]), width = 6, flag = "0"),
+    tipo_operacao = trimws(anexo[["Tipo de operação"]]),
+    caracteristica = trimws(anexo[["Característica do fornecimento"]]),
+    local = trimws(anexo[["Local do fornecimento a ser identificado no DFe"]]),
+    dispositivo_lc_214 = trimws(anexo[["Dispositivo Legal: LC 214/2025"]]),
+    observacao = trimws(anexo[["Observação"]]),
+    # "S" quer dizer que o código vale no documento; vazio, que não vale.
+    permitido_na_nfe = as.integer(anexo[["indNFe"]] %in% "S"),
+    permitido_na_nfse = as.integer(anexo[["indNFSe"]] %in% "S"),
+    permitido_na_nfse_via = as.integer(anexo[["indNFSe Via"]] %in% "S"),
+    local_incidencia_nfse = trimws(anexo[["NFSeLocIncidIBS"]])
+  )
+  versao = gsub("-", ".", sub("^v", "", versoes[mais_nova]))
+  list(tabela = local_operacao, titulo = paste0("Anexo VII (IndOp_IBSCBS) v", versao))
+}
+
 # Os indicadores da Tabela de Classificação Tributária do IBS e CBS: o nome na planilha e o nome no pacote. Nos
 # indicadores de grupo, 1 quer dizer que o grupo é exigido e 0 que não é permitido (a legenda da aba de CST); nos de
 # documento, 1 quer dizer que a classificação pode ser usada nele.
@@ -388,8 +499,9 @@ baixar_credito_presumido = function(pasta_temporaria) {
 }
 
 # O controle de versões do Informe Técnico 2025.002 (v1.71): o prazo de produção de cada versão ("Até 04/05/26"). As
-# versões sem prazo lá estão em produção, no máximo, no prazo da seguinte que tem, porque ela já traz a mudança. Versão
-# nova: uma linha aqui, com o prazo do IT dela; enquanto não tiver, as mudanças dela ficam sem prazo conhecido.
+# versões sem prazo lá ficam sem prazo conhecido. O da versão seguinte não serve: a 1.40 tirou a 200001 da NF-e, a 1.50
+# (prazo de 04/05/2026) já trazia isso, e a SEFAZ autorizou NF-e com a 200001 em 01/06/2026. Versão nova: uma linha
+# aqui, com o prazo do IT dela; enquanto não tiver, as mudanças dela também ficam sem prazo conhecido.
 VERSOES_DO_INFORME_TECNICO = data.frame(
   versao = c("1.20", "1.21", "1.30", "1.31", "1.40", "1.50", "1.60", "1.70", "1.71"),
   prazo_de_producao = as.Date(c(NA, NA, NA, NA, NA, "2026-05-04", "2026-07-06", "2026-10-16", "2026-10-30"))
@@ -413,14 +525,9 @@ LINKS_DAS_PLANILHAS_DA_REFORMA = c(
   credito_presumido = "contains(normalize-space(.), 'Crédito Presumido do IBS')"
 )
 
-# O prazo de produção de cada versão do IT: o dela ou, sem, o da primeira versão seguinte que tem.
+# O prazo de produção de cada versão do IT, pelo nome da versão (NA quando o IT não diz).
 prazo_de_cada_versao = function() {
   prazos = VERSOES_DO_INFORME_TECNICO$prazo_de_producao
-  for (posicao in rev(seq_len(length(prazos) - 1))) {
-    if (is.na(prazos[posicao])) {
-      prazos[posicao] = prazos[posicao + 1]
-    }
-  }
   names(prazos) = VERSOES_DO_INFORME_TECNICO$versao
   prazos
 }
@@ -894,6 +1001,8 @@ historia_da_reforma = baixar_historia_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
 meios_do_portal = baixar_meios_de_pagamento(pasta_temporaria)
 bandeiras_do_portal = baixar_bandeiras_de_cartao(pasta_temporaria)
+biocombustivel_do_portal = baixar_indice_biocombustivel(pasta_temporaria)
+combustiveis_do_portal = baixar_combustiveis_monofasicos(pasta_temporaria)
 servicos_de_homologacao = baixar_servicos_da_sefaz(PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO, "homologacao")
 for (servicos_do_documento in list(baixar_servicos_da_nfce("homologacao"),
                                     baixar_servicos_do_cte(PAGINA_DOS_SERVICOS_DO_CTE_DE_HOMOLOGACAO, "homologacao"),
@@ -903,7 +1012,8 @@ for (servicos_do_documento in list(baixar_servicos_da_nfce("homologacao"),
 }
 fontes = rbind(fontes, data.frame(
   tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "ncm",
-             "meios_pagamento", "bandeiras_cartao", "servicos_sefaz", "autorizadores_sefaz"),
+             "meios_pagamento", "bandeiras_cartao", "biocombustivel_ibs_cbs", "combustiveis_monofasicos",
+             "servicos_sefaz", "autorizadores_sefaz"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
@@ -915,6 +1025,8 @@ fontes = rbind(fontes, data.frame(
     paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
     paste0("Portal da NF-e, ", meios_do_portal$titulo),
     paste0("Portal da NF-e, ", bandeiras_do_portal$titulo),
+    paste0("Portal da NF-e, ", biocombustivel_do_portal$titulo, " (Informe Técnico 2025.004)"),
+    paste0("Portal da NF-e, ", combustiveis_do_portal$titulo),
     paste0("Portal da NF-e, Relação de Serviços Web de homologação (", PAGINA_DOS_SERVICOS_DE_HOMOLOGACAO,
            "); NFC-e: Portal da NFC-e (", PAGINA_DOS_SERVICOS_DA_NFCE, ") e, para MG, a página da SEFAZ-MG (",
            PAGINA_DOS_SERVICOS_DA_NFCE_DE_MG, "); CT-e: Portal do CT-e (", PAGINA_DOS_SERVICOS_DO_CTE_DE_HOMOLOGACAO,
@@ -955,6 +1067,26 @@ if (inherits(municipios_do_ibge, "error")) {
   ))
 }
 
+# O Portal da NFS-e (gov.br) pode não responder aos servidores do GitHub, como o IBGE: fica a cópia do pacote, com o
+# aviso na rodada do robô.
+local_operacao_da_nfse = tryCatch(baixar_local_operacao(pasta_temporaria), error = function(erro) erro)
+if (inherits(local_operacao_da_nfse, "error")) {
+  cat("::warning::Local da operação (cIndOp): o Portal da NFS-e não respondeu, fica a cópia do pacote (",
+      gsub("\\s+", " ", conditionMessage(local_operacao_da_nfse)), ")\n")
+  fontes_de_antes = utils::read.csv(file.path(PASTA_DAS_TABELAS, "fontes.csv"), colClasses = "character", na.strings = "")
+  fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela == "local_operacao_ibs_cbs", ])
+  local_operacao_da_nfse = NULL
+} else {
+  fontes = rbind(fontes, data.frame(
+    tabela = "local_operacao_ibs_cbs",
+    fonte = paste0("Portal da NFS-e, documentação técnica da RTC (", PAGINA_DA_DOCUMENTACAO_DA_NFSE, "), ",
+                   local_operacao_da_nfse$titulo),
+    versao = NA,
+    data_da_versao = NA,
+    baixada_em = baixada_em
+  ))
+}
+
 gravar_tabela(cfop_do_portal$tabela, "cfop")
 gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
 gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
@@ -963,6 +1095,11 @@ gravar_tabela(historia_da_reforma$tabela, "mudancas_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
 gravar_tabela(meios_do_portal$tabela, "meios_pagamento")
 gravar_tabela(bandeiras_do_portal$tabela, "bandeiras_cartao")
+gravar_tabela(biocombustivel_do_portal$tabela, "biocombustivel_ibs_cbs")
+gravar_tabela(combustiveis_do_portal$tabela, "combustiveis_monofasicos")
+if (!is.null(local_operacao_da_nfse)) {
+  gravar_tabela(local_operacao_da_nfse$tabela, "local_operacao_ibs_cbs")
+}
 gravar_tabela(servicos_de_homologacao$servicos, "servicos_sefaz")
 gravar_tabela(servicos_de_homologacao$autorizadores, "autorizadores_sefaz")
 if (!is.null(municipios_do_ibge)) {

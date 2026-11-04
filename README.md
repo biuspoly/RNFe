@@ -76,7 +76,10 @@ resumos reais (versões 1.00 e 1.01): todos lidos, e nos 251 que tinham a nota c
 bateram com ela.
 
 Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/2026), já com os campos da Reforma
-Tributária. Ao lado de cada código do item vem o nome dele (`cfop_titulo`, `cst_icms_descricao`...), como a
+Tributária: na nota, o IBS, a CBS e o monofásico dos totais, a previsão de entrega, o tipo da nota de débito e de
+crédito, o local da operação, o município do fato gerador do IBS, a compra governamental e as inscrições na
+Suframa; no item, o IBS e a CBS, o monofásico, o crédito presumido da ZFM, o bem móvel usado, o valor do item e o
+item de outro documento que ele cita. Ao lado de cada código do item vem o nome dele (`cfop_titulo`, `cst_icms_descricao`...), como a
 tabela oficial registrava na data da nota. Conferido com 10 mil notas reais (que não estão no repositório):
 os campos comparados bateram em todas, e todos os códigos dos 46 mil itens acharam o nome.
 
@@ -330,7 +333,14 @@ permitem, as alíquotas do ano, as contas de cada item (redução, alíquota efe
 IBS da UF, do município e da CBS, tributação regular, compra governamental), a nota de débito e de crédito (a
 classificação combina com o tipo da nota, a transferência de crédito, o ajuste de competência e o estorno com valor,
 o crédito presumido da ZFM), o crédito presumido da operação pela tabela `cCredPres` (o código, os grupos que ele
-exige, o desconto no IBS do item, o crédito em condição suspensiva), a CBS zero na ZFM e nas ALC e os totais. Cada
+exige, o desconto no IBS do item, o crédito em condição suspensiva), a CBS zero na ZFM e nas ALC e os totais. Confere
+também a tributação monofásica de combustíveis no leiaute novo da NT (v1.50, em produção desde 16/11/2026): os
+grupos de cada ano, os subgrupos que a classificação pede, a quantidade vezes a alíquota ad rem, a quantidade de
+biocombustível pela mistura obrigatória da data e os totais. E o resto da nota que a mesma NT valida: a previsão de
+entrega, os documentos referenciados, o tipo da nota de débito e de crédito, o local da operação (`cIndOp`), a
+compra governamental e as chaves dos documentos anteriores, a inscrição na Suframa (com o dígito), os tributos de
+cada item na nota de débito e de crédito, o CFOP da devolução, o ICMS monofásico, o item de outro documento citado
+no item e o total dos produtos. Como na NT, só a nota com IBS, CBS ou Imposto Seletivo é conferida. Cada
 conferência traz a
 regra (`UB35-10`), o código e a mensagem que a SEFAZ daria (`1041`, "Valor do IBS da UF difere do calculado") e, nas
 contas, a diferença. O valor calculado vai a 2 casas antes da tolerância de 0,01, porque a SEFAZ autoriza assim.
@@ -338,13 +348,18 @@ contas, a diferença. O valor calculado vai a 2 casas antes da tolerância de 0,
 Cada regra vale como a SEFAZ a aplicava no dia da emissão: a regra que ainda não estava em produção não é conferida
 (pelo cronograma da NT), e o que não confere hoje mas pode ter conferido na época vem sem conferir (`confere` vazio),
 com o motivo: a regra mudou depois da emissão, ou a linha da tabela de classificação que ela consulta mudou numa
-versão que talvez ainda não estivesse em produção. Por exemplo, a classificação 200001 deixou de valer na NF-e na
-versão 1.40 da tabela (publicada em 28/01/2026, em produção até 04/05/2026): numa nota de março ela vem sem
-conferir, numa de junho, errada. Essas mudanças estão em `tabela_fiscal("mudancas_ibs_cbs")`, montada pelo robô das
-tabelas comparando as versões publicadas desde 03/10/2025.
+versão que talvez ainda não estivesse em produção. Por exemplo, a classificação 550002 deixou de valer na NF-e na
+versão 1.60 da tabela (publicada em 23/06/2026, em produção até 06/07/2026): numa nota de 1º de julho ela vem sem
+conferir, numa de agosto, errada. As versões que o Informe Técnico não dá prazo (da 1.21 à 1.40) ficam sem prazo
+conhecido: a SEFAZ autorizou NF-e com a 200001, que a 1.40 tirou da NF-e, um mês depois do prazo da versão seguinte.
+Essas mudanças estão em `tabela_fiscal("mudancas_ibs_cbs")`, montada pelo robô das tabelas comparando as versões
+publicadas desde 03/10/2025.
 
-Ficam de fora, por enquanto, a tributação monofásica de combustíveis (reformulada na NT v1.50, com produção marcada
-para novembro de 2026), o Imposto Seletivo e as regras que a NT deixa para implementação futura.
+Ficam de fora as regras que a NT deixa para implementação futura (as do Imposto Seletivo entre elas) e as quatro
+que a SEFAZ confere no documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50). Duas contas do
+monofásico ficam sempre sem conferir, com o motivo: o valor ad valorem que não bate com a alíquota lida como
+percentual (a NT não diz a unidade) e o valor da diferença do biocombustível (a tabela que ele usa ainda não foi
+publicada).
 
 ## Tabelas fiscais
 
@@ -355,6 +370,9 @@ tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_c
 tabela_fiscal("credito_presumido_ibs_cbs")  # o cCredPres: os grupos que cada código exige e se desconta do IBS
 tabela_fiscal("mudancas_ibs_cbs")        # o que mudou nessas três de uma versão para a outra, com o prazo de produção
 tabela_fiscal("aliquotas_ibs_cbs")       # as alíquotas do IBS e da CBS de cada ano, com a base legal
+tabela_fiscal("local_operacao_ibs_cbs")  # o cIndOp (local da operação), do Anexo VII da NFS-e Nacional
+tabela_fiscal("biocombustivel_ibs_cbs")  # o etanol anidro obrigatório em cada gasolina C, com a vigência
+tabela_fiscal("combustiveis_monofasicos") # os combustíveis do ICMS monofásico e a alíquota ad rem de cada período
 tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
 tabela_fiscal("municipios")              # os municípios do IBGE: código de 7 dígitos, nome e UF
 tabela_fiscal("meios_pagamento")         # o tPag da NF-e e da NFC-e (PIX, boleto...), e "bandeiras_cartao"
@@ -363,7 +381,8 @@ tabela_fiscal("fontes")                  # de onde veio cada tabela, com a vers�
 ```
 
 Cada linha tem o `inicio` e o `fim` da vigência (vazios no CSOSN e nos municípios, que a fonte não data). As
-fontes são oficiais: o Portal da NF-e (CFOP, Reforma, meios de pagamento e bandeiras), o Portal Único
+fontes são oficiais: o Portal da NF-e (CFOP, Reforma, combustíveis, meios de pagamento e bandeiras), o Portal da
+NFS-e Nacional (o local da operação da Reforma), o Portal Único
 Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios).
 O CST e a classificação do IBS e da CBS trazem os indicadores da planilha oficial (os grupos que cada um exige ou
 não permite no documento e os documentos em que a classificação vale), que as regras de validação da NT 2025.002

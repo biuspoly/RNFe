@@ -100,30 +100,75 @@ test_that("a regra que mudou depois da emiss\u00e3o fica sem conferir em vez de 
   expect_false(linha_da_regra(em_outubro$conferencias, "UB56-10")$confere)
 })
 
+test_that("a mesma nota duas vezes no arquivo \u00e9 conferida uma vez", {
+  nota = regmatches(texto_do_exemplo(), regexpr("(?s)<NFe .*?</NFe>", texto_do_exemplo(), perl = TRUE))
+  repetida = ibs_cbs_conferir(paste0("<lote>", nota, nota, "</lote>"), todas_as_regras = TRUE)
+  uma_vez = ibs_cbs_conferir(texto_do_exemplo(), todas_as_regras = TRUE)
+  expect_identical(nrow(repetida$notas), 1L)
+  expect_identical(nrow(repetida$conferencias), nrow(uma_vez$conferencias))
+  expect_identical(repetida$notas$regras_conferidas, uma_vez$notas$regras_conferidas)
+})
+
+# A tabela de alíquotas com uma CBS de 2027 inventada (8,8%), para conferir a UB56-20 quando ela for publicada.
+TABELA_FISCAL_DO_PACOTE = tabela_fiscal
+tabela_com_a_cbs_de_2027 = function(nome_da_tabela) {
+  tabela = TABELA_FISCAL_DO_PACOTE(nome_da_tabela)
+  if (nome_da_tabela == "aliquotas_ibs_cbs") {
+    tabela$aliquota_cbs[tabela$inicio == as.Date("2027-01-01")] = 8.8
+  }
+  tabela
+}
+
+test_that("a CBS de 2027 em diante vale pela UB56-20, pelo ano da nota", {
+  em_2027 = sub("<dhEmi>2026-10-15", "<dhEmi>2027-03-10", texto_do_exemplo(), fixed = TRUE)
+  sem_referencia = linha_da_regra(ibs_cbs_conferir(em_2027, todas_as_regras = TRUE)$conferencias, c("UB56-10", "UB56-20"))
+  expect_identical(sem_referencia$regra, "UB56-20")
+  expect_true(is.na(sem_referencia$confere))
+  # Com a alíquota publicada na tabela, a nota de 2027 continua na UB56-20 (não na UB56-10, que é de 2025 e 2026).
+  local_mocked_bindings(tabela_fiscal = tabela_com_a_cbs_de_2027)
+  com_a_de_2026 = linha_da_regra(ibs_cbs_conferir(em_2027, todas_as_regras = TRUE)$conferencias, c("UB56-10", "UB56-20"))
+  expect_identical(com_a_de_2026$regra, "UB56-20")
+  expect_false(com_a_de_2026$confere)
+  expect_identical(com_a_de_2026$esperado, "8.8")
+  com_a_de_2027 = trocar_no_xml(em_2027, "<pCBS>0.90</pCBS>", "<pCBS>8.8000</pCBS>")
+  expect_true(linha_da_regra(ibs_cbs_conferir(com_a_de_2027, todas_as_regras = TRUE)$conferencias, "UB56-20")$confere)
+})
+
 test_that("a linha da tabela que mudou depois da emiss\u00e3o fica sem conferir em vez de errada", {
-  # A classificação 200001 deixou de valer na NF-e na versão 1.40 da tabela (publicada em 28/01/2026, em produção até
-  # 04/05/2026).
-  texto = trocar_no_xml(texto_do_exemplo(), "<cClassTrib>000001</cClassTrib>", "<cClassTrib>200001</cClassTrib>")
-  texto = trocar_no_xml(texto, "<CST>000</CST>", "<CST>200</CST>")
-  depois_do_prazo = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto, "2026-06-01"))$conferencias, "UB14-25")
+  # A classificação 550002 deixou de valer na NF-e na versão 1.60 da tabela (publicada em 23/06/2026, em produção até
+  # 06/07/2026).
+  texto = trocar_no_xml(texto_do_exemplo(), "<cClassTrib>000001</cClassTrib>", "<cClassTrib>550002</cClassTrib>")
+  texto = trocar_no_xml(texto, "<CST>000</CST>", "<CST>550</CST>")
+  depois_do_prazo = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto, "2026-08-03"))$conferencias, "UB14-25")
   expect_false(depois_do_prazo$confere)
   expect_identical(depois_do_prazo$codigo_sefaz, "1025")
-  no_meio = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto, "2026-03-02"))$conferencias, "UB14-25")
+  no_meio = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto, "2026-07-01"))$conferencias, "UB14-25")
   expect_true(is.na(no_meio$confere))
-  expect_match(no_meio$observacao, "vers\u00e3o 1.40 da tabela de classifica\u00e7\u00e3o tribut\u00e1ria", fixed = TRUE)
-  expect_match(no_meio$observacao, "permitido_na_nfe do c\u00f3digo 200001 mudou de 1 para 0", fixed = TRUE)
+  expect_match(no_meio$observacao, "vers\u00e3o 1.60 da tabela de classifica\u00e7\u00e3o tribut\u00e1ria", fixed = TRUE)
+  expect_match(no_meio$observacao, "permitido_na_nfe do c\u00f3digo 550002 mudou de 1 para 0", fixed = TRUE)
   expect_match(no_meio$observacao, "pode ter conferido", fixed = TRUE)
   # Antes de a versão ser publicada, a SEFAZ certamente usou a anterior.
-  antes_de_publicar = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto, "2026-01-12"))$conferencias, "UB14-25")
+  antes_de_publicar = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto, "2026-06-10"))$conferencias, "UB14-25")
   expect_true(is.na(antes_de_publicar$confere))
   expect_match(antes_de_publicar$observacao, "a SEFAZ conferiu a nota pela vers\u00e3o anterior", fixed = TRUE)
+  # A 200001 saiu da NF-e na 1.40, que não tem prazo no Informe Técnico: fica sem conferir também depois do prazo da
+  # 1.50 (a SEFAZ autorizou NF-e com ela em 01/06/2026).
+  texto_200001 = trocar_no_xml(texto_do_exemplo(), "<cClassTrib>000001</cClassTrib>", "<cClassTrib>200001</cClassTrib>")
+  texto_200001 = trocar_no_xml(texto_200001, "<CST>000</CST>", "<CST>200</CST>")
+  em_junho = linha_da_regra(ibs_cbs_conferir(com_emissao_em(texto_200001, "2026-06-01"))$conferencias, "UB14-25")
+  expect_true(is.na(em_junho$confere))
+  expect_match(em_junho$observacao, "sem prazo de produ\u00e7\u00e3o conhecido", fixed = TRUE)
 })
 
 test_that("as regras de um modelo s\u00f3 valem nele", {
   # A UB120-10 (crédito presumido na NFC-e) é só do modelo 65.
   na_nfe = ibs_cbs_conferir(texto_do_exemplo(), todas_as_regras = TRUE)$conferencias
   expect_false("UB120-10" %in% na_nfe$regra)
-  na_nfce = ibs_cbs_conferir(trocar_no_xml(texto_do_exemplo(), "<mod>55</mod>", "<mod>65</mod>"),
+  # A NFC-e é presencial: o exemplo (indPres 9) vira presencial (1) junto.
+  nfce = trocar_no_xml(texto_do_exemplo(), "<mod>55</mod>", "<mod>65</mod>")
+  na_nfce = ibs_cbs_conferir(nfce, todas_as_regras = TRUE)$conferencias
+  expect_false(linha_da_regra(na_nfce, "B25b-20", NA)$confere)
+  na_nfce = ibs_cbs_conferir(trocar_no_xml(nfce, "<indPres>9</indPres>", "<indPres>1</indPres>"),
                              todas_as_regras = TRUE)$conferencias
   expect_true("UB120-10" %in% na_nfce$regra)
   expect_true(all(na_nfce$confere))
@@ -133,9 +178,9 @@ test_that("nota sem IBS e CBS, documento que n\u00e3o \u00e9 NF-e e par\u00e2met
   sem_ibs_cbs = ibs_cbs_conferir(system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNFe"),
                                  todas_as_regras = TRUE)
   expect_identical(sem_ibs_cbs$notas$itens_com_ibs_cbs, 0L)
-  # Só a regra do total: sem item com IBSCBS, a nota não tem o IBSCBSTot.
-  expect_identical(sem_ibs_cbs$conferencias$regra, "W34-20")
-  expect_true(sem_ibs_cbs$conferencias$confere)
+  # As regras da NT só valem no documento com o IBS e a CBS preenchidos (nota ** do cronograma).
+  expect_identical(nrow(sem_ibs_cbs$conferencias), 0L)
+  expect_identical(sem_ibs_cbs$notas$regras_conferidas, 0L)
   do_cte = ibs_cbs_conferir(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))
   expect_identical(nrow(do_cte$notas), 0L)
   expect_identical(names(do_cte$notas), c("chave", "numero", "modelo", "data_emissao", "itens_com_ibs_cbs",
@@ -216,7 +261,13 @@ test_that("o cr\u00e9dito presumido da ZFM: s\u00f3 na nota de cr\u00e9dito 02, 
   expect_false(any(linha_da_regra(conferida, "UB131-40", 1:2)$confere))
   competencia = linha_da_regra(conferida, "UB132-10")
   expect_false(competencia$confere)
-  expect_identical(competencia$esperado, "at\u00e9 2026-10 (o m\u00eas da emiss\u00e3o)")
+  expect_identical(competencia$esperado, "at\u00e9 2026-10 (o m\u00eas da autoriza\u00e7\u00e3o)")
+  sem_protocolo = regmatches(texto, regexpr("(?s)<NFe .*?</NFe>", texto, perl = TRUE))
+  sem_saber = linha_da_regra(ibs_cbs_conferir(sem_protocolo)$conferencias, "UB132-10")
+  expect_true(is.na(sem_saber$confere))
+  expect_match(sem_saber$observacao, "protocolo", fixed = TRUE)
+  do_mes_da_emissao = sub("<competApur>2026-12</competApur>", "<competApur>2026-10</competApur>", sem_protocolo, fixed = TRUE)
+  expect_true(linha_da_regra(ibs_cbs_conferir(do_mes_da_emissao, todas_as_regras = TRUE)$conferencias, "UB132-10")$confere)
   repetido = linha_da_regra(conferida, "UB133-10", 1:2)
   expect_identical(repetido$confere, c(TRUE, FALSE))
 })
@@ -235,7 +286,8 @@ test_that("a CBS zero na \u00e1rea incentivada", {
   expect_identical(c(sem_area$no_documento, sem_area$esperado), c("0.46", "0.45"))
   # Em Manaus os dois, com a inscrição, o processo e o valor certo: confere.
   em_manaus = gsub("<cMun>[0-9]{7}</cMun>", "<cMun>1302603</cMun>", texto)
-  em_manaus = trocar_no_xml(em_manaus, "</emit>", "<ISUFemit>123456789</ISUFemit></emit>")
+  # A tag do schema é ISUFEmit (o texto da NT escreve ISUFemit); 123456789 é o exemplo do MOC 7.0, com o dígito certo.
+  em_manaus = trocar_no_xml(em_manaus, "</emit>", "<ISUFEmit>123456789</ISUFEmit></emit>")
   em_manaus = trocar_no_xml(em_manaus, "<nProcSuframa>000</nProcSuframa>", "<nProcSuframa>12345</nProcSuframa>")
   em_manaus = trocar_no_xml(em_manaus, "<vTribRegCBS>0.46</vTribRegCBS>", "<vTribRegCBS>0.45</vTribRegCBS>")
   certa = ibs_cbs_conferir(em_manaus, todas_as_regras = TRUE)$conferencias
@@ -287,4 +339,232 @@ test_that("o cr\u00e9dito presumido pela tabela de cr\u00e9dito presumido", {
   na_cbs = linha_da_regra(ibs_cbs_conferir(suspenso)$conferencias, "UB130-10")
   expect_false(na_cbs$confere)
   expect_identical(c(na_cbs$no_documento, na_cbs$esperado), c("cCredPres 04, emitida em 2026", "cCredPres 04, a partir de 2027"))
+})
+
+# As regras da nota (fora do grupo UB) e do monofásico.
+
+test_that("a previs\u00e3o de entrega, a nota de d\u00e9bito e de cr\u00e9dito e o local da opera\u00e7\u00e3o", {
+  # Previsão de mais de 3 meses depois da saída (15/10/2026: até 15/01/2027).
+  com_previsao = trocar_no_xml(texto_do_exemplo(), "<tpNF>1</tpNF>", "<dPrevEntrega>2027-03-01</dPrevEntrega><tpNF>1</tpNF>")
+  previsao = ibs_cbs_conferir(com_previsao, todas_as_regras = TRUE)$conferencias
+  expect_false(linha_da_regra(previsao, "B10a-20", NA)$confere)
+  expect_identical(linha_da_regra(previsao, "B10a-20", NA)$esperado, "at\u00e9 2027-01-15")
+  expect_true(linha_da_regra(previsao, "B10a-30", NA)$confere)
+  sem_frete = trocar_no_xml(com_previsao, "<modFrete>0</modFrete>", "<modFrete>9</modFrete>")
+  expect_false(linha_da_regra(ibs_cbs_conferir(sem_frete)$conferencias, "B10a-50", NA)$confere)
+  expect_identical(tres_meses_depois(as.Date(c("2026-11-30", NA))), as.Date(c("2027-02-28", NA)))
+  # Nota de crédito de 2026 do tipo 02 (só a partir de 2029), de saída (tem de ser de entrada) e com o ICMS no item.
+  credito = com_tipo_de_nota(texto_do_exemplo(), "5", "tpNFCredito", "02")
+  conferida = ibs_cbs_conferir(credito)$conferencias
+  expect_false(linha_da_regra(conferida, "B25.2-30", NA)$confere)
+  expect_false(linha_da_regra(conferida, "B25-110", NA)$confere)
+  tributos_a_mais = linha_da_regra(conferida, "B25-80", 1)
+  expect_identical(tributos_a_mais$no_documento, "ICMS, IPI, PIS, COFINS")
+  expect_identical(tributos_a_mais$codigo_sefaz, "1001")
+  # Na nota de débito sem o tipo, e na de crédito de multa e juros sem a nota referenciada.
+  expect_false(linha_da_regra(ibs_cbs_conferir(trocar_no_xml(texto_do_exemplo(), "<finNFe>1</finNFe>", "<finNFe>6</finNFe>"))$conferencias,
+                              "B25.1-20", NA)$confere)
+  multa = ibs_cbs_conferir(com_tipo_de_nota(texto_do_exemplo(), "5", "tpNFCredito", "01"))$conferencias
+  expect_false(linha_da_regra(multa, "B25-30", NA)$confere)
+  # O cIndOp 010104 vale na NF-e e pede o local de retirada; o 100301 não vale na NF-e.
+  leilao = ibs_cbs_conferir(trocar_no_xml(texto_do_exemplo(), "<tpNF>1</tpNF>", "<cIndOp>010104</cIndOp><tpNF>1</tpNF>"),
+                            todas_as_regras = TRUE)$conferencias
+  expect_true(linha_da_regra(leilao, "B25d-20", NA)$confere)
+  expect_false(linha_da_regra(leilao, "B25d-30", NA)$confere)
+  servico = ibs_cbs_conferir(trocar_no_xml(texto_do_exemplo(), "<tpNF>1</tpNF>", "<cIndOp>100301</cIndOp><tpNF>1</tpNF>"))
+  expect_false(linha_da_regra(servico$conferencias, "B25d-20", NA)$confere)
+})
+
+test_that("a compra governamental: as chaves dos documentos anteriores", {
+  # Recebimento do pagamento (tpOperGov 2) com duas chaves: a da própria nota e uma com o dígito errado.
+  propria = "35261011222333000181550010000010011123456785"
+  digito_errado = "35261011222333000181550010000010011123456780"
+  grupo = paste0("<gCompraGov><tpEnteGov>1</tpEnteGov><pRedutor>0.0000</pRedutor><tpOperGov>2</tpOperGov><refDFeAnt>",
+                 propria, "</refDFeAnt><refDFeAnt>", digito_errado, "</refDFeAnt></gCompraGov>")
+  texto = trocar_no_xml(texto_do_exemplo(), "<indFinal>0</indFinal>", paste0(grupo, "<indFinal>0</indFinal>"))
+  conferida = ibs_cbs_conferir(texto, todas_as_regras = TRUE)$conferencias
+  expect_false(linha_da_regra(conferida, "BB05-30", NA)$confere)
+  da_chave = conferida[conferida$regra %in% c("BB05-70", "BB05-150", "BB05-180"), c("regra", "no_documento", "confere")]
+  expect_identical(da_chave$confere[da_chave$regra == "BB05-70"], c(TRUE, FALSE))
+  expect_identical(da_chave$confere[da_chave$regra == "BB05-150"], c(FALSE, TRUE))
+  expect_true(all(da_chave$confere[da_chave$regra == "BB05-180"]))
+  # No recebimento do pagamento, o item não leva o ICMS, o PIS e a COFINS (B25-80) e a regra do ICMS ou ISSQN não vale.
+  expect_false("B25-90" %in% conferida$regra)
+})
+
+test_that("a inscri\u00e7\u00e3o na Suframa do emitente e do destinat\u00e1rio", {
+  # O dígito do MOC 7.0 (seção 8.4): 12345678 dá 9; a de 8 dígitos é a de 9 sem o zero da frente; setor 00 não vale.
+  expect_identical(inscricao_suframa_confere(c("123456789", "12345679", "123456780", "001234567", NA)),
+                   c(TRUE, TRUE, FALSE, FALSE, FALSE))
+  texto = trocar_no_xml(texto_do_exemplo(), "<CRT>3</CRT>", "<CRT>3</CRT><ISUFEmit>123456780</ISUFEmit>")
+  texto = trocar_no_xml(texto, "<indIEDest>1</indIEDest>", "<indIEDest>1</indIEDest><ISUF>123456789</ISUF>")
+  conferida = ibs_cbs_conferir(texto)$conferencias
+  # Emitente em São Paulo com a inscrição (fora da área), e com o dígito errado; destinatário no Rio de Janeiro.
+  expect_false(linha_da_regra(conferida, "C22-10", NA)$confere)
+  expect_false(linha_da_regra(conferida, "C22-20", NA)$confere)
+  expect_identical(linha_da_regra(conferida, "E18-30", NA)$no_documento, "RJ 3304557")
+})
+
+test_that("os tributos, o CFOP e o documento referenciado de cada item", {
+  # O item 1 sem o PIS, sem a origem do ICMS e com um CFOP de devolução numa venda.
+  texto = sub("(?s)<PIS>.*?</PIS>", "", texto_do_exemplo(), perl = TRUE)
+  texto = trocar_no_xml(texto, "<orig>0</orig>", "")
+  texto = trocar_no_xml(texto, "<CFOP>6102</CFOP>", "<CFOP>5202</CFOP>")
+  conferida = ibs_cbs_conferir(texto)$conferencias
+  expect_identical(linha_da_regra(conferida, "Q01-20", 1)$codigo_sefaz, "745")
+  expect_false(linha_da_regra(conferida, "N11-10", 1)$confere)
+  expect_false(linha_da_regra(conferida, "I08-144", 1)$confere)
+  # Documento referenciado no item e no cabeçalho ao mesmo tempo; e na NFC-e não pode.
+  referenciada = "35261011222333000181550010000009991123456781"
+  com_os_dois = trocar_no_xml(texto_do_exemplo(), "<tpNF>1</tpNF>", paste0("<NFref><refNFe>", referenciada, "</refNFe></NFref><tpNF>1</tpNF>"))
+  com_os_dois = trocar_no_xml(com_os_dois, "<infAdProd>", paste0("<DFeReferenciado><chaveAcesso>", referenciada,
+                                                                 "</chaveAcesso></DFeReferenciado><infAdProd>"))
+  expect_false(linha_da_regra(ibs_cbs_conferir(com_os_dois)$conferencias, "VC02-05", 1)$confere)
+  # O total dos produtos que não é a soma dos itens, e o total do Imposto Seletivo sem item com ele.
+  totais = trocar_no_xml(texto_do_exemplo(), "<vProd>110.00</vProd>", "<vProd>111.00</vProd>")
+  totais = trocar_no_xml(totais, "<vNFTot>", "<ISTot><vIS>0.00</vIS></ISTot><vNFTot>")
+  conferida = ibs_cbs_conferir(totais)$conferencias
+  expect_identical(linha_da_regra(conferida, "W07-10", NA)$esperado, "110.00")
+  expect_false(linha_da_regra(conferida, "W31-10", NA)$confere)
+})
+
+test_that("a devolu\u00e7\u00e3o referencia um documento: a reda\u00e7\u00e3o antiga e a da v1.53 (VC02-14)", {
+  devolucao = trocar_no_xml(texto_do_exemplo(), "<finNFe>1</finNFe>", "<finNFe>4</finNFe>")
+  referenciada = "35261011222333000181550010000009991123456781"
+  no_cabecalho = trocar_no_xml(devolucao, "<tpNF>1</tpNF>", paste0("<NFref><refNFe>", referenciada, "</refNFe></NFref><tpNF>1</tpNF>"))
+  # Em 15/10/2026 vale a redação antiga: o documento no cabeçalho ou no item.
+  expect_identical(linha_da_regra(ibs_cbs_conferir(devolucao)$conferencias, "VC02-14", 1:2)$confere, c(FALSE, FALSE))
+  expect_true(all(linha_da_regra(ibs_cbs_conferir(no_cabecalho, todas_as_regras = TRUE)$conferencias, "VC02-14", 1:2)$confere))
+  # Com o CFOP 1202, a redação antiga não vale; a da v1.53, sim.
+  com_1202 = trocar_no_xml(devolucao, "<CFOP>6102</CFOP>", "<CFOP>1202</CFOP>")
+  expect_identical(linha_da_regra(ibs_cbs_conferir(com_1202)$conferencias, "VC02-14", 1:2)$item, 2L)
+  # Desde 16/11/2026: sem o refNFe no cabeçalho, cada item referencia; com ele, a regra não vale.
+  nova = sub("<dhEmi>2026-10-15", "<dhEmi>2026-11-20", com_1202, fixed = TRUE)
+  expect_identical(linha_da_regra(ibs_cbs_conferir(nova)$conferencias, "VC02-14", 1:2)$item, 1:2)
+  com_refnfe_nova = sub("<dhEmi>2026-10-15", "<dhEmi>2026-11-20", no_cabecalho, fixed = TRUE)
+  expect_false("VC02-14" %in% ibs_cbs_conferir(com_refnfe_nova, todas_as_regras = TRUE)$conferencias$regra)
+})
+
+test_that("o total dos produtos soma s\u00f3 os itens com ICMS, IBS, CBS ou IS (W07-10)", {
+  # Nota conjugada: o item 2 vira serviço, só com o ISSQN; o total dos produtos é o do item 1.
+  partes = strsplit(texto_do_exemplo(), "<det nItem=\"2\">", fixed = TRUE)[[1]]
+  partes[2] = sub("(?s)<ICMS>.*?</ICMS>", paste0(
+    "<ISSQN><vBC>60.00</vBC><vAliq>5.0000</vAliq><vISSQN>3.00</vISSQN><cMunFG>3550308</cMunFG>",
+    "<cListServ>01.01</cListServ><indISS>1</indISS><indIncentivo>2</indIncentivo></ISSQN>"), partes[2], perl = TRUE)
+  partes[2] = sub("(?s)<IBSCBS>.*?</IBSCBS>", "", partes[2], perl = TRUE)
+  conjugada = trocar_no_xml(paste(partes, collapse = "<det nItem=\"2\">"), "<vProd>110.00</vProd>", "<vProd>50.00</vProd>")
+  total = linha_da_regra(ibs_cbs_conferir(conjugada, todas_as_regras = TRUE)$conferencias, "W07-10", NA)
+  expect_true(total$confere)
+  expect_identical(total$esperado, "50.00")
+})
+
+test_that("o grupo de totais do IBS e da CBS s\u00f3 com algum item com IBSCBS (W34)", {
+  # Os itens sem o IBSCBS e o IBSCBSTot informado: a W34-10 acusa.
+  sem_ibs_cbs = gsub("(?s)<IBSCBS>.*?</IBSCBS>", "", texto_do_exemplo(), perl = TRUE)
+  expect_false(linha_da_regra(ibs_cbs_conferir(sem_ibs_cbs)$conferencias, "W34-10", NA)$confere)
+  # Só o Imposto Seletivo, sem o IBS e a CBS: sem o IBSCBSTot, a W34-20 confere.
+  so_imposto_seletivo = trocar_no_xml(sem_ibs_cbs, "</imposto>", paste0(
+    "<IS><CSTIS>000</CSTIS><cClassTribIS>000001</cClassTribIS><vBCIS>50.00</vBCIS><pIS>1.0000</pIS><vIS>0.50</vIS></IS>",
+    "</imposto>"))
+  so_imposto_seletivo = sub("(?s)<IBSCBSTot>.*?</IBSCBSTot>", "<ISTot><vIS>0.50</vIS></ISTot>", so_imposto_seletivo, perl = TRUE)
+  conferida = ibs_cbs_conferir(so_imposto_seletivo, todas_as_regras = TRUE)$conferencias
+  expect_true(linha_da_regra(conferida, "W34-20", NA)$confere)
+})
+
+test_that("o que a SEFAZ autorizou em notas reais contra o texto da regra fica sem conferir", {
+  # W07-10: um centavo de diferença fica sem conferir; dois, errado.
+  um_centavo = ibs_cbs_conferir(trocar_no_xml(texto_do_exemplo(), "<vProd>110.00</vProd>", "<vProd>110.01</vProd>"))$conferencias
+  expect_true(is.na(linha_da_regra(um_centavo, "W07-10", NA)$confere))
+  expect_match(linha_da_regra(um_centavo, "W07-10", NA)$observacao, "0,01")
+  dois_centavos = ibs_cbs_conferir(trocar_no_xml(texto_do_exemplo(), "<vProd>110.00</vProd>", "<vProd>110.02</vProd>"))$conferencias
+  expect_false(linha_da_regra(dois_centavos, "W07-10", NA)$confere)
+  # I05k-20: o 0 (sem crédito presumido) num emitente de São Paulo fica sem conferir; o 1, errado.
+  com_zero = trocar_no_xml(texto_do_exemplo(), "<CFOP>6102</CFOP>", "<tpCredPresIBSZFM>0</tpCredPresIBSZFM><CFOP>6102</CFOP>")
+  zero = linha_da_regra(ibs_cbs_conferir(com_zero)$conferencias, "I05k-20", 1)
+  expect_true(is.na(zero$confere))
+  expect_identical(zero$no_documento, "SP, tpCredPresIBSZFM 0")
+  com_um = trocar_no_xml(com_zero, "<tpCredPresIBSZFM>0</tpCredPresIBSZFM>", "<tpCredPresIBSZFM>1</tpCredPresIBSZFM>")
+  expect_false(linha_da_regra(ibs_cbs_conferir(com_um)$conferencias, "I05k-20", 1)$confere)
+})
+
+test_that("o ICMS da UF de destino na venda a consumidor final n\u00e3o contribuinte", {
+  # Venda interestadual (idDest 2) a consumidor final não contribuinte: o item 1 (ICMS00) pede o ICMSUFDest; o item 2
+  # (ICMS60, CFOP 6404) também.
+  texto = trocar_no_xml(texto_do_exemplo(), "<indFinal>0</indFinal>", "<indFinal>1</indFinal>")
+  texto = trocar_no_xml(texto, "<indIEDest>1</indIEDest>", "<indIEDest>9</indIEDest>")
+  conferida = ibs_cbs_conferir(texto, todas_as_regras = TRUE)$conferencias
+  expect_identical(linha_da_regra(conferida, "NA01-20", 1:2)$confere, c(FALSE, FALSE))
+  # Do Simples Nacional, não.
+  simples = ibs_cbs_conferir(trocar_no_xml(texto, "<CRT>3</CRT>", "<CRT>1</CRT>"), todas_as_regras = TRUE)$conferencias
+  expect_false("NA01-20" %in% simples$regra)
+})
+
+# Um item 1 de combustível com o grupo monofásico (no lugar do gIBSCBS) e o grupo comb, emitido em 20/11/2026.
+item_de_combustivel = function(classificacao, grupo_monofasico, percentual_biocombustivel = "30.0000") {
+  texto = com_emissao_em(texto_do_exemplo(), "2026-11-20")
+  texto = trocar_no_xml(texto, "<CST>000</CST>", "<CST>620</CST>")
+  texto = trocar_no_xml(texto, "<cClassTrib>000001</cClassTrib>", paste0("<cClassTrib>", classificacao, "</cClassTrib>"))
+  texto = trocar_no_xml(texto, "<indTot>1</indTot>", paste0("<indTot>1</indTot><comb><cProdANP>320102001</cProdANP>",
+                                                            "<descANP>GASOLINA C COMUM</descANP><pBio>",
+                                                            percentual_biocombustivel, "</pBio><UFCons>SP</UFCons></comb>"))
+  trocar_o_grupo_do_item_1(texto, paste0("<gIBSCBSMono>", grupo_monofasico,
+                                         "<vTotIBSMonoItem>0.10</vTotIBSMonoItem><vTotCBSMonoItem>0.90</vTotCBSMonoItem>",
+                                         "</gIBSCBSMono>"))
+}
+
+test_that("o monof\u00e1sico ad valorem de 2026 e o grupo de cada ano", {
+  ad_valorem = paste0(
+    "<gIBSMonoAdValorem><gMonoPadrao><vBCMono>100.00</vBCMono><pAliqMonoUF>0.1000</pAliqMonoUF><vIBSMonoUF>0.10</vIBSMonoUF>",
+    "<pAliqMonoMun>0.0000</pAliqMonoMun><vIBSMonoMun>0.00</vIBSMonoMun><vIBSMono>0.10</vIBSMono></gMonoPadrao></gIBSMonoAdValorem>",
+    "<gCBSMonoAdValorem><gMonoPadrao><vBCMono>100.00</vBCMono><pAliqMonoCBS>0.9000</pAliqMonoCBS><vCBSMono>0.90</vCBSMono>",
+    "</gMonoPadrao></gCBSMonoAdValorem>"
+  )
+  conferida = ibs_cbs_conferir(item_de_combustivel("620001", ad_valorem), todas_as_regras = TRUE)$conferencias
+  do_item = linha_da_regra(conferida, c("UB90-20", "UB100-20", "UB91-10", "UB101-10", "UB91c-10", "UB91f-10", "UB101c-10",
+                                        "LA01-30"))
+  expect_identical(nrow(do_item), 8L)
+  expect_true(all(do_item$confere))
+  # O valor da alíquota sem dividir por 100 não confere em percentual: fica sem conferir, com o motivo.
+  literal = sub("<vIBSMonoUF>0.10</vIBSMonoUF>", "<vIBSMonoUF>10.00</vIBSMonoUF>", ad_valorem, fixed = TRUE)
+  sem_conferir = linha_da_regra(ibs_cbs_conferir(item_de_combustivel("620001", literal))$conferencias, "UB91c-10")
+  expect_true(is.na(sem_conferir$confere))
+  expect_match(sem_conferir$observacao, "percentual")
+  # Em 2029 o ad valorem do IBS e o da CBS não podem mais.
+  em_2029 = sub("<dhEmi>2026-11-20", "<dhEmi>2029-01-10", item_de_combustivel("620001", ad_valorem), fixed = TRUE)
+  depois = ibs_cbs_conferir(em_2029)$conferencias
+  expect_false(linha_da_regra(depois, "UB90-10")$confere)
+  expect_false(linha_da_regra(depois, "UB100-10")$confere)
+  # Antes de 16/11/2026, o leiaute novo do monofásico não estava em produção.
+  antes = sub("<dhEmi>2026-11-20", "<dhEmi>2026-11-10", item_de_combustivel("620001", ad_valorem), fixed = TRUE)
+  expect_false("UB90-20" %in% ibs_cbs_conferir(antes, todas_as_regras = TRUE)$conferencias$regra)
+  # LA01-30: a classificação 620 sem o grupo comb fica sem conferir antes de 16/11/2026 (há NF-e autorizada assim) e
+  # errada depois.
+  sem_comb = sub("(?s)<comb>.*?</comb>", "", item_de_combustivel("620001", ad_valorem), perl = TRUE)
+  expect_false(linha_da_regra(ibs_cbs_conferir(sem_comb)$conferencias, "LA01-30")$confere)
+  sem_comb_antes = sub("<dhEmi>2026-11-20", "<dhEmi>2026-08-10", sem_comb, fixed = TRUE)
+  linha_antes = linha_da_regra(ibs_cbs_conferir(sem_comb_antes)$conferencias, "LA01-30")
+  expect_true(is.na(linha_antes$confere))
+  expect_match(linha_antes$observacao, "16/11/2026")
+})
+
+test_that("o etanol anidro fora do obrigat\u00f3rio (620004) e a quantidade de biocombust\u00edvel", {
+  # A mistura obrigatória da gasolina C comum: 30% até 31/07/2026, 32% desde 01/08/2026.
+  expect_identical(mistura_obrigatoria_na_data(c("320102001", "320102001", "999"), as.Date(c("2026-07-31", "2026-08-01", "2026-08-01"))),
+                   c(0.30, 0.32, NA))
+  # 620004 com pBio 35%: acima dos 32%. A quantidade a recolher: 10 x (0,35 - 0,32) / (1 - 0,32) = 0,4412.
+  grupo = paste0(
+    "<gIBSMonoAdValorem><gMonoRet><vIBSMonoRet>0.00</vIBSMonoRet></gMonoRet><gpBioDiferenca><qBCBioComb>0.4412</qBCBioComb>",
+    "<vIBSDiferenca>0.00</vIBSDiferenca></gpBioDiferenca></gIBSMonoAdValorem>",
+    "<gCBSMonoAdValorem><gMonoRet><vCBSMonoRet>0.00</vCBSMonoRet></gMonoRet><gpBioDiferenca><qBCBioComb>0.5000</qBCBioComb>",
+    "<vCBSDiferenca>0.00</vCBSDiferenca></gpBioDiferenca></gCBSMonoAdValorem>"
+  )
+  conferida = ibs_cbs_conferir(item_de_combustivel("620004", grupo, "35.0000"), todas_as_regras = TRUE)$conferencias
+  expect_true(linha_da_regra(conferida, "UB14-30")$confere)
+  expect_true(linha_da_regra(conferida, "UB94a-10")$confere)
+  na_cbs = linha_da_regra(conferida, "UB104a-10")
+  expect_false(na_cbs$confere)
+  expect_identical(na_cbs$esperado, "0.4412")
+  # Com 30%, a 620004 (acima do obrigatório) não vale.
+  abaixo = ibs_cbs_conferir(item_de_combustivel("620004", grupo, "30.0000"))$conferencias
+  expect_false(linha_da_regra(abaixo, "UB14-30")$confere)
 })

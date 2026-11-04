@@ -37,8 +37,9 @@ eventos) e \code{\link[=nfse_distribuicao]{nfse_distribuicao()}} (as notas e os 
 \code{\link[=cnpj_situacao]{cnpj_situacao()}} (a BrasilAPI e, quando ela está fora do ar, as outras
 fontes públicas);
 \item a Reforma Tributária: \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}} (o IBS e a CBS da NF-e e da
-NFC-e pelas regras de validação da SEFAZ, como valiam no dia da
-emissão).
+NFC-e, com o monofásico dos combustíveis e o resto da nota que a mesma
+nota técnica valida, pelas regras de validação da SEFAZ, como valiam no
+dia da emissão).
 }
 }
 \section{De onde vêm as regras}{

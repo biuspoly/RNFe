@@ -3,8 +3,9 @@
 
 NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
-  "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs", "meios_pagamento",
-  "bandeiras_cartao", "municipios", "codigos_dos_campos", "fontes"
+  "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs",
+  "local_operacao_ibs_cbs", "biocombustivel_ibs_cbs", "combustiveis_monofasicos", "meios_pagamento", "bandeiras_cartao",
+  "municipios", "codigos_dos_campos", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em", "publicada_em", "em_producao_ate", "inicio_cbs",
                     "fim_cbs", "inicio_ibs", "fim_ibs")
@@ -22,9 +23,12 @@ COLUNAS_DE_INDICADOR = c(
   "permitido_na_dir", "permitido_na_duimp",
   # O crédito presumido: como se apropria, se deduz do tributo do item, os grupos que exige ou não permite.
   "apropria_no_documento", "apropria_por_evento", "deduz_do_tributo", "grupo_credito_cbs", "grupo_credito_ibs",
-  "declaracao_pagamento"
+  "declaracao_pagamento",
+  # O combustível do ICMS monofásico que pede o pBio.
+  "exige_pbio"
 )
-COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs", "aliquota_ibs_uf", "aliquota_ibs_municipio", "aliquota_cbs")
+COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs", "aliquota_ibs_uf", "aliquota_ibs_municipio", "aliquota_cbs",
+                      "mistura_obrigatoria", "aliquota_ad_rem_icms")
 # Cada tabela é lida do disco uma vez por sessão.
 tabelas_ja_lidas = new.env(parent = emptyenv())
 # As tabelas que tabelas_atualizar() baixa: as fiscais e os endereços da SEFAZ. Vêm do ramo main do repositório, onde
@@ -43,6 +47,7 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
 #' `"classificacao_ibs_cbs"`, `"credito_presumido_ibs_cbs"`, `"mudancas_ibs_cbs"`, `"aliquotas_ibs_cbs"`,
+#' `"local_operacao_ibs_cbs"`, `"biocombustivel_ibs_cbs"`, `"combustiveis_monofasicos"`,
 #' `"meios_pagamento"`, `"bandeiras_cartao"`,
 #' `"municipios"`, `"codigos_dos_campos"` (o que quer dizer cada código dos
 #' campos dos documentos) ou `"fontes"` (de onde veio cada uma, com a data).
@@ -120,8 +125,10 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   nome da coluna na tabela, ou `"existe"` para o código que entrou ou saiu),
 #'   o valor de `antes` e o de `depois`, a `versao` do Informe Técnico
 #'   2025.002, a data em que foi `publicada_em` e o prazo em que ficou
-#'   `em_producao_ate` (o do controle de versões do IT; a versão que não tem
-#'   prazo lá vale até o da seguinte que tem). É o que o [ibs_cbs_conferir()]
+#'   `em_producao_ate` (o do controle de versões do IT; vazio quando a versão
+#'   não tem prazo lá, da 1.21 à 1.40: o da versão seguinte não serve, porque
+#'   a SEFAZ autorizou NF-e com a classificação 200001, que a 1.40 tirou da
+#'   NF-e, depois do prazo da 1.50). É o que o [ibs_cbs_conferir()]
 #'   consulta para uma nota emitida antes de uma mudança, que a SEFAZ conferiu
 #'   pela versão da época.
 #' - `"aliquotas_ibs_cbs"`: as alíquotas do IBS (da UF e do município) e da
@@ -132,6 +139,21 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
 #'   (art. 347) e fica vazia enquanto não for publicada. Sem `codigo`: uma
 #'   linha por período (`inicio` e `fim`).
+#' - `"local_operacao_ibs_cbs"`: o código indicador do local da operação
+#'   (`cIndOp`, art. 11 da LC 214/2025), do Anexo VII da documentação da NFS-e
+#'   Nacional: o `codigo`, o `tipo_operacao`, a `caracteristica` do
+#'   fornecimento, o `local` que o documento identifica, o
+#'   `dispositivo_lc_214`, a `observacao`, os documentos em que vale
+#'   (`permitido_na_nfe`, `permitido_na_nfse`, `permitido_na_nfse_via`) e o
+#'   `local_incidencia_nfse`. Sem datas: o anexo só traz a versão de hoje.
+#' - `"biocombustivel_ibs_cbs"`: o percentual obrigatório de etanol anidro
+#'   em cada gasolina C (`mistura_obrigatoria`, em fração: 0,32 = 32%), pelo
+#'   código do produto da ANP (`codigo`, o `cProdANP`), com a vigência (a
+#'   Tabela de Código de Índice de Biocombustível, Informe Técnico 2025.004).
+#' - `"combustiveis_monofasicos"`: os combustíveis sujeitos à tributação
+#'   monofásica do ICMS, pelo código do produto da ANP, com a
+#'   `aliquota_ad_rem_icms` de cada período, se pedem o pBio (`exige_pbio`), a
+#'   `origem_combustivel` e a `unidade_tributavel`.
 #' - `"meios_pagamento"`: os meios de pagamento da tabela do Portal da NF-e
 #'   (dinheiro, cartão, boleto, PIX...), com a `observacao` de quando usar
 #'   cada um. É o código do `tPag` da NF-e e do meio de pagamento vinculado da
@@ -173,7 +195,9 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   (cClassTrib da Reforma), `"credito_presumido_ibs_cbs"` (cCredPres),
 #'   `"mudancas_ibs_cbs"` (o que mudou nessas três de uma versão para a
 #'   outra), `"aliquotas_ibs_cbs"` (as alíquotas de cada
-#'   ano), `"meios_pagamento"` (dinheiro, cartão, PIX...),
+#'   ano), `"local_operacao_ibs_cbs"` (cIndOp), `"biocombustivel_ibs_cbs"` (o
+#'   etanol anidro obrigatório na gasolina C), `"combustiveis_monofasicos"` (os
+#'   do ICMS monofásico), `"meios_pagamento"` (dinheiro, cartão, PIX...),
 #'   `"bandeiras_cartao"`, `"municipios"` (código IBGE, nome e UF),
 #'   `"codigos_dos_campos"` (o significado dos códigos dos documentos) ou
 #'   `"fontes"` (de onde veio cada tabela).
@@ -185,7 +209,11 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
 #'   30/10/2026) e a de Crédito Presumido (publicada em 01/10/2026), e as
 #'   versões delas publicadas desde 03/10/2025 para as mudanças, com os prazos
-#'   de produção do IT 2025.002 v1.71; as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
+#'   de produção do IT 2025.002 v1.71; o cIndOp, do Anexo VII da NFS-e Nacional
+#'   (Portal da NFS-e, v1.03.00); o etanol anidro obrigatório, da Tabela de
+#'   Índice de Biocombustível (IT 2025.004, publicada em 25/08/2026); os
+#'   combustíveis do ICMS monofásico, da tabela do Portal da NF-e (publicada em
+#'   05/12/2025); as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
 #'   2025.002-RTC v1.53 (Portal da NF-e, 30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
 #'   (30/10/2026). Municípios: a API de localidades do IBGE
 #'   (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de

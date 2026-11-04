@@ -1045,8 +1045,9 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     afrouxou a regra (uma exceção nova) não entra: o que não confere hoje também não conferia antes.
   - **A tabela também muda:** as 8 versões da planilha publicadas desde 03/10/2025 (a 1.20, que estava publicada
     quando as regras entraram em produção) foram comparadas; as 100 mudanças estão em `mudancas_ibs_cbs`, com o prazo
-    de produção do controle de versões do IT 2025.002 v1.71 (a 1.30, a 1.31 e a 1.40 não têm prazo lá: valem até o
-    da 1.50, 04/05/2026, que já as traz). A coluna DataAtualização da planilha não serve para isso: a 1.70 mexeu no
+    de produção do controle de versões do IT 2025.002 v1.71 (da 1.21 à 1.40 não há prazo lá; até o acervo inteiro,
+    elas valiam até o prazo da 1.50, 04/05/2026, que já as traz, mas uma NF-e autorizada com a 200001 em 01/06/2026
+    desmentiu isso: agora ficam sem prazo conhecido). A coluna DataAtualização da planilha não serve para isso: a 1.70 mexeu no
     texto das 170 linhas, e todas ficaram com 01/10/2026. O robô refaz a comparação toda semana; versão nova sem
     prazo em `VERSOES_DA_TABELA_DA_REFORMA` gera um aviso e as mudanças dela ficam sem prazo (a conferência as trata
     como talvez não em produção).
@@ -1056,8 +1057,9 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - **Depois do primeiro commit (no mesmo dia), as que faltavam:**
     - a nota de débito e de crédito: UB14-60 a UB14-80 (a classificação e o tipo da nota, pela tabela que a NT dá
       dentro das regras), UB106-30/31/40 (transferência de crédito), UB112-30 e UB116-30 (ajuste e estorno com
-      valor), UB131-40/50, UB132-10 e UB133-10 (o crédito presumido da ZFM); o mês "atual" da UB132-10 é, aqui, o da
-      emissão;
+      valor), UB131-40/50, UB132-10 e UB133-10 (o crédito presumido da ZFM); o mês "atual" da UB132-10 é o da
+      autorização (o `dhRecbto` do protocolo; sem ele, o mês depois da emissão fica sem conferir: desde a revisão
+      independente, que achou o caso da contingência);
     - a CBS zero na área incentivada: UB66a-10/20 (a UB66a-20 mudou na v1.51, quando a ZFM entrou na tabela dela),
       UB66c-10 e UB66e-10 (que não diz tolerância: até o centavo, depois de arredondar o calculado);
     - o crédito presumido da operação: a tabela nova `credito_presumido_ibs_cbs` (a planilha de crédito presumido do
@@ -1068,9 +1070,106 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
       crédito presumido do IBS do item quando o código manda (`deduz_do_tributo`).
     Na amostra do acervo, nenhuma acusou nota autorizada (o acervo não tem crédito presumido nem CBS da ZFM: essas
     estão testadas com variações do XML de exemplo).
-  - **Fica de fora, por enquanto:** a tributação monofásica (reformulada na v1.50, produção em novembro de 2026), o
-    Imposto Seletivo, a UB16-10 e as outras de implementação futura, e a W07-10 (o total dos produtos, que é do ICMS,
-    não do IBS e da CBS).
+  - **O resto do passo 2, no mesmo dia** (pergunta do usuário: "tem certeza que não falta mais nada?"; depois, "então
+    siga"). Eram duas faltas de regra (o monofásico e as regras da NT fora do grupo UB/W) e quatro de processo (o
+    leitor sem as colunas da Reforma, o acervo inteiro, a revisão independente e o robô). As 239 regras estão em
+    `inst/extdata/regras_ibs_cbs.csv` (eram 104).
+    - **O monofásico de combustíveis**, no leiaute da v1.50 (produção em 16/11/2026; o 03/11 está riscado no
+      cronograma): os grupos de cada ano (UB85a, UB90, UB95a e UB100: o IBS é ad valorem até 2028 e ad rem depois; a
+      CBS, ad valorem em 2026 e ad rem depois; em homologação, as exceções da NT), os subgrupos que a classificação
+      exige ou não permite (padrão, retenção, retido e diferença do biocombustível, pelos indicadores da planilha), as
+      contas e os totais do `gMono` (W58-10 a W59d-10). Três leituras, cada uma com a fonte:
+      - o `pBio` do XML é **percentual** (no acervo, 1.951 dos 1.980 valores passam de 1) e a mistura obrigatória da
+        tabela nova `biocombustivel_ibs_cbs` (Tabela de Índice de Biocombustível, IT 2025.004) é **fração** (0,32): as
+        contas usam pBio/100;
+      - a NT não diz a unidade da alíquota ad valorem do monofásico: o valor que bate com a alíquota lida como
+        percentual confere; o que não bate fica sem conferir, com o motivo;
+      - a UB89b-10 e a UB99b-10 (o valor da diferença do biocombustível) usam uma tabela que a NT diz que ainda será
+        publicada: ficam sempre sem conferir.
+      Os 1.394 XML do acervo com monofásico são todos do leiaute antigo (de antes da v1.50): as regras novas não se
+      aplicam a eles; estão testadas com variações do XML de exemplo.
+    - **As regras da NT fora do UB e do W**, nos grupos B (previsão de entrega, documentos referenciados, nota de débito
+      e de crédito, NFC-e, município do fato gerador do IBS e local da operação), BB (compra governamental: o tipo da
+      operação, as alíquotas nos anos de transição e as chaves dos documentos anteriores), C e E (a inscrição na
+      Suframa, com o dígito do MOC 7.0, seção 8.4), I, N, NA, Q e S (os tributos de cada item na nota de débito e de
+      crédito, o CFOP da devolução, o ICMS e a origem, o ICMS da UF de destino, o PIS e a COFINS), LA (o grupo de
+      combustível), VC (o documento referenciado no item) e W07/W31 (o total dos produtos e o do Imposto Seletivo).
+      Tabelas novas: `local_operacao_ibs_cbs` (o cIndOp, do Anexo VII da documentação da NFS-e Nacional, a versão mais
+      alta publicada; v1.03.00 hoje) e `combustiveis_monofasicos` (os do ICMS monofásico, Portal da NF-e). A tag do
+      schema é `ISUFEmit` (a NT escreve ISUFemit; achado conferindo cada caminho contra o schema 010g). Ficam de fora as
+      quatro que a SEFAZ confere no documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50).
+    - **Como na NT, só a nota com IBS, CBS ou IS é conferida** (nota ** do cronograma): as regras da nota toda (B, C,
+      I, N...) também. A nota sem os tributos novos sai sem conferências.
+    - **O `nfe_ler()` ganhou as colunas da Reforma que faltavam:** na nota, `previsao_entrega`, `tipo_nota_debito` e
+      `tipo_nota_credito`, `local_operacao`, `municipio_fato_gerador_ibs`, `compra_governamental_ente`, `_redutor` e
+      `_operacao`, `emitente_inscricao_suframa`, `destinatario_inscricao_suframa` e os totais do monofásico; no item,
+      `credito_presumido_zfm_tipo`, `bem_movel_usado`, `valor_item`, `referenciado_chave`, `referenciado_item` e os
+      totais do monofásico. O significado ao lado vem da documentação do schema (`tpNFDebito`, `tpNFCredito`,
+      `tpEnteGov`, `tpOperGov` e `indBemMovelUsado`, 25 linhas novas em `codigos_dos_campos`; os 90 campos conferem
+      contra os schemas). O `tpCredPresIBSZFM` fica sem significado: só a NT diz o que é cada valor, não o schema.
+    - **Velocidade:** a primeira rodada no acervo levou 0,32 s por arquivo; dois terços eram montar um `data.frame` por
+      regra e juntar com `rbind`. Agora cada regra devolve as colunas e a tabela é montada uma vez por arquivo
+      (`juntar_linhas`): no acervo inteiro (12.561 arquivos, 5 itens por nota em média), 88 ms por arquivo na primeira
+      rodada e 73 na segunda, e o resultado igual (os testes da conferência passaram sem mudança).
+    - **O que a SEFAZ autorizou contra o texto da regra fica sem conferir, com o motivo** (amostra do acervo, 2.638
+      NF-e autorizadas, 23 acusações, cada uma olhada só por códigos e contagens):
+      - I05k-20 (19 itens, 9 notas): o `tpCredPresIBSZFM` 0 ("sem crédito presumido") em emitente fora da ZFM,
+        autorizado de fevereiro a setembro de 2026. A regra (em produção desde 02/02/2026) diz "se informada", e a NT
+        não diz se o 0 conta. O 0 fora da ZFM fica sem conferir; de 1 a 4, errado;
+      - LA01-30 (1 nota de 02/02/2026): a classificação 620 sem o grupo `comb`. A NT adiou as regras do monofásico
+        (v1.35), diz que as orientações dele virão em NT futura (pág. 7) e o reformulou na v1.50: antes de 16/11/2026,
+        a 620 sem o grupo fica sem conferir; a 410013 sempre, e a 620 a partir de 16/11/2026, são conferidas;
+      - W07-10 (2 notas de setembro de 2026): o total dos produtos 0,01 menor que a soma dos itens. A regra não dá
+        tolerância e é obrigatória desde 03/08/2026 (v1.40): até o centavo confere, um centavo fica sem conferir e mais
+        que isso não confere.
+    - **O acervo inteiro** (só contagens na tela): dos 341.402 XML, 120.972 são NF-e e 12.561 têm IBS, CBS ou IS; 185
+      deles são NFS-e de prefeitura que usam o nome `<NFe>` (ficam em `arquivos`, com o motivo). Nas 12.376 NF-e
+      (todas modelo 55, de novembro de 2025 a outubro de 2026, 65.194 itens com IBS e CBS), 90 regras se aplicaram e
+      deram 1.688.033 conferências: 5 erradas e 168 sem conferir, todas olhadas:
+      - UB14-25 (4 itens de uma nota de 01/06/2026, a 200001 na NF-e): a 1.40 da tabela tirou a 200001 da NF-e e
+        não tem prazo no IT; eu usava o prazo da 1.50 (04/05/2026). A nota autorizada desmente: as versões sem prazo
+        no IT (1.21 a 1.40) ficam sem prazo conhecido, e a mudança delas, sem conferir. As duas notas de março do
+        mesmo emitente já saíam sem conferir;
+      - UB67-10 (1 item de uma nota de 16/03/2026): a CBS 0,02 acima do calculado. A NT dá tolerância de 0,01,
+        escrita; continua errada pela NT (a SEFAZ que autorizou aceitou, ao menos nesse caso: 1 em 17.176 conferências
+        da regra);
+      - sem conferir, com o motivo: 151 I05k-20 (o 0), 9 LA01-30 (a 620 antes de 16/11/2026), 6 W07-10 (um centavo)
+        e 2 UB14-25 (a 200001 em março).
+      Depois da correção da 200001 e das da revisão independente (abaixo), a segunda rodada: 91 regras aplicadas (a
+      VC02-14 entrou, e nenhuma devolução do acervo deixou de referenciar), 1.688.508 conferências, 1 errada (a UB67-10)
+      e 172 sem conferir, todas com o motivo.
+    - **Revisão independente** (um revisor com o código, a NT, o schema e o MOC, sem as minhas conclusões, com
+      experimentos em XML variado): 8 achados dados como confirmados e 4 suspeitas. Cada um conferido na fonte antes
+      de mexer:
+      - **W34-10 e W34-20, erro meu da mesma tarde:** ao passar todos os itens da nota para as regras dos totais, a
+        W34-10 deixou de acusar o `IBSCBSTot` sem item com IBSCBS, e a W34-20 acusava a nota só com o IS. Agora olham
+        só os itens com IBSCBS (teste novo);
+      - **VC02-14:** estava só desde 16/11/2026, mas a regra existe desde a v1.30 (é a da NT 2013/005, na lista que
+        entrou em 10/11/2025); o que entra em 16/11/2026 é a redação da v1.53. Agora, até 15/11/2026, a devolução
+        referencia um documento no cabeçalho (NF-e, NFC-e, NF modelo 1, de produtor ou ECF) ou no item, menos nos CFOP
+        1201, 1202, 1410, 1411, 5921 e 6921; desde 16/11/2026, sem o `refNFe` no cabeçalho, cada item referencia, menos
+        nos CFOP 5921 e 6921;
+      - **a mesma nota duas vezes no arquivo derrubava a chamada** (`factor level duplicated`): agora é conferida uma
+        vez;
+      - **W07-10:** a redação da v1.40 soma só os itens com indTot 1 "sujeitos ao ICMS ou IBS/CBS/IS"; o serviço só com
+        ISSQN, na nota conjugada, ficava na soma;
+      - **UB66a-20:** a v1.51 só acrescentou a ZFM à lista (afrouxou): saiu a marca de mudança;
+      - **UB13-20, falso:** o revisor leu na v1.30 o texto antigo, que lá está riscado (a v1.30 mostra o antigo
+        riscado e o novo realçado; conferido na imagem da página 33). Desde 10/11/2025 vale o novo; nada a mudar;
+      - **um `"﻿"` do `gerar_tabelas.R` virou o caractere invisível** quando desfiz os escapes do arquivo (as
+        ferramentas guardam acento cru no código): voltou o escape;
+      - **a ajuda:** o item vazio em todas as regras da nota, a linha por chave anterior na BB05 e o que acontece com
+        a mudança que afrouxou a regra (vale para a nota de antes);
+      - **suspeitas:** a UB56-10 valia pela alíquota da tabela, não pelo ano (quando o Senado publicar a CBS de 2027,
+        as notas de 2027 cairiam na regra de 2026): agora a UB56-10 é de 2025 e 2026 e a UB56-20 de 2027 em diante,
+        com a alíquota publicada ou só o zero obrigatório (teste com uma CBS de 2027 inventada); a UB132-10 passou ao
+        mês da autorização; o `refNFeSig` (a chave com o código numérico zerado) passou a contar como chave onde a
+        regra fala da NF referenciada (B25-50, B25-60 e a exceção 3 da NA01-20), e não onde a NT escreve `refNFe`
+        (B25-100 e a VC02-14 nova). O Simples Nacional (CRT 1 e 4) segue as regras de alíquota ao pé da letra: a NT
+        remete as orientações dele a uma NT futura e não dá exceção, e nenhuma nota autorizada do acervo foi acusada
+        nelas.
+    - **Fica de fora:** as regras que a NT deixa para implementação futura (as do Imposto Seletivo, a UB16-10, a
+      UB13-40, a VC03-20 e outras) e as quatro que dependem da base da SEFAZ.
 
 ## O robô das tabelas
 

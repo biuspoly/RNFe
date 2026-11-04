@@ -56,8 +56,8 @@ test_that("as al\u00edquotas do IBS e da CBS de cada per\u00edodo", {
 })
 
 test_that("o cr\u00e9dito presumido do IBS e da CBS como na planilha oficial", {
-  # A planilha de 01/10/2026: 13 c\u00f3digos; o 04 (bem m\u00f3vel de pessoa f\u00edsica para revenda) desconta o cr\u00e9dito do tributo
-  # do item e exige os dois grupos; o 05 exige o da CBS e n\u00e3o permite o do IBS.
+  # A planilha de 01/10/2026: 13 códigos; o 04 (bem móvel de pessoa física para revenda) desconta o crédito do tributo
+  # do item e exige os dois grupos; o 05 exige o da CBS e não permite o do IBS.
   credito = tabela_fiscal("credito_presumido_ibs_cbs")
   expect_identical(credito$codigo, sprintf("%02d", 1:13))
   bem_movel = credito[credito$codigo == "04", ]
@@ -68,7 +68,7 @@ test_that("o cr\u00e9dito presumido do IBS e da CBS como na planilha oficial", {
   expect_s3_class(credito$inicio_cbs, "Date")
   expect_identical(bem_movel$inicio_cbs, as.Date("2027-01-01"))
   expect_type(credito$orientacao_aliquota_cbs, "character")
-  # Na 1.21 do IT, o 02 deixou de ser apropriado no documento (a corre\u00e7\u00e3o que o IT descreve).
+  # Na 1.21 do IT, o 02 deixou de ser apropriado no documento (a correção que o IT descreve).
   mudancas = tabela_fiscal("mudancas_ibs_cbs")
   do_02 = mudancas[mudancas$tabela == "credito_presumido_ibs_cbs" & mudancas$codigo == "02", ]
   expect_identical(c(do_02$coluna, do_02$versao, do_02$antes, do_02$depois), c("apropria_no_documento", "1.21", "1", "0"))
@@ -85,8 +85,9 @@ test_that("o que mudou na tabela da Reforma de uma vers\u00e3o para a outra", {
   da_200001 = mudancas[mudancas$codigo == "200001" & mudancas$coluna == "permitido_na_nfe", ]
   expect_identical(c(da_200001$antes, da_200001$depois, da_200001$versao), c("1", "0", "1.40"))
   expect_identical(da_200001$publicada_em, as.Date("2026-01-28"))
-  # A 1.40 não tem prazo no IT: vale o da 1.50, que já traz a mudança.
-  expect_identical(da_200001$em_producao_ate, as.Date("2026-05-04"))
+  # A 1.40 não tem prazo no IT: fica sem prazo (houve NF-e autorizada com a 200001 depois do prazo da 1.50).
+  expect_true(is.na(da_200001$em_producao_ate))
+  expect_true(all(is.na(mudancas$em_producao_ate[mudancas$versao %in% c("1.21", "1.30", "1.31", "1.40")])))
   da_410014 = mudancas[mudancas$codigo == "410014", ]
   expect_identical(c(da_410014$coluna, da_410014$versao, da_410014$depois), c("grupo_credito_presumido", "1.70", "0"))
   expect_identical(da_410014$em_producao_ate, as.Date("2026-10-16"))
@@ -98,7 +99,7 @@ test_that("o que mudou na tabela da Reforma de uma vers\u00e3o para a outra", {
   # Cada mudança muda alguma coisa, e cada versão vem depois da anterior.
   expect_false(any(!is.na(mudancas$antes) & !is.na(mudancas$depois) & mudancas$antes == mudancas$depois))
   expect_false(is.unsorted(mudancas$publicada_em))
-  expect_true(all(mudancas$em_producao_ate >= mudancas$publicada_em))
+  expect_true(all(mudancas$em_producao_ate >= mudancas$publicada_em, na.rm = TRUE))
 })
 
 test_that("CFOP como na tabela oficial da NF-e", {

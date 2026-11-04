@@ -163,6 +163,63 @@ test_that("o pagamento vinculado da Reforma (gPgtoVinc)", {
   expect_identical(vinculados$cnpj_base_instituicao, "11444777")
 })
 
+test_that("os campos da Reforma na identifica\u00e7\u00e3o, no emitente, no destinat\u00e1rio e no item", {
+  texto = paste(readLines(NOTA_SP, encoding = "UTF-8"), collapse = "\n")
+  texto = sub("</dhSaiEnt>", "</dhSaiEnt><dPrevEntrega>2026-10-20</dPrevEntrega>", texto, fixed = TRUE)
+  texto = sub("<cMunFG>3550308</cMunFG>", "<cMunFG>3550308</cMunFG><cMunFGIBS>3550308</cMunFGIBS>", texto, fixed = TRUE)
+  texto = sub("<finNFe>1</finNFe>", "<finNFe>5</finNFe><tpNFCredito>04</tpNFCredito>", texto, fixed = TRUE)
+  texto = sub("<indPres>9</indPres>", "<indPres>9</indPres><cIndOp>010104</cIndOp>", texto, fixed = TRUE)
+  texto = sub("</verProc>", paste0("</verProc><gCompraGov><tpEnteGov>4</tpEnteGov><pRedutor>10.0000</pRedutor>",
+                                   "<tpOperGov>1</tpOperGov></gCompraGov>"), texto, fixed = TRUE)
+  texto = sub("<CRT>3</CRT>", "<CRT>3</CRT><ISUFEmit>123456789</ISUFEmit>", texto, fixed = TRUE)
+  texto = sub("<IE>12345678</IE>", "<IE>12345678</IE><ISUF>200123457</ISUF>", texto, fixed = TRUE)
+  texto = sub("<CFOP>6102</CFOP>", "<tpCredPresIBSZFM>1</tpCredPresIBSZFM><CFOP>6102</CFOP>", texto, fixed = TRUE)
+  texto = sub("<xPed>PEDIDO-77</xPed>", "<indBemMovelUsado>1</indBemMovelUsado><xPed>PEDIDO-77</xPed>", texto, fixed = TRUE)
+  texto = sub("<infAdProd>LOTE 123</infAdProd>", paste0("<infAdProd>LOTE 123</infAdProd><vItem>51.10</vItem><DFeReferenciado>",
+                                                        "<chaveAcesso>", CHAVE_SP, "</chaveAcesso><nItem>2</nItem></DFeReferenciado>"),
+              texto, fixed = TRUE)
+  # O item 2 vira monofásico (CST 620): o leitor só lê os totais do item e da nota.
+  partes = strsplit(texto, "<det nItem=\"2\">", fixed = TRUE)[[1]]
+  partes[2] = sub("(?s)<CST>000</CST>.*?</gIBSCBS>", paste0("<CST>620</CST><cClassTrib>620001</cClassTrib><gIBSCBSMono>",
+                                                             "<vTotIBSMonoItem>1.23</vTotIBSMonoItem><vTotCBSMonoItem>4.56</vTotCBSMonoItem>",
+                                                             "</gIBSCBSMono>"), partes[2], perl = TRUE)
+  texto = paste(partes, collapse = "<det nItem=\"2\">")
+  texto = sub("</gCBS>\n        </IBSCBSTot>", "</gCBS><gMono><vIBSMono>1.23</vIBSMono><vCBSMono>4.56</vCBSMono></gMono></IBSCBSTot>",
+              texto, fixed = TRUE)
+  lida = nfe_ler(texto)
+  notas = lida$notas
+  expect_identical(notas$previsao_entrega, as.Date("2026-10-20"))
+  expect_identical(notas$finalidade_descricao, "Nota de cr\u00e9dito")
+  expect_true(is.na(notas$tipo_nota_debito))
+  expect_identical(notas$tipo_nota_credito, "04")
+  expect_identical(notas$tipo_nota_credito_descricao, "Redu\u00e7\u00e3o de valores")
+  expect_identical(match("tipo_nota_credito_descricao", names(notas)), match("tipo_nota_credito", names(notas)) + 1L)
+  expect_identical(notas$local_operacao, "010104")
+  expect_identical(notas$municipio_fato_gerador_ibs, "3550308")
+  expect_identical(notas$compra_governamental_ente_descricao, "Munic\u00edpios")
+  expect_equal(notas$compra_governamental_redutor, 10)
+  expect_identical(notas$compra_governamental_operacao_descricao, "Fornecimento com pagamento posterior")
+  expect_identical(notas$emitente_inscricao_suframa, "123456789")
+  expect_identical(notas$destinatario_inscricao_suframa, "200123457")
+  expect_equal(notas$valor_ibs_monofasico, 1.23)
+  expect_equal(notas$valor_cbs_monofasica, 4.56)
+  itens = lida$itens
+  expect_identical(itens$credito_presumido_zfm_tipo, c("1", NA))
+  expect_identical(itens$bem_movel_usado, c("1", NA))
+  expect_identical(itens$bem_movel_usado_descricao, c("Bem M\u00f3vel Usado", NA))
+  expect_equal(itens$valor_item, c(51.1, NA))
+  expect_identical(itens$referenciado_chave, c(CHAVE_SP, NA))
+  expect_identical(itens$referenciado_item, c(2L, NA))
+  expect_equal(itens$valor_total_ibs_monofasico, c(NA, 1.23))
+  expect_equal(itens$valor_total_cbs_monofasica, c(NA, 4.56))
+  expect_identical(itens$cst_ibs_cbs, c("000", "620"))
+  # Sem os campos da Reforma, as colunas ficam NA.
+  sem_reforma = nfe_ler(NOTA_SP)
+  expect_true(is.na(sem_reforma$notas$previsao_entrega))
+  expect_true(is.na(sem_reforma$notas$tipo_nota_credito_descricao))
+  expect_true(all(is.na(sem_reforma$itens$referenciado_chave)))
+})
+
 test_that("a tabela de impostos tem todos os campos de imposto de cada item", {
   impostos = nfe_ler(NOTA_SP)$impostos
   # Item 1: vTotTrib, ICMS00 (6), IPI (cEnq + 4), PISAliq (4), COFINSAliq (4), IBSCBS (10) = 30.

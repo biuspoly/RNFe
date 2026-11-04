@@ -22,12 +22,16 @@ numero                        ide/nNF                                     inteir
 emissao                       ide/dhEmi|ide/dEmi                          data_hora
 data_emissao                  ide/dhEmi|ide/dEmi                          data
 saida_entrada                 ide/dhSaiEnt                                data_hora
+previsao_entrega              ide/dPrevEntrega                            data
 natureza_operacao             ide/natOp                                   texto
 tipo_operacao                 ide/tpNF                                    inteiro
 destino_operacao              ide/idDest                                  inteiro
 finalidade                    ide/finNFe                                  inteiro
+tipo_nota_debito              ide/tpNFDebito                              texto
+tipo_nota_credito             ide/tpNFCredito                             texto
 consumidor_final              ide/indFinal                                inteiro
 presenca                      ide/indPres                                 inteiro
+local_operacao                ide/cIndOp                                  texto
 forma_emissao                 ide/tpEmis                                  inteiro
 ambiente                      ide/tpAmb                                   inteiro
 processo_emissao              ide/procEmi                                 inteiro
@@ -35,10 +39,15 @@ formato_danfe                 ide/tpImp                                   inteir
 contingencia_entrada          ide/dhCont                                  data_hora
 contingencia_justificativa    ide/xJust                                   texto
 municipio_fato_gerador        ide/cMunFG                                  texto
+municipio_fato_gerador_ibs    ide/cMunFGIBS                               texto
+compra_governamental_ente     ide/gCompraGov/tpEnteGov                    texto
+compra_governamental_redutor  ide/gCompraGov/pRedutor                     numero
+compra_governamental_operacao ide/gCompraGov/tpOperGov                    texto
 emitente_documento            emit/CNPJ|emit/CPF                          texto
 emitente_nome                 emit/xNome                                  texto
 emitente_fantasia             emit/xFant                                  texto
 emitente_ie                   emit/IE                                     texto
+emitente_inscricao_suframa    emit/ISUFEmit                               texto
 emitente_municipio            emit/enderEmit/xMun                         texto
 emitente_codigo_municipio     emit/enderEmit/cMun                         texto
 emitente_uf                   emit/enderEmit/UF                           texto
@@ -48,7 +57,8 @@ destinatario_documento        dest/CNPJ|dest/CPF|dest/idEstrangeiro       texto
 destinatario_nome             dest/xNome                                  texto
 destinatario_ie               dest/IE                                     texto
 destinatario_indicador_ie     dest/indIEDest                              inteiro
-destinatario_municipio        dest/enderDest/xMun                         texto
+destinatario_inscricao_suframa dest/ISUF                                  texto
+destinatario_municipio       dest/enderDest/xMun                         texto
 destinatario_codigo_municipio dest/enderDest/cMun                         texto
 destinatario_uf               dest/enderDest/UF                           texto
 base_icms                     total/ICMSTot/vBC                           numero
@@ -75,7 +85,9 @@ valor_tributos_aproximado     total/ICMSTot/vTotTrib                      numero
 base_ibs_cbs                  total/IBSCBSTot/vBCIBSCBS                   numero
 valor_ibs                     total/IBSCBSTot/gIBS/vIBS                   numero
 valor_cbs                     total/IBSCBSTot/gCBS/vCBS                   numero
-valor_is                      total/ISTot/vIS                             numero
+valor_ibs_monofasico          total/IBSCBSTot/gMono/vIBSMono              numero
+valor_cbs_monofasica          total/IBSCBSTot/gMono/vCBSMono              numero
+valor_is                    total/ISTot/vIS                             numero
 valor_nota_com_ibs_cbs_is     total/vNFTot                                numero
 modalidade_frete              transp/modFrete                             inteiro
 transportadora_documento      transp/transporta/CNPJ|transp/transporta/CPF texto
@@ -100,7 +112,8 @@ descricao                 prod/xProd                                 texto
 ncm                       prod/NCM                                   texto
 cest                      prod/CEST                                  texto
 beneficio_fiscal          prod/cBenef                                texto
-cfop                      prod/CFOP                                  texto
+credito_presumido_zfm_tipo prod/tpCredPresIBSZFM                     texto
+cfop                     prod/CFOP                                  texto
 unidade                   prod/uCom                                  texto
 quantidade                prod/qCom                                  numero
 valor_unitario            prod/vUnCom                                numero
@@ -117,7 +130,8 @@ valor_outros              prod/vOutro                                numero
 compoe_total              prod/indTot                                inteiro
 pedido                    prod/xPed                                  texto
 item_pedido               prod/nItemPed                              texto
-informacoes_adicionais    infAdProd                                  texto
+bem_movel_usado           prod/indBemMovelUsado                      texto
+informacoes_adicionais   infAdProd                                  texto
 valor_tributos_aproximado imposto/vTotTrib                           numero
 origem                    imposto/ICMS/*/orig                        texto
 cst_icms                  imposto/ICMS/*/CST                         texto
@@ -149,9 +163,14 @@ aliquota_ibs_municipio    imposto/IBSCBS/gIBSCBS/gIBSMun/pIBSMun     numero
 valor_ibs                 imposto/IBSCBS/gIBSCBS/vIBS                numero
 aliquota_cbs              imposto/IBSCBS/gIBSCBS/gCBS/pCBS           numero
 valor_cbs                 imposto/IBSCBS/gIBSCBS/gCBS/vCBS           numero
+valor_total_ibs_monofasico imposto/IBSCBS/gIBSCBSMono/vTotIBSMonoItem numero
+valor_total_cbs_monofasica imposto/IBSCBS/gIBSCBSMono/vTotCBSMonoItem numero
 valor_is                  imposto/IS/vIS                             numero
 percentual_devolvido      impostoDevol/pDevol                        numero
 valor_ipi_devolvido       impostoDevol/IPI/vIPIDevol                 numero
+valor_item                vItem                                      numero
+referenciado_chave        DFeReferenciado/chaveAcesso                texto
+referenciado_item         DFeReferenciado/nItem                      inteiro
 ")
 
 # O nome de cada código do item, ao lado dele, como a tabela fiscal registrava na data de emissão da nota.
@@ -196,6 +215,8 @@ modelo                    mod       -
 tipo_operacao             tpNF      -
 destino_operacao          idDest    -
 finalidade                finNFe    -
+tipo_nota_debito          tpNFDebito -
+tipo_nota_credito         tpNFCredito -
 consumidor_final          indFinal  -
 presenca                  indPres   -
 forma_emissao             tpEmis    -
@@ -205,11 +226,14 @@ formato_danfe             tpImp     -
 emitente_regime           CRT       -
 destinatario_indicador_ie indIEDest -
 modalidade_frete          modFrete  -
+compra_governamental_ente tpEnteGov -
+compra_governamental_operacao tpOperGov -
 ")
 
 SIGNIFICADOS_DO_ITEM = ler_campos("
-coluna_do_codigo campo  coluna_do_contexto
-compoe_total     indTot -
+coluna_do_codigo campo            coluna_do_contexto
+compoe_total     indTot           -
+bem_movel_usado  indBemMovelUsado -
 ")
 
 SIGNIFICADOS_DO_PAGAMENTO = ler_campos("
@@ -279,7 +303,12 @@ autorizacao      card/cAut  texto
 #' `r documentar_campos(CAMPOS_DO_PROTOCOLO)`;
 #' e `arquivo`. `emissao`, `saida_entrada`, `contingencia_entrada` e
 #' `autorizacao` são data e hora (mostradas no horário de Brasília);
-#' `data_emissao` é a data como está na nota. Na NFC-e (`modelo` 65), `qrcode`
+#' `data_emissao` é a data como está na nota, e `previsao_entrega`, a data da
+#' previsão de entrega. Os campos da Reforma na identificação da nota (o tipo
+#' da nota de débito e da de crédito, o local da operação, o município do fato
+#' gerador do IBS e a compra governamental) e as inscrições na Suframa vêm em
+#' colunas próprias; o tipo da nota de débito e da de crédito, o ente e a
+#' operação da compra governamental vêm com o significado ao lado. Na NFC-e (`modelo` 65), `qrcode`
 #' e `url_consulta` vêm do grupo `infNFeSupl`, que fica fora do `infNFe`; o
 #' texto do QR-Code fica como está, sem desmontar.
 #'
@@ -293,7 +322,14 @@ autorizacao      card/cAut  texto
 #' código), `cfop_titulo`, `origem_descricao`, `cst_icms_descricao`,
 #' `csosn_descricao`, `cst_ipi_descricao`, `cst_pis_descricao`,
 #' `cst_cofins_descricao`, `cst_ibs_cbs_descricao` e
-#' `classificacao_ibs_cbs_nome`.
+#' `classificacao_ibs_cbs_nome`. `valor_total_ibs_monofasico` e
+#' `valor_total_cbs_monofasica` são os totais do monofásico do item
+#' (combustíveis: `vTotIBSMonoItem` e `vTotCBSMonoItem`; em `notas`,
+#' `valor_ibs_monofasico` e `valor_cbs_monofasica` são outro campo, o do
+#' grupo `gMono` dos totais, sem a retenção e o retido, que têm campos
+#' próprios), `valor_item` é a participação do item no total da nota e
+#' `referenciado_chave` e `referenciado_item`, o item de outro documento que
+#' ele cita (nota de crédito ou de débito, devolução), todos da Reforma.
 #'
 #' @section impostos:
 #' Todos os campos dos impostos de cada item, um por linha: `chave`, `item`,

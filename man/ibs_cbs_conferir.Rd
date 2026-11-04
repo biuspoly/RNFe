@@ -6,9 +6,13 @@
 \source{
 Nota Técnica 2025.002-RTC, versão 1.53 (Portal Nacional da NF-e,
 publicada em 30/10/2026), seção 7, regras de validação dos grupos UB
-(IBS e CBS do item) e W (totais); a Tabela de Classificação Tributária do
-IBS e CBS (Informe Técnico 2025.002, v1.71); e a LC 214/2025 (as alíquotas
-de cada ano).
+(IBS e CBS do item), W (totais) e dos outros grupos que dependem da
+Reforma (B, BB, C, E, I, LA, N, NA, Q, S e VC); a Tabela de Classificação
+Tributária do IBS e CBS (Informe Técnico 2025.002, v1.71) e a de Crédito
+Presumido; a LC 214/2025 (as alíquotas de cada ano); o Anexo VII da
+documentação da NFS-e Nacional (o local da operação); a Tabela de Índice
+de Biocombustível (Informe Técnico 2025.004); e a tabela de combustíveis
+do ICMS monofásico do Portal da NF-e. Veja \code{\link[=tabela_fiscal]{tabela_fiscal()}}.
 }
 \usage{
 ibs_cbs_conferir(arquivos, todas_as_regras = FALSE)
@@ -60,34 +64,69 @@ do município e da CBS, o IBS do item, a tributação regular e a soma da
 compra governamental, com a tolerância que cada regra dá (0,01 nas contas
 do item, 0,04 na compra governamental), depois de arredondar o valor
 calculado em 2 casas, como o campo;
-\item os totais (\code{IBSCBSTot}): a soma de cada campo nos itens, até o centavo.
+\item os totais (\code{IBSCBSTot}): a soma de cada campo nos itens, até o centavo;
+\item a tributação monofásica de combustíveis, no leiaute da versão 1.50 da NT:
+os grupos de cada ano (ad rem e ad valorem, do IBS e da CBS), os
+subgrupos que a classificação exige ou não permite, as contas (a
+quantidade vezes a alíquota ad rem; a ad valorem só confere quando bate
+com a alíquota lida como percentual, porque a NT não diz a unidade, e
+senão fica sem conferir), a quantidade de biocombustível pela mistura
+obrigatória na data da nota (veja
+\code{tabela_fiscal("biocombustivel_ibs_cbs")}; o \code{pBio} do XML é percentual,
+a tabela traz fração) e os totais do grupo \code{gMono};
+\item o resto da nota que a mesma NT valida: a identificação (a previsão de
+entrega, os documentos referenciados, a nota de débito e de crédito, a
+NFC-e, o município do fato gerador do IBS e o local da operação, veja
+\code{tabela_fiscal("local_operacao_ibs_cbs")}), a compra governamental (o
+tipo da operação, as alíquotas nos anos de transição e as chaves dos
+documentos anteriores), a inscrição na Suframa do emitente e do
+destinatário (com o dígito), os tributos de cada item na nota de débito e
+de crédito, o CFOP da devolução, o ICMS monofásico (veja
+\code{tabela_fiscal("combustiveis_monofasicos")}), o documento referenciado no
+item, o total dos produtos (até o centavo) e o grupo do Imposto Seletivo
+nos totais.
 }
+
+Como na NT, as regras só valem para o documento com o IBS, a CBS ou o
+Imposto Seletivo preenchidos: a nota sem eles não é conferida.
 
 Cada regra vale como a SEFAZ a aplicava no dia da emissão (\code{dhEmi}):
 \itemize{
 \item a regra só é conferida na nota emitida depois de ela entrar em produção
 (pelo cronograma da NT: 10/11/2025 para a maioria, 02/02/2026 e
-03/08/2026 para as que entraram depois);
+03/08/2026 para as que entraram depois, e 16/11/2026 para o monofásico
+da versão 1.50 e as mudanças da devolução da versão 1.53);
 \item quando a regra mudou depois da emissão, ou quando a linha do CST ou da
 classificação que ela consulta mudou numa versão da tabela que talvez
 ainda não estivesse em produção (veja
 \code{tabela_fiscal("mudancas_ibs_cbs")}), o que não confere pela regra e pela
 tabela de hoje vem com \code{confere} vazio e o motivo, em vez de errado.
+A versão da tabela sem prazo de produção no Informe Técnico (da 1.21 à
+1.40) fica sem prazo conhecido;
+\item a mudança que só afrouxou a regra (uma exceção nova) vale também para a
+nota de antes: o que confere hoje é dado como certo;
+\item quando a SEFAZ autorizou notas reais contra o texto da regra num caso que
+a NT não deixa claro (o \code{tpCredPresIBSZFM} 0 fora da ZFM, a classificação
+620 sem o grupo de combustível antes de 16/11/2026, um centavo de
+diferença no total dos produtos), esse caso fica sem conferir, com o
+motivo. A redação antiga da VC02-14 (a referência na devolução) vale até
+15/11/2026, e a da versão 1.53 desde 16/11/2026.
 }
 
-Fica de fora, por enquanto: a tributação monofásica de combustíveis, que a
-NT reformulou na versão 1.50, com produção marcada para novembro de 2026;
-o Imposto Seletivo e a regra da base de cálculo (UB16-10), que a NT deixa
-para implementação futura; a exigência do grupo monofásico pelo CST
-(UB13-40), também futura; a regra do total dos produtos (W07-10), que é do
-ICMS e não do IBS e da CBS; e o CT-e e os outros documentos, que têm as
-notas técnicas deles. Uma regra que se aplica mas
-não dá para conferir (a CBS de 2027 em diante, sem a alíquota de referência
-publicada) vem com \code{confere} vazio e o motivo.
+Fica de fora: as regras que a NT deixa para implementação futura (as do
+Imposto Seletivo, a da base de cálculo, UB16-10, e a exigência do grupo
+monofásico pelo CST, UB13-40, entre outras); as que a SEFAZ confere no
+documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50); e
+o CT-e e os outros documentos, que têm as notas técnicas deles. Uma regra
+que se aplica mas não dá para conferir (a CBS de 2027 em diante, sem a
+alíquota de referência publicada; o valor da diferença do biocombustível,
+UB89b-10 e UB99b-10, sem a tabela que a NT diz que será publicada) vem com
+\code{confere} vazio e o motivo.
 }
 \section{notas}{
 
-Uma linha por nota: \code{chave}, \code{numero}, \code{modelo}, \code{data_emissao},
+Uma linha por nota (a mesma nota repetida num arquivo é conferida uma vez):
+\code{chave}, \code{numero}, \code{modelo}, \code{data_emissao},
 \code{itens_com_ibs_cbs} (quantos itens têm o grupo \code{IBSCBS}),
 \code{regras_conferidas}, \code{regras_erradas} e \code{regras_sem_conferir} (que se
 aplicavam mas não deu para conferir).
@@ -95,8 +134,9 @@ aplicavam mas não deu para conferir).
 
 \section{conferencias}{
 
-Uma linha por regra que se aplica a cada item (ou à nota, nos totais):
-\code{chave}, \code{item} (o \code{nItem}; vazio nos totais), \code{regra}, \code{campo} (o campo ou
+Uma linha por regra que se aplica a cada item, ou à nota nas regras da nota
+(e, na BB05, a cada chave anterior da compra governamental):
+\code{chave}, \code{item} (o \code{nItem}; vazio nas regras da nota), \code{regra}, \code{campo} (o campo ou
 o grupo conferido), \code{no_documento} (o que está no XML), \code{esperado} (o que a
 regra espera), \code{diferenca} (nas contas: o do documento menos o calculado),
 \code{confere} (\code{TRUE}, \code{FALSE} ou vazio quando não deu para conferir),

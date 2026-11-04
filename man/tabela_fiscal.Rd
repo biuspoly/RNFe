@@ -9,7 +9,11 @@ CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
 30/10/2026) e a de Crédito Presumido (publicada em 01/10/2026), e as
 versões delas publicadas desde 03/10/2025 para as mudanças, com os prazos
-de produção do IT 2025.002 v1.71; as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
+de produção do IT 2025.002 v1.71; o cIndOp, do Anexo VII da NFS-e Nacional
+(Portal da NFS-e, v1.03.00); o etanol anidro obrigatório, da Tabela de
+Índice de Biocombustível (IT 2025.004, publicada em 25/08/2026); os
+combustíveis do ICMS monofásico, da tabela do Portal da NF-e (publicada em
+05/12/2025); as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
 2025.002-RTC v1.53 (Portal da NF-e, 30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
 (30/10/2026). Municípios: a API de localidades do IBGE
 (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de
@@ -36,7 +40,9 @@ tabela_fiscal(nome_da_tabela)
 (cClassTrib da Reforma), \code{"credito_presumido_ibs_cbs"} (cCredPres),
 \code{"mudancas_ibs_cbs"} (o que mudou nessas três de uma versão para a
 outra), \code{"aliquotas_ibs_cbs"} (as alíquotas de cada
-ano), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
+ano), \code{"local_operacao_ibs_cbs"} (cIndOp), \code{"biocombustivel_ibs_cbs"} (o
+etanol anidro obrigatório na gasolina C), \code{"combustiveis_monofasicos"} (os
+do ICMS monofásico), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
 \code{"bandeiras_cartao"}, \code{"municipios"} (código IBGE, nome e UF),
 \code{"codigos_dos_campos"} (o significado dos códigos dos documentos) ou
 \code{"fontes"} (de onde veio cada tabela).}
@@ -51,6 +57,7 @@ Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
 \code{"classificacao_ibs_cbs"}, \code{"credito_presumido_ibs_cbs"}, \code{"mudancas_ibs_cbs"}, \code{"aliquotas_ibs_cbs"},
+\code{"local_operacao_ibs_cbs"}, \code{"biocombustivel_ibs_cbs"}, \code{"combustiveis_monofasicos"},
 \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
 \code{"municipios"}, \code{"codigos_dos_campos"} (o que quer dizer cada código dos
 campos dos documentos) ou \code{"fontes"} (de onde veio cada uma, com a data).
@@ -130,8 +137,10 @@ regras de validação entraram em produção, em 10/11/2025): a \code{tabela}
 nome da coluna na tabela, ou \code{"existe"} para o código que entrou ou saiu),
 o valor de \code{antes} e o de \code{depois}, a \code{versao} do Informe Técnico
 2025.002, a data em que foi \code{publicada_em} e o prazo em que ficou
-\code{em_producao_ate} (o do controle de versões do IT; a versão que não tem
-prazo lá vale até o da seguinte que tem). É o que o \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}}
+\code{em_producao_ate} (o do controle de versões do IT; vazio quando a versão
+não tem prazo lá, da 1.21 à 1.40: o da versão seguinte não serve, porque
+a SEFAZ autorizou NF-e com a classificação 200001, que a 1.40 tirou da
+NF-e, depois do prazo da 1.50). É o que o \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}}
 consulta para uma nota emitida antes de uma mudança, que a SEFAZ conferiu
 pela versão da época.
 \item \code{"aliquotas_ibs_cbs"}: as alíquotas do IBS (da UF e do município) e da
@@ -142,6 +151,21 @@ município em 2027 e 2028 (art. 344). A CBS de 2027 em diante é a alíquota
 de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
 (art. 347) e fica vazia enquanto não for publicada. Sem \code{codigo}: uma
 linha por período (\code{inicio} e \code{fim}).
+\item \code{"local_operacao_ibs_cbs"}: o código indicador do local da operação
+(\code{cIndOp}, art. 11 da LC 214/2025), do Anexo VII da documentação da NFS-e
+Nacional: o \code{codigo}, o \code{tipo_operacao}, a \code{caracteristica} do
+fornecimento, o \code{local} que o documento identifica, o
+\code{dispositivo_lc_214}, a \code{observacao}, os documentos em que vale
+(\code{permitido_na_nfe}, \code{permitido_na_nfse}, \code{permitido_na_nfse_via}) e o
+\code{local_incidencia_nfse}. Sem datas: o anexo só traz a versão de hoje.
+\item \code{"biocombustivel_ibs_cbs"}: o percentual obrigatório de etanol anidro
+em cada gasolina C (\code{mistura_obrigatoria}, em fração: 0,32 = 32\%), pelo
+código do produto da ANP (\code{codigo}, o \code{cProdANP}), com a vigência (a
+Tabela de Código de Índice de Biocombustível, Informe Técnico 2025.004).
+\item \code{"combustiveis_monofasicos"}: os combustíveis sujeitos à tributação
+monofásica do ICMS, pelo código do produto da ANP, com a
+\code{aliquota_ad_rem_icms} de cada período, se pedem o pBio (\code{exige_pbio}), a
+\code{origem_combustivel} e a \code{unidade_tributavel}.
 \item \code{"meios_pagamento"}: os meios de pagamento da tabela do Portal da NF-e
 (dinheiro, cartão, boleto, PIX...), com a \code{observacao} de quando usar
 cada um. É o código do \code{tPag} da NF-e e do meio de pagamento vinculado da
