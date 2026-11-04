@@ -31,7 +31,7 @@ Cada etapa já é útil sozinha.
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
-| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
+| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | em andamento: as tabelas com os indicadores e as alíquotas prontas (04/11/2026); conferir e simular a seguir |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
 
@@ -996,6 +996,31 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - qualquer 404 com mensagem contava como "não achou" (o de um proxy também): agora só o formato de cada fonte para
     o CNPJ que não existe, o que elas devolveram em 04/11/2026; o resto é fora do ar, com o que a fonte disse;
   - com o Minha Receita antes da BrasilAPI na lista, a mesma base era perguntada duas vezes; fonte repetida também.
+
+## Etapa 4, a calculadora da Reforma: o que se decidiu (04/11/2026)
+
+- **Pedido do usuário:** "vá fazendo" (depois da revisão do código novo). Três passos: as tabelas, conferir o IBS e a
+  CBS de um documento como a SEFAZ confere, e simular o cálculo.
+- **As fontes:**
+  - a **NT 2025.002-RTC v1.53** (Portal da NF-e, 30/10/2026), com as regras de validação do grupo UB: as contas do
+    IBS e da CBS (o valor é a base vezes a alíquota, ou a alíquota efetiva quando há redução, menos o diferimento e
+    o tributo devolvido, com tolerância de 0,01; a alíquota efetiva em 4 casas), as alíquotas de cada ano e os grupos
+    que cada CST e cada classificação exigem ou não permitem;
+  - a **Tabela de Classificação Tributária do IBS e CBS** (Informe Técnico 2025.002, v1.71, de 30/10/2026): os
+    indicadores que essas regras consultam;
+  - a **LC 214/2025**, no texto do Planalto: 0,1% de IBS da UF e 0,9% de CBS em 2026 (arts. 343 e 346), 0,05% de IBS
+    da UF e 0,05% do município em 2027 e 2028 (art. 344), e a CBS de 2027 em diante como a alíquota de referência do
+    Senado (art. 349) menos 0,1 ponto percentual (art. 347), ainda não publicada.
+- **Passo 1, as tabelas (pronto):**
+  - o `cst_ibs_cbs` ganhou os 8 indicadores da aba de CST (1 = o grupo é exigido, 0 = não é permitido, pela legenda
+    da planilha), em português, com o nome oficial na ajuda;
+  - a `classificacao_ibs_cbs` ganhou os 7 indicadores de grupo da aba de cClassTrib, a permissão em cada documento
+    (NF-e, NFC-e, CT-e, CT-e OS, NFS-e, BP-e, NF3e, NFCom e os outros, 17 ao todo) e o tipo de receita do Simples
+    (`tpRBSN`) e o de doação (`tpDoacao`), com o significado tirado das abas da própria planilha;
+  - a tabela nova `aliquotas_ibs_cbs`, escrita à mão da LC e da NT, uma linha por período. A CBS de 2027 em diante
+    fica vazia, com a observação, até o Senado publicar.
+  - O formato das duas tabelas da Reforma mudou: quem tem o pacote de antes e chama `tabelas_atualizar()` recebe "a
+    tabela mudou de formato: atualize o pacote", e nenhuma tabela é trocada (tudo ou nada).
 
 ## O robô das tabelas
 

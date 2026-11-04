@@ -3,14 +3,24 @@
 
 NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
-  "classificacao_ibs_cbs", "meios_pagamento", "bandeiras_cartao", "municipios", "codigos_dos_campos", "fontes"
+  "classificacao_ibs_cbs", "aliquotas_ibs_cbs", "meios_pagamento", "bandeiras_cartao", "municipios",
+  "codigos_dos_campos", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em")
 COLUNAS_DE_INDICADOR = c(
-  "permitido_na_nfe", "permitido_na_nfce", "comunicacao", "transporte", "devolucao", "retorno", "anulacao",
-  "remessa", "combustivel", "exclusivo_ibs_cbs"
+  "comunicacao", "transporte", "devolucao", "retorno", "anulacao", "remessa", "combustivel", "exclusivo_ibs_cbs",
+  # O CST do IBS e da CBS: 1 = o grupo é exigido, 0 = não é permitido.
+  "grupo_ibs_cbs", "grupo_monofasico", "grupo_reducao", "grupo_diferimento", "grupo_transferencia_credito",
+  "grupo_credito_presumido_zfm", "grupo_ajuste_competencia", "redutor_base_calculo",
+  # A classificação do IBS e da CBS: os grupos, como no CST, e os documentos em que ela pode ser usada.
+  "grupo_tributacao_regular", "grupo_credito_presumido", "grupo_monofasico_padrao", "grupo_monofasico_retencao",
+  "grupo_monofasico_retido", "grupo_diferenca_biocombustivel", "grupo_estorno_credito",
+  "permitido_na_nfe", "permitido_na_nfce", "permitido_na_nfe_abi", "permitido_no_cte", "permitido_no_cte_os",
+  "permitido_no_bpe", "permitido_no_bpe_ta", "permitido_no_bpe_tm", "permitido_na_nf3e", "permitido_na_nfse",
+  "permitido_na_nfse_via", "permitido_na_nfcom", "permitido_na_nfag", "permitido_na_nfgas", "permitido_na_dere",
+  "permitido_na_dir", "permitido_na_duimp"
 )
-COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs")
+COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs", "aliquota_ibs_uf", "aliquota_ibs_municipio", "aliquota_cbs")
 # Cada tabela é lida do disco uma vez por sessão.
 tabelas_ja_lidas = new.env(parent = emptyenv())
 # As tabelas que tabelas_atualizar() baixa: as fiscais e os endereços da SEFAZ. Vêm do ramo main do repositório, onde
@@ -28,7 +38,7 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 #' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
-#' `"classificacao_ibs_cbs"`, `"meios_pagamento"`, `"bandeiras_cartao"`,
+#' `"classificacao_ibs_cbs"`, `"aliquotas_ibs_cbs"`, `"meios_pagamento"`, `"bandeiras_cartao"`,
 #' `"municipios"`, `"codigos_dos_campos"` (o que quer dizer cada código dos
 #' campos dos documentos) ou `"fontes"` (de onde veio cada uma, com a data).
 #' Cada tabela de códigos traz o `codigo`, a descrição e a vigência:
@@ -54,11 +64,42 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' - `"cst_icms"`: o CST do ICMS, de dois dígitos, como vai na NF-e.
 #' - `"csosn"`: o código do Simples Nacional, sem datas (veja abaixo).
 #' - `"cst_ipi"`, `"cst_pis"` e `"cst_cofins"`: o CST de cada um.
-#' - `"cst_ibs_cbs"`: o CST do IBS e da CBS (Reforma Tributária).
+#' - `"cst_ibs_cbs"`: o CST do IBS e da CBS (Reforma Tributária), com os
+#'   indicadores dos grupos que cada CST exige (1) ou não permite (0) no
+#'   documento, com o nome oficial entre parênteses: `grupo_ibs_cbs`
+#'   (`ind_gIBSCBS`), `grupo_monofasico` (`ind_gIBSCBSMono`), `grupo_reducao`
+#'   (`ind_gRed`), `grupo_diferimento` (`ind_gDif`),
+#'   `grupo_transferencia_credito` (`ind_gTransfCred`),
+#'   `grupo_credito_presumido_zfm` (`ind_gCredPresIBSZFM`),
+#'   `grupo_ajuste_competencia` (`ind_gAjusteCompet`) e `redutor_base_calculo`
+#'   (`ind_RedutorBC`). São os indicadores que as regras de validação da NT
+#'   2025.002 consultam.
 #' - `"classificacao_ibs_cbs"`: a classificação tributária do IBS e da CBS
 #'   (`cClassTrib`), com o `cst` dela, o `nome`, a `descricao`, o artigo da LC
 #'   214/2025 (`artigo_lc_214`), o `tipo_aliquota`, os percentuais de redução
-#'   (`reducao_ibs` e `reducao_cbs`) e se vale na NF-e e na NFC-e.
+#'   (`reducao_ibs` e `reducao_cbs`); os indicadores dos grupos, como no CST:
+#'   `grupo_tributacao_regular` (`ind_gTribRegular`), `grupo_credito_presumido`
+#'   (`ind_gCredPresOper`), `grupo_monofasico_padrao` (`ind_gMonoPadrao`),
+#'   `grupo_monofasico_retencao` (`ind_gMonoReten`), `grupo_monofasico_retido`
+#'   (`ind_gMonoRet`), `grupo_diferenca_biocombustivel` (`ind_gpBioDiferenca`) e
+#'   `grupo_estorno_credito` (`ind_gEstornoCred`); os documentos em que ela pode
+#'   ser usada (1 = pode): `permitido_na_nfe`, `permitido_na_nfce`,
+#'   `permitido_na_nfe_abi`, `permitido_no_cte`, `permitido_no_cte_os`,
+#'   `permitido_no_bpe`, `permitido_no_bpe_ta`, `permitido_no_bpe_tm`,
+#'   `permitido_na_nf3e`, `permitido_na_nfse`, `permitido_na_nfse_via`,
+#'   `permitido_na_nfcom`, `permitido_na_nfag`, `permitido_na_nfgas`,
+#'   `permitido_na_dere`, `permitido_na_dir` e `permitido_na_duimp` (da coluna
+#'   `ind` de cada um na planilha); o tipo de receita bruta do Simples Nacional
+#'   (`tipo_receita_simples`, o `tpRBSN`) e o uso do indicador de doação
+#'   (`doacao`, o `tpDoacao`), cada um com a `_descricao` das abas da planilha.
+#' - `"aliquotas_ibs_cbs"`: as alíquotas do IBS (da UF e do município) e da
+#'   CBS de cada período, em percentual, com a `base_legal` e a `observacao`:
+#'   0,1% de IBS da UF e 0,9% de CBS em 2026 (LC 214/2025, arts. 343 e 346; a
+#'   NT 2025.002 aceita as mesmas em 2025), 0,05% de IBS da UF e 0,05% do
+#'   município em 2027 e 2028 (art. 344). A CBS de 2027 em diante é a alíquota
+#'   de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
+#'   (art. 347) e fica vazia enquanto não for publicada. Sem `codigo`: uma
+#'   linha por período (`inicio` e `fim`).
 #' - `"meios_pagamento"`: os meios de pagamento da tabela do Portal da NF-e
 #'   (dinheiro, cartão, boleto, PIX...), com a `observacao` de quando usar
 #'   cada um. É o código do `tPag` da NF-e e do meio de pagamento vinculado da
@@ -97,7 +138,8 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   `"origem"` (origem da mercadoria), `"cst_icms"` (CST do ICMS), `"csosn"`
 #'   (CSOSN, do Simples Nacional), `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`,
 #'   `"cst_ibs_cbs"` (CST do IBS e da CBS), `"classificacao_ibs_cbs"`
-#'   (cClassTrib da Reforma), `"meios_pagamento"` (dinheiro, cartão, PIX...),
+#'   (cClassTrib da Reforma), `"aliquotas_ibs_cbs"` (as alíquotas de cada
+#'   ano), `"meios_pagamento"` (dinheiro, cartão, PIX...),
 #'   `"bandeiras_cartao"`, `"municipios"` (código IBGE, nome e UF),
 #'   `"codigos_dos_campos"` (o significado dos códigos dos documentos) ou
 #'   `"fontes"` (de onde veio cada tabela).
@@ -107,7 +149,8 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' @source CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 #'   2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 #'   Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
-#'   30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
+#'   30/10/2026); as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
+#'   2025.002-RTC v1.53 (Portal da NF-e, 30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
 #'   (30/10/2026). Municípios: a API de localidades do IBGE
 #'   (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de
 #'   cartão: as tabelas do Portal da NF-e (publicadas em 06/03/2026 e

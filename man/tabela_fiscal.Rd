@@ -7,7 +7,8 @@
 CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
-30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
+30/10/2026); as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
+2025.002-RTC v1.53 (Portal da NF-e, 30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
 (30/10/2026). Municípios: a API de localidades do IBGE
 (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de
 cartão: as tabelas do Portal da NF-e (publicadas em 06/03/2026 e
@@ -30,7 +31,8 @@ tabela_fiscal(nome_da_tabela)
 \code{"origem"} (origem da mercadoria), \code{"cst_icms"} (CST do ICMS), \code{"csosn"}
 (CSOSN, do Simples Nacional), \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"},
 \code{"cst_ibs_cbs"} (CST do IBS e da CBS), \code{"classificacao_ibs_cbs"}
-(cClassTrib da Reforma), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
+(cClassTrib da Reforma), \code{"aliquotas_ibs_cbs"} (as alíquotas de cada
+ano), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
 \code{"bandeiras_cartao"}, \code{"municipios"} (código IBGE, nome e UF),
 \code{"codigos_dos_campos"} (o significado dos códigos dos documentos) ou
 \code{"fontes"} (de onde veio cada tabela).}
@@ -44,7 +46,7 @@ Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
 Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
-\code{"classificacao_ibs_cbs"}, \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
+\code{"classificacao_ibs_cbs"}, \code{"aliquotas_ibs_cbs"}, \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
 \code{"municipios"}, \code{"codigos_dos_campos"} (o que quer dizer cada código dos
 campos dos documentos) ou \code{"fontes"} (de onde veio cada uma, com a data).
 Cada tabela de códigos traz o \code{codigo}, a descrição e a vigência:
@@ -72,11 +74,42 @@ códigos 0 a 2 mudaram de descrição em 2013, quando vieram os de 3 a 8.
 \item \code{"cst_icms"}: o CST do ICMS, de dois dígitos, como vai na NF-e.
 \item \code{"csosn"}: o código do Simples Nacional, sem datas (veja abaixo).
 \item \code{"cst_ipi"}, \code{"cst_pis"} e \code{"cst_cofins"}: o CST de cada um.
-\item \code{"cst_ibs_cbs"}: o CST do IBS e da CBS (Reforma Tributária).
+\item \code{"cst_ibs_cbs"}: o CST do IBS e da CBS (Reforma Tributária), com os
+indicadores dos grupos que cada CST exige (1) ou não permite (0) no
+documento, com o nome oficial entre parênteses: \code{grupo_ibs_cbs}
+(\code{ind_gIBSCBS}), \code{grupo_monofasico} (\code{ind_gIBSCBSMono}), \code{grupo_reducao}
+(\code{ind_gRed}), \code{grupo_diferimento} (\code{ind_gDif}),
+\code{grupo_transferencia_credito} (\code{ind_gTransfCred}),
+\code{grupo_credito_presumido_zfm} (\code{ind_gCredPresIBSZFM}),
+\code{grupo_ajuste_competencia} (\code{ind_gAjusteCompet}) e \code{redutor_base_calculo}
+(\code{ind_RedutorBC}). São os indicadores que as regras de validação da NT
+2025.002 consultam.
 \item \code{"classificacao_ibs_cbs"}: a classificação tributária do IBS e da CBS
 (\code{cClassTrib}), com o \code{cst} dela, o \code{nome}, a \code{descricao}, o artigo da LC
 214/2025 (\code{artigo_lc_214}), o \code{tipo_aliquota}, os percentuais de redução
-(\code{reducao_ibs} e \code{reducao_cbs}) e se vale na NF-e e na NFC-e.
+(\code{reducao_ibs} e \code{reducao_cbs}); os indicadores dos grupos, como no CST:
+\code{grupo_tributacao_regular} (\code{ind_gTribRegular}), \code{grupo_credito_presumido}
+(\code{ind_gCredPresOper}), \code{grupo_monofasico_padrao} (\code{ind_gMonoPadrao}),
+\code{grupo_monofasico_retencao} (\code{ind_gMonoReten}), \code{grupo_monofasico_retido}
+(\code{ind_gMonoRet}), \code{grupo_diferenca_biocombustivel} (\code{ind_gpBioDiferenca}) e
+\code{grupo_estorno_credito} (\code{ind_gEstornoCred}); os documentos em que ela pode
+ser usada (1 = pode): \code{permitido_na_nfe}, \code{permitido_na_nfce},
+\code{permitido_na_nfe_abi}, \code{permitido_no_cte}, \code{permitido_no_cte_os},
+\code{permitido_no_bpe}, \code{permitido_no_bpe_ta}, \code{permitido_no_bpe_tm},
+\code{permitido_na_nf3e}, \code{permitido_na_nfse}, \code{permitido_na_nfse_via},
+\code{permitido_na_nfcom}, \code{permitido_na_nfag}, \code{permitido_na_nfgas},
+\code{permitido_na_dere}, \code{permitido_na_dir} e \code{permitido_na_duimp} (da coluna
+\code{ind} de cada um na planilha); o tipo de receita bruta do Simples Nacional
+(\code{tipo_receita_simples}, o \code{tpRBSN}) e o uso do indicador de doação
+(\code{doacao}, o \code{tpDoacao}), cada um com a \verb{_descricao} das abas da planilha.
+\item \code{"aliquotas_ibs_cbs"}: as alíquotas do IBS (da UF e do município) e da
+CBS de cada período, em percentual, com a \code{base_legal} e a \code{observacao}:
+0,1\% de IBS da UF e 0,9\% de CBS em 2026 (LC 214/2025, arts. 343 e 346; a
+NT 2025.002 aceita as mesmas em 2025), 0,05\% de IBS da UF e 0,05\% do
+município em 2027 e 2028 (art. 344). A CBS de 2027 em diante é a alíquota
+de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
+(art. 347) e fica vazia enquanto não for publicada. Sem \code{codigo}: uma
+linha por período (\code{inicio} e \code{fim}).
 \item \code{"meios_pagamento"}: os meios de pagamento da tabela do Portal da NF-e
 (dinheiro, cartão, boleto, PIX...), com a \code{observacao} de quando usar
 cada um. É o código do \code{tPag} da NF-e e do meio de pagamento vinculado da

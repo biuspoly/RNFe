@@ -4,7 +4,7 @@
 test_that("cada tabela tem as colunas e os tipos certos", {
   for (nome in c("origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs")) {
     tabela = tabela_fiscal(nome)
-    expect_identical(names(tabela), c("codigo", "descricao", "inicio", "fim"))
+    expect_identical(names(tabela)[1:4], c("codigo", "descricao", "inicio", "fim"))
     expect_s3_class(tabela$inicio, "Date")
     expect_s3_class(tabela$fim, "Date")
     expect_false(any(is.na(tabela$codigo) | is.na(tabela$descricao)))
@@ -14,6 +14,45 @@ test_that("cada tabela tem as colunas e os tipos certos", {
   expect_type(cfop$devolucao, "integer")
   expect_false(any(duplicated(cfop$codigo)))
   expect_error(tabela_fiscal("tabela_que_nao_existe"), "Tabela desconhecida")
+})
+
+test_that("o CST e a classifica\u00e7\u00e3o do IBS e da CBS trazem os indicadores da planilha oficial", {
+  # Os valores da planilha do Informe Técnico 2025.002 de 30/10/2026: na aba de CST, 1 = o grupo é exigido e 0 = não
+  # é permitido; na de cClassTrib, os indicadores de cada documento e as abas tpRBSN e tpDoacao.
+  cst = tabela_fiscal("cst_ibs_cbs")
+  expect_identical(cst$grupo_reducao[cst$codigo == "011"], 1L)
+  expect_identical(cst$grupo_diferimento[cst$codigo == "510"], 1L)
+  expect_identical(cst$grupo_ibs_cbs[cst$codigo == "400"], 0L)
+  expect_identical(cst$grupo_monofasico[cst$codigo == "620"], 1L)
+  expect_identical(cst$redutor_base_calculo[cst$codigo == "222"], 1L)
+  for (coluna in names(cst)[5:12]) {
+    expect_type(cst[[coluna]], "integer")
+    expect_false(anyNA(cst[[coluna]]))
+  }
+  classificacao = tabela_fiscal("classificacao_ibs_cbs")
+  integral = classificacao[classificacao$codigo == "000001", ]
+  expect_identical(c(integral$permitido_na_nfe, integral$permitido_no_cte, integral$permitido_na_nfse), c(1L, 1L, 1L))
+  expect_identical(integral$tipo_receita_simples, "1")
+  expect_identical(integral$tipo_receita_simples_descricao, "Receita bruta - interna")
+  expect_false(anyNA(classificacao$tipo_receita_simples_descricao))
+  expect_false(anyNA(classificacao$doacao_descricao))
+  expect_identical(sum(classificacao$grupo_tributacao_regular), 31L)
+  expect_type(classificacao$permitido_na_duimp, "integer")
+})
+
+test_that("as al\u00edquotas do IBS e da CBS de cada per\u00edodo", {
+  aliquotas = tabela_fiscal("aliquotas_ibs_cbs")
+  expect_s3_class(aliquotas$inicio, "Date")
+  de_2026 = aliquotas[aliquotas$inicio == as.Date("2026-01-01"), ]
+  expect_identical(c(de_2026$aliquota_ibs_uf, de_2026$aliquota_ibs_municipio, de_2026$aliquota_cbs), c(0.1, 0, 0.9))
+  expect_identical(de_2026$base_legal, "LC 214/2025, arts. 343 e 346")
+  de_2027 = aliquotas[aliquotas$inicio == as.Date("2027-01-01"), ]
+  expect_identical(de_2027$fim, as.Date("2028-12-31"))
+  expect_identical(c(de_2027$aliquota_ibs_uf, de_2027$aliquota_ibs_municipio), c(0.05, 0.05))
+  # A CBS de 2027 depende da alíquota de referência do Senado, que ainda não foi publicada.
+  expect_true(is.na(de_2027$aliquota_cbs))
+  # Os períodos não se sobrepõem.
+  expect_true(all(utils::head(aliquotas$fim, -1) < utils::tail(aliquotas$inicio, -1)))
 })
 
 test_that("CFOP como na tabela oficial da NF-e", {

@@ -207,17 +207,66 @@ baixar_bandeiras_de_cartao = function(pasta_temporaria) {
   list(tabela = bandeiras_cartao, titulo = planilha_baixada$titulo)
 }
 
+# Os indicadores da Tabela de Classificação Tributária do IBS e CBS: o nome na planilha e o nome no pacote. Nos
+# indicadores de grupo, 1 quer dizer que o grupo é exigido e 0 que não é permitido (a legenda da aba de CST); nos de
+# documento, 1 quer dizer que a classificação pode ser usada nele.
+INDICADORES_DA_CLASSIFICACAO = c(
+  indNFe = "permitido_na_nfe", indNFCe = "permitido_na_nfce", indNFeABI = "permitido_na_nfe_abi",
+  indCTe = "permitido_no_cte", indCTeOS = "permitido_no_cte_os", indBPe = "permitido_no_bpe",
+  indBPeTA = "permitido_no_bpe_ta", indBPeTM = "permitido_no_bpe_tm", indNF3e = "permitido_na_nf3e",
+  indNFSe = "permitido_na_nfse", "indNFSe Via" = "permitido_na_nfse_via", indNFCom = "permitido_na_nfcom",
+  indNFAg = "permitido_na_nfag", indNFGas = "permitido_na_nfgas", indDERE = "permitido_na_dere",
+  indDIR = "permitido_na_dir", indDUIMP = "permitido_na_duimp",
+  ind_gTribRegular = "grupo_tributacao_regular", ind_gCredPresOper = "grupo_credito_presumido",
+  ind_gMonoPadrao = "grupo_monofasico_padrao", ind_gMonoReten = "grupo_monofasico_retencao",
+  ind_gMonoRet = "grupo_monofasico_retido", ind_gpBioDiferenca = "grupo_diferenca_biocombustivel",
+  ind_gEstornoCred = "grupo_estorno_credito"
+)
+INDICADORES_DO_CST = c(
+  ind_gIBSCBS = "grupo_ibs_cbs", ind_gIBSCBSMono = "grupo_monofasico", ind_gRed = "grupo_reducao",
+  ind_gDif = "grupo_diferimento", ind_gTransfCred = "grupo_transferencia_credito",
+  ind_gCredPresIBSZFM = "grupo_credito_presumido_zfm", ind_gAjusteCompet = "grupo_ajuste_competencia",
+  ind_RedutorBC = "redutor_base_calculo"
+)
+
+# Uma aba pequena da planilha (tpRBSN, tpDoacao): abaixo do título, o código numa coluna e o significado na seguinte.
+# O readxl pula a coluna vazia da esquerda, então a coluna do código é achada pelo conteúdo. Devolve o significado de
+# cada código.
+significados_da_aba = function(arquivo_da_planilha, nome_da_aba) {
+  aba = readxl::read_excel(arquivo_da_planilha, sheet = nome_da_aba, col_names = FALSE, col_types = "text")
+  coluna_do_codigo = NA
+  for (posicao in seq_len(ncol(aba) - 1)) {
+    if (any(grepl("^[0-9]+$", aba[[posicao]]))) {
+      coluna_do_codigo = posicao
+      break
+    }
+  }
+  if (is.na(coluna_do_codigo)) {
+    stop("A aba ", nome_da_aba, " da tabela de classificação do IBS e CBS não tem mais os códigos", call. = FALSE)
+  }
+  codigos = aba[[coluna_do_codigo]]
+  textos = aba[[coluna_do_codigo + 1]]
+  linhas_de_codigo = !is.na(codigos) & grepl("^[0-9]+$", codigos) & !is.na(textos)
+  significados = trimws(textos[linhas_de_codigo])
+  names(significados) = codigos[linhas_de_codigo]
+  significados
+}
+
 # A Tabela de Classificação Tributária do IBS e CBS (Informe Técnico 2025.002): a primeira aba tem as
-# classificações (cClassTrib), a segunda os CST. O Excel guarda alguns CST como número (400 em vez de
-# "400"): todo CST volta a ter três dígitos.
+# classificações (cClassTrib), a segunda os CST, e as abas tpRBSN e tpDoacao o significado desses dois códigos. O
+# Excel guarda alguns CST como número (400 em vez de "400"): todo CST volta a ter três dígitos.
 baixar_tabelas_da_reforma = function(pasta_temporaria) {
   planilha_baixada = baixar_do_portal("Tabela de Classificação Tributária do IBS e CBS", pasta_temporaria)
   classificacoes = readxl::read_excel(planilha_baixada$arquivo, sheet = 1)
   conferir_colunas(classificacoes, c(
     "CST-IBS/CBS", "cClassTrib", "Nome cClassTrib", "Descrição cClassTrib", "LC 214/25", "Tipo de Alíquota",
-    "pRedIBS", "pRedCBS", "dIniVig", "dFimVig", "indNFe", "indNFCe"
+    "pRedIBS", "pRedCBS", "dIniVig", "dFimVig", "tpRBSN", "tpDoacao", names(INDICADORES_DA_CLASSIFICACAO)
   ), "de classificação do IBS e CBS")
   classificacoes = classificacoes[!is.na(classificacoes[["cClassTrib"]]), ]
+  significados_do_tipo_de_receita = significados_da_aba(planilha_baixada$arquivo, "tpRBSN")
+  significados_da_doacao = significados_da_aba(planilha_baixada$arquivo, "tpDoacao")
+  tipo_de_receita = as.character(as.integer(classificacoes[["tpRBSN"]]))
+  doacao = as.character(as.integer(classificacoes[["tpDoacao"]]))
   classificacao = data.frame(
     codigo = classificacoes[["cClassTrib"]],
     cst = sprintf("%03d", as.integer(classificacoes[["CST-IBS/CBS"]])),
@@ -228,12 +277,23 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
     reducao_ibs = as.numeric(classificacoes[["pRedIBS"]]),
     reducao_cbs = as.numeric(classificacoes[["pRedCBS"]]),
     inicio = as.Date(classificacoes[["dIniVig"]]),
-    fim = as.Date(classificacoes[["dFimVig"]]),
-    permitido_na_nfe = as.integer(classificacoes[["indNFe"]]),
-    permitido_na_nfce = as.integer(classificacoes[["indNFCe"]])
+    fim = as.Date(classificacoes[["dFimVig"]])
   )
+  for (nome_na_planilha in names(INDICADORES_DA_CLASSIFICACAO)) {
+    classificacao[[INDICADORES_DA_CLASSIFICACAO[[nome_na_planilha]]]] = as.integer(classificacoes[[nome_na_planilha]])
+  }
+  classificacao$tipo_receita_simples = tipo_de_receita
+  classificacao$tipo_receita_simples_descricao = unname(significados_do_tipo_de_receita[tipo_de_receita])
+  classificacao$doacao = doacao
+  classificacao$doacao_descricao = unname(significados_da_doacao[doacao])
+  if (anyNA(classificacao$tipo_receita_simples_descricao) || anyNA(classificacao$doacao_descricao)) {
+    stop("A tabela de classificação do IBS e CBS tem tpRBSN ou tpDoacao sem significado na aba deles", call. = FALSE)
+  }
+
   csts = readxl::read_excel(planilha_baixada$arquivo, sheet = 2)
-  conferir_colunas(csts, c("CST-IBS/CBS", "Descrição CST-IBS/CBS"), "de CST do IBS e CBS")
+  # Na planilha de 30/10/2026 um nome vem com espaço ("ind_ gCredPresIBSZFM").
+  names(csts) = sub("^ind_ ", "ind_", names(csts))
+  conferir_colunas(csts, c("CST-IBS/CBS", "Descrição CST-IBS/CBS", names(INDICADORES_DO_CST)), "de CST do IBS e CBS")
   csts = csts[!is.na(csts[["CST-IBS/CBS"]]), ]
   cst = data.frame(
     codigo = sprintf("%03d", as.integer(csts[["CST-IBS/CBS"]])),
@@ -241,6 +301,9 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
     inicio = as.Date(NA),
     fim = as.Date(NA)
   )
+  for (nome_na_planilha in names(INDICADORES_DO_CST)) {
+    cst[[INDICADORES_DO_CST[[nome_na_planilha]]]] = as.integer(csts[[nome_na_planilha]])
+  }
   list(classificacao = classificacao, cst = cst, titulo = planilha_baixada$titulo)
 }
 
@@ -607,10 +670,11 @@ fontes = rbind(fontes, data.frame(
   baixada_em = baixada_em
 ))
 
-# A tabela dos códigos dos campos não é baixada: é escrita à mão a partir da documentação dos schemas e conferida
-# por ferramentas/conferir_codigos_dos_campos.R. A linha dela nas fontes passa adiante como está.
+# A tabela dos códigos dos campos e a das alíquotas do IBS e da CBS não são baixadas: são escritas à mão, a primeira a
+# partir da documentação dos schemas (conferida por ferramentas/conferir_codigos_dos_campos.R), a segunda a partir da
+# LC 214/2025 e da NT 2025.002. A linha de cada uma nas fontes passa adiante como está.
 fontes_de_antes = utils::read.csv(file.path(PASTA_DAS_TABELAS, "fontes.csv"), colClasses = "character", na.strings = "")
-fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela == "codigos_dos_campos", ])
+fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela %in% c("codigos_dos_campos", "aliquotas_ibs_cbs"), ])
 
 # O IBGE não aceita conexão dos servidores do GitHub (tempo esgotado em 120 s, testado em 30/10/2026). Quando ele não
 # responde, fica a cópia que já está no pacote, com a data dela, e as outras tabelas seguem; o aviso aparece na

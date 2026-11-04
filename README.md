@@ -319,7 +319,8 @@ do ITI). O PyNFe conecta sem isso porque desliga a verificação (`verify=False`
 ```r
 tabela_fiscal("cfop")                    # título, nota explicativa e indicadores de cada CFOP
 tabela_fiscal("ncm")                     # a NCM vigente, com a descrição completa de cada código
-tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_cbs"
+tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_cbs", com os indicadores de cada um
+tabela_fiscal("aliquotas_ibs_cbs")       # as alíquotas do IBS e da CBS de cada ano, com a base legal
 tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
 tabela_fiscal("municipios")              # os municípios do IBGE: código de 7 dígitos, nome e UF
 tabela_fiscal("meios_pagamento")         # o tPag da NF-e e da NFC-e (PIX, boleto...), e "bandeiras_cartao"
@@ -330,6 +331,11 @@ tabela_fiscal("fontes")                  # de onde veio cada tabela, com a vers�
 Cada linha tem o `inicio` e o `fim` da vigência (vazios no CSOSN e nos municípios, que a fonte não data). As
 fontes são oficiais: o Portal da NF-e (CFOP, Reforma, meios de pagamento e bandeiras), o Portal Único
 Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios).
+O CST e a classificação do IBS e da CBS trazem os indicadores da planilha oficial (os grupos que cada um exige ou
+não permite no documento e os documentos em que a classificação vale), que as regras de validação da NT 2025.002
+consultam. As alíquotas do IBS e da CBS vêm da LC 214/2025: 0,1% de IBS da UF e 0,9% de CBS em 2026, e 0,05% de IBS
+da UF e do município em 2027 e 2028; a CBS de 2027 em diante depende da alíquota de referência que o Senado fixa, e
+fica vazia até ser publicada.
 `ferramentas/gerar_tabelas.R` baixa tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso
 quando alguma tabela muda. Os municípios ficam de fora do robô, porque o IBGE não aceita conexão dos
 servidores do GitHub.
