@@ -1,0 +1,904 @@
+# Conferência do IBS e da CBS de uma NF-e ou NFC-e pelas regras de validação da NT 2025.002-RTC v1.53 (grupos UB e
+# W): o que a SEFAZ rejeitaria. O código e a mensagem de cada regra estão em inst/extdata/regras_ibs_cbs.csv, tirados do
+# texto da NT; os indicadores de cada CST e de cada classificação, nas tabelas cst_ibs_cbs e classificacao_ibs_cbs; as
+# alíquotas de cada ano, na aliquotas_ibs_cbs.
+
+#' @include ler_xml.R tabelas.R
+NULL
+
+CAMINHO_DAS_NOTAS_PARA_CONFERIR = "//NFe/infNFe"
+# As regras de conta do item aceitam 0,01 a mais ou a menos; a soma da compra governamental, 0,04. As somas dos totais
+# não dizem tolerância: têm de bater até o centavo. A alíquota efetiva vai em 4 casas, arredondada na última.
+TOLERANCIA_DOS_VALORES = 0.01
+TOLERANCIA_DA_COMPRA_GOVERNAMENTAL = 0.04
+TOLERANCIA_DO_CENTAVO = 0.005
+TOLERANCIA_DA_ALIQUOTA_EFETIVA = 0.00005
+TOLERANCIA_DO_PERCENTUAL = 0.000001
+FOLGA_DE_PONTO_FLUTUANTE = 1e-9
+
+# A partir do infNFe.
+CAMPOS_DA_NOTA_PARA_CONFERIR = ler_campos("
+coluna                        caminho                                         tipo
+numero                        ide/nNF                                         inteiro
+modelo                        ide/mod                                         texto
+data_emissao                  ide/dhEmi                                       texto
+finalidade                    ide/finNFe                                      texto
+tipo_nota_debito              ide/tpNFDebito                                  texto
+tipo_nota_credito             ide/tpNFCredito                                 texto
+redutor_compra_governamental  ide/gCompraGov/pRedutor                         numero
+municipio_emitente            emit/enderEmit/cMun                             texto
+municipio_destinatario        dest/enderDest/cMun                             texto
+total_base                    total/IBSCBSTot/vBCIBSCBS                       numero
+total_diferimento_ibs_uf      total/IBSCBSTot/gIBS/gIBSUF/vDif                numero
+total_devolvido_ibs_uf        total/IBSCBSTot/gIBS/gIBSUF/vDevTrib            numero
+total_ibs_uf                  total/IBSCBSTot/gIBS/gIBSUF/vIBSUF              numero
+total_diferimento_ibs_mun     total/IBSCBSTot/gIBS/gIBSMun/vDif               numero
+total_devolvido_ibs_mun       total/IBSCBSTot/gIBS/gIBSMun/vDevTrib           numero
+total_ibs_mun                 total/IBSCBSTot/gIBS/gIBSMun/vIBSMun            numero
+total_ibs                     total/IBSCBSTot/gIBS/vIBS                       numero
+total_credito_presumido_ibs   total/IBSCBSTot/gIBS/vCredPres                  numero
+total_diferimento_cbs         total/IBSCBSTot/gCBS/vDif                       numero
+total_devolvido_cbs           total/IBSCBSTot/gCBS/vDevTrib                   numero
+total_cbs                     total/IBSCBSTot/gCBS/vCBS                       numero
+total_credito_presumido_cbs   total/IBSCBSTot/gCBS/vCredPres                  numero
+total_estorno_ibs             total/IBSCBSTot/gEstornoCred/vIBSEstCred        numero
+total_estorno_cbs             total/IBSCBSTot/gEstornoCred/vCBSEstCred        numero
+")
+
+GRUPOS_DA_NOTA_PARA_CONFERIR = ler_campos("
+coluna                    caminho
+tem_total_ibs_cbs         total/IBSCBSTot
+tem_compra_governamental  ide/gCompraGov
+")
+
+# A partir de cada det. Os grupos da UF, do município e da CBS têm os mesmos campos, cada um com o seu final no nome.
+CAMPOS_DO_ITEM_PARA_CONFERIR = ler_campos("
+coluna                          caminho                                                       tipo
+item                            @nItem                                                        inteiro
+ncm                             prod/NCM                                                      texto
+bem_movel_usado                 prod/indBemMovelUsado                                         texto
+cst                             imposto/IBSCBS/CST                                            texto
+classificacao                   imposto/IBSCBS/cClassTrib                                     texto
+base                            imposto/IBSCBS/gIBSCBS/vBC                                    numero
+aliquota_ibs_uf                 imposto/IBSCBS/gIBSCBS/gIBSUF/pIBSUF                          numero
+diferimento_ibs_uf              imposto/IBSCBS/gIBSCBS/gIBSUF/gDif/pDif                       numero
+valor_diferimento_ibs_uf        imposto/IBSCBS/gIBSCBS/gIBSUF/gDif/vDif                       numero
+valor_devolvido_ibs_uf          imposto/IBSCBS/gIBSCBS/gIBSUF/gDevTrib/vDevTrib               numero
+reducao_ibs_uf                  imposto/IBSCBS/gIBSCBS/gIBSUF/gRed/pRedAliq                   numero
+aliquota_efetiva_ibs_uf         imposto/IBSCBS/gIBSCBS/gIBSUF/gRed/pAliqEfet                  numero
+valor_ibs_uf                    imposto/IBSCBS/gIBSCBS/gIBSUF/vIBSUF                          numero
+aliquota_ibs_mun                imposto/IBSCBS/gIBSCBS/gIBSMun/pIBSMun                        numero
+diferimento_ibs_mun             imposto/IBSCBS/gIBSCBS/gIBSMun/gDif/pDif                      numero
+valor_diferimento_ibs_mun       imposto/IBSCBS/gIBSCBS/gIBSMun/gDif/vDif                      numero
+valor_devolvido_ibs_mun         imposto/IBSCBS/gIBSCBS/gIBSMun/gDevTrib/vDevTrib              numero
+reducao_ibs_mun                 imposto/IBSCBS/gIBSCBS/gIBSMun/gRed/pRedAliq                  numero
+aliquota_efetiva_ibs_mun        imposto/IBSCBS/gIBSCBS/gIBSMun/gRed/pAliqEfet                 numero
+valor_ibs_mun                   imposto/IBSCBS/gIBSCBS/gIBSMun/vIBSMun                        numero
+valor_ibs                       imposto/IBSCBS/gIBSCBS/vIBS                                   numero
+aliquota_cbs                    imposto/IBSCBS/gIBSCBS/gCBS/pCBS                              numero
+diferimento_cbs                 imposto/IBSCBS/gIBSCBS/gCBS/gDif/pDif                         numero
+valor_diferimento_cbs           imposto/IBSCBS/gIBSCBS/gCBS/gDif/vDif                         numero
+percentual_devolvido_cbs        imposto/IBSCBS/gIBSCBS/gCBS/gDevTrib/pDevTrib                 numero
+valor_devolvido_cbs             imposto/IBSCBS/gIBSCBS/gCBS/gDevTrib/vDevTrib                 numero
+reducao_cbs                     imposto/IBSCBS/gIBSCBS/gCBS/gRed/pRedAliq                     numero
+aliquota_efetiva_cbs            imposto/IBSCBS/gIBSCBS/gCBS/gRed/pAliqEfet                    numero
+valor_cbs                       imposto/IBSCBS/gIBSCBS/gCBS/vCBS                              numero
+cst_regular                     imposto/IBSCBS/gIBSCBS/gTribRegular/CSTReg                    texto
+classificacao_regular           imposto/IBSCBS/gIBSCBS/gTribRegular/cClassTribReg             texto
+aliquota_regular_ibs_uf         imposto/IBSCBS/gIBSCBS/gTribRegular/pAliqEfetRegIBSUF         numero
+valor_regular_ibs_uf            imposto/IBSCBS/gIBSCBS/gTribRegular/vTribRegIBSUF             numero
+aliquota_regular_ibs_mun        imposto/IBSCBS/gIBSCBS/gTribRegular/pAliqEfetRegIBSMun        numero
+valor_regular_ibs_mun           imposto/IBSCBS/gIBSCBS/gTribRegular/vTribRegIBSMun            numero
+aliquota_regular_cbs            imposto/IBSCBS/gIBSCBS/gTribRegular/pAliqEfetRegCBS           numero
+valor_regular_cbs               imposto/IBSCBS/gIBSCBS/gTribRegular/vTribRegCBS               numero
+compra_governamental_ibs_uf     imposto/IBSCBS/gIBSCBS/gTribCompraGov/vTribIBSUF              numero
+compra_governamental_ibs_mun    imposto/IBSCBS/gIBSCBS/gTribCompraGov/vTribIBSMun             numero
+compra_governamental_cbs        imposto/IBSCBS/gIBSCBS/gTribCompraGov/vTribCBS                numero
+credito_presumido_ibs           imposto/IBSCBS/gCredPresOper/gIBSCredPres/vCredPres           numero
+credito_presumido_cbs           imposto/IBSCBS/gCredPresOper/gCBSCredPres/vCredPres           numero
+estorno_ibs                     imposto/IBSCBS/gEstornoCred/vIBSEstCred                       numero
+estorno_cbs                     imposto/IBSCBS/gEstornoCred/vCBSEstCred                       numero
+")
+
+GRUPOS_DO_ITEM_PARA_CONFERIR = ler_campos("
+coluna                          caminho
+tem_ibs_cbs                     imposto/IBSCBS
+tem_grupo_ibs_cbs               imposto/IBSCBS/gIBSCBS
+tem_monofasico                  imposto/IBSCBS/gIBSCBSMono
+tem_transferencia_credito       imposto/IBSCBS/gTransfCred
+tem_ajuste_competencia          imposto/IBSCBS/gAjusteCompet
+tem_estorno_credito             imposto/IBSCBS/gEstornoCred
+tem_credito_presumido           imposto/IBSCBS/gCredPresOper
+tem_credito_presumido_ibs       imposto/IBSCBS/gCredPresOper/gIBSCredPres
+tem_credito_presumido_zfm       imposto/IBSCBS/gCredPresIBSZFM
+tem_diferimento_ibs_uf          imposto/IBSCBS/gIBSCBS/gIBSUF/gDif
+tem_devolucao_ibs_uf            imposto/IBSCBS/gIBSCBS/gIBSUF/gDevTrib
+tem_reducao_ibs_uf              imposto/IBSCBS/gIBSCBS/gIBSUF/gRed
+tem_diferimento_ibs_mun         imposto/IBSCBS/gIBSCBS/gIBSMun/gDif
+tem_devolucao_ibs_mun           imposto/IBSCBS/gIBSCBS/gIBSMun/gDevTrib
+tem_reducao_ibs_mun             imposto/IBSCBS/gIBSCBS/gIBSMun/gRed
+tem_diferimento_cbs             imposto/IBSCBS/gIBSCBS/gCBS/gDif
+tem_devolucao_cbs               imposto/IBSCBS/gIBSCBS/gCBS/gDevTrib
+tem_reducao_cbs                 imposto/IBSCBS/gIBSCBS/gCBS/gRed
+tem_area_incentivada_cbs        imposto/IBSCBS/gIBSCBS/gCBS/gALCZFMCBS
+tem_tributacao_regular          imposto/IBSCBS/gIBSCBS/gTribRegular
+tem_compra_governamental_item   imposto/IBSCBS/gIBSCBS/gTribCompraGov
+")
+
+# Os municípios das áreas incentivadas da regra UB56-10 (exceção 3): a CBS pode ser zero quando o emitente e o
+# destinatário estão na mesma área (os três municípios da ZFM entre si, e cada ALC com os seus).
+AREAS_INCENTIVADAS = ler_campos("
+municipio area
+1301902   ZFM
+1302603   ZFM
+1303569   ZFM
+1304062   ALC1
+1100106   ALC2
+1400100   ALC3
+1400159   ALC3
+1600303   ALC4
+1600600   ALC4
+1200104   ALC5
+1200252   ALC5
+1200203   ALC5
+")
+AREAS_INCENTIVADAS$municipio = as.character(AREAS_INCENTIVADAS$municipio)
+
+# O que cada regra consulta nas tabelas do IBS e da CBS: a tabela, a coluna (ou "existe", para o código) e o campo do
+# item com o código; os modelos em que a consulta vale. É por aqui que a conferência acha, para uma nota antiga, a
+# mudança da tabela que a SEFAZ talvez não usou (tabela_fiscal("mudancas_ibs_cbs")).
+CONSULTAS_DAS_REGRAS = ler_campos("
+regra     tabela                 coluna                       campo_do_codigo        modelos
+UB13-10   cst_ibs_cbs            existe                       cst                    55/65
+UB13-20   cst_ibs_cbs            grupo_ibs_cbs                cst                    55/65
+UB13-30   cst_ibs_cbs            grupo_ibs_cbs                cst                    55/65
+UB13-39   cst_ibs_cbs            grupo_monofasico             cst                    55/65
+UB13-44   cst_ibs_cbs            grupo_transferencia_credito  cst                    55/65
+UB13-45   cst_ibs_cbs            grupo_transferencia_credito  cst                    55/65
+UB112-10  cst_ibs_cbs            grupo_ajuste_competencia     cst                    55/65
+UB112-20  cst_ibs_cbs            grupo_ajuste_competencia     cst                    55/65
+UB131-20  cst_ibs_cbs            grupo_credito_presumido_zfm  cst                    55/65
+UB131-30  cst_ibs_cbs            grupo_credito_presumido_zfm  cst                    55/65
+UB22-10   cst_ibs_cbs            grupo_diferimento            cst                    55/65
+UB22-20   cst_ibs_cbs            grupo_diferimento            cst                    55/65
+UB40-10   cst_ibs_cbs            grupo_diferimento            cst                    55/65
+UB40-20   cst_ibs_cbs            grupo_diferimento            cst                    55/65
+UB59-10   cst_ibs_cbs            grupo_diferimento            cst                    55/65
+UB59-20   cst_ibs_cbs            grupo_diferimento            cst                    55/65
+UB26-10   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB26-20   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB45-10   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB45-20   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB64-10   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB64-20   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB27-10   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB46-10   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB65-10   cst_ibs_cbs            grupo_reducao                cst                    55/65
+UB27-10   classificacao_ibs_cbs  reducao_ibs                  classificacao          55/65
+UB46-10   classificacao_ibs_cbs  reducao_ibs                  classificacao          55/65
+UB65-10   classificacao_ibs_cbs  reducao_cbs                  classificacao          55/65
+UB82a-10  cst_ibs_cbs            grupo_ibs_cbs                cst                    55/65
+UB69-10   cst_ibs_cbs            existe                       cst_regular            55/65
+UB14-10   classificacao_ibs_cbs  existe                       classificacao          55/65
+UB14-25   classificacao_ibs_cbs  permitido_na_nfe             classificacao          55
+UB14-25   classificacao_ibs_cbs  permitido_na_nfce            classificacao          65
+UB68-10   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
+UB68-11   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
+UB116-10  classificacao_ibs_cbs  grupo_estorno_credito        classificacao          55/65
+UB116-20  classificacao_ibs_cbs  grupo_estorno_credito        classificacao          55/65
+UB120-20  classificacao_ibs_cbs  grupo_credito_presumido      classificacao          55/65
+UB18-10   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
+UB37-10   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
+UB56-10   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
+UB56-20   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
+UB70-10   classificacao_ibs_cbs  existe                       classificacao_regular  55/65
+")
+
+# As somas dos totais (regras W): a regra, o campo do total, a coluna do total na nota e a coluna do item que soma.
+TOTAIS_PARA_CONFERIR = ler_campos("
+regra    campo                       coluna_do_total               coluna_do_item
+W35-10   vBCIBSCBS                   total_base                    base
+W38-10   gIBSUF/vDif                 total_diferimento_ibs_uf      valor_diferimento_ibs_uf
+W39-10   gIBSUF/vDevTrib             total_devolvido_ibs_uf        valor_devolvido_ibs_uf
+W41-10   gIBSUF/vIBSUF               total_ibs_uf                  valor_ibs_uf
+W43-10   gIBSMun/vDif                total_diferimento_ibs_mun     valor_diferimento_ibs_mun
+W44-10   gIBSMun/vDevTrib            total_devolvido_ibs_mun       valor_devolvido_ibs_mun
+W46-10   gIBSMun/vIBSMun             total_ibs_mun                 valor_ibs_mun
+W47-10   gIBS/vIBS                   total_ibs                     valor_ibs
+W48-10   gIBS/vCredPres              total_credito_presumido_ibs   credito_presumido_ibs
+W53-10   gCBS/vDif                   total_diferimento_cbs         valor_diferimento_cbs
+W54-10   gCBS/vDevTrib               total_devolvido_cbs           valor_devolvido_cbs
+W56-10   gCBS/vCBS                   total_cbs                     valor_cbs
+W56a-10  gCBS/vCredPres              total_credito_presumido_cbs   credito_presumido_cbs
+W59f-10  gEstornoCred/vIBSEstCred    total_estorno_ibs             estorno_ibs
+W59g-10  gEstornoCred/vCBSEstCred    total_estorno_cbs             estorno_cbs
+")
+
+#' Conferir o IBS e a CBS de uma NF-e ou NFC-e
+#'
+#' Confere o IBS e a CBS de cada item e os totais da NF-e e da NFC-e pelas
+#' regras de validação da Nota Técnica 2025.002-RTC: o que a SEFAZ rejeitaria
+#' ao autorizar a nota. Cada conferência diz a regra (por exemplo, `UB35-10`),
+#' o código e a mensagem da rejeição, o que está no documento, o que a regra
+#' espera e, nas contas, a diferença. Lê o XML como [nfe_ler()]: um arquivo,
+#' vários ou o próprio texto.
+#'
+#' O que é conferido:
+#' - os códigos: o CST e a classificação tributária (`cClassTrib`) existem, a
+#'   classificação é do CST e vale no modelo do documento;
+#' - os grupos: o que cada CST e cada classificação exige ou não permite no
+#'   item (diferimento, redução, devolução, tributação regular, transferência
+#'   de crédito, ajuste de competência, estorno de crédito, crédito presumido,
+#'   compra governamental), pelos indicadores da planilha oficial (veja
+#'   `tabela_fiscal("cst_ibs_cbs")` e `tabela_fiscal("classificacao_ibs_cbs")`);
+#' - as alíquotas do ano (veja `tabela_fiscal("aliquotas_ibs_cbs")`), com as
+#'   exceções da NT: a tributação regular, a devolução, as notas de crédito e,
+#'   na CBS, as áreas incentivadas (ZFM e ALC);
+#' - as contas: o percentual de redução da classificação, a alíquota efetiva
+#'   (em 4 casas), o diferimento, a devolução da CBS, os valores do IBS da UF,
+#'   do município e da CBS, o IBS do item, a tributação regular e a soma da
+#'   compra governamental, com a tolerância que cada regra dá (0,01 nas contas
+#'   do item, 0,04 na compra governamental), depois de arredondar o valor
+#'   calculado em 2 casas, como o campo;
+#' - os totais (`IBSCBSTot`): a soma de cada campo nos itens, até o centavo.
+#'
+#' Cada regra vale como a SEFAZ a aplicava no dia da emissão (`dhEmi`):
+#' - a regra só é conferida na nota emitida depois de ela entrar em produção
+#'   (pelo cronograma da NT: 10/11/2025 para a maioria, 02/02/2026 e
+#'   03/08/2026 para as que entraram depois);
+#' - quando a regra mudou depois da emissão, ou quando a linha do CST ou da
+#'   classificação que ela consulta mudou numa versão da tabela que talvez
+#'   ainda não estivesse em produção (veja
+#'   `tabela_fiscal("mudancas_ibs_cbs")`), o que não confere pela regra e pela
+#'   tabela de hoje vem com `confere` vazio e o motivo, em vez de errado.
+#'
+#' Fica de fora, por enquanto: a tributação monofásica de combustíveis, que a
+#' NT reformulou na versão 1.50, com produção marcada para novembro de 2026;
+#' o crédito presumido, que consulta a tabela de crédito presumido
+#' (`cCredPres`), ainda fora do RNFe; o Imposto Seletivo e a regra da base de
+#' cálculo (UB16-10), que a NT deixa para implementação futura; a exigência
+#' do grupo monofásico pelo CST (UB13-40), também futura; e o CT-e e os outros
+#' documentos, que têm as notas técnicas deles. Uma regra que se aplica mas
+#' não dá para conferir (a CBS de 2027 em diante, sem a alíquota de referência
+#' publicada) vem com `confere` vazio e o motivo.
+#'
+#' @section notas:
+#' Uma linha por nota: `chave`, `numero`, `modelo`, `data_emissao`,
+#' `itens_com_ibs_cbs` (quantos itens têm o grupo `IBSCBS`),
+#' `regras_conferidas`, `regras_erradas` e `regras_sem_conferir` (que se
+#' aplicavam mas não deu para conferir).
+#'
+#' @section conferencias:
+#' Uma linha por regra que se aplica a cada item (ou à nota, nos totais):
+#' `chave`, `item` (o `nItem`; vazio nos totais), `regra`, `campo` (o campo ou
+#' o grupo conferido), `no_documento` (o que está no XML), `esperado` (o que a
+#' regra espera), `diferenca` (nas contas: o do documento menos o calculado),
+#' `confere` (`TRUE`, `FALSE` ou vazio quando não deu para conferir),
+#' `codigo_sefaz` e `mensagem` (a rejeição que a SEFAZ daria, como na NT) e
+#' `observacao`. Só as que não conferem ou não deu para conferir, a menos que
+#' `todas_as_regras = TRUE`.
+#'
+#' @param arquivos Os XMLs da NF-e ou da NFC-e: o caminho de um arquivo, um
+#'   vetor com vários ou o próprio texto do XML (começando por `<`).
+#' @param todas_as_regras `TRUE` traz em `conferencias` também as regras que
+#'   conferem.
+#' @return Uma lista com os `data.frame`s `notas`, `conferencias` e `arquivos`
+#'   (o que foi lido e o motivo do que não deu, como em [nfe_ler()]).
+#' @source Nota Técnica 2025.002-RTC, versão 1.53 (Portal Nacional da NF-e,
+#'   publicada em 30/10/2026), seção 7, regras de validação dos grupos UB
+#'   (IBS e CBS do item) e W (totais); a Tabela de Classificação Tributária do
+#'   IBS e CBS (Informe Técnico 2025.002, v1.71); e a LC 214/2025 (as alíquotas
+#'   de cada ano).
+#' @seealso [nfe_ler()] para ler as notas; [tabela_fiscal()] para as tabelas
+#'   que a conferência consulta.
+#' @examples
+#' nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
+#' conferida = ibs_cbs_conferir(nota)
+#' conferida$notas
+#' todas = ibs_cbs_conferir(nota, todas_as_regras = TRUE)$conferencias
+#' todas[todas$item %in% 1, c("regra", "campo", "no_documento", "esperado", "confere")]
+#' @export
+ibs_cbs_conferir = function(arquivos, todas_as_regras = FALSE) {
+  if (!isTRUE(todas_as_regras) && !isFALSE(todas_as_regras)) {
+    stop("Informe todas_as_regras = TRUE ou FALSE.", call. = FALSE)
+  }
+  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS_PARA_CONFERIR, "uma NF-e", colunas_da_conferencia, FALSE)
+  colunas_vazias = colunas_da_conferencia(NULL, NA_character_, FALSE)
+  notas = juntar_tabela(arquivos_lidos, "notas", colunas_vazias$notas)
+  conferencias = juntar_tabela(arquivos_lidos, "conferencias", colunas_vazias$conferencias)
+  if (!todas_as_regras) {
+    conferencias = conferencias[!(conferencias$confere %in% TRUE), ]
+    rownames(conferencias) = NULL
+  }
+  list(notas = notas, conferencias = conferencias, arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas"))
+}
+
+# As colunas das tabelas de um arquivo: a conferência de cada nota e o resumo delas. Com xml_lido NULL, vêm vazias, com
+# os nomes e os tipos certos.
+colunas_da_conferencia = function(xml_lido, nome_do_arquivo, todos_os_campos) {
+  if (is.null(xml_lido)) {
+    xml_lido = xml2::read_xml("<vazio/>")
+  }
+  elementos_das_notas = buscar_todos(xml_lido, CAMINHO_DAS_NOTAS_PARA_CONFERIR)
+  elementos_dos_itens = buscar_todos(elementos_das_notas, "det")
+  notas = data.frame(
+    c(list(chave = chave_de_cada(elementos_das_notas, "infNFe")),
+      valores_dos_campos(elementos_das_notas, CAMPOS_DA_NOTA_PARA_CONFERIR),
+      presenca_dos_grupos(elementos_das_notas, GRUPOS_DA_NOTA_PARA_CONFERIR))
+  )
+  notas$data_emissao = as.Date(substr(notas$data_emissao, 1, 10))
+  itens = data.frame(
+    c(list(chave = chave_de_cada(elementos_dos_itens, "infNFe")),
+      valores_dos_campos(elementos_dos_itens, CAMPOS_DO_ITEM_PARA_CONFERIR),
+      presenca_dos_grupos(elementos_dos_itens, GRUPOS_DO_ITEM_PARA_CONFERIR))
+  )
+  itens = preparar_os_itens(itens[itens$tem_ibs_cbs, ], notas)
+  conferencias = rbind(
+    conferir_os_codigos(itens),
+    conferir_os_grupos(itens),
+    conferir_as_aliquotas(itens),
+    conferir_as_contas(itens),
+    conferir_os_totais(itens, notas)
+  )
+  conferencias = completar_com_as_regras(conferencias, notas, itens)
+
+  resumo = data.frame(
+    chave = notas$chave, numero = notas$numero, modelo = notas$modelo, data_emissao = notas$data_emissao,
+    itens_com_ibs_cbs = as.integer(table(factor(itens$chave, levels = notas$chave))),
+    regras_conferidas = as.integer(table(factor(conferencias$chave[!is.na(conferencias$confere)], levels = notas$chave))),
+    regras_erradas = as.integer(table(factor(conferencias$chave[conferencias$confere %in% FALSE], levels = notas$chave))),
+    regras_sem_conferir = as.integer(table(factor(conferencias$chave[is.na(conferencias$confere)], levels = notas$chave)))
+  )
+  list(notas = as.list(resumo), conferencias = as.list(conferencias))
+}
+
+# TRUE onde o grupo existe em cada elemento.
+presenca_dos_grupos = function(elementos, grupos) {
+  colunas = list()
+  for (numero_do_grupo in seq_len(nrow(grupos))) {
+    achados = xml2::xml_find_first(elementos, grupos$caminho[numero_do_grupo], ns = SEM_NAMESPACE)
+    colunas[[grupos$coluna[numero_do_grupo]]] = !is.na(xml2::xml_name(achados))
+  }
+  colunas
+}
+
+# Ao lado de cada item: os campos da nota dele, os indicadores do CST e da classificação, as alíquotas do ano e a
+# alíquota que entra na conta (a efetiva, quando há redução).
+preparar_os_itens = function(itens, notas) {
+  da_nota = match(itens$chave, notas$chave)
+  for (coluna in c("modelo", "data_emissao", "finalidade", "tipo_nota_debito", "tipo_nota_credito",
+                   "redutor_compra_governamental", "municipio_emitente", "municipio_destinatario",
+                   "tem_compra_governamental")) {
+    itens[[coluna]] = notas[[coluna]][da_nota]
+  }
+  tabela_de_cst = tabela_fiscal("cst_ibs_cbs")
+  tabela_de_classificacao = tabela_fiscal("classificacao_ibs_cbs")
+  do_cst = match(itens$cst, tabela_de_cst$codigo)
+  da_classificacao = match(itens$classificacao, tabela_de_classificacao$codigo)
+  itens$cst_existe = !is.na(do_cst)
+  itens$classificacao_existe = !is.na(da_classificacao)
+  itens$cst_da_classificacao = tabela_de_classificacao$cst[da_classificacao]
+  itens$permitido_no_modelo = ifelse(itens$modelo == "65", tabela_de_classificacao$permitido_na_nfce[da_classificacao],
+                                     tabela_de_classificacao$permitido_na_nfe[da_classificacao])
+  # Os indicadores do CST e da classificação: 1 = o grupo é exigido, 0 = não é permitido; NA quando o código não existe.
+  for (indicador in c("grupo_ibs_cbs", "grupo_monofasico", "grupo_reducao", "grupo_diferimento",
+                      "grupo_transferencia_credito", "grupo_credito_presumido_zfm", "grupo_ajuste_competencia")) {
+    itens[[indicador]] = tabela_de_cst[[indicador]][do_cst]
+  }
+  for (indicador in c("grupo_tributacao_regular", "grupo_estorno_credito", "grupo_credito_presumido",
+                      "reducao_ibs", "reducao_cbs")) {
+    itens[[paste0(indicador, "_da_classificacao")]] = tabela_de_classificacao[[indicador]][da_classificacao]
+  }
+  aliquotas = tabela_fiscal("aliquotas_ibs_cbs")
+  linha_do_ano = rep(NA_integer_, nrow(itens))
+  for (numero_da_linha in seq_len(nrow(aliquotas))) {
+    no_periodo = !is.na(itens$data_emissao) & itens$data_emissao >= aliquotas$inicio[numero_da_linha] &
+      itens$data_emissao <= aliquotas$fim[numero_da_linha]
+    linha_do_ano[no_periodo] = numero_da_linha
+  }
+  itens$tem_aliquota_do_ano = !is.na(linha_do_ano)
+  itens$aliquota_do_ano_ibs_uf = aliquotas$aliquota_ibs_uf[linha_do_ano]
+  itens$aliquota_do_ano_ibs_mun = aliquotas$aliquota_ibs_municipio[linha_do_ano]
+  itens$aliquota_do_ano_cbs = aliquotas$aliquota_cbs[linha_do_ano]
+  itens$aliquota_usada_ibs_uf = ifelse(itens$tem_reducao_ibs_uf, itens$aliquota_efetiva_ibs_uf, itens$aliquota_ibs_uf)
+  itens$aliquota_usada_ibs_mun = ifelse(itens$tem_reducao_ibs_mun, itens$aliquota_efetiva_ibs_mun, itens$aliquota_ibs_mun)
+  itens$aliquota_usada_cbs = ifelse(itens$tem_reducao_cbs, itens$aliquota_efetiva_cbs, itens$aliquota_cbs)
+  area_do_emitente = AREAS_INCENTIVADAS$area[match(itens$municipio_emitente, AREAS_INCENTIVADAS$municipio)]
+  area_do_destinatario = AREAS_INCENTIVADAS$area[match(itens$municipio_destinatario, AREAS_INCENTIVADAS$municipio)]
+  itens$mesma_area_incentivada = !is.na(area_do_emitente) & area_do_emitente %in% area_do_destinatario
+  itens$ncm_fora_da_area_incentivada = ncm_sem_cbs_zero_na_area_incentivada(itens$ncm)
+  itens
+}
+
+# Os NCM que a exceção 3 da regra UB56-10 deixa de fora: armas e munições (93), fumo (24), bebidas alcoólicas (2203 a
+# 2208), automóveis de passageiros (8703) e perfumaria e toucador (33, menos 3303 a 3307).
+ncm_sem_cbs_zero_na_area_incentivada = function(ncms) {
+  posicao = substr(ncms, 1, 4)
+  capitulo = substr(ncms, 1, 2)
+  capitulo %in% c("93", "24") | posicao %in% c("2203", "2204", "2205", "2206", "2207", "2208", "8703") |
+    (capitulo == "33" & !(posicao %in% c("3303", "3304", "3305", "3306", "3307")))
+}
+
+conferir_os_codigos = function(itens) {
+  linhas = list()
+  linhas[[1]] = linhas_da_regra("UB13-10", itens, aplica = !is.na(itens$cst), confere = itens$cst_existe, campo = "CST",
+                                no_documento = itens$cst, esperado = "um CST da tabela do IBS e da CBS")
+  linhas[[2]] = linhas_da_regra("UB14-10", itens, aplica = !is.na(itens$classificacao), confere = itens$classificacao_existe,
+                                campo = "cClassTrib", no_documento = itens$classificacao,
+                                esperado = "uma classifica\u00e7\u00e3o da tabela do IBS e da CBS")
+  linhas[[3]] = linhas_da_regra("UB14-20", itens, aplica = itens$classificacao_existe & !is.na(itens$cst),
+                                confere = itens$cst_da_classificacao == itens$cst, campo = "cClassTrib",
+                                no_documento = paste0("CST ", itens$cst, ", cClassTrib ", itens$classificacao),
+                                esperado = paste0("CST ", itens$cst_da_classificacao))
+  linhas[[4]] = linhas_da_regra("UB14-25", itens, aplica = itens$classificacao_existe,
+                                confere = itens$permitido_no_modelo %in% 1, campo = "cClassTrib",
+                                no_documento = paste0("cClassTrib ", itens$classificacao, " no modelo ", itens$modelo),
+                                esperado = "classifica\u00e7\u00e3o permitida no modelo")
+  linhas[[5]] = linhas_da_regra("UB69-10", itens, aplica = itens$tem_tributacao_regular,
+                                confere = itens$cst_regular %in% tabela_fiscal("cst_ibs_cbs")$codigo,
+                                campo = "gTribRegular/CSTReg", no_documento = itens$cst_regular,
+                                esperado = "um CST da tabela do IBS e da CBS")
+  linhas[[6]] = linhas_da_regra("UB70-10", itens, aplica = itens$tem_tributacao_regular,
+                                confere = itens$classificacao_regular %in% tabela_fiscal("classificacao_ibs_cbs")$codigo,
+                                campo = "gTribRegular/cClassTribReg", no_documento = itens$classificacao_regular,
+                                esperado = "uma classifica\u00e7\u00e3o da tabela do IBS e da CBS")
+  do.call(rbind, linhas)
+}
+
+conferir_os_grupos = function(itens) {
+  com_grupo = itens$tem_grupo_ibs_cbs
+  nota_de_perda = itens$tipo_nota_debito %in% "07"
+  linhas = list(
+    regra_de_grupo("UB13-20", itens, itens$grupo_ibs_cbs, 0, itens$tem_grupo_ibs_cbs, "gIBSCBS"),
+    regra_de_grupo("UB13-30", itens, itens$grupo_ibs_cbs, 1, itens$tem_grupo_ibs_cbs, "gIBSCBS", !nota_de_perda),
+    regra_de_grupo("UB13-39", itens, itens$grupo_monofasico, 0, itens$tem_monofasico, "gIBSCBSMono"),
+    regra_de_grupo("UB13-44", itens, itens$grupo_transferencia_credito, 0, itens$tem_transferencia_credito, "gTransfCred"),
+    regra_de_grupo("UB13-45", itens, itens$grupo_transferencia_credito, 1, itens$tem_transferencia_credito, "gTransfCred"),
+    regra_de_grupo("UB112-10", itens, itens$grupo_ajuste_competencia, 0, itens$tem_ajuste_competencia, "gAjusteCompet"),
+    regra_de_grupo("UB112-20", itens, itens$grupo_ajuste_competencia, 1, itens$tem_ajuste_competencia, "gAjusteCompet"),
+    regra_de_grupo("UB131-20", itens, itens$grupo_credito_presumido_zfm, 0, itens$tem_credito_presumido_zfm,
+                   "gCredPresIBSZFM"),
+    regra_de_grupo("UB131-30", itens, itens$grupo_credito_presumido_zfm, 1, itens$tem_credito_presumido_zfm,
+                   "gCredPresIBSZFM"),
+    regra_de_grupo("UB22-10", itens, itens$grupo_diferimento, 0, itens$tem_diferimento_ibs_uf, "gIBSUF/gDif", com_grupo),
+    regra_de_grupo("UB22-20", itens, itens$grupo_diferimento, 1, itens$tem_diferimento_ibs_uf, "gIBSUF/gDif", com_grupo),
+    regra_de_grupo("UB40-10", itens, itens$grupo_diferimento, 1, itens$tem_diferimento_ibs_mun, "gIBSMun/gDif", com_grupo),
+    regra_de_grupo("UB40-20", itens, itens$grupo_diferimento, 0, itens$tem_diferimento_ibs_mun, "gIBSMun/gDif", com_grupo),
+    regra_de_grupo("UB59-10", itens, itens$grupo_diferimento, 1, itens$tem_diferimento_cbs, "gCBS/gDif", com_grupo),
+    regra_de_grupo("UB59-20", itens, itens$grupo_diferimento, 0, itens$tem_diferimento_cbs, "gCBS/gDif", com_grupo),
+    regra_de_grupo("UB68-10", itens, itens$grupo_tributacao_regular_da_classificacao, 1, itens$tem_tributacao_regular,
+                   "gTribRegular"),
+    regra_de_grupo("UB68-11", itens, itens$grupo_tributacao_regular_da_classificacao, 0, itens$tem_tributacao_regular,
+                   "gTribRegular"),
+    regra_de_grupo("UB116-10", itens, itens$grupo_estorno_credito_da_classificacao, 0, itens$tem_estorno_credito,
+                   "gEstornoCred", !nota_de_perda),
+    regra_de_grupo("UB120-20", itens, itens$grupo_credito_presumido_da_classificacao, 0, itens$tem_credito_presumido,
+                   "gCredPresOper", !(itens$bem_movel_usado %in% "1"))
+  )
+  # O estorno de crédito também é exigido na nota de débito de perda em estoque (tpNFDebito 07).
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB116-20", itens, aplica = itens$grupo_estorno_credito_da_classificacao %in% 1 | nota_de_perda,
+    confere = itens$tem_estorno_credito, campo = "gEstornoCred", no_documento = texto_da_presenca(itens$tem_estorno_credito),
+    esperado = "informado"
+  )
+  # Na NFC-e não há crédito presumido (as regras são só do modelo 65; o filtro pelo modelo vem depois).
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB120-10", itens, aplica = TRUE, confere = !itens$tem_credito_presumido, campo = "gCredPresOper",
+    no_documento = texto_da_presenca(itens$tem_credito_presumido), esperado = "n\u00e3o informado"
+  )
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB131-10", itens, aplica = TRUE, confere = !itens$tem_credito_presumido_zfm, campo = "gCredPresIBSZFM",
+    no_documento = texto_da_presenca(itens$tem_credito_presumido_zfm), esperado = "n\u00e3o informado"
+  )
+  # A redução: o CST que não permite aceita o grupo só na compra governamental, com o percentual zero (exceção das
+  # regras UB26-10, UB45-10 e UB64-10); o grupo é exigido pelo CST ou pela compra governamental.
+  for (parte in c("ibs_uf", "ibs_mun", "cbs")) {
+    regras = switch(parte, ibs_uf = c("UB26-10", "UB26-20"), ibs_mun = c("UB45-10", "UB45-20"), cbs = c("UB64-10", "UB64-20"))
+    grupo = switch(parte, ibs_uf = "gIBSUF/gRed", ibs_mun = "gIBSMun/gRed", cbs = "gCBS/gRed")
+    tem_reducao = itens[[paste0("tem_reducao_", parte)]]
+    percentual_de_reducao = itens[[paste0("reducao_", parte)]]
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regras[1], itens, aplica = com_grupo & itens$grupo_reducao %in% 0,
+      confere = !tem_reducao | (itens$tem_compra_governamental & percentual_de_reducao %in% 0), campo = grupo,
+      no_documento = texto_da_presenca(tem_reducao), esperado = "n\u00e3o informado (ou zero na compra governamental)"
+    )
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regras[2], itens, aplica = com_grupo & (itens$grupo_reducao %in% 1 | itens$tem_compra_governamental),
+      confere = tem_reducao, campo = grupo, no_documento = texto_da_presenca(tem_reducao), esperado = "informado"
+    )
+  }
+  # A devolução de tributos (cashback) não é permitida no IBS; na CBS, não na NFC-e, e na NF-e com o percentual.
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB24-10", itens, aplica = com_grupo, confere = !itens$tem_devolucao_ibs_uf, campo = "gIBSUF/gDevTrib",
+    no_documento = texto_da_presenca(itens$tem_devolucao_ibs_uf), esperado = "n\u00e3o informado"
+  )
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB43-10", itens, aplica = com_grupo, confere = !itens$tem_devolucao_ibs_mun, campo = "gIBSMun/gDevTrib",
+    no_documento = texto_da_presenca(itens$tem_devolucao_ibs_mun), esperado = "n\u00e3o informado"
+  )
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB62-10", itens, aplica = com_grupo, confere = !itens$tem_devolucao_cbs, campo = "gCBS/gDevTrib",
+    no_documento = texto_da_presenca(itens$tem_devolucao_cbs), esperado = "n\u00e3o informado"
+  )
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB62a-10", itens, aplica = itens$tem_devolucao_cbs, confere = !is.na(itens$percentual_devolvido_cbs),
+    campo = "gCBS/gDevTrib/pDevTrib", no_documento = texto_do_numero(itens$percentual_devolvido_cbs, 4),
+    esperado = "informado"
+  )
+  # A compra governamental: com o gCompraGov na nota, o item traz a composição (gTribCompraGov), menos no CST que não
+  # permite o grupo do IBS e da CBS; sem ele, não traz.
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB82a-10", itens, aplica = itens$tem_compra_governamental & !(itens$grupo_ibs_cbs %in% 0),
+    confere = itens$tem_compra_governamental_item, campo = "gTribCompraGov",
+    no_documento = texto_da_presenca(itens$tem_compra_governamental_item), esperado = "informado"
+  )
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB82a-30", itens, aplica = !itens$tem_compra_governamental, confere = !itens$tem_compra_governamental_item,
+    campo = "gTribCompraGov", no_documento = texto_da_presenca(itens$tem_compra_governamental_item),
+    esperado = "n\u00e3o informado"
+  )
+  do.call(rbind, linhas)
+}
+
+# A alíquota do ano: 0 na classificação com tributação regular; a regra não vale na devolução e em algumas notas de
+# crédito. Na CBS, a exceção 3 da UB56-10 aceita zero quando o emitente e o destinatário estão na mesma área incentivada
+# e o NCM não é um dos de fora; de 2027 em diante (UB56-20), a CBS é zero com o grupo da área incentivada.
+conferir_as_aliquotas = function(itens) {
+  tributacao_regular = itens$grupo_tributacao_regular_da_classificacao %in% 1
+  sem_regra_do_ibs = itens$finalidade %in% "4" | itens$tipo_nota_credito %in% c("03", "04", "06")
+  linhas = list()
+  for (parte in c("ibs_uf", "ibs_mun")) {
+    regra = switch(parte, ibs_uf = "UB18-10", ibs_mun = "UB37-10")
+    campo = switch(parte, ibs_uf = "gIBSUF/pIBSUF", ibs_mun = "gIBSMun/pIBSMun")
+    aliquota = itens[[paste0("aliquota_", parte)]]
+    esperada = ifelse(tributacao_regular, 0, itens[[paste0("aliquota_do_ano_", parte)]])
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regra, itens, aplica = itens$tem_grupo_ibs_cbs & itens$tem_aliquota_do_ano & !sem_regra_do_ibs,
+      confere = igual_com_tolerancia(aliquota, esperada, TOLERANCIA_DO_PERCENTUAL), campo = campo,
+      no_documento = texto_da_aliquota(aliquota), esperado = texto_da_aliquota(esperada)
+    )
+  }
+  esperada_cbs = ifelse(tributacao_regular, 0, itens$aliquota_do_ano_cbs)
+  zero_na_area_incentivada = !tributacao_regular & itens$aliquota_cbs %in% 0 & itens$mesma_area_incentivada &
+    !itens$ncm_fora_da_area_incentivada
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB56-10", itens,
+    aplica = itens$tem_grupo_ibs_cbs & !is.na(itens$aliquota_do_ano_cbs) & !(itens$tipo_nota_credito %in% "04"),
+    confere = igual_com_tolerancia(itens$aliquota_cbs, esperada_cbs, TOLERANCIA_DO_PERCENTUAL) | zero_na_area_incentivada,
+    campo = "gCBS/pCBS", no_documento = texto_da_aliquota(itens$aliquota_cbs),
+    esperado = ifelse(tributacao_regular, "0 (classifica\u00e7\u00e3o com tributa\u00e7\u00e3o regular)",
+                      paste0(texto_da_aliquota(esperada_cbs), " (ou 0 na mesma \u00e1rea incentivada, ZFM ou ALC)"))
+  )
+  # De 2027 em diante a alíquota de referência ainda não foi publicada: só dá para conferir o zero obrigatório.
+  sem_aliquota_publicada = itens$tem_grupo_ibs_cbs & itens$tem_aliquota_do_ano & is.na(itens$aliquota_do_ano_cbs) &
+    !sem_regra_do_ibs
+  cbs_zero = tributacao_regular | itens$tem_area_incentivada_cbs
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB56-20", itens, aplica = sem_aliquota_publicada,
+    confere = ifelse(cbs_zero, igual_com_tolerancia(itens$aliquota_cbs, 0, TOLERANCIA_DO_PERCENTUAL), NA),
+    campo = "gCBS/pCBS", no_documento = texto_da_aliquota(itens$aliquota_cbs),
+    esperado = ifelse(cbs_zero, "0", "a al\u00edquota de refer\u00eancia do ano menos 0,1 ponto percentual"),
+    observacao = ifelse(cbs_zero, NA, "A al\u00edquota de refer\u00eancia da CBS deste ano ainda n\u00e3o foi publicada.")
+  )
+  do.call(rbind, linhas)
+}
+
+conferir_as_contas = function(itens) {
+  linhas = list()
+  fator_da_compra_governamental = ifelse(itens$tem_compra_governamental,
+                                         1 - valor_ou_zero(itens$redutor_compra_governamental) / 100, 1)
+  for (parte in c("ibs_uf", "ibs_mun", "cbs")) {
+    regras = switch(parte,
+                    ibs_uf = c("UB27-10", "UB28-10", "UB23-10", "UB35-10"),
+                    ibs_mun = c("UB46-10", "UB47-10", "UB42-10", "UB54-10"),
+                    cbs = c("UB65-10", "UB66-10", "UB61-10", "UB67-10"))
+    grupo = switch(parte, ibs_uf = "gIBSUF", ibs_mun = "gIBSMun", cbs = "gCBS")
+    campo_do_valor = switch(parte, ibs_uf = "vIBSUF", ibs_mun = "vIBSMun", cbs = "vCBS")
+    tem_reducao = itens[[paste0("tem_reducao_", parte)]]
+    percentual_de_reducao = itens[[paste0("reducao_", parte)]]
+    reducao_da_classificacao = if (parte == "cbs") itens$reducao_cbs_da_classificacao else itens$reducao_ibs_da_classificacao
+    aliquota = itens[[paste0("aliquota_", parte)]]
+    aliquota_efetiva = itens[[paste0("aliquota_efetiva_", parte)]]
+    aliquota_usada = itens[[paste0("aliquota_usada_", parte)]]
+    valor_do_diferimento = itens[[paste0("valor_diferimento_", parte)]]
+    valor_devolvido = itens[[paste0("valor_devolvido_", parte)]]
+    valor = itens[[paste0("valor_", parte)]]
+
+    # O percentual de redução é o da classificação; com o CST que não permite redução, só o zero da compra governamental.
+    exige_reducao = itens$grupo_reducao %in% 1
+    reducao_esperada = ifelse(exige_reducao, reducao_da_classificacao, 0)
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regras[1], itens,
+      aplica = tem_reducao & !is.na(itens$grupo_reducao) & (!exige_reducao | !is.na(reducao_da_classificacao)),
+      confere = ifelse(exige_reducao, igual_com_tolerancia(percentual_de_reducao, reducao_esperada, TOLERANCIA_DO_PERCENTUAL),
+                       itens$tem_compra_governamental & percentual_de_reducao %in% 0),
+      campo = paste0(grupo, "/gRed/pRedAliq"), no_documento = texto_da_aliquota(percentual_de_reducao),
+      esperado = ifelse(exige_reducao, texto_da_aliquota(reducao_esperada), "0 (s\u00f3 na compra governamental)")
+    )
+    efetiva_calculada = aliquota * (1 - percentual_de_reducao / 100) * fator_da_compra_governamental
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regras[2], itens, aplica = tem_reducao & !is.na(aliquota) & !is.na(percentual_de_reducao),
+      confere = igual_com_tolerancia(aliquota_efetiva, efetiva_calculada, TOLERANCIA_DA_ALIQUOTA_EFETIVA),
+      campo = paste0(grupo, "/gRed/pAliqEfet"), no_documento = texto_do_numero(aliquota_efetiva, 4),
+      esperado = texto_do_numero(efetiva_calculada, 4), diferenca = aliquota_efetiva - efetiva_calculada
+    )
+    tem_diferimento = itens[[paste0("tem_diferimento_", parte)]]
+    diferimento_calculado = arredondar_no_centavo(itens$base * aliquota_usada / 100 * itens[[paste0("diferimento_", parte)]] / 100)
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regras[3], itens, aplica = tem_diferimento,
+      confere = igual_com_tolerancia(valor_do_diferimento, diferimento_calculado, TOLERANCIA_DOS_VALORES),
+      campo = paste0(grupo, "/gDif/vDif"), no_documento = texto_do_numero(valor_do_diferimento, 2),
+      esperado = texto_do_numero(diferimento_calculado, 2), diferenca = valor_do_diferimento - diferimento_calculado
+    )
+    valor_calculado = arredondar_no_centavo(itens$base * aliquota_usada / 100) - valor_ou_zero(valor_do_diferimento) -
+      valor_ou_zero(valor_devolvido)
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regras[4], itens, aplica = itens$tem_grupo_ibs_cbs,
+      confere = igual_com_tolerancia(valor, valor_calculado, TOLERANCIA_DOS_VALORES),
+      campo = paste0(grupo, "/", campo_do_valor), no_documento = texto_do_numero(valor, 2),
+      esperado = texto_do_numero(valor_calculado, 2), diferenca = valor - valor_calculado
+    )
+  }
+  # A devolução da CBS (cashback): a base vezes a alíquota vezes o percentual devolvido.
+  devolucao_calculada = arredondar_no_centavo(itens$base * itens$aliquota_usada_cbs / 100 * itens$percentual_devolvido_cbs / 100)
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB63-10", itens, aplica = itens$tem_devolucao_cbs & !is.na(itens$percentual_devolvido_cbs),
+    confere = igual_com_tolerancia(itens$valor_devolvido_cbs, devolucao_calculada, TOLERANCIA_DOS_VALORES),
+    campo = "gCBS/gDevTrib/vDevTrib", no_documento = texto_do_numero(itens$valor_devolvido_cbs, 2),
+    esperado = texto_do_numero(devolucao_calculada, 2), diferenca = itens$valor_devolvido_cbs - devolucao_calculada
+  )
+  # O IBS do item é o da UF mais o do município; com crédito presumido do IBS, o desconto depende do código do crédito
+  # presumido (indDeduzCredPres), de uma tabela que o RNFe ainda não tem.
+  ibs_calculado = valor_ou_zero(itens$valor_ibs_uf) + valor_ou_zero(itens$valor_ibs_mun)
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB54a-10", itens, aplica = itens$tem_grupo_ibs_cbs,
+    confere = ifelse(itens$tem_credito_presumido_ibs, NA,
+                     igual_com_tolerancia(itens$valor_ibs, ibs_calculado, TOLERANCIA_DO_CENTAVO)),
+    campo = "gIBSCBS/vIBS", no_documento = texto_do_numero(itens$valor_ibs, 2),
+    esperado = texto_do_numero(ibs_calculado, 2), diferenca = itens$valor_ibs - ibs_calculado,
+    observacao = ifelse(itens$tem_credito_presumido_ibs, paste(
+      "Com cr\u00e9dito presumido do IBS, o vCredPres s\u00f3 \u00e9 descontado quando o c\u00f3digo do cr\u00e9dito presumido manda",
+      "(indDeduzCredPres), e a tabela desses c\u00f3digos ainda n\u00e3o est\u00e1 no RNFe."
+    ), NA)
+  )
+  # A tributação regular: a base vezes a alíquota efetiva regular de cada um.
+  for (parte in c("ibs_uf", "ibs_mun", "cbs")) {
+    regra = switch(parte, ibs_uf = "UB72-10", ibs_mun = "UB72b-10", cbs = "UB72d-10")
+    campo = switch(parte, ibs_uf = "gTribRegular/vTribRegIBSUF", ibs_mun = "gTribRegular/vTribRegIBSMun",
+                   cbs = "gTribRegular/vTribRegCBS")
+    valor_regular = itens[[paste0("valor_regular_", parte)]]
+    regular_calculado = arredondar_no_centavo(itens$base * itens[[paste0("aliquota_regular_", parte)]] / 100)
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      regra, itens, aplica = itens$tem_tributacao_regular,
+      confere = igual_com_tolerancia(valor_regular, regular_calculado, TOLERANCIA_DOS_VALORES), campo = campo,
+      no_documento = texto_do_numero(valor_regular, 2), esperado = texto_do_numero(regular_calculado, 2),
+      diferenca = valor_regular - regular_calculado
+    )
+  }
+  # A compra governamental: a soma da composição bate com a soma do IBS e da CBS do item.
+  soma_da_compra = valor_ou_zero(itens$compra_governamental_ibs_uf) + valor_ou_zero(itens$compra_governamental_ibs_mun) +
+    valor_ou_zero(itens$compra_governamental_cbs)
+  soma_do_item = valor_ou_zero(itens$valor_ibs_uf) + valor_ou_zero(itens$valor_ibs_mun) + valor_ou_zero(itens$valor_cbs)
+  linhas[[length(linhas) + 1]] = linhas_da_regra(
+    "UB82a-20", itens, aplica = itens$tem_compra_governamental_item,
+    confere = igual_com_tolerancia(soma_da_compra, soma_do_item, TOLERANCIA_DA_COMPRA_GOVERNAMENTAL),
+    campo = "gTribCompraGov", no_documento = texto_do_numero(soma_da_compra, 2), esperado = texto_do_numero(soma_do_item, 2),
+    diferenca = soma_da_compra - soma_do_item
+  )
+  do.call(rbind, linhas)
+}
+
+# Os totais da nota (IBSCBSTot): o grupo existe quando algum item tem o IBS e a CBS, e cada campo é a soma dos itens.
+conferir_os_totais = function(itens, notas) {
+  notas_com_ibs_cbs = notas$chave %in% itens$chave
+  sem_item = rep(NA_integer_, nrow(notas))
+  linhas = list(
+    linhas_da_regra("W34-10", notas, aplica = notas$tem_total_ibs_cbs, confere = notas_com_ibs_cbs, campo = "IBSCBSTot",
+                    no_documento = "informado", esperado = "s\u00f3 com algum item com IBSCBS", itens_da_regra = sem_item),
+    linhas_da_regra("W34-20", notas, aplica = !notas$tem_total_ibs_cbs, confere = !notas_com_ibs_cbs, campo = "IBSCBSTot",
+                    no_documento = "n\u00e3o informado", esperado = "informado, porque algum item tem IBSCBS",
+                    itens_da_regra = sem_item)
+  )
+  for (numero_do_total in seq_len(nrow(TOTAIS_PARA_CONFERIR))) {
+    total = TOTAIS_PARA_CONFERIR[numero_do_total, ]
+    soma_dos_itens = rep(0, nrow(notas))
+    if (nrow(itens) > 0) {
+      somas = rowsum(valor_ou_zero(itens[[total$coluna_do_item]]), itens$chave)
+      soma_dos_itens = valor_ou_zero(somas[match(notas$chave, rownames(somas)), 1])
+    }
+    valor_do_total = valor_ou_zero(notas[[total$coluna_do_total]])
+    linhas[[length(linhas) + 1]] = linhas_da_regra(
+      total$regra, notas, aplica = notas$tem_total_ibs_cbs,
+      confere = igual_com_tolerancia(valor_do_total, soma_dos_itens, TOLERANCIA_DO_CENTAVO),
+      campo = paste0("IBSCBSTot/", total$campo), no_documento = texto_do_numero(valor_do_total, 2),
+      esperado = texto_do_numero(soma_dos_itens, 2), diferenca = valor_do_total - soma_dos_itens, itens_da_regra = sem_item
+    )
+  }
+  do.call(rbind, linhas)
+}
+
+# Uma regra de grupo: onde o indicador é `valor_do_indicador` (1 = o grupo é exigido, 0 = não é permitido), o grupo
+# tem de estar no item, ou não estar. `aplica_tambem` são as outras condições da regra.
+regra_de_grupo = function(regra, itens, indicador, valor_do_indicador, presente, grupo, aplica_tambem = TRUE) {
+  if (valor_do_indicador == 1) {
+    confere = presente
+    esperado = "informado"
+  } else {
+    confere = !presente
+    esperado = "n\u00e3o informado"
+  }
+  linhas_da_regra(regra, itens, aplica = indicador %in% valor_do_indicador & aplica_tambem, confere = confere,
+                  campo = grupo, no_documento = texto_da_presenca(presente), esperado = esperado)
+}
+
+# As linhas de uma regra: uma por item (ou por nota, nos totais) em que ela se aplica.
+linhas_da_regra = function(regra, itens, aplica, confere, campo, no_documento, esperado, diferenca = NA_real_,
+                           observacao = NA_character_, itens_da_regra = itens$item) {
+  quantidade = length(itens$chave)
+  aplica = rep_len(aplica, quantidade)
+  linhas = data.frame(
+    chave = itens$chave,
+    item = rep_len(itens_da_regra, quantidade),
+    regra = rep_len(regra, quantidade),
+    campo = rep_len(campo, quantidade),
+    no_documento = rep_len(as.character(no_documento), quantidade),
+    esperado = rep_len(as.character(esperado), quantidade),
+    diferenca = rep_len(as.numeric(diferenca), quantidade),
+    confere = rep_len(as.logical(confere), quantidade),
+    observacao = rep_len(as.character(observacao), quantidade)
+  )
+  linhas[!is.na(aplica) & aplica, ]
+}
+
+# O código e a mensagem de cada regra, o filtro pelo modelo (algumas regras são só da NF-e ou só da NFC-e) e pela data
+# (a regra só vale para a nota emitida depois de entrar em produção; sem a data de emissão, todas valem), o que não
+# confere hoje mas pode ter conferido na emissão e a observação da regra quando a linha não tem uma própria.
+completar_com_as_regras = function(conferencias, notas, itens) {
+  regras = regras_do_ibs_cbs()
+  da_regra = match(conferencias$regra, regras$regra)
+  da_nota = match(conferencias$chave, notas$chave)
+  modelo_da_nota = notas$modelo[da_nota]
+  emissao = notas$data_emissao[da_nota]
+  modelos_da_regra = regras$modelos[da_regra]
+  do_modelo = modelos_da_regra %in% "55/65" | (!is.na(modelo_da_nota) & modelos_da_regra == modelo_da_nota)
+  em_producao_desde = regras$em_producao_desde[da_regra]
+  em_producao = is.na(emissao) | (!is.na(em_producao_desde) & emissao >= em_producao_desde)
+  conferencias$codigo_sefaz = regras$codigo_sefaz[da_regra]
+  conferencias$mensagem = regras$mensagem[da_regra]
+  conferencias = conferencias[do_modelo & em_producao, ]
+  conferencias = sem_conferir_pela_mudanca_da_regra(conferencias, notas)
+  conferencias = sem_conferir_pela_mudanca_das_tabelas(conferencias, notas, itens)
+  sem_observacao = is.na(conferencias$observacao)
+  conferencias$observacao[sem_observacao] = regras$observacao[match(conferencias$regra, regras$regra)][sem_observacao]
+  conferencias = conferencias[, c("chave", "item", "regra", "campo", "no_documento", "esperado", "diferenca", "confere",
+                                  "codigo_sefaz", "mensagem", "observacao")]
+  rownames(conferencias) = NULL
+  conferencias
+}
+
+# A regra que mudou depois da emissão de um jeito que pode ter aceitado antes o que hoje não aceita: o que não confere
+# pela redação de hoje fica sem conferir, com o motivo.
+sem_conferir_pela_mudanca_da_regra = function(conferencias, notas) {
+  regras = regras_do_ibs_cbs()
+  da_regra = match(conferencias$regra, regras$regra)
+  emissao = notas$data_emissao[match(conferencias$chave, notas$chave)]
+  mudou_em = regras$mudou_em_producao_em[da_regra]
+  incerta = conferencias$confere %in% FALSE & !is.na(emissao) & !is.na(mudou_em) & emissao < mudou_em
+  conferencias$confere[incerta] = NA
+  conferencias$observacao[incerta] = paste0(
+    "Pela reda\u00e7\u00e3o de hoje n\u00e3o confere, mas a regra mudou na NT 2025.002 v", regras$mudou_na_versao[da_regra][incerta],
+    " (em produ\u00e7\u00e3o desde ", format(mudou_em[incerta], "%d/%m/%Y"), "), depois da emiss\u00e3o: a SEFAZ conferiu a nota ",
+    "pela reda\u00e7\u00e3o anterior."
+  )
+  conferencias
+}
+
+# A linha do CST ou da classificação que a regra consulta e que mudou numa versão da tabela que podia não estar em
+# produção na emissão (veja tabela_fiscal("mudancas_ibs_cbs")): o que não confere pela tabela de hoje fica sem conferir,
+# com o motivo.
+sem_conferir_pela_mudanca_das_tabelas = function(conferencias, notas, itens) {
+  erradas = which(conferencias$confere %in% FALSE & !is.na(conferencias$item))
+  if (length(erradas) == 0) {
+    return(conferencias)
+  }
+  da_nota = match(conferencias$chave[erradas], notas$chave)
+  linhas = data.frame(
+    posicao = erradas,
+    regra = conferencias$regra[erradas],
+    emissao = notas$data_emissao[da_nota],
+    modelo = notas$modelo[da_nota],
+    do_item = match(paste(conferencias$chave[erradas], conferencias$item[erradas]), paste(itens$chave, itens$item))
+  )
+  linhas = merge(linhas, CONSULTAS_DAS_REGRAS, by = "regra")
+  linhas = linhas[linhas$modelos == "55/65" | (!is.na(linhas$modelo) & linhas$modelos == linhas$modelo), ]
+  # A regra errada que não consulta tabela nenhuma (uma conta, por exemplo) não tem o que procurar aqui.
+  if (nrow(linhas) == 0) {
+    return(conferencias)
+  }
+  linhas$codigo = NA_character_
+  for (campo in unique(linhas$campo_do_codigo)) {
+    deste_campo = linhas$campo_do_codigo == campo
+    linhas$codigo[deste_campo] = itens[[campo]][linhas$do_item[deste_campo]]
+  }
+  linhas = merge(linhas, tabela_fiscal("mudancas_ibs_cbs"), by = c("tabela", "codigo", "coluna"))
+  # A mudança que podia não estar em produção na emissão: sem prazo conhecido ou com o prazo depois dela.
+  linhas = linhas[!is.na(linhas$emissao) & (is.na(linhas$em_producao_ate) | linhas$emissao < linhas$em_producao_ate), ]
+  if (nrow(linhas) == 0) {
+    return(conferencias)
+  }
+  # De cada conferência, a mudança mais recente.
+  linhas = linhas[order(linhas$posicao, linhas$publicada_em, decreasing = c(FALSE, TRUE), method = "radix"), ]
+  linhas = linhas[!duplicated(linhas$posicao), ]
+  conferencias$confere[linhas$posicao] = NA
+  conferencias$observacao[linhas$posicao] = texto_da_mudanca_da_tabela(linhas)
+  conferencias
+}
+
+texto_da_mudanca_da_tabela = function(linhas) {
+  nome_da_tabela = ifelse(linhas$tabela == "cst_ibs_cbs", "CST", "classifica\u00e7\u00e3o tribut\u00e1ria")
+  o_que_mudou = ifelse(
+    linhas$coluna == "existe",
+    paste0("o c\u00f3digo ", linhas$codigo, ifelse(linhas$depois %in% "1", " entrou na tabela", " saiu da tabela")),
+    paste0(linhas$coluna, " do c\u00f3digo ", linhas$codigo, " mudou de ", texto_do_valor_da_tabela(linhas$antes), " para ",
+           texto_do_valor_da_tabela(linhas$depois))
+  )
+  versao = ifelse(is.na(linhas$versao), "", paste0(" ", linhas$versao))
+  prazo = ifelse(is.na(linhas$em_producao_ate), "sem prazo de produ\u00e7\u00e3o conhecido",
+                 paste0("em produ\u00e7\u00e3o at\u00e9 ", format(linhas$em_producao_ate, "%d/%m/%Y")))
+  como_a_sefaz_conferiu = ifelse(linhas$emissao < linhas$publicada_em, "a SEFAZ conferiu a nota pela vers\u00e3o anterior",
+                                 "a SEFAZ pode ter conferido a nota pela vers\u00e3o anterior")
+  paste0("Pela tabela de hoje n\u00e3o confere, mas na vers\u00e3o", versao, " da tabela de ", nome_da_tabela, " (publicada em ",
+         format(linhas$publicada_em, "%d/%m/%Y"), ", ", prazo, ") ", o_que_mudou, ": ", como_a_sefaz_conferiu, ".")
+}
+
+texto_do_valor_da_tabela = function(valores) {
+  valores[is.na(valores)] = "(vazio)"
+  valores
+}
+
+# As regras da NT 2025.002 que a conferência usa, com o modelo, o código e a mensagem da rejeição (lidas uma vez).
+regras_do_ibs_cbs = function() {
+  if (is.null(tabelas_ja_lidas[["regras_ibs_cbs"]])) {
+    tabelas_ja_lidas[["regras_ibs_cbs"]] = utils::read.csv(
+      system.file("extdata", "regras_ibs_cbs.csv", package = "RNFe"), colClasses = "character", fileEncoding = "UTF-8",
+      na.strings = ""
+    )
+    for (coluna in c("em_producao_desde", "mudou_em_producao_em")) {
+      tabelas_ja_lidas[["regras_ibs_cbs"]][[coluna]] = as.Date(tabelas_ja_lidas[["regras_ibs_cbs"]][[coluna]])
+    }
+  }
+  tabelas_ja_lidas[["regras_ibs_cbs"]]
+}
+
+# O valor calculado vai a 2 casas, como o campo, antes da tolerância (meio centavo para cima): a SEFAZ autorizou nota
+# com 0,01005 de diferença para a conta sem arredondar.
+arredondar_no_centavo = function(valores) {
+  sign(valores) * floor(abs(valores) * 100 + 0.5 + FOLGA_DE_PONTO_FLUTUANTE) / 100
+}
+
+igual_com_tolerancia = function(valor, calculado, tolerancia) {
+  !is.na(valor) & !is.na(calculado) & abs(valor - calculado) <= tolerancia + FOLGA_DE_PONTO_FLUTUANTE
+}
+
+valor_ou_zero = function(numeros) {
+  numeros[is.na(numeros)] = 0
+  numeros
+}
+
+texto_da_presenca = function(presente) {
+  ifelse(presente, "informado", "n\u00e3o informado")
+}
+
+# O número com as casas pedidas, como no XML (ponto decimal); "(vazio)" quando não veio.
+texto_do_numero = function(numeros, casas) {
+  textos = formatC(numeros, format = "f", digits = casas)
+  textos[is.na(numeros)] = "(vazio)"
+  textos
+}
+
+# A alíquota sem os zeros que sobram no fim (0.9, 0.05, 60).
+texto_da_aliquota = function(numeros) {
+  textos = sub("\\.?0+$", "", formatC(numeros, format = "f", digits = 4))
+  textos[is.na(numeros)] = "(vazio)"
+  textos
+}

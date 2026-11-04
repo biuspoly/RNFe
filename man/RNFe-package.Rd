@@ -35,7 +35,10 @@ na Produção Restrita: \code{\link[=nfse_situacao]{nfse_situacao()}} (a nota pe
 eventos) e \code{\link[=nfse_distribuicao]{nfse_distribuicao()}} (as notas e os eventos de um CNPJ);
 \item a situação do CNPJ na Receita Federal, sem certificado:
 \code{\link[=cnpj_situacao]{cnpj_situacao()}} (a BrasilAPI e, quando ela está fora do ar, as outras
-fontes públicas).
+fontes públicas);
+\item a Reforma Tributária: \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}} (o IBS e a CBS da NF-e e da
+NFC-e pelas regras de validação da SEFAZ, como valiam no dia da
+emissão).
 }
 }
 \section{De onde vêm as regras}{

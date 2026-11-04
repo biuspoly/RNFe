@@ -8,7 +8,8 @@
 #   explicativa literais do Convênio SINIEF s/nº de 1970 e o início de vigência de cada código.
 # - Origem, CST do ICMS, CSOSN e CST do IPI, do PIS e da COFINS: as tabelas externas do SPED Fiscal, que a
 #   Receita publica com o início e o fim de cada código, baixadas pelo serviço do próprio SPED.
-# - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e.
+# - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e; e o que
+#   mudou de uma versão publicada da tabela para a seguinte, desde a 1.20 (mudancas_ibs_cbs).
 # - NCM: a nomenclatura vigente do Portal Único Siscomex.
 # - Meios de pagamento e bandeiras de cartão: as tabelas do Portal da NF-e (seção Diversos).
 # - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
@@ -109,24 +110,36 @@ data_do_sped = function(datas_em_texto) {
 
 # ---- Portal da NF-e ----
 
-# Baixa o arquivo do link mais recente cujo texto começa por `comeco_do_link` e devolve o caminho dele e o
-# texto do link (que traz a data de publicação).
-baixar_do_portal = function(comeco_do_link, pasta_temporaria) {
+# Os links da página de Diversos do portal cujo texto cumpre o `filtro_do_xpath`, do mais novo para o mais antigo (como
+# a página lista): o título de cada um (que traz a data de publicação) e o endereço.
+links_do_portal = function(filtro_do_xpath, pasta_temporaria) {
   # O portal só entrega o arquivo para quem abriu a página antes (cookie de sessão).
   arquivo_de_cookies = file.path(pasta_temporaria, "cookies_do_portal.txt")
   pedido_da_pagina = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, PAGINA_COM_A_TABELA_DE_CFOP)), arquivo_de_cookies)
   pagina_do_portal = xml2::read_html(httr2::resp_body_string(httr2::req_perform(pedido_da_pagina)))
-  links_achados = xml2::xml_find_all(pagina_do_portal, paste0("//a[starts-with(normalize-space(.), '", comeco_do_link, "')]"))
-  if (length(links_achados) == 0) {
-    stop("A página do portal não tem mais o link '", comeco_do_link, "'", call. = FALSE)
-  }
-  # O primeiro é o mais recente (a página lista do mais novo para o mais antigo).
-  titulo_do_link = trimws(xml2::xml_text(links_achados[1]))
-  endereco_do_arquivo = gsub("+", "%2B", xml2::xml_attr(links_achados[1], "href"), fixed = TRUE)
+  links_achados = xml2::xml_find_all(pagina_do_portal, paste0("//a[", filtro_do_xpath, "]"))
+  data.frame(
+    titulo = trimws(xml2::xml_text(links_achados)),
+    endereco = gsub("+", "%2B", xml2::xml_attr(links_achados, "href"), fixed = TRUE)
+  )
+}
+
+baixar_link_do_portal = function(endereco_do_arquivo, pasta_temporaria) {
+  arquivo_de_cookies = file.path(pasta_temporaria, "cookies_do_portal.txt")
   arquivo_baixado = tempfile(tmpdir = pasta_temporaria, fileext = ".xlsx")
   pedido_do_arquivo = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, endereco_do_arquivo)), arquivo_de_cookies)
   httr2::req_perform(pedido_do_arquivo, path = arquivo_baixado)
-  list(arquivo = arquivo_baixado, titulo = titulo_do_link)
+  arquivo_baixado
+}
+
+# Baixa o arquivo do link mais recente cujo texto começa por `comeco_do_link` e devolve o caminho dele e o
+# texto do link (que traz a data de publicação).
+baixar_do_portal = function(comeco_do_link, pasta_temporaria) {
+  links_achados = links_do_portal(paste0("starts-with(normalize-space(.), '", comeco_do_link, "')"), pasta_temporaria)
+  if (nrow(links_achados) == 0) {
+    stop("A página do portal não tem mais o link '", comeco_do_link, "'", call. = FALSE)
+  }
+  list(arquivo = baixar_link_do_portal(links_achados$endereco[1], pasta_temporaria), titulo = links_achados$titulo[1])
 }
 
 conferir_colunas = function(planilha, colunas_esperadas, nome_da_tabela) {
@@ -252,12 +265,33 @@ significados_da_aba = function(arquivo_da_planilha, nome_da_aba) {
   significados
 }
 
-# A Tabela de Classificação Tributária do IBS e CBS (Informe Técnico 2025.002): a primeira aba tem as
-# classificações (cClassTrib), a segunda os CST, e as abas tpRBSN e tpDoacao o significado desses dois códigos. O
-# Excel guarda alguns CST como número (400 em vez de "400"): todo CST volta a ter três dígitos.
+# As abas da planilha da Reforma, achadas pelo nome ("cClass 2026-09-01", "CST 2026-09-01"): a ordem muda de uma
+# versão para outra (na de 23/06/2026 o CST vinha primeiro).
+abas_da_planilha_da_reforma = function(arquivo_da_planilha) {
+  nomes_das_abas = readxl::excel_sheets(arquivo_da_planilha)
+  aba_da_classificacao = nomes_das_abas[startsWith(tolower(nomes_das_abas), "cclass")]
+  aba_do_cst = nomes_das_abas[startsWith(toupper(nomes_das_abas), "CST")]
+  if (length(aba_da_classificacao) != 1 || length(aba_do_cst) != 1) {
+    stop("A planilha da Reforma não tem uma aba de cClassTrib e uma de CST: ", paste(nomes_das_abas, collapse = ", "),
+         call. = FALSE)
+  }
+  list(classificacao = aba_da_classificacao, cst = aba_do_cst)
+}
+
+ler_aba_de_cst = function(arquivo_da_planilha, nome_da_aba, tipos_das_colunas = NULL) {
+  csts = readxl::read_excel(arquivo_da_planilha, sheet = nome_da_aba, col_types = tipos_das_colunas)
+  # Desde a planilha de 19/11/2025 um nome vem com espaço ("ind_ gCredPresIBSZFM").
+  names(csts) = sub("^ind_ ", "ind_", names(csts))
+  csts[!is.na(csts[["CST-IBS/CBS"]]), ]
+}
+
+# A Tabela de Classificação Tributária do IBS e CBS (Informe Técnico 2025.002): a aba cClass tem as classificações
+# (cClassTrib), a aba CST os CST, e as abas tpRBSN e tpDoacao o significado desses dois códigos. O Excel guarda alguns
+# CST como número (400 em vez de "400"): todo CST volta a ter três dígitos.
 baixar_tabelas_da_reforma = function(pasta_temporaria) {
   planilha_baixada = baixar_do_portal("Tabela de Classificação Tributária do IBS e CBS", pasta_temporaria)
-  classificacoes = readxl::read_excel(planilha_baixada$arquivo, sheet = 1)
+  abas = abas_da_planilha_da_reforma(planilha_baixada$arquivo)
+  classificacoes = readxl::read_excel(planilha_baixada$arquivo, sheet = abas$classificacao)
   conferir_colunas(classificacoes, c(
     "CST-IBS/CBS", "cClassTrib", "Nome cClassTrib", "Descrição cClassTrib", "LC 214/25", "Tipo de Alíquota",
     "pRedIBS", "pRedCBS", "dIniVig", "dFimVig", "tpRBSN", "tpDoacao", names(INDICADORES_DA_CLASSIFICACAO)
@@ -290,11 +324,8 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
     stop("A tabela de classificação do IBS e CBS tem tpRBSN ou tpDoacao sem significado na aba deles", call. = FALSE)
   }
 
-  csts = readxl::read_excel(planilha_baixada$arquivo, sheet = 2)
-  # Na planilha de 30/10/2026 um nome vem com espaço ("ind_ gCredPresIBSZFM").
-  names(csts) = sub("^ind_ ", "ind_", names(csts))
+  csts = ler_aba_de_cst(planilha_baixada$arquivo, abas$cst)
   conferir_colunas(csts, c("CST-IBS/CBS", "Descrição CST-IBS/CBS", names(INDICADORES_DO_CST)), "de CST do IBS e CBS")
-  csts = csts[!is.na(csts[["CST-IBS/CBS"]]), ]
   cst = data.frame(
     codigo = sprintf("%03d", as.integer(csts[["CST-IBS/CBS"]])),
     descricao = trimws(csts[["Descrição CST-IBS/CBS"]]),
@@ -305,6 +336,129 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
     cst[[INDICADORES_DO_CST[[nome_na_planilha]]]] = as.integer(csts[[nome_na_planilha]])
   }
   list(classificacao = classificacao, cst = cst, titulo = planilha_baixada$titulo)
+}
+
+# As versões da Tabela de Classificação Tributária do IBS e CBS desde a que estava publicada quando as regras de
+# validação da NT 2025.002 entraram em produção (10/11/2025, NT v1.30): a data de publicação no portal, a versão do
+# Informe Técnico 2025.002 e o prazo de produção que o controle de versões do IT dá ("Até 04/05/26"). As versões sem
+# prazo no IT estão em produção, no máximo, no prazo da seguinte que tem, porque ela já traz a mudança. Versão nova no
+# portal: uma linha aqui, com o prazo do IT dela; enquanto não tiver, as mudanças dela ficam sem prazo conhecido.
+VERSOES_DA_TABELA_DA_REFORMA = data.frame(
+  publicada_em = as.Date(c("2025-10-03", "2025-11-24", "2025-12-15", "2026-01-28", "2026-04-15", "2026-06-23",
+                           "2026-10-01", "2026-10-30")),
+  versao = c("1.20", "1.30", "1.31", "1.40", "1.50", "1.60", "1.70", "1.71"),
+  prazo_de_producao = as.Date(c(NA, NA, NA, NA, "2026-05-04", "2026-07-06", "2026-10-16", "2026-10-30"))
+)
+
+# O valor como texto, para comparar uma versão com a outra: "60" e "60.0" são o mesmo número; vazio fica NA.
+valor_para_comparar = function(valores) {
+  numeros = suppressWarnings(as.numeric(valores))
+  textos = as.character(numeros)
+  textos[is.na(numeros)] = NA
+  textos
+}
+
+# De uma versão da planilha, os valores que a história acompanha, um por linha: a tabela do pacote, o código, a coluna
+# (com o nome do pacote; "existe" diz que o código está na versão) e o valor. Só as colunas que a versão tem.
+valores_da_versao_da_reforma = function(arquivo_da_planilha) {
+  abas = abas_da_planilha_da_reforma(arquivo_da_planilha)
+  classificacoes = readxl::read_excel(arquivo_da_planilha, sheet = abas$classificacao, col_types = "text")
+  classificacoes = classificacoes[!is.na(classificacoes[["cClassTrib"]]), ]
+  codigos_da_classificacao = formatC(as.integer(classificacoes[["cClassTrib"]]), width = 6, flag = "0")
+  csts = ler_aba_de_cst(arquivo_da_planilha, abas$cst, "text")
+  codigos_do_cst = sprintf("%03d", as.integer(csts[["CST-IBS/CBS"]]))
+  partes = list(
+    data.frame(tabela = "classificacao_ibs_cbs", codigo = codigos_da_classificacao, coluna = "existe", valor = "1"),
+    data.frame(tabela = "cst_ibs_cbs", codigo = codigos_do_cst, coluna = "existe", valor = "1")
+  )
+  colunas_da_classificacao = c(pRedIBS = "reducao_ibs", pRedCBS = "reducao_cbs", INDICADORES_DA_CLASSIFICACAO)
+  for (nome_na_planilha in intersect(names(colunas_da_classificacao), names(classificacoes))) {
+    partes[[length(partes) + 1]] = data.frame(
+      tabela = "classificacao_ibs_cbs", codigo = codigos_da_classificacao,
+      coluna = colunas_da_classificacao[[nome_na_planilha]], valor = valor_para_comparar(classificacoes[[nome_na_planilha]])
+    )
+  }
+  for (nome_na_planilha in intersect(names(INDICADORES_DO_CST), names(csts))) {
+    partes[[length(partes) + 1]] = data.frame(
+      tabela = "cst_ibs_cbs", codigo = codigos_do_cst, coluna = INDICADORES_DO_CST[[nome_na_planilha]],
+      valor = valor_para_comparar(csts[[nome_na_planilha]])
+    )
+  }
+  do.call(rbind, partes)
+}
+
+# O que mudou de uma versão para a seguinte: o código que entrou ou saiu (coluna "existe") e o valor que mudou num
+# código que está nas duas, só nas colunas que as duas têm.
+mudancas_entre_versoes = function(valores_antes, valores_depois) {
+  juntos = merge(valores_antes, valores_depois, by = c("tabela", "codigo", "coluna"), all = TRUE,
+                 suffixes = c("_antes", "_depois"))
+  colunas_das_duas = intersect(paste(valores_antes$tabela, valores_antes$coluna), paste(valores_depois$tabela, valores_depois$coluna))
+  codigos_antes = paste(valores_antes$tabela, valores_antes$codigo)
+  codigos_depois = paste(valores_depois$tabela, valores_depois$codigo)
+  existe = juntos$coluna == "existe"
+  juntos$valor_antes[existe & is.na(juntos$valor_antes)] = "0"
+  juntos$valor_depois[existe & is.na(juntos$valor_depois)] = "0"
+  nas_duas = paste(juntos$tabela, juntos$codigo) %in% intersect(codigos_antes, codigos_depois) &
+    paste(juntos$tabela, juntos$coluna) %in% colunas_das_duas
+  mudou = (is.na(juntos$valor_antes) != is.na(juntos$valor_depois)) |
+    (!is.na(juntos$valor_antes) & !is.na(juntos$valor_depois) & juntos$valor_antes != juntos$valor_depois)
+  juntos[mudou & (existe | nas_duas), c("tabela", "codigo", "coluna", "valor_antes", "valor_depois")]
+}
+
+# A história da tabela da Reforma: baixa do portal cada versão publicada desde a 1.20 e lista o que mudou em cada uma,
+# com o prazo de produção dela. É o que a conferência do IBS e da CBS consulta para uma nota emitida antes de uma
+# mudança, que a SEFAZ conferiu pela versão da época.
+baixar_historia_da_reforma = function(pasta_temporaria) {
+  links_achados = links_do_portal("contains(normalize-space(.), 'Classificação Tributária do IBS')", pasta_temporaria)
+  links_achados$publicada_em = as.Date(sub(".*Publicad[ao] em (\\d{2}/\\d{2}/\\d{4}).*", "\\1", links_achados$titulo),
+                                       format = "%d/%m/%Y")
+  if (anyNA(links_achados$publicada_em)) {
+    stop("Link da tabela da Reforma sem a data de publicação: ", paste(links_achados$titulo[is.na(links_achados$publicada_em)],
+                                                                      collapse = "; "), call. = FALSE)
+  }
+  links_achados = links_achados[links_achados$publicada_em >= min(VERSOES_DA_TABELA_DA_REFORMA$publicada_em), ]
+  links_achados = links_achados[order(links_achados$publicada_em), ]
+  sem_versao = !(links_achados$publicada_em %in% VERSOES_DA_TABELA_DA_REFORMA$publicada_em)
+  if (any(sem_versao)) {
+    cat("::warning::Tabela da Reforma publicada sem versão em VERSOES_DA_TABELA_DA_REFORMA (as mudanças dela ficam sem",
+        "prazo de produção):", paste(links_achados$titulo[sem_versao], collapse = "; "), "\n")
+  }
+  faltam = setdiff(VERSOES_DA_TABELA_DA_REFORMA$publicada_em, links_achados$publicada_em)
+  if (length(faltam) > 0) {
+    stop("O portal não tem mais a tabela da Reforma publicada em ", paste(format(as.Date(faltam, origin = "1970-01-01"), "%d/%m/%Y"),
+                                                                        collapse = ", "), call. = FALSE)
+  }
+  da_versao = match(links_achados$publicada_em, VERSOES_DA_TABELA_DA_REFORMA$publicada_em)
+  links_achados$versao = VERSOES_DA_TABELA_DA_REFORMA$versao[da_versao]
+  links_achados$prazo_de_producao = VERSOES_DA_TABELA_DA_REFORMA$prazo_de_producao[da_versao]
+  # Sem prazo no IT: o da primeira versão seguinte que tem.
+  links_achados$em_producao_ate = links_achados$prazo_de_producao
+  for (posicao in rev(seq_len(nrow(links_achados) - 1))) {
+    if (is.na(links_achados$em_producao_ate[posicao]) && !is.na(links_achados$versao[posicao])) {
+      links_achados$em_producao_ate[posicao] = links_achados$em_producao_ate[posicao + 1]
+    }
+  }
+  mudancas = list()
+  valores_antes = NULL
+  for (posicao in seq_len(nrow(links_achados))) {
+    arquivo_da_versao = baixar_link_do_portal(links_achados$endereco[posicao], pasta_temporaria)
+    valores_depois = valores_da_versao_da_reforma(arquivo_da_versao)
+    if (!is.null(valores_antes)) {
+      mudancas_da_versao = mudancas_entre_versoes(valores_antes, valores_depois)
+      if (nrow(mudancas_da_versao) > 0) {
+        mudancas_da_versao$versao = links_achados$versao[posicao]
+        mudancas_da_versao$publicada_em = links_achados$publicada_em[posicao]
+        mudancas_da_versao$em_producao_ate = links_achados$em_producao_ate[posicao]
+        mudancas[[length(mudancas) + 1]] = mudancas_da_versao
+      }
+    }
+    valores_antes = valores_depois
+  }
+  historia = do.call(rbind, mudancas)
+  names(historia)[names(historia) == "valor_antes"] = "antes"
+  names(historia)[names(historia) == "valor_depois"] = "depois"
+  historia = historia[order(historia$publicada_em, historia$tabela, historia$codigo, historia$coluna), ]
+  list(tabela = historia, primeira = links_achados$publicada_em[1], ultima = links_achados$publicada_em[nrow(links_achados)])
 }
 
 # ---- Siscomex ----
@@ -637,6 +791,7 @@ fontes = rbind(fontes, data.frame(
 ))
 
 tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
+historia_da_reforma = baixar_historia_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
 meios_do_portal = baixar_meios_de_pagamento(pasta_temporaria)
 bandeiras_do_portal = baixar_bandeiras_de_cartao(pasta_temporaria)
@@ -648,11 +803,14 @@ for (servicos_do_documento in list(baixar_servicos_da_nfce("homologacao"),
   servicos_de_homologacao$autorizadores = rbind(servicos_de_homologacao$autorizadores, servicos_do_documento$autorizadores)
 }
 fontes = rbind(fontes, data.frame(
-  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao", "servicos_sefaz",
-             "autorizadores_sefaz"),
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "mudancas_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao",
+             "servicos_sefaz", "autorizadores_sefaz"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
+    paste0("Portal da NF-e, as versões da Tabela de Classificação Tributária do IBS e CBS publicadas de ",
+           format(historia_da_reforma$primeira, "%d/%m/%Y"), " a ", format(historia_da_reforma$ultima, "%d/%m/%Y"),
+           ", comparadas uma com a seguinte; prazos de produção do controle de versões do Informe Técnico 2025.002"),
     paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
     paste0("Portal da NF-e, ", meios_do_portal$titulo),
     paste0("Portal da NF-e, ", bandeiras_do_portal$titulo),
@@ -699,6 +857,7 @@ if (inherits(municipios_do_ibge, "error")) {
 gravar_tabela(cfop_do_portal$tabela, "cfop")
 gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
 gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
+gravar_tabela(historia_da_reforma$tabela, "mudancas_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
 gravar_tabela(meios_do_portal$tabela, "meios_pagamento")
 gravar_tabela(bandeiras_do_portal$tabela, "bandeiras_cartao")

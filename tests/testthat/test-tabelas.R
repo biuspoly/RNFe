@@ -55,6 +55,33 @@ test_that("as al\u00edquotas do IBS e da CBS de cada per\u00edodo", {
   expect_true(all(utils::head(aliquotas$fim, -1) < utils::tail(aliquotas$inicio, -1)))
 })
 
+test_that("o que mudou na tabela da Reforma de uma vers\u00e3o para a outra", {
+  # Conferido com o Informe Técnico 2025.002 v1.71 (seção 7): na 1.40, a 200001 deixou de valer na NF-e; na 1.70, a
+  # 410014 deixou de permitir o crédito presumido; na 1.30, os CST 010 e 011 passaram a exigir o grupo do IBS e da CBS.
+  mudancas = tabela_fiscal("mudancas_ibs_cbs")
+  expect_identical(names(mudancas), c("tabela", "codigo", "coluna", "antes", "depois", "versao", "publicada_em",
+                                      "em_producao_ate"))
+  expect_s3_class(mudancas$publicada_em, "Date")
+  expect_s3_class(mudancas$em_producao_ate, "Date")
+  da_200001 = mudancas[mudancas$codigo == "200001" & mudancas$coluna == "permitido_na_nfe", ]
+  expect_identical(c(da_200001$antes, da_200001$depois, da_200001$versao), c("1", "0", "1.40"))
+  expect_identical(da_200001$publicada_em, as.Date("2026-01-28"))
+  # A 1.40 não tem prazo no IT: vale o da 1.50, que já traz a mudança.
+  expect_identical(da_200001$em_producao_ate, as.Date("2026-05-04"))
+  da_410014 = mudancas[mudancas$codigo == "410014", ]
+  expect_identical(c(da_410014$coluna, da_410014$versao, da_410014$depois), c("grupo_credito_presumido", "1.70", "0"))
+  expect_identical(da_410014$em_producao_ate, as.Date("2026-10-16"))
+  do_cst_010 = mudancas[mudancas$tabela == "cst_ibs_cbs" & mudancas$codigo == "010", ]
+  expect_identical(c(do_cst_010$coluna, do_cst_010$antes, do_cst_010$depois), c("grupo_ibs_cbs", "0", "1"))
+  # O código que saiu na 1.30.
+  saiu = mudancas[mudancas$codigo == "210001", ]
+  expect_identical(c(saiu$coluna, saiu$antes, saiu$depois), c("existe", "1", "0"))
+  # Cada mudança muda alguma coisa, e cada versão vem depois da anterior.
+  expect_false(any(!is.na(mudancas$antes) & !is.na(mudancas$depois) & mudancas$antes == mudancas$depois))
+  expect_false(is.unsorted(mudancas$publicada_em))
+  expect_true(all(mudancas$em_producao_ate >= mudancas$publicada_em))
+})
+
 test_that("CFOP como na tabela oficial da NF-e", {
   cfop = tabela_fiscal("cfop")
   linha_6404 = cfop[cfop$codigo == "6404", ]

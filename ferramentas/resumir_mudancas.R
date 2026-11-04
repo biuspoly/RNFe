@@ -14,9 +14,14 @@ ler_tabela_gravada = function(arquivo_csv) {
 }
 
 # Uma linha da tabela é o código num período: o mesmo código pode ter várias linhas, uma por início. A tabela sem
-# código (os endereços dos serviços da SEFAZ) é comparada pela linha inteira.
+# código e início (os endereços dos serviços da SEFAZ, as mudanças da tabela da Reforma, em que o mesmo código tem uma
+# linha por coluna que mudou) é comparada pela linha inteira.
+tem_codigo_e_inicio = function(tabela_gravada) {
+  all(c("codigo", "inicio") %in% names(tabela_gravada))
+}
+
 identificacao_de_cada_linha = function(tabela_gravada) {
-  if (!("codigo" %in% names(tabela_gravada))) {
+  if (!tem_codigo_e_inicio(tabela_gravada)) {
     return(do.call(paste, c(as.list(tabela_gravada), sep = " | ")))
   }
   paste(tabela_gravada$codigo, tabela_gravada$inicio)
@@ -65,7 +70,7 @@ for (arquivo_da_tabela in arquivos_das_tabelas) {
   }
   linhas_novas = setdiff(linhas_de_depois, linhas_de_antes)
   linhas_que_sairam = setdiff(linhas_de_antes, linhas_de_depois)
-  if (!("codigo" %in% names(tabela_de_depois))) {
+  if (!tem_codigo_e_inicio(tabela_de_depois)) {
     linhas_do_resumo = c(
       linhas_do_resumo,
       paste0("- **", nome_da_tabela, "**: ", nrow(tabela_de_antes), " linhas antes, ", nrow(tabela_de_depois), " depois"),

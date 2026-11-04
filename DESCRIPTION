@@ -34,7 +34,10 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     NFS-e). Diz a situação cadastral do CNPJ na Receita Federal pelas fontes
     públicas que republicam o cadastro (a BrasilAPI e, quando ela está fora
     do ar, as outras). Acha a chave de acesso num PDF ou numa imagem,
-    pelo texto, pelo QR-Code ou por OCR.
+    pelo texto, pelo QR-Code ou por OCR. Confere o IBS e a CBS da NF-e e da
+    NFC-e pelas regras de validação da Nota Técnica 2025.002-RTC, como a
+    SEFAZ as aplicava no dia da emissão (com as alíquotas de cada ano e o que
+    mudou nas regras e nas tabelas de uma versão para a outra).
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues
@@ -72,7 +75,8 @@ Collate:
     'cte_simplificado_ler.R'
     'eventos_ler.R'
     'gtve_ler.R'
+    'tabelas.R'
+    'ibs_cbs_conferir.R'
     'mdfe_ler.R'
     'nfe_ler.R'
     'nfse_ler.R'
-    'tabelas.R'

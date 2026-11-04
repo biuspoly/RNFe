@@ -31,7 +31,7 @@ Cada etapa já é útil sozinha.
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
-| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | em andamento: as tabelas com os indicadores e as alíquotas prontas (04/11/2026); conferir e simular a seguir |
+| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | em andamento: as tabelas e a conferência (`ibs_cbs_conferir`) prontas (04/11/2026); simular a seguir |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
 
@@ -63,7 +63,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
-| Calculadora da Reforma: conferir e simular | não | não | não | etapa 4 |
+| Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir pronto (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão); simular a seguir |
 | Ler o SPED e pré-conferência | não | não | não | etapa 5 |
 
 ## Tabelas que se atualizam sozinhas
@@ -1021,6 +1021,43 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     fica vazia, com a observação, até o Senado publicar.
   - O formato das duas tabelas da Reforma mudou: quem tem o pacote de antes e chama `tabelas_atualizar()` recebe "a
     tabela mudou de formato: atualize o pacote", e nenhuma tabela é trocada (tudo ou nada).
+- **Passo 2, conferir (pronto, 04/11/2026):** `ibs_cbs_conferir()`, a NF-e e a NFC-e pelas regras UB e W da NT
+  v1.53. O código e a mensagem de cada regra estão em `inst/extdata/regras_ibs_cbs.csv`, tirados do texto da NT.
+  - **Testado no acervo do Fiscal** (2.638 NF-e sorteadas com IBS e CBS, 14.077 itens, só contagens na tela): a
+    primeira rodada acusou 192 regras em notas autorizadas. Cada uma tinha um motivo, e nenhum era a nota:
+    - UB24-10, UB43-10 e UB62a-10 (99): as notas eram de antes de 03/08/2026, quando essas regras entraram em
+      produção (NT v1.40);
+    - UB13-40 (90): a própria NT diz "implementação futura" para a produção e a homologação. Saiu da conferência;
+    - UB67-10 (1): a diferença era de 0,01005 para a conta sem arredondar, e a SEFAZ autorizou. O calculado passou a
+      ir a 2 casas antes da tolerância;
+    - UB14-25 (2): a classificação 200001 na NF-e, permitida até a versão 1.30 da tabela e proibida desde a 1.40
+      (publicada em 28/01/2026); as notas eram de março de 2026.
+    Depois das correções: nenhuma errada, 2 sem conferir (as da 200001, com o motivo).
+  - **As datas de cada regra:** `em_producao_desde` pelo cronograma da NT (10/11/2025 para a maioria, 02/02/2026 para
+    a segunda lista da v1.30, 03/08/2026 para as incluídas na v1.40; a UB13-30 desde 04/12/2025, porque até a v1.31
+    ela dizia "em produção para NFe com data de emissão maior ou igual a 05/01/2026" e a v1.32 tirou isso). O
+    cronograma não lista toda mudança de texto: as 12 versões da NT (1.30 a 1.53) foram baixadas e o texto de cada
+    regra comparado de uma para a outra. A maioria das diferenças é redação (a mensagem, a ordem). As que mudam o que
+    a regra aceita, e que podem ter aceitado antes o que hoje não aceita, estão em `mudou_na_versao` e
+    `mudou_em_producao_em`: a UB56-10 (v1.51, 05/10/2026: a ZFM deixou de ser os estados e passou a ser os três
+    municípios), a UB26-20, a UB45-20 e a UB64-20 (v1.36, 03/08/2026: saiu o "se a alíquota for maior que zero"), a
+    UB35-10, a UB54-10, a UB67-10 e a W47-10 (v1.31, 17/11/2025: saiu o crédito presumido da conta). A mudança que só
+    afrouxou a regra (uma exceção nova) não entra: o que não confere hoje também não conferia antes.
+  - **A tabela também muda:** as 8 versões da planilha publicadas desde 03/10/2025 (a 1.20, que estava publicada
+    quando as regras entraram em produção) foram comparadas; as 100 mudanças estão em `mudancas_ibs_cbs`, com o prazo
+    de produção do controle de versões do IT 2025.002 v1.71 (a 1.30, a 1.31 e a 1.40 não têm prazo lá: valem até o
+    da 1.50, 04/05/2026, que já as traz). A coluna DataAtualização da planilha não serve para isso: a 1.70 mexeu no
+    texto das 170 linhas, e todas ficaram com 01/10/2026. O robô refaz a comparação toda semana; versão nova sem
+    prazo em `VERSOES_DA_TABELA_DA_REFORMA` gera um aviso e as mudanças dela ficam sem prazo (a conferência as trata
+    como talvez não em produção).
+  - **Como fica:** o que não confere pela regra e pela tabela de hoje, numa nota emitida antes da mudança, vem com
+    `confere` vazio e o motivo (para a tabela, "a SEFAZ conferiu" quando a nota é de antes da publicação e "pode ter
+    conferido" entre a publicação e o prazo).
+  - **Fica de fora, por enquanto:** a tributação monofásica (reformulada na v1.50, produção em novembro de 2026), o
+    crédito presumido (UB122 a UB130, que consultam a tabela `cCredPres`, ainda fora do RNFe), o Imposto Seletivo,
+    a UB16-10 e as outras de implementação futura; e regras simples que ainda não entraram: UB14-60 a UB14-80 (o
+    cClassTrib e o tipo da nota de débito e de crédito), UB66a a UB66e (a CBS da ZFM), UB106, UB112-30, UB116-30,
+    UB131-40, UB131-50, UB132-10, UB133-10 e W07-10.
 
 ## O robô das tabelas
 
