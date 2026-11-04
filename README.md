@@ -7,7 +7,7 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
 > SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta pela chave (NF-e, NFC-e,
-> CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e, em homologação; o plano está em
+> CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e (NF-e e CT-e), em homologação; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -222,12 +222,20 @@ nfe_ler(distribuicao$documentos$xml)       # as notas e os resumos que vieram
 eventos_ler(distribuicao$documentos$xml)   # os eventos
 # o próximo pedido segue do último NSU recebido
 sefaz_distribuicao("11222333000181", "empresa.pfx", senha, ultimo_nsu = distribuicao$consulta$ultimo_nsu)
+
+# os CT-e, CT-e OS e GTV-e em que o CNPJ aparece (remetente, destinatário, tomador...); a UF de quem pede é obrigatória
+ctes = sefaz_distribuicao("11222333000181", "empresa.pfx", senha, distribuicao = "CT-e", uf = "SP")
+cte_ler(ctes$documentos$xml)       # os CT-e e CT-e OS que vieram
+gtve_ler(ctes$documentos$xml)      # as GTV-e
+eventos_ler(ctes$documentos$xml)   # os eventos
 ```
 
-A Distribuição de DF-e (NT 2014.002) traz até 50 documentos por pedido, já descompactados. Depois de uma resposta
-"não há mais documentos", quem pede de novo pelo último NSU antes de passar uma hora tem o CNPJ bloqueado pela SEFAZ
-por uma hora; o RNFe recusa esse pedido nesta sessão do R, antes de ir à SEFAZ. Também dá para pedir um NSU que
-faltou (`nsu`) ou uma NF-e pela chave (`chave`).
+A Distribuição de DF-e (NT 2014.002 na NF-e, NT 2015.002 no CT-e) traz até 50 documentos por pedido, já
+descompactados. Depois de uma resposta "não há mais documentos", quem pede de novo pelo último NSU antes de passar
+uma hora recebe 656 ("Consumo Indevido"), e na NF-e o CNPJ fica bloqueado por uma hora; o RNFe recusa esse pedido
+nesta sessão do R, antes de ir à SEFAZ. A NF-e e o CT-e têm cada um a sua sequência de NSU e a sua espera. Também dá
+para pedir um NSU que faltou (`nsu`) ou, só na NF-e, uma nota pela chave (`chave`). O emitente não recebe os próprios
+CT-e, e o schema da distribuição do CT-e (1.00) ainda não aceita o CNPJ com letras.
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada

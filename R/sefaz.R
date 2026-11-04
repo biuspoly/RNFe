@@ -136,9 +136,9 @@ sefaz_status = function(ufs, certificado, senha, ambiente = "homologacao", docum
 }
 
 # A linha do documento na tabela de configuração, como lista. Documento que a tabela não tem para tudo antes de conectar.
-configuracao_do_documento = function(tabela, documento) {
+configuracao_do_documento = function(tabela, documento, nome_do_argumento = "documento") {
   if (length(documento) != 1 || is.na(documento) || !(documento %in% tabela$documento)) {
-    stop("Informe documento = ", paste0('"', tabela$documento, '"', collapse = ", "), ".", call. = FALSE)
+    stop("Informe ", nome_do_argumento, " = ", paste0('"', tabela$documento, '"', collapse = ", "), ".", call. = FALSE)
   }
   as.list(tabela[tabela$documento == documento, ])
 }
@@ -740,67 +740,104 @@ data_hora_da_consulta = function(texto) {
   as.POSIXct(texto, format = "%Y-%m-%dT%H:%M:%S", tz = "America/Sao_Paulo")
 }
 
-# Quando o Ambiente Nacional disse que não havia mais documentos para cada documento (CNPJ ou CPF) e ambiente, nesta
-# sessão. A NT 2014.002 manda esperar uma hora antes de perguntar de novo; antes disso, a SEFAZ pode bloquear o CNPJ
-# por uma hora (656, "Consumo Indevido").
+# Quando o Ambiente Nacional disse que não havia mais documentos para cada distribuição (NF-e ou CT-e), documento (CNPJ
+# ou CPF) e ambiente, nesta sessão. As NTs 2014.002 e 2015.002 mandam esperar uma hora antes de perguntar de novo; antes
+# disso, a SEFAZ pode responder 656 ("Consumo Indevido") e, na NF-e, bloquear o CNPJ por uma hora.
 quando_nao_havia_mais_documentos = new.env(parent = emptyenv())
 ESPERA_DEPOIS_DE_NENHUM_DOCUMENTO = 3600
 
-#' Distribuição de DF-e: os documentos de interesse de um CNPJ
+# Como cada distribuição conversa com o Ambiente Nacional: o serviço (o nome na Relação de Serviços Web e no WSDL), a
+# operação, a família, a versão do pedido e a nota técnica. A do CT-e traz também o CT-e OS e a GTV-e. Os nomes vêm dos
+# WSDLs de homologação (baixados em 03/11/2026 e 04/11/2026).
+DISTRIBUICAO_DE_CADA_DOCUMENTO = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE, text = "
+documento ; servico            ; operacao            ; familia ; versao ; nota_tecnica
+NF-e      ; NFeDistribuicaoDFe ; nfeDistDFeInteresse ; nfe     ; 1.01   ; NT 2014.002
+CT-e      ; CTeDistribuicaoDFe ; cteDistDFeInteresse ; cte     ; 1.00   ; NT 2015.002
+", colClasses = "character")
+
+#' Distribuição de DF-e: os documentos de interesse de um CNPJ (NF-e e CT-e)
 #'
-#' Pergunta ao Ambiente Nacional os documentos de interesse de um CNPJ ou CPF
-#' (a Distribuição de DF-e da NT 2014.002): as NF-e em que ele é
-#' destinatário, transportador ou autorizado, os resumos das que ele ainda não
-#' manifestou e os eventos. Devolve uma lista com `consulta` (a resposta, numa
-#' linha) e `documentos` (um por linha, com o XML já descompactado). Leia os
-#' documentos com [nfe_ler()] (as notas e os resumos) e [eventos_ler()]:
-#' `nfe_ler(distribuicao$documentos$xml)`.
+#' Pergunta ao Ambiente Nacional os documentos de interesse de um CNPJ ou CPF.
+#' Na NF-e (o padrão, a Distribuição de DF-e da NT 2014.002): as notas em que
+#' ele é destinatário, transportador ou autorizado, os resumos das que ele
+#' ainda não manifestou e os eventos. No CT-e (`distribuicao = "CT-e"`, a NT
+#' 2015.002): os CT-e, CT-e OS e GTV-e em que ele é remetente, destinatário,
+#' expedidor, recebedor, tomador ou autorizado (`autXML`), e os eventos deles;
+#' o emitente não recebe os próprios. Devolve uma lista com `consulta` (a
+#' resposta, numa linha) e `documentos` (um por linha, com o XML já
+#' descompactado). Leia os documentos com [nfe_ler()] (as notas e os
+#' resumos), [cte_ler()] (o CT-e e o CT-e OS), [gtve_ler()] e [eventos_ler()]:
+#' `nfe_ler(distribuicao$documentos$xml)`. O CT-e simplificado também vem
+#' (para o tomador e os autorizados), mas o RNFe ainda não o lê: ele fica só
+#' em `documentos`, com o XML.
 #'
 #' Cada chamada faz um pedido, que traz até 50 documentos. Para seguir, chame
 #' de novo com `ultimo_nsu` igual ao `ultimo_nsu` da resposta, até ele ficar
-#' igual ao `maior_nsu`. Também dá para pedir um NSU que faltou (`nsu`) ou uma
-#' NF-e pela chave (`chave`).
+#' igual ao `maior_nsu`. Também dá para pedir um NSU que faltou (`nsu`) ou,
+#' só na NF-e, uma nota pela chave (`chave`). Cada distribuição tem a sua
+#' sequência de NSU: o último NSU da NF-e não serve para o CT-e.
 #'
-#' **A SEFAZ bloqueia quem pergunta demais.** Pela NT 2014.002, quando a
-#' resposta diz que não há mais documentos (137, ou o `ultimo_nsu` igual ao
-#' `maior_nsu`), é preciso esperar uma hora antes de pedir de novo a partir do
-#' último NSU; antes disso, ela pode responder 656 ("Consumo Indevido") e
-#' bloquear o CNPJ por uma hora. As consultas também têm de seguir o
-#' `ultimo_nsu` que ela devolveu. Por isso, nesta sessão do R, o RNFe recusa
-#' um novo pedido pelo último NSU do mesmo CNPJ antes de passar a hora (o
-#' pedido de um `nsu` ou de uma `chave` não entra nessa regra).
+#' **A SEFAZ bloqueia quem pergunta demais.** Pelas NTs 2014.002 e 2015.002,
+#' quando a resposta diz que não há mais documentos (137, ou o `ultimo_nsu`
+#' igual ao `maior_nsu`), é preciso esperar uma hora antes de pedir de novo a
+#' partir do último NSU; antes disso, ela pode responder 656 ("Consumo
+#' Indevido") e, na NF-e, bloquear o CNPJ por uma hora. As consultas também
+#' têm de seguir o `ultimo_nsu` que ela devolveu. Por isso, nesta sessão do R,
+#' o RNFe recusa um novo pedido pelo último NSU do mesmo CNPJ, na mesma
+#' distribuição, antes de passar a hora (o pedido de um `nsu` ou de uma
+#' `chave` não entra nessa regra).
+#'
+#' Quem pede é o dono do certificado: com um certificado de empresa, dá para
+#' pedir os documentos de qualquer CNPJ com a mesma raiz (os 8 primeiros
+#' dígitos); outra raiz volta 593. No CT-e, para quem só está no `autXML`, a
+#' SEFAZ troca as chaves das NF-e e CT-e citados no documento por 44 noves
+#' (sigilo fiscal, NT 2015.002).
 #'
 #' Por enquanto só o ambiente de **homologação**; a produção é recusada. A
 #' conexão é a mesma do [sefaz_status()].
 #'
 #' @param documento O CNPJ ou CPF de quem pede (o interessado nos documentos),
-#'   em geral o do certificado. Pontos, barras e traços são ignorados.
+#'   em geral o do certificado. Pontos, barras e traços são ignorados. No
+#'   CT-e, o CNPJ só com números: o schema da distribuição (1.00) ainda não
+#'   aceita letras.
 #' @param ultimo_nsu O último NSU já recebido: 0 na primeira vez (a SEFAZ
 #'   devolve só o que chegou nos últimos 3 meses) e, depois, o `ultimo_nsu` da
 #'   resposta anterior.
 #' @param nsu Um NSU específico, para buscar um documento que faltou. Quando
 #'   informado, `ultimo_nsu` não é usado.
 #' @param chave A chave de acesso de uma NF-e, para buscá-la direto. Quando
-#'   informada, `ultimo_nsu` e `nsu` não são usados.
+#'   informada, `ultimo_nsu` e `nsu` não são usados. Só na NF-e: o pedido do
+#'   CT-e não tem busca pela chave.
+#' @param distribuicao `"NF-e"` (o padrão) ou `"CT-e"` (que traz também o CT-e
+#'   OS e a GTV-e).
+#' @param uf A UF de quem pede, pela sigla (`"SP"`, `"CE"`...). Obrigatória no
+#'   CT-e (o `cUFAutor` do pedido); na NF-e, vai no pedido quando informada.
 #' @inheritParams sefaz_status
 #' @return Uma lista com dois `data.frame`s:
-#'   - `consulta`, numa linha: `documento`, `ambiente`, `situacao` (o código de
-#'     status, `cStat`: 137 quando não há documentos, 138 quando há),
-#'     `motivo`, `processamento` (data e hora, no horário de Brasília),
-#'     `ultimo_nsu` (de onde seguir), `maior_nsu` (o maior NSU que o Ambiente
-#'     Nacional tem para o documento), `documentos` (quantos vieram),
-#'     `versao_aplicativo`, `endereco` e `problema` (por que a consulta não deu
-#'     certo; vazio quando deu);
+#'   - `consulta`, numa linha: `documento`, `distribuicao` (`"NF-e"` ou
+#'     `"CT-e"`), `ambiente`, `situacao` (o código de status, `cStat`: 137
+#'     quando não há documentos, 138 quando há), `motivo`, `processamento`
+#'     (data e hora, no horário de Brasília), `ultimo_nsu` (de onde seguir),
+#'     `maior_nsu` (o maior NSU que o Ambiente Nacional tem para o documento),
+#'     `documentos` (quantos vieram), `versao_aplicativo`, `endereco` e
+#'     `problema` (por que a consulta não deu certo; vazio quando deu);
 #'   - `documentos`, um por linha: `nsu`, `schema` (o schema que valida o
-#'     documento, como `resNFe_v1.01.xsd` ou `procNFe_v4.00.xsd`), `tipo` (o
-#'     nome do schema sem a versão: `resNFe`, `procNFe`, `resEvento`,
-#'     `procEventoNFe`...) e `xml` (o documento, descompactado).
-#' @seealso [nfe_ler()], [eventos_ler()], [sefaz_situacao()]
-#' @source NT 2014.002 v1.02d (Web Service de Distribuição de DF-e, Portal da
-#'   NF-e); os schemas `distDFeInt_v1.01.xsd` e `retDistDFeInt_v1.01.xsd` do
-#'   pacote da Distribuição de DF-e v1.04 (03/07/2026); o WSDL do serviço
-#'   NFeDistribuicaoDFe do Ambiente Nacional (operação `nfeDistDFeInteresse`,
-#'   com o `nfeDadosMsg` dentro de `nfeDistDFeInteresse`).
+#'     documento, como `resNFe_v1.01.xsd`, `procNFe_v4.00.xsd` ou
+#'     `procCTe_v4.00.xsd`), `tipo` (o nome do schema sem a versão: `resNFe`,
+#'     `procNFe`, `resEvento`, `procEventoNFe`, `procCTe`,
+#'     `procEventoCTe`...) e `xml` (o documento, descompactado).
+#' @seealso [nfe_ler()], [cte_ler()], [gtve_ler()], [eventos_ler()],
+#'   [sefaz_situacao()]
+#' @source NF-e: NT 2014.002 v1.02d (Web Service de Distribuição de DF-e,
+#'   Portal da NF-e); os schemas `distDFeInt_v1.01.xsd` e
+#'   `retDistDFeInt_v1.01.xsd` do pacote da Distribuição de DF-e v1.04
+#'   (03/07/2026); o WSDL do serviço NFeDistribuicaoDFe do Ambiente Nacional
+#'   (operação `nfeDistDFeInteresse`, com o `nfeDadosMsg` dentro de
+#'   `nfeDistDFeInteresse`). CT-e: NT 2015.002 v1.05 (novembro de 2024,
+#'   Portal do CT-e); os schemas `distDFeInt_v1.00.xsd` e
+#'   `retDistDFeInt_v1.00.xsd` do pacote PL_CTeDistDFe_100; o WSDL do serviço
+#'   CTeDistribuicaoDFe (operação `cteDistDFeInteresse`, com o `cteDadosMsg`
+#'   dentro de `cteDistDFeInteresse`).
 #' @examples
 #' \dontrun{
 #' senha = Sys.getenv("SENHA_DO_CERTIFICADO")
@@ -810,35 +847,45 @@ ESPERA_DEPOIS_DE_NENHUM_DOCUMENTO = 3600
 #' # O próximo pedido segue do último NSU recebido.
 #' seguinte = sefaz_distribuicao("11222333000181", "empresa.pfx", senha,
 #'                               ultimo_nsu = distribuicao$consulta$ultimo_nsu)
+#' # Os CT-e de interesse do mesmo CNPJ (a UF de quem pede é obrigatória).
+#' ctes = sefaz_distribuicao("11222333000181", "empresa.pfx", senha,
+#'                           distribuicao = "CT-e", uf = "SP")
+#' cte_ler(ctes$documentos$xml)
 #' }
 #' @export
 sefaz_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, nsu = NA, chave = NA,
-                              ambiente = "homologacao") {
+                              ambiente = "homologacao", distribuicao = "NF-e", uf = NA) {
   conferir_ambiente(ambiente)
+  configuracao = configuracao_do_documento(DISTRIBUICAO_DE_CADA_DOCUMENTO, distribuicao, "distribuicao")
   documento = toupper(gsub("[^0-9A-Za-z]", "", as.character(documento)))
   if (length(documento) != 1 || is.na(documento) || !grepl("^([0-9A-Z]{12}[0-9]{2}|[0-9]{11})$", documento)) {
     stop("Informe um CNPJ (14 posi\u00e7\u00f5es) ou um CPF (11 d\u00edgitos) em `documento`.", call. = FALSE)
   }
-  grupo_do_pedido = grupo_da_distribuicao(ultimo_nsu, nsu, chave)
-  memoria = paste(documento, ambiente)
+  if (distribuicao == "CT-e" && grepl("[A-Z]", documento)) {
+    stop("A Distribui\u00e7\u00e3o do CT-e (schema 1.00) ainda n\u00e3o aceita o CNPJ com letras.", call. = FALSE)
+  }
+  codigo_da_uf = codigo_da_uf_de_quem_pede(uf, distribuicao)
+  grupo_do_pedido = grupo_da_distribuicao(ultimo_nsu, nsu, chave, distribuicao)
+  memoria = paste(distribuicao, documento, ambiente)
   if (grupo_do_pedido$pelo_ultimo_nsu && !is.null(quando_nao_havia_mais_documentos[[memoria]])) {
     liberado_em = quando_nao_havia_mais_documentos[[memoria]] + ESPERA_DEPOIS_DE_NENHUM_DOCUMENTO
     if (Sys.time() < liberado_em) {
       stop("O Ambiente Nacional disse \u00e0s ", format(quando_nao_havia_mais_documentos[[memoria]], "%H:%M"),
-           " que n\u00e3o havia mais documentos para este CNPJ ou CPF. A NT 2014.002 manda esperar uma hora antes de pedir ",
-           "de novo (sen\u00e3o a SEFAZ bloqueia o CNPJ por uma hora): tente depois das ", format(liberado_em, "%H:%M"), ".",
-           call. = FALSE)
+           " que n\u00e3o havia mais documentos (", distribuicao, ") para este CNPJ ou CPF. A ", configuracao$nota_tecnica,
+           " manda esperar uma hora antes de pedir de novo (antes disso, a SEFAZ pode responder 656, \"Consumo Indevido\"): ",
+           "tente depois das ", format(liberado_em, "%H:%M"), ".", call. = FALSE)
     }
   }
   exigir_pacotes(c("httr2", "curl", "openssl"))
   conferir_certificado(certificado, senha)
   servicos = tabela_interna("servicos_sefaz")
-  do_ambiente_nacional = servicos[servicos$documento == "NF-e" & servicos$ambiente == ambiente &
-                                    servicos$autorizador == "AN" & servicos$servico == "NFeDistribuicaoDFe", ]
+  do_ambiente_nacional = servicos[servicos$documento == distribuicao & servicos$ambiente == ambiente &
+                                    servicos$autorizador == "AN" & servicos$servico == configuracao$servico, ]
   consulta = data.frame(
-    documento = documento, ambiente = ambiente, situacao = NA_integer_, motivo = NA_character_,
-    processamento = as.POSIXct(NA), ultimo_nsu = NA_character_, maior_nsu = NA_character_, documentos = NA_integer_,
-    versao_aplicativo = NA_character_, endereco = do_ambiente_nacional$endereco[1], problema = NA_character_
+    documento = documento, distribuicao = distribuicao, ambiente = ambiente, situacao = NA_integer_,
+    motivo = NA_character_, processamento = as.POSIXct(NA), ultimo_nsu = NA_character_, maior_nsu = NA_character_,
+    documentos = NA_integer_, versao_aplicativo = NA_character_, endereco = do_ambiente_nacional$endereco[1],
+    problema = NA_character_
   )
   documentos = data.frame(nsu = character(), schema = character(), tipo = character(), xml = character())
   if (nrow(do_ambiente_nacional) == 0) {
@@ -854,11 +901,17 @@ sefaz_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, nsu
   } else {
     tipo_do_documento = "CPF"
   }
+  uf_de_quem_pede = ""
+  if (!is.na(codigo_da_uf)) {
+    uf_de_quem_pede = paste0("<cUFAutor>", codigo_da_uf, "</cUFAutor>")
+  }
   mensagem = paste0(
-    '<distDFeInt xmlns="', NAMESPACE_DA_NFE, '" versao="1.01"><tpAmb>', AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb>",
+    '<distDFeInt xmlns="http://www.portalfiscal.inf.br/', configuracao$familia, '" versao="', configuracao$versao, '">',
+    "<tpAmb>", AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb>", uf_de_quem_pede,
     "<", tipo_do_documento, ">", documento, "</", tipo_do_documento, ">", grupo_do_pedido$xml, "</distDFeInt>"
   )
-  pedido = montar_pedido(consulta$endereco, "NFeDistribuicaoDFe", "nfeDistDFeInteresse", mensagem, "nfeDistDFeInteresse")
+  pedido = montar_pedido(consulta$endereco, configuracao$servico, configuracao$operacao, mensagem, configuracao$operacao,
+                         familia = configuracao$familia)
   resposta_lida = ler_resposta(enviar_pedidos(list(pedido), conexao)[[1]], "retDistDFeInt")
   if (!is.na(resposta_lida$problema)) {
     consulta$problema = resposta_lida$problema
@@ -867,7 +920,8 @@ sefaz_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, nsu
   retorno = resposta_lida$retorno
   consulta$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
   consulta$motivo = texto_do_retorno(retorno, "xMotivo")
-  consulta$processamento = data_hora(texto_do_retorno(retorno, "dhResp"))
+  # No CT-e o dhResp vem sem o fuso (o schema 1.00 não tem): é a hora de Brasília (conferido em 04/11/2026).
+  consulta$processamento = data_hora_da_consulta(texto_do_retorno(retorno, "dhResp"))
   consulta$ultimo_nsu = texto_do_retorno(retorno, "ultNSU")
   consulta$maior_nsu = texto_do_retorno(retorno, "maxNSU")
   consulta$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
@@ -887,9 +941,29 @@ sefaz_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, nsu
   list(consulta = consulta, documentos = documentos)
 }
 
-# O grupo do pedido: o último NSU (distNSU), um NSU (consNSU) ou uma chave (consChNFe). O NSU tem 15 dígitos.
-grupo_da_distribuicao = function(ultimo_nsu, nsu, chave) {
+# O código IBGE da UF de quem pede (o cUFAutor), ou NA. O pedido do CT-e exige; o da NF-e, não.
+codigo_da_uf_de_quem_pede = function(uf, distribuicao) {
+  if (length(uf) != 1 || is.na(uf)) {
+    if (distribuicao == "CT-e") {
+      stop("A Distribui\u00e7\u00e3o do CT-e pede a UF de quem pede os documentos (o cUFAutor da NT 2015.002): ",
+           "informe `uf`, como uf = \"SP\".", call. = FALSE)
+    }
+    return(NA_character_)
+  }
+  codigo_da_uf = names(UF_PELO_CODIGO)[match(toupper(trimws(uf)), UF_PELO_CODIGO)]
+  if (is.na(codigo_da_uf)) {
+    stop("UF desconhecida em `uf`: ", uf, ".", call. = FALSE)
+  }
+  codigo_da_uf
+}
+
+# O grupo do pedido: o último NSU (distNSU), um NSU (consNSU) ou, na NF-e, uma chave (consChNFe). O NSU tem 15 dígitos.
+grupo_da_distribuicao = function(ultimo_nsu, nsu, chave, distribuicao = "NF-e") {
   if (length(chave) == 1 && !is.na(chave)) {
+    if (distribuicao != "NF-e") {
+      stop("A Distribui\u00e7\u00e3o do CT-e n\u00e3o busca pela chave (o pedido da NT 2015.002 s\u00f3 tem o \u00faltimo NSU e o ",
+           "NSU): use `ultimo_nsu` ou `nsu`.", call. = FALSE)
+    }
     chave_limpa = limpar_chaves(chave)
     if (!chave_valida(chave_limpa)) {
       stop("A chave n\u00e3o confere: ", chave_decompor(chave_limpa)$problema, ".", call. = FALSE)

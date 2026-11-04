@@ -19,8 +19,8 @@
 #'   no ar?), [sefaz_situacao()] (a situação de cada documento, pela chave),
 #'   [sefaz_mdfe_nao_encerrados()] (os MDF-e que um emitente ainda não
 #'   encerrou), [sefaz_cadastro()] (o cadastro de contribuintes, pelo CNPJ,
-#'   CPF ou IE) e [sefaz_distribuicao()] (os documentos emitidos contra um
-#'   CNPJ).
+#'   CPF ou IE) e [sefaz_distribuicao()] (as NF-e e os CT-e emitidos contra
+#'   um CNPJ).
 #'
 #' @section De onde vêm as regras:
 #' Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da

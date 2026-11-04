@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e, em homologação; a chave num PDF ou numa foto |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; a chave num PDF ou numa foto |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -51,7 +51,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e, da NFC-e, do CT-e e do MDF-e, e os MDF-e não encerrados, prontos em homologação; a NFS-e na etapa 3 |
-| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e pronta em homologação; CT-e e NFS-e na etapa 3 |
+| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e e CT-e prontos em homologação; NFS-e na etapa 3 |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
 | Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | última |
@@ -757,6 +757,35 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   certificado de teste e pela função pública, voltaram 112 ("não localizou MDF-e nessa situação") em 0,9 s. As
   respostas da SVRS e de SP ficaram gravadas para os testes (não têm dado de empresa); as do CT-e cancelado e do
   MDF-e encerrado são montadas com o protocolo e o evento dos exemplos do pacote.
+
+## Etapa 3, sexto passo: a Distribuição do CT-e (04/11/2026)
+
+- **Pedido do usuário** ("pode começar", depois de o que faltava ser listado). A `sefaz_distribuicao()` ganhou os
+  argumentos `distribuicao` (`"NF-e"`, o padrão, ou `"CT-e"`) e `uf`, e a coluna `distribuicao` na consulta. Cada
+  distribuição é uma linha de `DISTRIBUICAO_DE_CADA_DOCUMENTO`, no `R/sefaz.R`: o serviço, a operação, a família, a
+  versão e a nota técnica. A do CT-e traz também o CT-e OS e a GTV-e, e os documentos vão para o `cte_ler()`, o
+  `gtve_ler()` e o `eventos_ler()`.
+- **Fontes:** a NT 2015.002 v1.05 (novembro de 2024) e o pacote PL_CTeDistDFe_100, ambos do Portal do CT-e, e o WSDL
+  de homologação do CTeDistribuicaoDFe (baixado em 04/11/2026), que pede o `cteDadosMsg` dentro de
+  `cteDistDFeInteresse`, como na NF-e. O endereço já estava em `servicos_sefaz`.
+- **O que muda em relação à NF-e:**
+  - o pedido exige o `cUFAutor` (a UF de quem pede), que na NF-e é opcional. A NT não tem regra sobre o valor. Na
+    NF-e ele vai quando `uf` é informada;
+  - não há busca pela chave: o pedido só tem o último NSU (`distNSU`) e o NSU (`consNSU`);
+  - o CNPJ do schema 1.00 é só de números. O CNPJ com letras é recusado antes de conectar, com o motivo;
+  - o emitente não recebe os próprios CT-e. Recebem o remetente, o destinatário, o expedidor, o recebedor, o tomador e
+    quem está no `autXML`. Para quem só está no `autXML`, as chaves citadas no documento chegam trocadas por 44 noves.
+    O CT-e simplificado também vem (para o tomador e os autorizados), mas o RNFe ainda não o lê;
+  - **o `dhResp` vem sem o fuso** (o schema não tem). A resposta real disse 09:44:12 às 09:44 de Brasília, então ele é
+    lido como hora de Brasília. Só o teste real mostrou isso.
+- **A trava de uma hora é de cada distribuição:** a NT 2015.002 também manda esperar uma hora depois de "não há mais
+  documentos" e responde 656 a quem não espera (sem dizer de bloqueio, que é da NT 2014.002). A memória da sessão
+  agora é por distribuição, CNPJ e ambiente: a espera do CT-e não prende a NF-e.
+- **Teste real em homologação (04/11/2026)**, com o CNPJ do certificado de teste: um pedido pelo último NSU (0) voltou
+  137, "Nenhum documento localizado.", em 2,2 s, com último e maior NSU zerados; um pedido do NSU 1 pela função pública
+  também voltou 137, e não o 589 ("NSU superior ao maior") que a regra H06 da NT prevê. A resposta do 137 ficou gravada para os
+  testes (não tem dado de empresa). O pedido montado pelo RNFe (pelo último NSU, por um NSU e com CPF), a resposta real
+  e a resposta montada dos testes (um CT-e, o cancelamento dele e uma GTV-e) passam nos schemas do pacote.
 
 ## O robô das tabelas
 

@@ -1,9 +1,11 @@
 # Sem rede: o httr2 devolve a resposta no lugar da SEFAZ. respostas/distribuicao_homologacao_an.xml é a resposta real
-# do Ambiente Nacional de homologação (03/11/2026) ao primeiro pedido pelo último NSU: 137, nenhum documento. A resposta
-# com documentos é montada com dois exemplos do pacote, compactados como a SEFAZ manda (gzip dentro do base64).
+# do Ambiente Nacional de homologação (03/11/2026) ao primeiro pedido pelo último NSU: 137, nenhum documento; a
+# distribuicao_cte_homologacao_an.xml, a do CT-e (04/11/2026), também 137. As respostas com documentos são montadas com
+# exemplos do pacote, compactados como a SEFAZ manda (gzip dentro do base64).
 CERTIFICADO_DA_DISTRIBUICAO = test_path("certificados", "pessoa_juridica.pfx")
 CNPJ_DA_DISTRIBUICAO = "11222333000181"
 ENDERECO_DA_DISTRIBUICAO = "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx"
+ENDERECO_DA_DISTRIBUICAO_DO_CTE = "https://hom1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx"
 
 esquecer_as_respostas_sem_documentos = function() {
   rm(list = ls(quando_nao_havia_mais_documentos), envir = quando_nao_havia_mais_documentos)
@@ -40,6 +42,32 @@ resposta_com_documentos = function(ultimo_nsu, maior_nsu) {
   )
 }
 
+# Um retDistDFeInt do CT-e com 138: o CT-e (NSU 1), o cancelamento dele (NSU 2) e uma GTV-e (NSU 3). O dhResp vem sem o
+# fuso, como na resposta real.
+resposta_do_cte_com_documentos = function() {
+  paste0(
+    '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body>',
+    '<cteDistDFeInteresseResponse xmlns="http://www.portalfiscal.inf.br/cte/wsdl/CTeDistribuicaoDFe"><cteDistDFeInteresseResult>',
+    '<retDistDFeInt versao="1.00" xmlns="http://www.portalfiscal.inf.br/cte"><tpAmb>2</tpAmb><verAplic>TESTE</verAplic>',
+    "<cStat>138</cStat><xMotivo>Documento localizado.</xMotivo><dhResp>2026-11-04T09:44:12</dhResp>",
+    "<ultNSU>000000000000003</ultNSU><maxNSU>000000000000003</maxNSU><loteDistDFeInt>",
+    '<docZip NSU="000000000000001" schema="procCTe_v4.00.xsd">', compactado_em_base64(texto_do_exemplo("cte_proc_sp.xml")), "</docZip>",
+    '<docZip NSU="000000000000002" schema="procEventoCTe_v4.00.xsd">',
+    compactado_em_base64(texto_do_exemplo("evento_cte_cancelamento.xml")), "</docZip>",
+    '<docZip NSU="000000000000003" schema="procGTVe_v4.00.xsd">', compactado_em_base64(texto_do_exemplo("gtve_proc_sp.xml")), "</docZip>",
+    "</loteDistDFeInt></retDistDFeInt></cteDistDFeInteresseResult></cteDistDFeInteresseResponse></soap:Body></soap:Envelope>"
+  )
+}
+
+# A resposta real de cada distribui\u00e7\u00e3o, pelo endere\u00e7o pedido.
+resposta_real_sem_documentos = function(req) {
+  arquivo = "distribuicao_homologacao_an.xml"
+  if (grepl("hom1.cte.fazenda.gov.br", req$url, fixed = TRUE)) {
+    arquivo = "distribuicao_cte_homologacao_an.xml"
+  }
+  resposta_da_distribuicao(paste(readLines(test_path("respostas", arquivo), warn = FALSE), collapse = ""))
+}
+
 test_that("a produ\u00e7\u00e3o, um documento, um NSU ou uma chave fora do formato s\u00e3o recusados antes de conectar", {
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", ambiente = "producao"), "homologa\u00e7\u00e3o")
   expect_error(sefaz_distribuicao("123", "qualquer.pfx", "senha"), "CNPJ")
@@ -47,6 +75,13 @@ test_that("a produ\u00e7\u00e3o, um documento, um NSU ou uma chave fora do forma
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", nsu = "1234567890123456"), "15 d\u00edgitos")
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha",
                                   chave = "35261011222333000181550010000010011123456780"), "d\u00edgito verificador")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "MDF-e"), "distribuicao")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", uf = "XX"), "UF desconhecida")
+  # O CT-e: a UF de quem pede \u00e9 obrigat\u00f3ria, o CNPJ s\u00f3 com n\u00fameros e n\u00e3o h\u00e1 busca pela chave.
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "CT-e"), "cUFAutor")
+  expect_error(sefaz_distribuicao("12ABC34501DE35", "qualquer.pfx", "senha", distribuicao = "CT-e", uf = "SP"), "letras")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "CT-e", uf = "SP",
+                                  chave = "35261011222333000181570010000010011123456785"), "pela chave")
 })
 
 test_that("nenhum documento: o pedido que vai, a resposta e a espera de uma hora", {
@@ -63,6 +98,7 @@ test_that("nenhum documento: o pedido que vai, a resposta e a espera de uma hora
   distribuicao = sefaz_distribuicao("11.222.333/0001-81", CERTIFICADO_DA_DISTRIBUICAO, "teste")
   consulta = distribuicao$consulta
   expect_identical(consulta$documento, CNPJ_DA_DISTRIBUICAO)
+  expect_identical(consulta$distribuicao, "NF-e")
   expect_identical(consulta$situacao, 137L)
   expect_identical(consulta$motivo, "Nenhum documento localizado")
   expect_equal(as.numeric(consulta$processamento), as.numeric(as.POSIXct("2026-11-03 17:34:32", tz = "UTC")))
@@ -86,11 +122,14 @@ test_that("nenhum documento: o pedido que vai, a resposta e a espera de uma hora
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", ultimo_nsu = 0), "esperar uma hora")
   expect_length(pedidos, 1)
   sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", chave = "35261011222333000181550010000010011123456785")
-  sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", nsu = 12)
+  sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", nsu = 12, uf = "sp")
   expect_length(pedidos, 3)
   expect_match(rawToChar(pedidos[[2]]$body$data), "<consChNFe><chNFe>35261011222333000181550010000010011123456785</chNFe></consChNFe>",
                fixed = TRUE)
-  expect_match(rawToChar(pedidos[[3]]$body$data), "<consNSU><NSU>000000000000012</NSU></consNSU>", fixed = TRUE)
+  # Na NF-e a UF de quem pede é opcional: vai quando informada.
+  expect_match(rawToChar(pedidos[[3]]$body$data),
+               "<tpAmb>2</tpAmb><cUFAutor>35</cUFAutor><CNPJ>11222333000181</CNPJ><consNSU><NSU>000000000000012</NSU></consNSU>",
+               fixed = TRUE)
   # Outro CNPJ não está preso à espera deste.
   sefaz_distribuicao("11444777000161", CERTIFICADO_DA_DISTRIBUICAO, "teste")
   expect_length(pedidos, 4)
@@ -119,4 +158,72 @@ test_that("os documentos chegam descompactados e passam pelos leitores", {
   httr2::local_mocked_responses(function(req) resposta_da_distribuicao(resposta_com_documentos("000000000000005", "000000000000005")))
   sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", ultimo_nsu = 2)
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", ultimo_nsu = 5), "esperar uma hora")
+})
+
+test_that("CT-e: o pedido que vai, a resposta real (hora sem o fuso) e a espera separada da NF-e", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  esquecer_as_respostas_sem_documentos()
+  on.exit(esquecer_as_respostas_sem_documentos(), add = TRUE)
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    resposta_real_sem_documentos(req)
+  })
+  distribuicao = sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", distribuicao = "CT-e", uf = "ce")
+  consulta = distribuicao$consulta
+  expect_identical(consulta$distribuicao, "CT-e")
+  expect_identical(consulta$situacao, 137L)
+  expect_identical(consulta$motivo, "Nenhum documento localizado.")
+  # O dhResp do CT-e vem sem o fuso: é a hora de Brasília.
+  expect_equal(as.numeric(consulta$processamento), as.numeric(as.POSIXct("2026-11-04 12:44:12", tz = "UTC")))
+  expect_identical(consulta$ultimo_nsu, "000000000000000")
+  expect_identical(consulta$maior_nsu, "000000000000000")
+  expect_identical(consulta$versao_aplicativo, "2.1.2_2611040944")
+  expect_identical(consulta$endereco, ENDERECO_DA_DISTRIBUICAO_DO_CTE)
+  expect_true(is.na(consulta$problema))
+  # O pedido: o cteDadosMsg dentro de cteDistDFeInteresse, como o WSDL pede, e o cUFAutor logo depois do ambiente.
+  expect_identical(pedidos[[1]]$url, ENDERECO_DA_DISTRIBUICAO_DO_CTE)
+  expect_match(rawToChar(pedidos[[1]]$body$data), paste0(
+    '<cteDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/cte/wsdl/CTeDistribuicaoDFe"><cteDadosMsg>',
+    '<distDFeInt xmlns="http://www.portalfiscal.inf.br/cte" versao="1.00"><tpAmb>2</tpAmb><cUFAutor>23</cUFAutor><CNPJ>',
+    CNPJ_DA_DISTRIBUICAO, "</CNPJ><distNSU><ultNSU>000000000000000</ultNSU></distNSU></distDFeInt></cteDadosMsg>",
+    "</cteDistDFeInteresse>"
+  ), fixed = TRUE)
+  expect_match(pedidos[[1]]$body$content_type,
+               'action="http://www.portalfiscal.inf.br/cte/wsdl/CTeDistribuicaoDFe/cteDistDFeInteresse"', fixed = TRUE)
+  # A espera do CT-e não prende a NF-e do mesmo CNPJ, e a da NF-e não prende o CT-e.
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", distribuicao = "CT-e", uf = "CE"),
+               "NT 2015.002 manda esperar uma hora")
+  sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste")
+  expect_length(pedidos, 2)
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste"), "NT 2014.002 manda esperar uma hora")
+  # O NSU que faltou ainda vai.
+  sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", nsu = 7, distribuicao = "CT-e", uf = "CE")
+  expect_length(pedidos, 3)
+  expect_match(rawToChar(pedidos[[3]]$body$data), "<consNSU><NSU>000000000000007</NSU></consNSU>", fixed = TRUE)
+})
+
+test_that("CT-e: os documentos chegam descompactados e passam pelos leitores do CT-e, da GTV-e e dos eventos", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  esquecer_as_respostas_sem_documentos()
+  on.exit(esquecer_as_respostas_sem_documentos(), add = TRUE)
+  httr2::local_mocked_responses(function(req) resposta_da_distribuicao(resposta_do_cte_com_documentos()))
+  distribuicao = sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", distribuicao = "CT-e", uf = "SP")
+  expect_identical(distribuicao$consulta$situacao, 138L)
+  expect_identical(distribuicao$consulta$documentos, 3L)
+  documentos = distribuicao$documentos
+  expect_identical(documentos$nsu, c("000000000000001", "000000000000002", "000000000000003"))
+  expect_identical(documentos$tipo, c("procCTe", "procEventoCTe", "procGTVe"))
+  expect_identical(documentos$xml[1], texto_do_exemplo("cte_proc_sp.xml"))
+  # Cada leitor pega o que é dele e aponta o resto em problema.
+  expect_identical(cte_ler(documentos$xml)$ctes$chave, "35261012ABC34501DE35570010000005551876543210")
+  expect_identical(gtve_ler(documentos$xml)$gtves$chave, "35261011444777000161640010000005011246813570")
+  expect_identical(eventos_ler(documentos$xml)$eventos$tipo, "110111")
+  # O último NSU já é o maior: o seguinte pelo último NSU, só depois de uma hora.
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, CERTIFICADO_DA_DISTRIBUICAO, "teste", ultimo_nsu = 3,
+                                  distribuicao = "CT-e", uf = "SP"), "esperar uma hora")
 })

@@ -2,13 +2,18 @@
 % Please edit documentation in R/sefaz.R
 \name{sefaz_distribuicao}
 \alias{sefaz_distribuicao}
-\title{Distribuição de DF-e: os documentos de interesse de um CNPJ}
+\title{Distribuição de DF-e: os documentos de interesse de um CNPJ (NF-e e CT-e)}
 \source{
-NT 2014.002 v1.02d (Web Service de Distribuição de DF-e, Portal da
-NF-e); os schemas \code{distDFeInt_v1.01.xsd} e \code{retDistDFeInt_v1.01.xsd} do
-pacote da Distribuição de DF-e v1.04 (03/07/2026); o WSDL do serviço
-NFeDistribuicaoDFe do Ambiente Nacional (operação \code{nfeDistDFeInteresse},
-com o \code{nfeDadosMsg} dentro de \code{nfeDistDFeInteresse}).
+NF-e: NT 2014.002 v1.02d (Web Service de Distribuição de DF-e,
+Portal da NF-e); os schemas \code{distDFeInt_v1.01.xsd} e
+\code{retDistDFeInt_v1.01.xsd} do pacote da Distribuição de DF-e v1.04
+(03/07/2026); o WSDL do serviço NFeDistribuicaoDFe do Ambiente Nacional
+(operação \code{nfeDistDFeInteresse}, com o \code{nfeDadosMsg} dentro de
+\code{nfeDistDFeInteresse}). CT-e: NT 2015.002 v1.05 (novembro de 2024,
+Portal do CT-e); os schemas \code{distDFeInt_v1.00.xsd} e
+\code{retDistDFeInt_v1.00.xsd} do pacote PL_CTeDistDFe_100; o WSDL do serviço
+CTeDistribuicaoDFe (operação \code{cteDistDFeInteresse}, com o \code{cteDadosMsg}
+dentro de \code{cteDistDFeInteresse}).
 }
 \usage{
 sefaz_distribuicao(
@@ -18,12 +23,16 @@ sefaz_distribuicao(
   ultimo_nsu = 0,
   nsu = NA,
   chave = NA,
-  ambiente = "homologacao"
+  ambiente = "homologacao",
+  distribuicao = "NF-e",
+  uf = NA
 )
 }
 \arguments{
 \item{documento}{O CNPJ ou CPF de quem pede (o interessado nos documentos),
-em geral o do certificado. Pontos, barras e traços são ignorados.}
+em geral o do certificado. Pontos, barras e traços são ignorados. No
+CT-e, o CNPJ só com números: o schema da distribuição (1.00) ainda não
+aceita letras.}
 
 \item{certificado}{O caminho do certificado digital A1 (\code{.pfx} ou \code{.p12}).}
 
@@ -38,49 +47,71 @@ resposta anterior.}
 informado, \code{ultimo_nsu} não é usado.}
 
 \item{chave}{A chave de acesso de uma NF-e, para buscá-la direto. Quando
-informada, \code{ultimo_nsu} e \code{nsu} não são usados.}
+informada, \code{ultimo_nsu} e \code{nsu} não são usados. Só na NF-e: o pedido do
+CT-e não tem busca pela chave.}
 
 \item{ambiente}{\code{"homologacao"}, o único liberado por enquanto.}
+
+\item{distribuicao}{\code{"NF-e"} (o padrão) ou \code{"CT-e"} (que traz também o CT-e
+OS e a GTV-e).}
+
+\item{uf}{A UF de quem pede, pela sigla (\code{"SP"}, \code{"CE"}...). Obrigatória no
+CT-e (o \code{cUFAutor} do pedido); na NF-e, vai no pedido quando informada.}
 }
 \value{
 Uma lista com dois \code{data.frame}s:
 \itemize{
-\item \code{consulta}, numa linha: \code{documento}, \code{ambiente}, \code{situacao} (o código de
-status, \code{cStat}: 137 quando não há documentos, 138 quando há),
-\code{motivo}, \code{processamento} (data e hora, no horário de Brasília),
-\code{ultimo_nsu} (de onde seguir), \code{maior_nsu} (o maior NSU que o Ambiente
-Nacional tem para o documento), \code{documentos} (quantos vieram),
-\code{versao_aplicativo}, \code{endereco} e \code{problema} (por que a consulta não deu
-certo; vazio quando deu);
+\item \code{consulta}, numa linha: \code{documento}, \code{distribuicao} (\code{"NF-e"} ou
+\code{"CT-e"}), \code{ambiente}, \code{situacao} (o código de status, \code{cStat}: 137
+quando não há documentos, 138 quando há), \code{motivo}, \code{processamento}
+(data e hora, no horário de Brasília), \code{ultimo_nsu} (de onde seguir),
+\code{maior_nsu} (o maior NSU que o Ambiente Nacional tem para o documento),
+\code{documentos} (quantos vieram), \code{versao_aplicativo}, \code{endereco} e
+\code{problema} (por que a consulta não deu certo; vazio quando deu);
 \item \code{documentos}, um por linha: \code{nsu}, \code{schema} (o schema que valida o
-documento, como \code{resNFe_v1.01.xsd} ou \code{procNFe_v4.00.xsd}), \code{tipo} (o
-nome do schema sem a versão: \code{resNFe}, \code{procNFe}, \code{resEvento},
-\code{procEventoNFe}...) e \code{xml} (o documento, descompactado).
+documento, como \code{resNFe_v1.01.xsd}, \code{procNFe_v4.00.xsd} ou
+\code{procCTe_v4.00.xsd}), \code{tipo} (o nome do schema sem a versão: \code{resNFe},
+\code{procNFe}, \code{resEvento}, \code{procEventoNFe}, \code{procCTe},
+\code{procEventoCTe}...) e \code{xml} (o documento, descompactado).
 }
 }
 \description{
-Pergunta ao Ambiente Nacional os documentos de interesse de um CNPJ ou CPF
-(a Distribuição de DF-e da NT 2014.002): as NF-e em que ele é
-destinatário, transportador ou autorizado, os resumos das que ele ainda não
-manifestou e os eventos. Devolve uma lista com \code{consulta} (a resposta, numa
-linha) e \code{documentos} (um por linha, com o XML já descompactado). Leia os
-documentos com \code{\link[=nfe_ler]{nfe_ler()}} (as notas e os resumos) e \code{\link[=eventos_ler]{eventos_ler()}}:
-\code{nfe_ler(distribuicao$documentos$xml)}.
+Pergunta ao Ambiente Nacional os documentos de interesse de um CNPJ ou CPF.
+Na NF-e (o padrão, a Distribuição de DF-e da NT 2014.002): as notas em que
+ele é destinatário, transportador ou autorizado, os resumos das que ele
+ainda não manifestou e os eventos. No CT-e (\code{distribuicao = "CT-e"}, a NT
+2015.002): os CT-e, CT-e OS e GTV-e em que ele é remetente, destinatário,
+expedidor, recebedor, tomador ou autorizado (\code{autXML}), e os eventos deles;
+o emitente não recebe os próprios. Devolve uma lista com \code{consulta} (a
+resposta, numa linha) e \code{documentos} (um por linha, com o XML já
+descompactado). Leia os documentos com \code{\link[=nfe_ler]{nfe_ler()}} (as notas e os
+resumos), \code{\link[=cte_ler]{cte_ler()}} (o CT-e e o CT-e OS), \code{\link[=gtve_ler]{gtve_ler()}} e \code{\link[=eventos_ler]{eventos_ler()}}:
+\code{nfe_ler(distribuicao$documentos$xml)}. O CT-e simplificado também vem
+(para o tomador e os autorizados), mas o RNFe ainda não o lê: ele fica só
+em \code{documentos}, com o XML.
 }
 \details{
 Cada chamada faz um pedido, que traz até 50 documentos. Para seguir, chame
 de novo com \code{ultimo_nsu} igual ao \code{ultimo_nsu} da resposta, até ele ficar
-igual ao \code{maior_nsu}. Também dá para pedir um NSU que faltou (\code{nsu}) ou uma
-NF-e pela chave (\code{chave}).
+igual ao \code{maior_nsu}. Também dá para pedir um NSU que faltou (\code{nsu}) ou,
+só na NF-e, uma nota pela chave (\code{chave}). Cada distribuição tem a sua
+sequência de NSU: o último NSU da NF-e não serve para o CT-e.
 
-\strong{A SEFAZ bloqueia quem pergunta demais.} Pela NT 2014.002, quando a
-resposta diz que não há mais documentos (137, ou o \code{ultimo_nsu} igual ao
-\code{maior_nsu}), é preciso esperar uma hora antes de pedir de novo a partir do
-último NSU; antes disso, ela pode responder 656 ("Consumo Indevido") e
-bloquear o CNPJ por uma hora. As consultas também têm de seguir o
-\code{ultimo_nsu} que ela devolveu. Por isso, nesta sessão do R, o RNFe recusa
-um novo pedido pelo último NSU do mesmo CNPJ antes de passar a hora (o
-pedido de um \code{nsu} ou de uma \code{chave} não entra nessa regra).
+\strong{A SEFAZ bloqueia quem pergunta demais.} Pelas NTs 2014.002 e 2015.002,
+quando a resposta diz que não há mais documentos (137, ou o \code{ultimo_nsu}
+igual ao \code{maior_nsu}), é preciso esperar uma hora antes de pedir de novo a
+partir do último NSU; antes disso, ela pode responder 656 ("Consumo
+Indevido") e, na NF-e, bloquear o CNPJ por uma hora. As consultas também
+têm de seguir o \code{ultimo_nsu} que ela devolveu. Por isso, nesta sessão do R,
+o RNFe recusa um novo pedido pelo último NSU do mesmo CNPJ, na mesma
+distribuição, antes de passar a hora (o pedido de um \code{nsu} ou de uma
+\code{chave} não entra nessa regra).
+
+Quem pede é o dono do certificado: com um certificado de empresa, dá para
+pedir os documentos de qualquer CNPJ com a mesma raiz (os 8 primeiros
+dígitos); outra raiz volta 593. No CT-e, para quem só está no \code{autXML}, a
+SEFAZ troca as chaves das NF-e e CT-e citados no documento por 44 noves
+(sigilo fiscal, NT 2015.002).
 
 Por enquanto só o ambiente de \strong{homologação}; a produção é recusada. A
 conexão é a mesma do \code{\link[=sefaz_status]{sefaz_status()}}.
@@ -94,8 +125,13 @@ nfe_ler(distribuicao$documentos$xml)$resumos
 # O próximo pedido segue do último NSU recebido.
 seguinte = sefaz_distribuicao("11222333000181", "empresa.pfx", senha,
                               ultimo_nsu = distribuicao$consulta$ultimo_nsu)
+# Os CT-e de interesse do mesmo CNPJ (a UF de quem pede é obrigatória).
+ctes = sefaz_distribuicao("11222333000181", "empresa.pfx", senha,
+                          distribuicao = "CT-e", uf = "SP")
+cte_ler(ctes$documentos$xml)
 }
 }
 \seealso{
-\code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=eventos_ler]{eventos_ler()}}, \code{\link[=sefaz_situacao]{sefaz_situacao()}}
+\code{\link[=nfe_ler]{nfe_ler()}}, \code{\link[=cte_ler]{cte_ler()}}, \code{\link[=gtve_ler]{gtve_ler()}}, \code{\link[=eventos_ler]{eventos_ler()}},
+\code{\link[=sefaz_situacao]{sefaz_situacao()}}
 }
