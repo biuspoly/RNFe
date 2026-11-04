@@ -842,10 +842,13 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   consulta é recusada por limite; a ReceitaWS e a CNPJ.ws mandaram, nos cabeçalhos, limite de 3 por minuto, por isso
   vão por último. O argumento `fontes` escolhe quais e em que ordem.
 - **Fora do ar** (vai para a próxima): sem resposta (inclui o tempo limite de 15 s), 429, 5xx, ou uma resposta que não
-  é a de sempre (sem JSON, ou um 404 sem a mensagem da fonte). **Não achou** é resposta e para ali: 404 com a mensagem
-  da fonte (`message` na BrasilAPI, no Minha Receita e na CNPJá; `detalhes` na CNPJ.ws), ou, na ReceitaWS, o 200 com
-  `status` "ERROR" ("CNPJ rejeitado pela Receita Federal"). Procurar na fonte seguinte o CNPJ que uma não achou não foi
-  pedido: o pedido foi passar para a próxima quando a fonte estiver fora do ar.
+  é a de sempre (sem JSON, ou um 404 sem a mensagem da fonte). **Não achou** é o 404 com a mensagem da fonte
+  (`message` na BrasilAPI, no Minha Receita e na CNPJá; `detalhes` na CNPJ.ws), ou, na ReceitaWS, o 200 com `status`
+  "ERROR" ("CNPJ rejeitado pela Receita Federal"). Na primeira versão, o "não achou" parava ali; desde 04/11/2026
+  (o usuário, depois da revisão: "faça todos") ele também passa para a próxima, porque o CNPJ aberto há pouco pode
+  ainda não estar nos dados abertos que a BrasilAPI usa. O Minha Receita só é perguntado quando a BrasilAPI está fora
+  do ar: ela busca nele, e perguntar aos dois seria perguntar duas vezes à mesma base. `mensagem` traz o que cada
+  fonte que não achou disse, com o nome dela.
 - **Cada fonte no seu formato**, conferido em 04/11/2026 com a matriz do Banco do Brasil (ativa desde 03/11/2005), uma
   filial baixada em 29/07/2020 e um CNPJ com o dígito certo que não existe; as cinco deram a mesma situação e a mesma
   data:

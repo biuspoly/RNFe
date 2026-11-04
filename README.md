@@ -269,8 +269,10 @@ cnpj_situacao(c("11.222.333/0001-81", "11.444.777/0001-61"))
 
 A situação vem da BrasilAPI e, quando ela está fora do ar, do Minha Receita, da CNPJá, da ReceitaWS e da CNPJ.ws,
 uma depois da outra: todas públicas, republicando o cadastro da Receita. Fora do ar é sem resposta, limite de
-consultas (429), erro do servidor ou resposta fora do formato; um CNPJ que a fonte não tem é resposta (`encontrado`
-`FALSE`) e não vai para a próxima. A ReceitaWS e a CNPJ.ws aceitam poucas consultas por minuto (3, em 04/11/2026), e
+consultas (429), erro do servidor ou resposta fora do formato. O CNPJ que uma fonte não tem também é procurado na
+próxima (o aberto há pouco pode não estar ainda nos dados abertos que a BrasilAPI usa); o Minha Receita só entra
+quando a BrasilAPI está fora do ar, porque ela busca nele. `encontrado` fica `FALSE` quando nenhuma das que
+responderam achou. A ReceitaWS e a CNPJ.ws aceitam poucas consultas por minuto (3, em 04/11/2026), e
 por isso vêm por último; dá para escolher as fontes e a ordem com `fontes`.
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer

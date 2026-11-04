@@ -96,33 +96,60 @@ test_that("cada fonte, no seu formato, d\u00e1 a mesma situa\u00e7\u00e3o do CNP
   }
 })
 
-test_that("o CNPJ que a fonte n\u00e3o tem \u00e9 resposta: n\u00e3o passa para a pr\u00f3xima", {
+test_that("o CNPJ que uma fonte n\u00e3o tem \u00e9 procurado na pr\u00f3xima; o Minha Receita s\u00f3 sem a BrasilAPI", {
   skip_if_not_installed("httr2")
   skip_if_not_installed("jsonlite")
-  mensagens = c(brasilapi = "CNPJ 12.ABC.345/01DE-35 n\u00e3o encontrado.",
-                minhareceita = "CNPJ 12.ABC.345/01DE-35 n\u00e3o encontrado.",
-                cnpja = "tax id not registered at revenue service",
-                receitaws = "CNPJ rejeitado pela Receita Federal",
-                cnpjws = "Recurso n\u00e3o encontrado")
-  pedidos = list()
+  pedidos = character()
   httr2::local_mocked_responses(function(req) {
-    pedidos[[length(pedidos) + 1]] <<- req
     fonte = fonte_do_pedido(req)
+    pedidos <<- c(pedidos, fonte)
     # A ReceitaWS diz que não achou com 200 e o status ERROR.
     if (fonte == "receitaws") {
       return(resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 200))
     }
     resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 404)
   })
-  for (fonte in names(mensagens)) {
-    situacao = cnpj_situacao(CNPJ_QUE_NAO_EXISTE, fontes = c(fonte, "brasilapi"))
-    expect_identical(situacao$fonte, fonte)
-    expect_false(situacao$encontrado)
-    expect_identical(situacao$mensagem, unname(mensagens[fonte]))
-    expect_true(is.na(situacao$situacao))
-    expect_true(is.na(situacao$problema))
-  }
-  expect_length(pedidos, 5)
+  # Nenhuma acha: todas são perguntadas, menos o Minha Receita, porque a BrasilAPI respondeu.
+  situacao = cnpj_situacao(CNPJ_QUE_NAO_EXISTE)
+  expect_identical(pedidos, c("brasilapi", "cnpja", "receitaws", "cnpjws"))
+  expect_false(situacao$encontrado)
+  expect_true(is.na(situacao$fonte))
+  expect_identical(situacao$mensagem, paste0(
+    "brasilapi: CNPJ 12.ABC.345/01DE-35 n\u00e3o encontrado.; cnpja: tax id not registered at revenue service; ",
+    "receitaws: CNPJ rejeitado pela Receita Federal; cnpjws: Recurso n\u00e3o encontrado"
+  ))
+  expect_true(is.na(situacao$situacao))
+  expect_true(is.na(situacao$problema))
+  # A BrasilAPI não acha e a CNPJá acha (o CNPJ aberto depois dos dados abertos que a BrasilAPI usa).
+  pedidos = character()
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    pedidos <<- c(pedidos, fonte)
+    if (fonte == "brasilapi") {
+      return(resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 404))
+    }
+    resposta_da_fonte(fonte, CNPJ_BAIXADO, 200)
+  })
+  situacao = cnpj_situacao(CNPJ_BAIXADO)
+  expect_identical(pedidos, c("brasilapi", "cnpja"))
+  expect_true(situacao$encontrado)
+  expect_identical(situacao$fonte, "cnpja")
+  expect_identical(situacao$situacao, "BAIXADA")
+  expect_identical(situacao$mensagem, "brasilapi: CNPJ 12.ABC.345/01DE-35 n\u00e3o encontrado.")
+  # A BrasilAPI fora do ar: aí o Minha Receita é perguntado.
+  pedidos = character()
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    pedidos <<- c(pedidos, fonte)
+    if (fonte == "brasilapi") {
+      return(httr2::response(status_code = 503))
+    }
+    resposta_da_fonte(fonte, CNPJ_BAIXADO, 200)
+  })
+  situacao = cnpj_situacao(CNPJ_BAIXADO)
+  expect_identical(pedidos, c("brasilapi", "minhareceita"))
+  expect_identical(situacao$fonte, "minhareceita")
+  expect_true(is.na(situacao$mensagem))
 })
 
 test_that("fora do ar: sem resposta, limite, erro do servidor e resposta que n\u00e3o \u00e9 a de sempre passam para a pr\u00f3xima", {

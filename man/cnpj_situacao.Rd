@@ -26,14 +26,14 @@ dito. Dá para tirar alguma ou trocar a ordem.}
 }
 \value{
 Um \code{data.frame} com uma linha por CNPJ: \code{cnpj}, \code{encontrado}
-(\code{TRUE}, \code{FALSE} quando a fonte não tem o CNPJ, \code{NA} quando nenhuma
-respondeu), \code{situacao}, \code{data_situacao}, \code{motivo_situacao},
+(\code{TRUE}, \code{FALSE} quando nenhuma das que responderam tem o CNPJ, \code{NA}
+quando nenhuma respondeu), \code{situacao}, \code{data_situacao}, \code{motivo_situacao},
 \code{situacao_especial} e \code{data_situacao_especial}, \code{razao_social},
 \code{nome_fantasia}, \code{atualizado_em} (quando a fonte diz de quando são os
-dados, no horário de Brasília), \code{fonte} (a que respondeu), \code{mensagem} (o
-que a fonte disse quando não achou), \code{fontes_fora_do_ar} (as que foram
-tentadas antes e não responderam, com o motivo) e \code{problema} (vazio quando
-alguma fonte respondeu).
+dados, no horário de Brasília), \code{fonte} (a que achou), \code{mensagem} (o que
+disseram as fontes que não acharam, cada uma com o nome),
+\code{fontes_fora_do_ar} (as que foram tentadas e não responderam, com o
+motivo) e \code{problema} (vazio quando alguma fonte respondeu).
 }
 \description{
 Diz a situação cadastral de cada CNPJ (ATIVA, BAIXADA, INAPTA, SUSPENSA ou
@@ -44,9 +44,13 @@ são públicas e republicam o cadastro da Receita; não precisa de certificado.
 }
 \details{
 Fora do ar quer dizer sem resposta, a resposta de limite de consultas (429),
-erro do servidor (5xx) ou uma resposta que não é a de sempre. Um CNPJ que a
-fonte não acha é resposta, não falha: ele não é procurado na próxima, e
-\code{encontrado} fica \code{FALSE}. CNPJ com o dígito errado nem é perguntado.
+erro do servidor (5xx) ou uma resposta que não é a de sempre. O CNPJ que
+uma fonte não acha também é procurado na próxima: o aberto há pouco pode
+ainda não estar nos dados abertos que a BrasilAPI usa, e estar na CNPJá ou
+na ReceitaWS. O Minha Receita só é perguntado quando a BrasilAPI está fora
+do ar, porque ela busca nele (perguntar aos dois é perguntar duas vezes à
+mesma base). \code{encontrado} fica \code{FALSE} quando nenhuma das que responderam
+achou. CNPJ com o dígito errado nem é perguntado.
 
 Os dados de cada fonte têm a sua data: a BrasilAPI e o Minha Receita usam os
 dados abertos da Receita e não dizem a data no registro; a CNPJá, a

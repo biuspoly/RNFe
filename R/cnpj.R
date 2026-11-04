@@ -26,9 +26,13 @@ TEMPO_LIMITE_DAS_FONTES_DO_CNPJ = 15
 #' são públicas e republicam o cadastro da Receita; não precisa de certificado.
 #'
 #' Fora do ar quer dizer sem resposta, a resposta de limite de consultas (429),
-#' erro do servidor (5xx) ou uma resposta que não é a de sempre. Um CNPJ que a
-#' fonte não acha é resposta, não falha: ele não é procurado na próxima, e
-#' `encontrado` fica `FALSE`. CNPJ com o dígito errado nem é perguntado.
+#' erro do servidor (5xx) ou uma resposta que não é a de sempre. O CNPJ que
+#' uma fonte não acha também é procurado na próxima: o aberto há pouco pode
+#' ainda não estar nos dados abertos que a BrasilAPI usa, e estar na CNPJá ou
+#' na ReceitaWS. O Minha Receita só é perguntado quando a BrasilAPI está fora
+#' do ar, porque ela busca nele (perguntar aos dois é perguntar duas vezes à
+#' mesma base). `encontrado` fica `FALSE` quando nenhuma das que responderam
+#' achou. CNPJ com o dígito errado nem é perguntado.
 #'
 #' Os dados de cada fonte têm a sua data: a BrasilAPI e o Minha Receita usam os
 #' dados abertos da Receita e não dizem a data no registro; a CNPJá, a
@@ -45,14 +49,14 @@ TEMPO_LIMITE_DAS_FONTES_DO_CNPJ = 15
 #' @param fontes As fontes, na ordem em que são tentadas: todas, se nada for
 #'   dito. Dá para tirar alguma ou trocar a ordem.
 #' @return Um `data.frame` com uma linha por CNPJ: `cnpj`, `encontrado`
-#'   (`TRUE`, `FALSE` quando a fonte não tem o CNPJ, `NA` quando nenhuma
-#'   respondeu), `situacao`, `data_situacao`, `motivo_situacao`,
+#'   (`TRUE`, `FALSE` quando nenhuma das que responderam tem o CNPJ, `NA`
+#'   quando nenhuma respondeu), `situacao`, `data_situacao`, `motivo_situacao`,
 #'   `situacao_especial` e `data_situacao_especial`, `razao_social`,
 #'   `nome_fantasia`, `atualizado_em` (quando a fonte diz de quando são os
-#'   dados, no horário de Brasília), `fonte` (a que respondeu), `mensagem` (o
-#'   que a fonte disse quando não achou), `fontes_fora_do_ar` (as que foram
-#'   tentadas antes e não responderam, com o motivo) e `problema` (vazio quando
-#'   alguma fonte respondeu).
+#'   dados, no horário de Brasília), `fonte` (a que achou), `mensagem` (o que
+#'   disseram as fontes que não acharam, cada uma com o nome),
+#'   `fontes_fora_do_ar` (as que foram tentadas e não responderam, com o
+#'   motivo) e `problema` (vazio quando alguma fonte respondeu).
 #' @seealso [sefaz_cadastro()] para a inscrição estadual, na SEFAZ.
 #' @source As respostas de cada fonte, conferidas em 04/11/2026 com um CNPJ
 #'   ativo, um baixado e um que não existe: a BrasilAPI
@@ -96,7 +100,7 @@ linha_do_cnpj = function(cnpj) {
   )
 }
 
-# Uma fonte depois da outra, até uma responder (achando ou não o CNPJ).
+# Uma fonte depois da outra, até uma achar o CNPJ. A que está fora do ar e a que não acha passam para a próxima.
 situacao_de_um_cnpj = function(cnpj, fontes) {
   linha = linha_do_cnpj(cnpj)
   if (is.na(cnpj) || !cnpj_confere(cnpj)) {
@@ -104,25 +108,39 @@ situacao_de_um_cnpj = function(cnpj, fontes) {
     return(linha)
   }
   fora_do_ar = character()
+  nao_acharam = character()
+  brasilapi_respondeu = FALSE
   for (fonte in fontes) {
+    # A BrasilAPI busca no Minha Receita: quando ela respondeu, o Minha Receita diria o mesmo.
+    if (fonte == "minhareceita" && brasilapi_respondeu) {
+      next
+    }
     resposta = perguntar_a_fonte(fonte, cnpj)
     if (resposta$resultado == "fora do ar") {
       fora_do_ar = c(fora_do_ar, paste0(fonte, " (", resposta$motivo, ")"))
       next
     }
-    linha$fonte = fonte
-    if (resposta$resultado == "n\u00e3o achou") {
-      linha$encontrado = FALSE
-      linha$mensagem = resposta$mensagem
-    } else {
-      linha = preencher_com_a_fonte(linha, fonte, resposta$json)
+    if (fonte == "brasilapi") {
+      brasilapi_respondeu = TRUE
     }
+    if (resposta$resultado == "n\u00e3o achou") {
+      nao_acharam = c(nao_acharam, paste0(fonte, ": ", resposta$mensagem))
+      next
+    }
+    linha$fonte = fonte
+    linha = preencher_com_a_fonte(linha, fonte, resposta$json)
     break
+  }
+  if (length(nao_acharam) > 0) {
+    linha$mensagem = paste(nao_acharam, collapse = "; ")
   }
   if (length(fora_do_ar) > 0) {
     linha$fontes_fora_do_ar = paste(fora_do_ar, collapse = "; ")
   }
-  if (is.na(linha$fonte)) {
+  if (is.na(linha$fonte) && length(nao_acharam) > 0) {
+    linha$encontrado = FALSE
+  }
+  if (is.na(linha$fonte) && length(nao_acharam) == 0) {
     linha$problema = "nenhuma fonte respondeu"
   }
   linha
