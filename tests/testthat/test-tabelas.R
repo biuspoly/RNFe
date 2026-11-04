@@ -55,6 +55,25 @@ test_that("as al\u00edquotas do IBS e da CBS de cada per\u00edodo", {
   expect_true(all(utils::head(aliquotas$fim, -1) < utils::tail(aliquotas$inicio, -1)))
 })
 
+test_that("o cr\u00e9dito presumido do IBS e da CBS como na planilha oficial", {
+  # A planilha de 01/10/2026: 13 c\u00f3digos; o 04 (bem m\u00f3vel de pessoa f\u00edsica para revenda) desconta o cr\u00e9dito do tributo
+  # do item e exige os dois grupos; o 05 exige o da CBS e n\u00e3o permite o do IBS.
+  credito = tabela_fiscal("credito_presumido_ibs_cbs")
+  expect_identical(credito$codigo, sprintf("%02d", 1:13))
+  bem_movel = credito[credito$codigo == "04", ]
+  expect_identical(c(bem_movel$deduz_do_tributo, bem_movel$grupo_credito_ibs, bem_movel$grupo_credito_cbs), c(1L, 1L, 1L))
+  do_05 = credito[credito$codigo == "05", ]
+  expect_identical(c(do_05$grupo_credito_ibs, do_05$grupo_credito_cbs), c(0L, 1L))
+  expect_true(is.na(do_05$deduz_do_tributo))
+  expect_s3_class(credito$inicio_cbs, "Date")
+  expect_identical(bem_movel$inicio_cbs, as.Date("2027-01-01"))
+  expect_type(credito$orientacao_aliquota_cbs, "character")
+  # Na 1.21 do IT, o 02 deixou de ser apropriado no documento (a corre\u00e7\u00e3o que o IT descreve).
+  mudancas = tabela_fiscal("mudancas_ibs_cbs")
+  do_02 = mudancas[mudancas$tabela == "credito_presumido_ibs_cbs" & mudancas$codigo == "02", ]
+  expect_identical(c(do_02$coluna, do_02$versao, do_02$antes, do_02$depois), c("apropria_no_documento", "1.21", "1", "0"))
+})
+
 test_that("o que mudou na tabela da Reforma de uma vers\u00e3o para a outra", {
   # Conferido com o Informe Técnico 2025.002 v1.71 (seção 7): na 1.40, a 200001 deixou de valer na NF-e; na 1.70, a
   # 410014 deixou de permitir o crédito presumido; na 1.30, os CST 010 e 011 passaram a exigir o grupo do IBS e da CBS.

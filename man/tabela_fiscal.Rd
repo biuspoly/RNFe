@@ -7,8 +7,9 @@
 CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
-30/10/2026), e as versões dela publicadas desde 03/10/2025 para as
-mudanças, com os prazos de produção do IT 2025.002 v1.71; as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
+30/10/2026) e a de Crédito Presumido (publicada em 01/10/2026), e as
+versões delas publicadas desde 03/10/2025 para as mudanças, com os prazos
+de produção do IT 2025.002 v1.71; as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
 2025.002-RTC v1.53 (Portal da NF-e, 30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
 (30/10/2026). Municípios: a API de localidades do IBGE
 (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de
@@ -32,8 +33,9 @@ tabela_fiscal(nome_da_tabela)
 \code{"origem"} (origem da mercadoria), \code{"cst_icms"} (CST do ICMS), \code{"csosn"}
 (CSOSN, do Simples Nacional), \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"},
 \code{"cst_ibs_cbs"} (CST do IBS e da CBS), \code{"classificacao_ibs_cbs"}
-(cClassTrib da Reforma), \code{"mudancas_ibs_cbs"} (o que mudou nessas duas
-de uma versão para a outra), \code{"aliquotas_ibs_cbs"} (as alíquotas de cada
+(cClassTrib da Reforma), \code{"credito_presumido_ibs_cbs"} (cCredPres),
+\code{"mudancas_ibs_cbs"} (o que mudou nessas três de uma versão para a
+outra), \code{"aliquotas_ibs_cbs"} (as alíquotas de cada
 ano), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
 \code{"bandeiras_cartao"}, \code{"municipios"} (código IBGE, nome e UF),
 \code{"codigos_dos_campos"} (o significado dos códigos dos documentos) ou
@@ -48,7 +50,8 @@ Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
 Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
-\code{"classificacao_ibs_cbs"}, \code{"mudancas_ibs_cbs"}, \code{"aliquotas_ibs_cbs"}, \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
+\code{"classificacao_ibs_cbs"}, \code{"credito_presumido_ibs_cbs"}, \code{"mudancas_ibs_cbs"}, \code{"aliquotas_ibs_cbs"},
+\code{"meios_pagamento"}, \code{"bandeiras_cartao"},
 \code{"municipios"}, \code{"codigos_dos_campos"} (o que quer dizer cada código dos
 campos dos documentos) ou \code{"fontes"} (de onde veio cada uma, com a data).
 Cada tabela de códigos traz o \code{codigo}, a descrição e a vigência:
@@ -104,10 +107,26 @@ ser usada (1 = pode): \code{permitido_na_nfe}, \code{permitido_na_nfce},
 \code{ind} de cada um na planilha); o tipo de receita bruta do Simples Nacional
 (\code{tipo_receita_simples}, o \code{tpRBSN}) e o uso do indicador de doação
 (\code{doacao}, o \code{tpDoacao}), cada um com a \verb{_descricao} das abas da planilha.
-\item \code{"mudancas_ibs_cbs"}: o que mudou nas duas tabelas acima de uma versão
+\item \code{"credito_presumido_ibs_cbs"}: o código de classificação do crédito
+presumido do IBS e da CBS (\code{cCredPres}, com dois dígitos, como no XML), a
+\code{descricao}, o \code{texto_da_lc_214}; como ele se apropria
+(\code{apropria_no_documento} e \code{apropria_por_evento}), se o crédito é
+descontado do IBS do item (\code{deduz_do_tributo}, o \code{indDeduzCredPres}) e os
+grupos que exige (1) ou não permite (0) no documento: \code{grupo_credito_cbs}
+(\code{ind_gCBSCredPres}) e \code{grupo_credito_ibs} (\code{ind_gIBSCredPres}); a
+\code{declaracao_pagamento} (\code{indDecPag}) e os documentos em que vale
+(\code{permitido_na_nfe}, \code{permitido_na_nfce}, \code{permitido_no_cte} e
+\code{permitido_na_nfse}); as orientações da planilha, em texto
+(\code{orientacao_aliquota_cbs}, \code{orientacao_aliquota_ibs},
+\code{orientacao_percentual_cbs}, \code{orientacao_percentual_ibs},
+\code{orientacao_reducao_transicao_ibs} e
+\code{orientacao_classificacao_referenciada}); e a vigência na CBS e no IBS
+(\code{inicio_cbs}, \code{fim_cbs}, \code{inicio_ibs} e \code{fim_ibs}).
+\item \code{"mudancas_ibs_cbs"}: o que mudou nas tabelas acima de uma versão
 publicada para a seguinte, desde a 1.20 (a que estava publicada quando as
 regras de validação entraram em produção, em 10/11/2025): a \code{tabela}
-(\code{"cst_ibs_cbs"} ou \code{"classificacao_ibs_cbs"}), o \code{codigo}, a \code{coluna} (o
+(\code{"cst_ibs_cbs"}, \code{"classificacao_ibs_cbs"} ou
+\code{"credito_presumido_ibs_cbs"}), o \code{codigo}, a \code{coluna} (o
 nome da coluna na tabela, ou \code{"existe"} para o código que entrou ou saiu),
 o valor de \code{antes} e o de \code{depois}, a \code{versao} do Informe Técnico
 2025.002, a data em que foi \code{publicada_em} e o prazo em que ficou

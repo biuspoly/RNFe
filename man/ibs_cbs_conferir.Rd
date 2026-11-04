@@ -42,6 +42,15 @@ item (diferimento, redução, devolução, tributação regular, transferência
 de crédito, ajuste de competência, estorno de crédito, crédito presumido,
 compra governamental), pelos indicadores da planilha oficial (veja
 \code{tabela_fiscal("cst_ibs_cbs")} e \code{tabela_fiscal("classificacao_ibs_cbs")});
+\item a nota de débito e de crédito: a classificação combina com o tipo da
+nota; a transferência de crédito, o ajuste de competência e o estorno com
+valor; o crédito presumido da ZFM só na nota de crédito do tipo 02;
+\item o crédito presumido da operação, pela tabela de crédito presumido (veja
+\code{tabela_fiscal("credito_presumido_ibs_cbs")}): o código existe, os grupos
+do IBS e da CBS que ele exige ou não permite, o limite do código 04 e o
+crédito em condição suspensiva;
+\item a CBS zero na área incentivada (ZFM e ALC): a inscrição na Suframa, o NCM,
+a mesma área do emitente e do destinatário e o valor sem a redução;
 \item as alíquotas do ano (veja \code{tabela_fiscal("aliquotas_ibs_cbs")}), com as
 exceções da NT: a tributação regular, a devolução, as notas de crédito e,
 na CBS, as áreas incentivadas (ZFM e ALC);
@@ -68,11 +77,11 @@ tabela de hoje vem com \code{confere} vazio e o motivo, em vez de errado.
 
 Fica de fora, por enquanto: a tributação monofásica de combustíveis, que a
 NT reformulou na versão 1.50, com produção marcada para novembro de 2026;
-o crédito presumido, que consulta a tabela de crédito presumido
-(\code{cCredPres}), ainda fora do RNFe; o Imposto Seletivo e a regra da base de
-cálculo (UB16-10), que a NT deixa para implementação futura; a exigência
-do grupo monofásico pelo CST (UB13-40), também futura; e o CT-e e os outros
-documentos, que têm as notas técnicas deles. Uma regra que se aplica mas
+o Imposto Seletivo e a regra da base de cálculo (UB16-10), que a NT deixa
+para implementação futura; a exigência do grupo monofásico pelo CST
+(UB13-40), também futura; a regra do total dos produtos (W07-10), que é do
+ICMS e não do IBS e da CBS; e o CT-e e os outros documentos, que têm as
+notas técnicas deles. Uma regra que se aplica mas
 não dá para conferir (a CBS de 2027 em diante, sem a alíquota de referência
 publicada) vem com \code{confere} vazio e o motivo.
 }

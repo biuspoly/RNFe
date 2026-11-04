@@ -327,7 +327,11 @@ ibs_cbs_conferir("nota.xml", todas_as_regras = TRUE)   # também as que conferem
 Confere o IBS e a CBS da NF-e e da NFC-e pelas regras de validação da NT 2025.002-RTC (v1.53): os códigos (o CST
 e a classificação existem, combinam e valem no modelo), os grupos que cada CST e cada classificação exigem ou não
 permitem, as alíquotas do ano, as contas de cada item (redução, alíquota efetiva, diferimento, devolução, valor do
-IBS da UF, do município e da CBS, tributação regular, compra governamental) e os totais. Cada conferência traz a
+IBS da UF, do município e da CBS, tributação regular, compra governamental), a nota de débito e de crédito (a
+classificação combina com o tipo da nota, a transferência de crédito, o ajuste de competência e o estorno com valor,
+o crédito presumido da ZFM), o crédito presumido da operação pela tabela `cCredPres` (o código, os grupos que ele
+exige, o desconto no IBS do item, o crédito em condição suspensiva), a CBS zero na ZFM e nas ALC e os totais. Cada
+conferência traz a
 regra (`UB35-10`), o código e a mensagem que a SEFAZ daria (`1041`, "Valor do IBS da UF difere do calculado") e, nas
 contas, a diferença. O valor calculado vai a 2 casas antes da tolerância de 0,01, porque a SEFAZ autoriza assim.
 
@@ -340,8 +344,7 @@ conferir, numa de junho, errada. Essas mudanças estão em `tabela_fiscal("mudan
 tabelas comparando as versões publicadas desde 03/10/2025.
 
 Ficam de fora, por enquanto, a tributação monofásica de combustíveis (reformulada na NT v1.50, com produção marcada
-para novembro de 2026), o crédito presumido (que consulta a tabela `cCredPres`, ainda fora do RNFe), o Imposto
-Seletivo e as regras que a NT deixa para implementação futura.
+para novembro de 2026), o Imposto Seletivo e as regras que a NT deixa para implementação futura.
 
 ## Tabelas fiscais
 
@@ -349,7 +352,8 @@ Seletivo e as regras que a NT deixa para implementação futura.
 tabela_fiscal("cfop")                    # título, nota explicativa e indicadores de cada CFOP
 tabela_fiscal("ncm")                     # a NCM vigente, com a descrição completa de cada código
 tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_cbs", com os indicadores de cada um
-tabela_fiscal("mudancas_ibs_cbs")        # o que mudou nessas duas de uma versão para a outra, com o prazo de produção
+tabela_fiscal("credito_presumido_ibs_cbs")  # o cCredPres: os grupos que cada código exige e se desconta do IBS
+tabela_fiscal("mudancas_ibs_cbs")        # o que mudou nessas três de uma versão para a outra, com o prazo de produção
 tabela_fiscal("aliquotas_ibs_cbs")       # as alíquotas do IBS e da CBS de cada ano, com a base legal
 tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
 tabela_fiscal("municipios")              # os municípios do IBGE: código de 7 dígitos, nome e UF

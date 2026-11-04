@@ -9,7 +9,8 @@
 # - Origem, CST do ICMS, CSOSN e CST do IPI, do PIS e da COFINS: as tabelas externas do SPED Fiscal, que a
 #   Receita publica com o início e o fim de cada código, baixadas pelo serviço do próprio SPED.
 # - CST e classificação tributária do IBS e da CBS: a tabela do Informe Técnico 2025.002, no Portal da NF-e; e o que
-#   mudou de uma versão publicada da tabela para a seguinte, desde a 1.20 (mudancas_ibs_cbs).
+#   mudou de uma versão publicada da tabela para a seguinte, desde a 1.20 (mudancas_ibs_cbs). O crédito presumido
+#   (cCredPres): a tabela de crédito presumido do mesmo IT.
 # - NCM: a nomenclatura vigente do Portal Único Siscomex.
 # - Meios de pagamento e bandeiras de cartão: as tabelas do Portal da NF-e (seção Diversos).
 # - Municípios: a API de localidades do IBGE, que a NF-e, o CT-e, o MDF-e e a NFS-e usam para o código do
@@ -118,9 +119,11 @@ links_do_portal = function(filtro_do_xpath, pasta_temporaria) {
   pedido_da_pagina = httr2::req_cookie_preserve(httr2::request(paste0(ENDERECO_DO_PORTAL, PAGINA_COM_A_TABELA_DE_CFOP)), arquivo_de_cookies)
   pagina_do_portal = xml2::read_html(httr2::resp_body_string(httr2::req_perform(pedido_da_pagina)))
   links_achados = xml2::xml_find_all(pagina_do_portal, paste0("//a[", filtro_do_xpath, "]"))
+  # O código do arquivo no link tem "+", que vai como %2B; em alguns links a página traz um espaço no lugar dele (o da
+  # tabela de crédito presumido de 07/10/2025).
   data.frame(
     titulo = trimws(xml2::xml_text(links_achados)),
-    endereco = gsub("+", "%2B", xml2::xml_attr(links_achados, "href"), fixed = TRUE)
+    endereco = gsub("[+ ]", "%2B", xml2::xml_attr(links_achados, "href"))
   )
 }
 
@@ -338,17 +341,89 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
   list(classificacao = classificacao, cst = cst, titulo = planilha_baixada$titulo)
 }
 
-# As versões da Tabela de Classificação Tributária do IBS e CBS desde a que estava publicada quando as regras de
-# validação da NT 2025.002 entraram em produção (10/11/2025, NT v1.30): a data de publicação no portal, a versão do
-# Informe Técnico 2025.002 e o prazo de produção que o controle de versões do IT dá ("Até 04/05/26"). As versões sem
-# prazo no IT estão em produção, no máximo, no prazo da seguinte que tem, porque ela já traz a mudança. Versão nova no
-# portal: uma linha aqui, com o prazo do IT dela; enquanto não tiver, as mudanças dela ficam sem prazo conhecido.
-VERSOES_DA_TABELA_DA_REFORMA = data.frame(
-  publicada_em = as.Date(c("2025-10-03", "2025-11-24", "2025-12-15", "2026-01-28", "2026-04-15", "2026-06-23",
-                           "2026-10-01", "2026-10-30")),
-  versao = c("1.20", "1.30", "1.31", "1.40", "1.50", "1.60", "1.70", "1.71"),
-  prazo_de_producao = as.Date(c(NA, NA, NA, NA, "2026-05-04", "2026-07-06", "2026-10-16", "2026-10-30"))
+# A Tabela de Código de Crédito Presumido do IBS e CBS (Informe Técnico 2025.002): o código (cCredPres, com dois
+# dígitos, como no XML), o que cada um permite e exige no documento e a vigência na CBS e no IBS. Na planilha de
+# 23/06/2026 a dedução se chamava "ind_DeduzCredPres". As colunas de texto são orientações (a alíquota "calculada e
+# divulgada anualmente", o cClassTrib da nota referenciada), como o IT as descreve.
+COLUNAS_DO_CREDITO_PRESUMIDO = c(
+  "Apropria via NF?" = "apropria_no_documento", "Apropria via evento?" = "apropria_por_evento",
+  indDeduzCredPres = "deduz_do_tributo", ind_gCBSCredPres = "grupo_credito_cbs", ind_gIBSCredPres = "grupo_credito_ibs",
+  indDecPag = "declaracao_pagamento", indNFe = "permitido_na_nfe", indNFCe = "permitido_na_nfce",
+  indCTe = "permitido_no_cte", indNFSe = "permitido_na_nfse"
 )
+
+ler_aba_de_credito_presumido = function(arquivo_da_planilha, tipos_das_colunas = NULL) {
+  creditos = readxl::read_excel(arquivo_da_planilha, sheet = "cCredPres", col_types = tipos_das_colunas)
+  names(creditos)[names(creditos) == "ind_DeduzCredPres"] = "indDeduzCredPres"
+  creditos[!is.na(creditos[["cCredPres"]]), ]
+}
+
+baixar_credito_presumido = function(pasta_temporaria) {
+  planilha_baixada = baixar_do_portal("Tabela de Código de Crédito Presumido do IBS", pasta_temporaria)
+  creditos = ler_aba_de_credito_presumido(planilha_baixada$arquivo)
+  conferir_colunas(creditos, c(
+    "cCredPres", "Descrição", "LC 214/2025", "Alíquota CBS", "Alíquota IBS", "pAliqCredPresCBS", "pAliqCredPresIBS",
+    "pRedTransicaoIBS", "cClassTrib nota referenciada", "dIniVigCBS", "dFimVigCBS", "dIniVigIBS", "dFimVigIBS",
+    names(COLUNAS_DO_CREDITO_PRESUMIDO)
+  ), "de crédito presumido do IBS e CBS")
+  credito_presumido = data.frame(
+    codigo = sprintf("%02d", as.integer(creditos[["cCredPres"]])),
+    descricao = trimws(creditos[["Descrição"]]),
+    texto_da_lc_214 = trimws(creditos[["LC 214/2025"]]),
+    orientacao_aliquota_cbs = trimws(as.character(creditos[["Alíquota CBS"]])),
+    orientacao_aliquota_ibs = trimws(as.character(creditos[["Alíquota IBS"]])),
+    orientacao_percentual_cbs = trimws(as.character(creditos[["pAliqCredPresCBS"]])),
+    orientacao_percentual_ibs = trimws(as.character(creditos[["pAliqCredPresIBS"]])),
+    orientacao_reducao_transicao_ibs = trimws(as.character(creditos[["pRedTransicaoIBS"]])),
+    orientacao_classificacao_referenciada = trimws(as.character(creditos[["cClassTrib nota referenciada"]])),
+    inicio_cbs = as.Date(creditos[["dIniVigCBS"]]),
+    fim_cbs = as.Date(creditos[["dFimVigCBS"]]),
+    inicio_ibs = as.Date(creditos[["dIniVigIBS"]]),
+    fim_ibs = as.Date(creditos[["dFimVigIBS"]])
+  )
+  for (nome_na_planilha in names(COLUNAS_DO_CREDITO_PRESUMIDO)) {
+    credito_presumido[[COLUNAS_DO_CREDITO_PRESUMIDO[[nome_na_planilha]]]] = as.integer(creditos[[nome_na_planilha]])
+  }
+  list(tabela = credito_presumido, titulo = planilha_baixada$titulo)
+}
+
+# O controle de versões do Informe Técnico 2025.002 (v1.71): o prazo de produção de cada versão ("Até 04/05/26"). As
+# versões sem prazo lá estão em produção, no máximo, no prazo da seguinte que tem, porque ela já traz a mudança. Versão
+# nova: uma linha aqui, com o prazo do IT dela; enquanto não tiver, as mudanças dela ficam sem prazo conhecido.
+VERSOES_DO_INFORME_TECNICO = data.frame(
+  versao = c("1.20", "1.21", "1.30", "1.31", "1.40", "1.50", "1.60", "1.70", "1.71"),
+  prazo_de_producao = as.Date(c(NA, NA, NA, NA, NA, "2026-05-04", "2026-07-06", "2026-10-16", "2026-10-30"))
+)
+
+# As planilhas da Reforma publicadas no portal desde a versão 1.20 do IT (a que estava publicada quando as regras de
+# validação da NT 2025.002 entraram em produção, em 10/11/2025): a de classificação (com a aba de CST) e a de crédito
+# presumido, com a data de publicação e a versão do IT de cada uma.
+PUBLICACOES_DA_REFORMA = data.frame(
+  planilha = c(rep("classificacao", 8), rep("credito_presumido", 5)),
+  publicada_em = as.Date(c("2025-10-03", "2025-11-24", "2025-12-15", "2026-01-28", "2026-04-15", "2026-06-23",
+                           "2026-10-01", "2026-10-30",
+                           "2025-10-03", "2025-10-07", "2025-12-15", "2026-06-23", "2026-10-01")),
+  versao = c("1.20", "1.30", "1.31", "1.40", "1.50", "1.60", "1.70", "1.71",
+             "1.20", "1.21", "1.31", "1.60", "1.70")
+)
+
+# O que acha os links de cada planilha na página do portal.
+LINKS_DAS_PLANILHAS_DA_REFORMA = c(
+  classificacao = "contains(normalize-space(.), 'Classificação Tributária do IBS')",
+  credito_presumido = "contains(normalize-space(.), 'Crédito Presumido do IBS')"
+)
+
+# O prazo de produção de cada versão do IT: o dela ou, sem, o da primeira versão seguinte que tem.
+prazo_de_cada_versao = function() {
+  prazos = VERSOES_DO_INFORME_TECNICO$prazo_de_producao
+  for (posicao in rev(seq_len(length(prazos) - 1))) {
+    if (is.na(prazos[posicao])) {
+      prazos[posicao] = prazos[posicao + 1]
+    }
+  }
+  names(prazos) = VERSOES_DO_INFORME_TECNICO$versao
+  prazos
+}
 
 # O valor como texto, para comparar uma versão com a outra: "60" e "60.0" são o mesmo número; vazio fica NA.
 valor_para_comparar = function(valores) {
@@ -358,9 +433,10 @@ valor_para_comparar = function(valores) {
   textos
 }
 
-# De uma versão da planilha, os valores que a história acompanha, um por linha: a tabela do pacote, o código, a coluna
-# (com o nome do pacote; "existe" diz que o código está na versão) e o valor. Só as colunas que a versão tem.
-valores_da_versao_da_reforma = function(arquivo_da_planilha) {
+# De uma versão da planilha de classificação, os valores que a história acompanha, um por linha: a tabela do pacote, o
+# código, a coluna (com o nome do pacote; "existe" diz que o código está na versão) e o valor. Só as colunas que a
+# versão tem.
+valores_da_classificacao = function(arquivo_da_planilha) {
   abas = abas_da_planilha_da_reforma(arquivo_da_planilha)
   classificacoes = readxl::read_excel(arquivo_da_planilha, sheet = abas$classificacao, col_types = "text")
   classificacoes = classificacoes[!is.na(classificacoes[["cClassTrib"]]), ]
@@ -387,6 +463,19 @@ valores_da_versao_da_reforma = function(arquivo_da_planilha) {
   do.call(rbind, partes)
 }
 
+valores_do_credito_presumido = function(arquivo_da_planilha) {
+  creditos = ler_aba_de_credito_presumido(arquivo_da_planilha, "text")
+  codigos = sprintf("%02d", as.integer(creditos[["cCredPres"]]))
+  partes = list(data.frame(tabela = "credito_presumido_ibs_cbs", codigo = codigos, coluna = "existe", valor = "1"))
+  for (nome_na_planilha in intersect(names(COLUNAS_DO_CREDITO_PRESUMIDO), names(creditos))) {
+    partes[[length(partes) + 1]] = data.frame(
+      tabela = "credito_presumido_ibs_cbs", codigo = codigos, coluna = COLUNAS_DO_CREDITO_PRESUMIDO[[nome_na_planilha]],
+      valor = valor_para_comparar(creditos[[nome_na_planilha]])
+    )
+  }
+  do.call(rbind, partes)
+}
+
 # O que mudou de uma versão para a seguinte: o código que entrou ou saiu (coluna "existe") e o valor que mudou num
 # código que está nas duas, só nas colunas que as duas têm.
 mudancas_entre_versoes = function(valores_antes, valores_depois) {
@@ -405,60 +494,69 @@ mudancas_entre_versoes = function(valores_antes, valores_depois) {
   juntos[mudou & (existe | nas_duas), c("tabela", "codigo", "coluna", "valor_antes", "valor_depois")]
 }
 
-# A história da tabela da Reforma: baixa do portal cada versão publicada desde a 1.20 e lista o que mudou em cada uma,
-# com o prazo de produção dela. É o que a conferência do IBS e da CBS consulta para uma nota emitida antes de uma
-# mudança, que a SEFAZ conferiu pela versão da época.
-baixar_historia_da_reforma = function(pasta_temporaria) {
-  links_achados = links_do_portal("contains(normalize-space(.), 'Classificação Tributária do IBS')", pasta_temporaria)
+# As versões publicadas de uma planilha da Reforma, da mais antiga para a mais nova, com a versão do IT e o prazo de
+# produção de cada uma.
+versoes_publicadas = function(planilha, pasta_temporaria) {
+  links_achados = links_do_portal(LINKS_DAS_PLANILHAS_DA_REFORMA[[planilha]], pasta_temporaria)
   links_achados$publicada_em = as.Date(sub(".*Publicad[ao] em (\\d{2}/\\d{2}/\\d{4}).*", "\\1", links_achados$titulo),
                                        format = "%d/%m/%Y")
   if (anyNA(links_achados$publicada_em)) {
-    stop("Link da tabela da Reforma sem a data de publicação: ", paste(links_achados$titulo[is.na(links_achados$publicada_em)],
-                                                                      collapse = "; "), call. = FALSE)
+    stop("Link da planilha da Reforma sem a data de publicação: ",
+         paste(links_achados$titulo[is.na(links_achados$publicada_em)], collapse = "; "), call. = FALSE)
   }
-  links_achados = links_achados[links_achados$publicada_em >= min(VERSOES_DA_TABELA_DA_REFORMA$publicada_em), ]
+  publicacoes = PUBLICACOES_DA_REFORMA[PUBLICACOES_DA_REFORMA$planilha == planilha, ]
+  links_achados = links_achados[links_achados$publicada_em >= min(publicacoes$publicada_em), ]
   links_achados = links_achados[order(links_achados$publicada_em), ]
-  sem_versao = !(links_achados$publicada_em %in% VERSOES_DA_TABELA_DA_REFORMA$publicada_em)
+  sem_versao = !(links_achados$publicada_em %in% publicacoes$publicada_em)
   if (any(sem_versao)) {
-    cat("::warning::Tabela da Reforma publicada sem versão em VERSOES_DA_TABELA_DA_REFORMA (as mudanças dela ficam sem",
-        "prazo de produção):", paste(links_achados$titulo[sem_versao], collapse = "; "), "\n")
+    cat("::warning::Planilha da Reforma publicada sem versão em PUBLICACOES_DA_REFORMA (as mudanças dela ficam sem prazo",
+        "de produção):", paste(links_achados$titulo[sem_versao], collapse = "; "), "\n")
   }
-  faltam = setdiff(VERSOES_DA_TABELA_DA_REFORMA$publicada_em, links_achados$publicada_em)
+  faltam = publicacoes$publicada_em[!(publicacoes$publicada_em %in% links_achados$publicada_em)]
   if (length(faltam) > 0) {
-    stop("O portal não tem mais a tabela da Reforma publicada em ", paste(format(as.Date(faltam, origin = "1970-01-01"), "%d/%m/%Y"),
-                                                                        collapse = ", "), call. = FALSE)
+    stop("O portal não tem mais a planilha de ", planilha, " publicada em ", paste(format(faltam, "%d/%m/%Y"), collapse = ", "),
+         call. = FALSE)
   }
-  da_versao = match(links_achados$publicada_em, VERSOES_DA_TABELA_DA_REFORMA$publicada_em)
-  links_achados$versao = VERSOES_DA_TABELA_DA_REFORMA$versao[da_versao]
-  links_achados$prazo_de_producao = VERSOES_DA_TABELA_DA_REFORMA$prazo_de_producao[da_versao]
-  # Sem prazo no IT: o da primeira versão seguinte que tem.
-  links_achados$em_producao_ate = links_achados$prazo_de_producao
-  for (posicao in rev(seq_len(nrow(links_achados) - 1))) {
-    if (is.na(links_achados$em_producao_ate[posicao]) && !is.na(links_achados$versao[posicao])) {
-      links_achados$em_producao_ate[posicao] = links_achados$em_producao_ate[posicao + 1]
-    }
-  }
+  links_achados$versao = publicacoes$versao[match(links_achados$publicada_em, publicacoes$publicada_em)]
+  links_achados$em_producao_ate = prazo_de_cada_versao()[links_achados$versao]
+  links_achados
+}
+
+# A história das planilhas da Reforma: baixa do portal cada versão publicada desde a 1.20 e lista o que mudou em cada
+# uma, com o prazo de produção dela. É o que a conferência do IBS e da CBS consulta para uma nota emitida antes de uma
+# mudança, que a SEFAZ conferiu pela versão da época.
+baixar_historia_da_reforma = function(pasta_temporaria) {
   mudancas = list()
-  valores_antes = NULL
-  for (posicao in seq_len(nrow(links_achados))) {
-    arquivo_da_versao = baixar_link_do_portal(links_achados$endereco[posicao], pasta_temporaria)
-    valores_depois = valores_da_versao_da_reforma(arquivo_da_versao)
-    if (!is.null(valores_antes)) {
-      mudancas_da_versao = mudancas_entre_versoes(valores_antes, valores_depois)
-      if (nrow(mudancas_da_versao) > 0) {
-        mudancas_da_versao$versao = links_achados$versao[posicao]
-        mudancas_da_versao$publicada_em = links_achados$publicada_em[posicao]
-        mudancas_da_versao$em_producao_ate = links_achados$em_producao_ate[posicao]
-        mudancas[[length(mudancas) + 1]] = mudancas_da_versao
+  publicadas = list()
+  for (planilha in names(LINKS_DAS_PLANILHAS_DA_REFORMA)) {
+    versoes = versoes_publicadas(planilha, pasta_temporaria)
+    publicadas[[planilha]] = versoes$publicada_em
+    valores_antes = NULL
+    for (posicao in seq_len(nrow(versoes))) {
+      arquivo_da_versao = baixar_link_do_portal(versoes$endereco[posicao], pasta_temporaria)
+      if (planilha == "classificacao") {
+        valores_depois = valores_da_classificacao(arquivo_da_versao)
+      } else {
+        valores_depois = valores_do_credito_presumido(arquivo_da_versao)
       }
+      if (!is.null(valores_antes)) {
+        mudancas_da_versao = mudancas_entre_versoes(valores_antes, valores_depois)
+        if (nrow(mudancas_da_versao) > 0) {
+          mudancas_da_versao$versao = versoes$versao[posicao]
+          mudancas_da_versao$publicada_em = versoes$publicada_em[posicao]
+          mudancas_da_versao$em_producao_ate = unname(versoes$em_producao_ate[posicao])
+          mudancas[[length(mudancas) + 1]] = mudancas_da_versao
+        }
+      }
+      valores_antes = valores_depois
     }
-    valores_antes = valores_depois
   }
   historia = do.call(rbind, mudancas)
   names(historia)[names(historia) == "valor_antes"] = "antes"
   names(historia)[names(historia) == "valor_depois"] = "depois"
   historia = historia[order(historia$publicada_em, historia$tabela, historia$codigo, historia$coluna), ]
-  list(tabela = historia, primeira = links_achados$publicada_em[1], ultima = links_achados$publicada_em[nrow(links_achados)])
+  todas_as_datas = do.call(c, publicadas)
+  list(tabela = historia, primeira = min(todas_as_datas), ultima = max(todas_as_datas))
 }
 
 # ---- Siscomex ----
@@ -791,6 +889,7 @@ fontes = rbind(fontes, data.frame(
 ))
 
 tabelas_da_reforma = baixar_tabelas_da_reforma(pasta_temporaria)
+credito_presumido_do_portal = baixar_credito_presumido(pasta_temporaria)
 historia_da_reforma = baixar_historia_da_reforma(pasta_temporaria)
 ncm_baixada = baixar_ncm()
 meios_do_portal = baixar_meios_de_pagamento(pasta_temporaria)
@@ -803,14 +902,16 @@ for (servicos_do_documento in list(baixar_servicos_da_nfce("homologacao"),
   servicos_de_homologacao$autorizadores = rbind(servicos_de_homologacao$autorizadores, servicos_do_documento$autorizadores)
 }
 fontes = rbind(fontes, data.frame(
-  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "mudancas_ibs_cbs", "ncm", "meios_pagamento", "bandeiras_cartao",
-             "servicos_sefaz", "autorizadores_sefaz"),
+  tabela = c("cst_ibs_cbs", "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "ncm",
+             "meios_pagamento", "bandeiras_cartao", "servicos_sefaz", "autorizadores_sefaz"),
   fonte = c(
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de CST"),
     paste0("Portal da NF-e, ", tabelas_da_reforma$titulo, " (Informe Técnico 2025.002), aba de cClassTrib"),
-    paste0("Portal da NF-e, as versões da Tabela de Classificação Tributária do IBS e CBS publicadas de ",
-           format(historia_da_reforma$primeira, "%d/%m/%Y"), " a ", format(historia_da_reforma$ultima, "%d/%m/%Y"),
-           ", comparadas uma com a seguinte; prazos de produção do controle de versões do Informe Técnico 2025.002"),
+    paste0("Portal da NF-e, ", credito_presumido_do_portal$titulo, " (Informe Técnico 2025.002)"),
+    paste0("Portal da NF-e, as versões das tabelas de Classificação Tributária e de Crédito Presumido do IBS e CBS ",
+           "publicadas de ", format(historia_da_reforma$primeira, "%d/%m/%Y"), " a ",
+           format(historia_da_reforma$ultima, "%d/%m/%Y"), ", comparadas uma com a seguinte; prazos de produção do ",
+           "controle de versões do Informe Técnico 2025.002"),
     paste0("Portal Único Siscomex, nomenclatura NCM (", ncm_baixada$situacao, ", ", ncm_baixada$ato, ")"),
     paste0("Portal da NF-e, ", meios_do_portal$titulo),
     paste0("Portal da NF-e, ", bandeiras_do_portal$titulo),
@@ -857,6 +958,7 @@ if (inherits(municipios_do_ibge, "error")) {
 gravar_tabela(cfop_do_portal$tabela, "cfop")
 gravar_tabela(tabelas_da_reforma$cst, "cst_ibs_cbs")
 gravar_tabela(tabelas_da_reforma$classificacao, "classificacao_ibs_cbs")
+gravar_tabela(credito_presumido_do_portal$tabela, "credito_presumido_ibs_cbs")
 gravar_tabela(historia_da_reforma$tabela, "mudancas_ibs_cbs")
 gravar_tabela(ncm_baixada$tabela, "ncm")
 gravar_tabela(meios_do_portal$tabela, "meios_pagamento")

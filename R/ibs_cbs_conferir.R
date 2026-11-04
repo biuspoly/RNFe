@@ -28,6 +28,7 @@ tipo_nota_credito             ide/tpNFCredito                                 te
 redutor_compra_governamental  ide/gCompraGov/pRedutor                         numero
 municipio_emitente            emit/enderEmit/cMun                             texto
 municipio_destinatario        dest/enderDest/cMun                             texto
+inscricao_suframa_emitente    emit/ISUFemit                                   texto
 total_base                    total/IBSCBSTot/vBCIBSCBS                       numero
 total_diferimento_ibs_uf      total/IBSCBSTot/gIBS/gIBSUF/vDif                numero
 total_devolvido_ibs_uf        total/IBSCBSTot/gIBS/gIBSUF/vDevTrib            numero
@@ -96,8 +97,22 @@ compra_governamental_ibs_mun    imposto/IBSCBS/gIBSCBS/gTribCompraGov/vTribIBSMu
 compra_governamental_cbs        imposto/IBSCBS/gIBSCBS/gTribCompraGov/vTribCBS                numero
 credito_presumido_ibs           imposto/IBSCBS/gCredPresOper/gIBSCredPres/vCredPres           numero
 credito_presumido_cbs           imposto/IBSCBS/gCredPresOper/gCBSCredPres/vCredPres           numero
+credito_presumido_codigo        imposto/IBSCBS/gCredPresOper/cCredPres                        texto
+credito_suspenso_ibs            imposto/IBSCBS/gCredPresOper/gIBSCredPres/vCredPresCondSus    numero
+credito_suspenso_cbs            imposto/IBSCBS/gCredPresOper/gCBSCredPres/vCredPresCondSus    numero
+valor_produto                   prod/vProd                                                    numero
 estorno_ibs                     imposto/IBSCBS/gEstornoCred/vIBSEstCred                       numero
 estorno_cbs                     imposto/IBSCBS/gEstornoCred/vCBSEstCred                       numero
+tipo_area_incentivada_cbs       imposto/IBSCBS/gIBSCBS/gCBS/gALCZFMCBS/tpALCZFMCBS            texto
+processo_suframa                imposto/IBSCBS/gIBSCBS/gCBS/gALCZFMCBS/nProcSuframa           texto
+aliquota_sem_area_incentivada   imposto/IBSCBS/gIBSCBS/gCBS/gALCZFMCBS/pAliqEfetRegCBS        numero
+valor_sem_area_incentivada      imposto/IBSCBS/gIBSCBS/gCBS/gALCZFMCBS/vTribRegCBS            numero
+transferencia_ibs               imposto/IBSCBS/gTransfCred/vIBS                               numero
+transferencia_cbs               imposto/IBSCBS/gTransfCred/vCBS                               numero
+ajuste_competencia_ibs          imposto/IBSCBS/gAjusteCompet/vIBS                             numero
+ajuste_competencia_cbs          imposto/IBSCBS/gAjusteCompet/vCBS                             numero
+competencia_credito_zfm         imposto/IBSCBS/gCredPresIBSZFM/competApur                     texto
+tipo_credito_zfm                imposto/IBSCBS/gCredPresIBSZFM/tpCredPresIBSZFM               texto
 ")
 
 GRUPOS_DO_ITEM_PARA_CONFERIR = ler_campos("
@@ -110,6 +125,7 @@ tem_ajuste_competencia          imposto/IBSCBS/gAjusteCompet
 tem_estorno_credito             imposto/IBSCBS/gEstornoCred
 tem_credito_presumido           imposto/IBSCBS/gCredPresOper
 tem_credito_presumido_ibs       imposto/IBSCBS/gCredPresOper/gIBSCredPres
+tem_credito_presumido_cbs       imposto/IBSCBS/gCredPresOper/gCBSCredPres
 tem_credito_presumido_zfm       imposto/IBSCBS/gCredPresIBSZFM
 tem_diferimento_ibs_uf          imposto/IBSCBS/gIBSCBS/gIBSUF/gDif
 tem_devolucao_ibs_uf            imposto/IBSCBS/gIBSCBS/gIBSUF/gDevTrib
@@ -192,6 +208,12 @@ UB37-10   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao     
 UB56-10   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
 UB56-20   classificacao_ibs_cbs  grupo_tributacao_regular     classificacao          55/65
 UB70-10   classificacao_ibs_cbs  existe                       classificacao_regular  55/65
+UB122-10  credito_presumido_ibs_cbs  existe                   credito_presumido_codigo  55/65
+UB123-10  credito_presumido_ibs_cbs  grupo_credito_ibs        credito_presumido_codigo  55/65
+UB123-20  credito_presumido_ibs_cbs  grupo_credito_ibs        credito_presumido_codigo  55/65
+UB127-10  credito_presumido_ibs_cbs  grupo_credito_cbs        credito_presumido_codigo  55/65
+UB127-20  credito_presumido_ibs_cbs  grupo_credito_cbs        credito_presumido_codigo  55/65
+UB54a-10  credito_presumido_ibs_cbs  deduz_do_tributo         credito_presumido_codigo  55/65
 ")
 
 # As somas dos totais (regras W): a regra, o campo do total, a coluna do total na nota e a coluna do item que soma.
@@ -231,6 +253,15 @@ W59g-10  gEstornoCred/vCBSEstCred    total_estorno_cbs             estorno_cbs
 #'   de crédito, ajuste de competência, estorno de crédito, crédito presumido,
 #'   compra governamental), pelos indicadores da planilha oficial (veja
 #'   `tabela_fiscal("cst_ibs_cbs")` e `tabela_fiscal("classificacao_ibs_cbs")`);
+#' - a nota de débito e de crédito: a classificação combina com o tipo da
+#'   nota; a transferência de crédito, o ajuste de competência e o estorno com
+#'   valor; o crédito presumido da ZFM só na nota de crédito do tipo 02;
+#' - o crédito presumido da operação, pela tabela de crédito presumido (veja
+#'   `tabela_fiscal("credito_presumido_ibs_cbs")`): o código existe, os grupos
+#'   do IBS e da CBS que ele exige ou não permite, o limite do código 04 e o
+#'   crédito em condição suspensiva;
+#' - a CBS zero na área incentivada (ZFM e ALC): a inscrição na Suframa, o NCM,
+#'   a mesma área do emitente e do destinatário e o valor sem a redução;
 #' - as alíquotas do ano (veja `tabela_fiscal("aliquotas_ibs_cbs")`), com as
 #'   exceções da NT: a tributação regular, a devolução, as notas de crédito e,
 #'   na CBS, as áreas incentivadas (ZFM e ALC);
@@ -254,11 +285,11 @@ W59g-10  gEstornoCred/vCBSEstCred    total_estorno_cbs             estorno_cbs
 #'
 #' Fica de fora, por enquanto: a tributação monofásica de combustíveis, que a
 #' NT reformulou na versão 1.50, com produção marcada para novembro de 2026;
-#' o crédito presumido, que consulta a tabela de crédito presumido
-#' (`cCredPres`), ainda fora do RNFe; o Imposto Seletivo e a regra da base de
-#' cálculo (UB16-10), que a NT deixa para implementação futura; a exigência
-#' do grupo monofásico pelo CST (UB13-40), também futura; e o CT-e e os outros
-#' documentos, que têm as notas técnicas deles. Uma regra que se aplica mas
+#' o Imposto Seletivo e a regra da base de cálculo (UB16-10), que a NT deixa
+#' para implementação futura; a exigência do grupo monofásico pelo CST
+#' (UB13-40), também futura; a regra do total dos produtos (W07-10), que é do
+#' ICMS e não do IBS e da CBS; e o CT-e e os outros documentos, que têm as
+#' notas técnicas deles. Uma regra que se aplica mas
 #' não dá para conferir (a CBS de 2027 em diante, sem a alíquota de referência
 #' publicada) vem com `confere` vazio e o motivo.
 #'
@@ -336,6 +367,9 @@ colunas_da_conferencia = function(xml_lido, nome_do_arquivo, todos_os_campos) {
   conferencias = rbind(
     conferir_os_codigos(itens),
     conferir_os_grupos(itens),
+    conferir_as_notas_de_debito_e_credito(itens),
+    conferir_a_area_incentivada_da_cbs(itens),
+    conferir_o_credito_presumido(itens),
     conferir_as_aliquotas(itens),
     conferir_as_contas(itens),
     conferir_os_totais(itens, notas)
@@ -368,7 +402,7 @@ preparar_os_itens = function(itens, notas) {
   da_nota = match(itens$chave, notas$chave)
   for (coluna in c("modelo", "data_emissao", "finalidade", "tipo_nota_debito", "tipo_nota_credito",
                    "redutor_compra_governamental", "municipio_emitente", "municipio_destinatario",
-                   "tem_compra_governamental")) {
+                   "inscricao_suframa_emitente", "tem_compra_governamental")) {
     itens[[coluna]] = notas[[coluna]][da_nota]
   }
   tabela_de_cst = tabela_fiscal("cst_ibs_cbs")
@@ -388,6 +422,12 @@ preparar_os_itens = function(itens, notas) {
   for (indicador in c("grupo_tributacao_regular", "grupo_estorno_credito", "grupo_credito_presumido",
                       "reducao_ibs", "reducao_cbs")) {
     itens[[paste0(indicador, "_da_classificacao")]] = tabela_de_classificacao[[indicador]][da_classificacao]
+  }
+  tabela_do_credito = tabela_fiscal("credito_presumido_ibs_cbs")
+  do_credito = match(itens$credito_presumido_codigo, tabela_do_credito$codigo)
+  itens$credito_presumido_existe = !is.na(do_credito)
+  for (indicador in c("grupo_credito_ibs", "grupo_credito_cbs", "deduz_do_tributo")) {
+    itens[[indicador]] = tabela_do_credito[[indicador]][do_credito]
   }
   aliquotas = tabela_fiscal("aliquotas_ibs_cbs")
   linha_do_ano = rep(NA_integer_, nrow(itens))
@@ -540,6 +580,156 @@ conferir_os_grupos = function(itens) {
   do.call(rbind, linhas)
 }
 
+# A classificação que só vale num tipo de nota de débito ou de crédito (regras UB14-60, UB14-70 e UB14-80). Os tipos que
+# a NT deixa sem limite (multa e juros, pagamento antecipado, as recusas na entrega, a redução de valores) não estão aqui.
+CLASSIFICACAO_DE_CADA_TIPO_DE_NOTA = data.frame(
+  classificacao = c("410030", "800001", "800001", "800002", "810001", "811001", "811002", "811003"),
+  nota = c("debito", "debito", "credito", "debito", "credito", "debito", "debito", "debito"),
+  tipo = c("07", "05", "05", "01", "02", "02", "03", "08")
+)
+
+# As regras da nota de débito e de crédito (só da NF-e): a classificação e o tipo da nota combinam; a transferência de
+# crédito, o ajuste de competência e o estorno de crédito com valor; o crédito presumido da ZFM só na nota de crédito
+# do tipo 02, com a competência até o mês da emissão e sem repetir o tipo na nota.
+conferir_as_notas_de_debito_e_credito = function(itens) {
+  tabela = CLASSIFICACAO_DE_CADA_TIPO_DE_NOTA
+  pares_da_tabela = paste(tabela$classificacao, tabela$nota, tabela$tipo)
+  combina_com_o_debito = paste(itens$classificacao, "debito", itens$tipo_nota_debito) %in% pares_da_tabela
+  combina_com_o_credito = paste(itens$classificacao, "credito", itens$tipo_nota_credito) %in% pares_da_tabela
+  do_debito = tabela[tabela$nota == "debito", ]
+  classificacao_do_debito = do_debito$classificacao[match(itens$tipo_nota_debito, do_debito$tipo)]
+  do_credito = tabela[tabela$nota == "credito", ]
+  classificacao_do_credito = do_credito$classificacao[match(itens$tipo_nota_credito, do_credito$tipo)]
+  texto_da_nota = paste0("cClassTrib ", itens$classificacao, ", tpNFDebito ", texto_ou_vazio(itens$tipo_nota_debito),
+                         ", tpNFCredito ", texto_ou_vazio(itens$tipo_nota_credito))
+  linhas = list(
+    linhas_da_regra("UB14-60", itens, aplica = itens$classificacao %in% tabela$classificacao,
+                    confere = combina_com_o_debito | combina_com_o_credito, campo = "cClassTrib", no_documento = texto_da_nota,
+                    esperado = tipos_de_nota_da_classificacao(itens$classificacao)),
+    linhas_da_regra("UB14-70", itens, aplica = !is.na(classificacao_do_debito),
+                    confere = !is.na(itens$classificacao) & itens$classificacao == classificacao_do_debito,
+                    campo = "cClassTrib", no_documento = texto_da_nota,
+                    esperado = paste0("cClassTrib ", classificacao_do_debito)),
+    linhas_da_regra("UB14-80", itens, aplica = !is.na(classificacao_do_credito),
+                    confere = !is.na(itens$classificacao) & itens$classificacao == classificacao_do_credito,
+                    campo = "cClassTrib", no_documento = texto_da_nota,
+                    esperado = paste0("cClassTrib ", classificacao_do_credito)),
+    linhas_da_regra("UB106-30", itens, aplica = itens$tem_transferencia_credito, confere = itens$finalidade %in% "6",
+                    campo = "ide/finNFe", no_documento = texto_ou_vazio(itens$finalidade),
+                    esperado = "6 (nota de d\u00e9bito)"),
+    linhas_da_regra("UB106-31", itens, aplica = itens$tem_transferencia_credito,
+                    confere = itens$tipo_nota_debito %in% c("01", "05"), campo = "ide/tpNFDebito",
+                    no_documento = texto_ou_vazio(itens$tipo_nota_debito), esperado = "01 ou 05"),
+    linhas_da_regra("UB106-40", itens, aplica = itens$tem_transferencia_credito,
+                    confere = valor_ou_zero(itens$transferencia_ibs) > 0 | valor_ou_zero(itens$transferencia_cbs) > 0,
+                    campo = "gTransfCred", no_documento = texto_dos_dois_valores(itens$transferencia_ibs, itens$transferencia_cbs),
+                    esperado = "vIBS ou vCBS maior que zero"),
+    linhas_da_regra("UB112-30", itens, aplica = itens$tem_ajuste_competencia,
+                    confere = valor_ou_zero(itens$ajuste_competencia_ibs) > 0 | valor_ou_zero(itens$ajuste_competencia_cbs) > 0,
+                    campo = "gAjusteCompet",
+                    no_documento = texto_dos_dois_valores(itens$ajuste_competencia_ibs, itens$ajuste_competencia_cbs),
+                    esperado = "vIBS ou vCBS maior que zero"),
+    # Na nota de débito de perda em estoque (tpNFDebito 07), o estorno pode vir zerado.
+    linhas_da_regra("UB116-30", itens, aplica = itens$tem_estorno_credito & !(itens$tipo_nota_debito %in% "07"),
+                    confere = valor_ou_zero(itens$estorno_ibs) > 0 | valor_ou_zero(itens$estorno_cbs) > 0,
+                    campo = "gEstornoCred", no_documento = texto_dos_dois_valores(itens$estorno_ibs, itens$estorno_cbs),
+                    esperado = "vIBSEstCred ou vCBSEstCred maior que zero"),
+    linhas_da_regra("UB131-40", itens, aplica = itens$tem_credito_presumido_zfm, confere = itens$tipo_nota_credito %in% "02",
+                    campo = "ide/tpNFCredito", no_documento = texto_ou_vazio(itens$tipo_nota_credito), esperado = "02"),
+    linhas_da_regra("UB131-50", itens, aplica = !itens$tem_credito_presumido_zfm,
+                    confere = !(itens$tipo_nota_credito %in% "02"), campo = "gCredPresIBSZFM",
+                    no_documento = paste0("tpNFCredito ", texto_ou_vazio(itens$tipo_nota_credito), ", grupo n\u00e3o informado"),
+                    esperado = "o grupo, porque a nota de cr\u00e9dito \u00e9 do tipo 02"),
+    # O mês "atual" da SEFAZ é o da autorização; aqui, o da emissão.
+    linhas_da_regra("UB132-10", itens, aplica = !is.na(itens$competencia_credito_zfm),
+                    confere = itens$competencia_credito_zfm <= format(itens$data_emissao, "%Y-%m"),
+                    campo = "gCredPresIBSZFM/competApur", no_documento = itens$competencia_credito_zfm,
+                    esperado = paste0("at\u00e9 ", format(itens$data_emissao, "%Y-%m"), " (o m\u00eas da emiss\u00e3o)")),
+    linhas_da_regra("UB133-10", itens, aplica = itens$tem_credito_presumido_zfm & !is.na(itens$tipo_credito_zfm),
+                    confere = !duplicated(paste(itens$chave, itens$tipo_credito_zfm)),
+                    campo = "gCredPresIBSZFM/tpCredPresIBSZFM", no_documento = itens$tipo_credito_zfm,
+                    esperado = "um tipo que nenhum item anterior da nota usou")
+  )
+  do.call(rbind, linhas)
+}
+
+# "tpNFDebito 05 ou tpNFCredito 05", o que a regra UB14-60 aceita para cada classificação da tabela.
+tipos_de_nota_da_classificacao = function(classificacoes) {
+  tabela = CLASSIFICACAO_DE_CADA_TIPO_DE_NOTA
+  textos = paste0(ifelse(tabela$nota == "debito", "tpNFDebito ", "tpNFCredito "), tabela$tipo)
+  juntos = tapply(textos, tabela$classificacao, paste, collapse = " ou ")
+  unname(juntos[classificacoes])
+}
+
+# A CBS zero na área incentivada (gALCZFMCBS): o emitente com inscrição na Suframa, o NCM fora das exceções e os dois na
+# mesma área (os mesmos da UB56-10), o processo na Suframa no tipo 2 e o valor que a CBS teria fora da área. A UB66e-10
+# não diz tolerância: tem de bater até o centavo, depois de arredondar o calculado.
+conferir_a_area_incentivada_da_cbs = function(itens) {
+  com_o_grupo = itens$tem_area_incentivada_cbs
+  valor_calculado = arredondar_no_centavo(itens$base * itens$aliquota_sem_area_incentivada / 100)
+  linhas = list(
+    linhas_da_regra("UB66a-10", itens, aplica = com_o_grupo,
+                    confere = !is.na(itens$inscricao_suframa_emitente) & nzchar(itens$inscricao_suframa_emitente),
+                    campo = "emit/ISUFemit", no_documento = texto_ou_vazio(itens$inscricao_suframa_emitente),
+                    esperado = "informada"),
+    linhas_da_regra("UB66a-20", itens, aplica = com_o_grupo,
+                    confere = itens$mesma_area_incentivada & !itens$ncm_fora_da_area_incentivada, campo = "gCBS/gALCZFMCBS",
+                    no_documento = paste0("NCM ", texto_ou_vazio(itens$ncm), ", munic\u00edpios ",
+                                          texto_ou_vazio(itens$municipio_emitente), " e ",
+                                          texto_ou_vazio(itens$municipio_destinatario)),
+                    esperado = "NCM fora das exce\u00e7\u00f5es e emitente e destinat\u00e1rio na mesma \u00e1rea (ZFM ou a mesma ALC)"),
+    linhas_da_regra("UB66c-10", itens, aplica = com_o_grupo & itens$tipo_area_incentivada_cbs %in% "2",
+                    confere = !is.na(itens$processo_suframa) & grepl("[1-9]", itens$processo_suframa),
+                    campo = "gCBS/gALCZFMCBS/nProcSuframa", no_documento = texto_ou_vazio(itens$processo_suframa),
+                    esperado = "informado, sem ser s\u00f3 zeros"),
+    linhas_da_regra("UB66e-10", itens, aplica = com_o_grupo,
+                    confere = igual_com_tolerancia(itens$valor_sem_area_incentivada, valor_calculado, TOLERANCIA_DO_CENTAVO),
+                    campo = "gCBS/gALCZFMCBS/vTribRegCBS", no_documento = texto_do_numero(itens$valor_sem_area_incentivada, 2),
+                    esperado = texto_do_numero(valor_calculado, 2), diferenca = itens$valor_sem_area_incentivada - valor_calculado)
+  )
+  do.call(rbind, linhas)
+}
+
+# O crédito presumido da operação (gCredPresOper), pela tabela de crédito presumido: o código existe; os grupos do IBS e
+# da CBS que ele exige ou não permite; no código 04 (bem móvel comprado de pessoa física para revenda), o crédito até o
+# valor do produto; e o crédito em condição suspensiva, que só vale no código 04, no IBS a partir de 2033 e na CBS a
+# partir de 2027.
+conferir_o_credito_presumido = function(itens) {
+  com_o_codigo = itens$tem_credito_presumido & !is.na(itens$credito_presumido_codigo)
+  do_bem_movel = itens$credito_presumido_codigo %in% "04"
+  ano_da_emissao = as.integer(format(itens$data_emissao, "%Y"))
+  texto_do_suspenso = paste0("cCredPres ", texto_ou_vazio(itens$credito_presumido_codigo), ", emitida em ",
+                             texto_ou_vazio(as.character(ano_da_emissao)))
+  linhas = list(
+    linhas_da_regra("UB122-10", itens, aplica = com_o_codigo, confere = itens$credito_presumido_existe,
+                    campo = "gCredPresOper/cCredPres", no_documento = itens$credito_presumido_codigo,
+                    esperado = "um c\u00f3digo da tabela de cr\u00e9dito presumido"),
+    regra_de_grupo("UB123-10", itens, itens$grupo_credito_ibs, 0, itens$tem_credito_presumido_ibs,
+                   "gCredPresOper/gIBSCredPres", com_o_codigo),
+    regra_de_grupo("UB123-20", itens, itens$grupo_credito_ibs, 1, itens$tem_credito_presumido_ibs,
+                   "gCredPresOper/gIBSCredPres", com_o_codigo),
+    regra_de_grupo("UB127-10", itens, itens$grupo_credito_cbs, 0, itens$tem_credito_presumido_cbs,
+                   "gCredPresOper/gCBSCredPres", com_o_codigo),
+    regra_de_grupo("UB127-20", itens, itens$grupo_credito_cbs, 1, itens$tem_credito_presumido_cbs,
+                   "gCredPresOper/gCBSCredPres", com_o_codigo),
+    linhas_da_regra("UB125-10", itens, aplica = do_bem_movel & !is.na(itens$credito_presumido_ibs),
+                    confere = itens$credito_presumido_ibs <= valor_ou_zero(itens$valor_produto) + FOLGA_DE_PONTO_FLUTUANTE,
+                    campo = "gIBSCredPres/vCredPres", no_documento = texto_do_numero(itens$credito_presumido_ibs, 2),
+                    esperado = paste0("at\u00e9 ", texto_do_numero(itens$valor_produto, 2), " (vProd)")),
+    linhas_da_regra("UB129-10", itens, aplica = do_bem_movel & !is.na(itens$credito_presumido_cbs),
+                    confere = itens$credito_presumido_cbs <= valor_ou_zero(itens$valor_produto) + FOLGA_DE_PONTO_FLUTUANTE,
+                    campo = "gCBSCredPres/vCredPres", no_documento = texto_do_numero(itens$credito_presumido_cbs, 2),
+                    esperado = paste0("at\u00e9 ", texto_do_numero(itens$valor_produto, 2), " (vProd)")),
+    linhas_da_regra("UB126-10", itens, aplica = !is.na(itens$credito_suspenso_ibs),
+                    confere = do_bem_movel & ano_da_emissao >= 2033, campo = "gIBSCredPres/vCredPresCondSus",
+                    no_documento = texto_do_suspenso, esperado = "cCredPres 04, a partir de 2033"),
+    linhas_da_regra("UB130-10", itens, aplica = !is.na(itens$credito_suspenso_cbs),
+                    confere = do_bem_movel & ano_da_emissao >= 2027, campo = "gCBSCredPres/vCredPresCondSus",
+                    no_documento = texto_do_suspenso, esperado = "cCredPres 04, a partir de 2027")
+  )
+  do.call(rbind, linhas)
+}
+
 # A alíquota do ano: 0 na classificação com tributação regular; a regra não vale na devolução e em algumas notas de
 # crédito. Na CBS, a exceção 3 da UB56-10 aceita zero quando o emitente e o destinatário estão na mesma área incentivada
 # e o NCM não é um dos de fora; de 2027 em diante (UB56-20), a CBS é zero com o grupo da área incentivada.
@@ -647,18 +837,20 @@ conferir_as_contas = function(itens) {
     campo = "gCBS/gDevTrib/vDevTrib", no_documento = texto_do_numero(itens$valor_devolvido_cbs, 2),
     esperado = texto_do_numero(devolucao_calculada, 2), diferenca = itens$valor_devolvido_cbs - devolucao_calculada
   )
-  # O IBS do item é o da UF mais o do município; com crédito presumido do IBS, o desconto depende do código do crédito
-  # presumido (indDeduzCredPres), de uma tabela que o RNFe ainda não tem.
-  ibs_calculado = valor_ou_zero(itens$valor_ibs_uf) + valor_ou_zero(itens$valor_ibs_mun)
+  # O IBS do item é o da UF mais o do município, menos o crédito presumido do IBS quando o código dele manda descontar
+  # (indDeduzCredPres = 1). Com o código fora da tabela, não dá para saber se desconta.
+  desconta_o_credito = itens$tem_credito_presumido_ibs & itens$deduz_do_tributo %in% 1
+  codigo_fora_da_tabela = itens$tem_credito_presumido_ibs & !itens$credito_presumido_existe
+  ibs_calculado = valor_ou_zero(itens$valor_ibs_uf) + valor_ou_zero(itens$valor_ibs_mun) -
+    ifelse(desconta_o_credito, valor_ou_zero(itens$credito_presumido_ibs), 0)
   linhas[[length(linhas) + 1]] = linhas_da_regra(
     "UB54a-10", itens, aplica = itens$tem_grupo_ibs_cbs,
-    confere = ifelse(itens$tem_credito_presumido_ibs, NA,
-                     igual_com_tolerancia(itens$valor_ibs, ibs_calculado, TOLERANCIA_DO_CENTAVO)),
+    confere = ifelse(codigo_fora_da_tabela, NA, igual_com_tolerancia(itens$valor_ibs, ibs_calculado, TOLERANCIA_DO_CENTAVO)),
     campo = "gIBSCBS/vIBS", no_documento = texto_do_numero(itens$valor_ibs, 2),
     esperado = texto_do_numero(ibs_calculado, 2), diferenca = itens$valor_ibs - ibs_calculado,
-    observacao = ifelse(itens$tem_credito_presumido_ibs, paste(
-      "Com cr\u00e9dito presumido do IBS, o vCredPres s\u00f3 \u00e9 descontado quando o c\u00f3digo do cr\u00e9dito presumido manda",
-      "(indDeduzCredPres), e a tabela desses c\u00f3digos ainda n\u00e3o est\u00e1 no RNFe."
+    observacao = ifelse(codigo_fora_da_tabela, paste(
+      "O c\u00f3digo do cr\u00e9dito presumido n\u00e3o est\u00e1 na tabela: n\u00e3o d\u00e1 para saber se o vCredPres \u00e9",
+      "descontado do IBS do item."
     ), NA)
   )
   # A tributação regular: a base vezes a alíquota efetiva regular de cada um.
@@ -835,7 +1027,9 @@ sem_conferir_pela_mudanca_das_tabelas = function(conferencias, notas, itens) {
 }
 
 texto_da_mudanca_da_tabela = function(linhas) {
-  nome_da_tabela = ifelse(linhas$tabela == "cst_ibs_cbs", "CST", "classifica\u00e7\u00e3o tribut\u00e1ria")
+  nomes_das_tabelas = c(cst_ibs_cbs = "CST", classificacao_ibs_cbs = "classifica\u00e7\u00e3o tribut\u00e1ria",
+                        credito_presumido_ibs_cbs = "cr\u00e9dito presumido")
+  nome_da_tabela = unname(nomes_das_tabelas[linhas$tabela])
   o_que_mudou = ifelse(
     linhas$coluna == "existe",
     paste0("o c\u00f3digo ", linhas$codigo, ifelse(linhas$depois %in% "1", " entrou na tabela", " saiu da tabela")),
@@ -883,6 +1077,15 @@ igual_com_tolerancia = function(valor, calculado, tolerancia) {
 valor_ou_zero = function(numeros) {
   numeros[is.na(numeros)] = 0
   numeros
+}
+
+texto_ou_vazio = function(textos) {
+  textos[is.na(textos)] = "(vazio)"
+  textos
+}
+
+texto_dos_dois_valores = function(valor_do_ibs, valor_da_cbs) {
+  paste0("IBS ", texto_do_numero(valor_do_ibs, 2), ", CBS ", texto_do_numero(valor_da_cbs, 2))
 }
 
 texto_da_presenca = function(presente) {

@@ -15,8 +15,8 @@ com_emissao_em = function(texto, data) {
   trocar_no_xml(texto, "<dhEmi>2026-10-15T10:30:00-03:00</dhEmi>", paste0("<dhEmi>", data, "T10:30:00-03:00</dhEmi>"))
 }
 
-linha_da_regra = function(conferencias, regra, item = 1) {
-  conferencias[conferencias$regra == regra & conferencias$item %in% item, ]
+linha_da_regra = function(conferencias, regras, item = 1) {
+  conferencias[conferencias$regra %in% regras & conferencias$item %in% item, ]
 }
 
 test_that("o exemplo certo confere em todas as regras", {
@@ -142,4 +142,149 @@ test_that("nota sem IBS e CBS, documento que n\u00e3o \u00e9 NF-e e par\u00e2met
                                           "regras_conferidas", "regras_erradas", "regras_sem_conferir"))
   expect_match(do_cte$arquivos$problema, "NF-e")
   expect_error(ibs_cbs_conferir(texto_do_exemplo(), todas_as_regras = NA), "todas_as_regras")
+})
+
+# Troca o gIBSCBS do item 1 por outro pedaço (a transferência de crédito e o ajuste de competência ficam no lugar dele).
+trocar_o_grupo_do_item_1 = function(texto, pedaco_novo) {
+  expect_true(grepl("<gIBSCBS>", texto, fixed = TRUE))
+  sub("(?s)<gIBSCBS>.*?</gIBSCBS>", pedaco_novo, texto, perl = TRUE)
+}
+
+# Põe um pedaço logo depois do gIBSCBS do item 1 (o estorno e o crédito presumido da ZFM ficam ali).
+depois_do_grupo_do_item_1 = function(texto, pedaco_novo) {
+  sub("(?s)(<gIBSCBS>.*?</gIBSCBS>)", paste0("\\1", pedaco_novo), texto, perl = TRUE)
+}
+
+com_tipo_de_nota = function(texto, finalidade, campo, tipo) {
+  trocar_no_xml(texto, "<finNFe>1</finNFe>", paste0("<finNFe>", finalidade, "</finNFe><", campo, ">", tipo, "</", campo, ">"))
+}
+
+test_that("a classifica\u00e7\u00e3o e o tipo da nota de d\u00e9bito ou de cr\u00e9dito combinam", {
+  # Nota de débito de perda em estoque (07) pede a 410030; a 811001 (anulação de crédito) pede o débito do tipo 02.
+  perda = com_tipo_de_nota(texto_do_exemplo(), "6", "tpNFDebito", "07")
+  na_perda = linha_da_regra(ibs_cbs_conferir(perda)$conferencias, "UB14-70")
+  expect_false(na_perda$confere)
+  expect_identical(na_perda$esperado, "cClassTrib 410030")
+  expect_identical(na_perda$codigo_sefaz, "1200")
+  anulacao = trocar_no_xml(texto_do_exemplo(), "<cClassTrib>000001</cClassTrib>", "<cClassTrib>811001</cClassTrib>")
+  sem_o_debito = linha_da_regra(ibs_cbs_conferir(anulacao)$conferencias, "UB14-60")
+  expect_false(sem_o_debito$confere)
+  expect_identical(sem_o_debito$esperado, "tpNFDebito 02")
+  com_o_debito = ibs_cbs_conferir(com_tipo_de_nota(anulacao, "6", "tpNFDebito", "02"), todas_as_regras = TRUE)
+  expect_true(linha_da_regra(com_o_debito$conferencias, "UB14-60")$confere)
+  expect_true(linha_da_regra(com_o_debito$conferencias, "UB14-70")$confere)
+  # A 800001 (sucessão) vale no débito ou no crédito do tipo 05.
+  expect_identical(tipos_de_nota_da_classificacao("800001"), "tpNFDebito 05 ou tpNFCredito 05")
+  # Nota de crédito do tipo 02 pede a 810001 e o grupo do crédito presumido da ZFM.
+  credito_da_zfm = ibs_cbs_conferir(com_tipo_de_nota(texto_do_exemplo(), "5", "tpNFCredito", "02"))$conferencias
+  expect_identical(linha_da_regra(credito_da_zfm, "UB14-80")$esperado, "cClassTrib 810001")
+  expect_false(linha_da_regra(credito_da_zfm, "UB131-50")$confere)
+  # Antes de 03/08/2026 essas três não estavam em produção.
+  em_julho = ibs_cbs_conferir(com_emissao_em(perda, "2026-07-01"), todas_as_regras = TRUE)$conferencias
+  expect_false("UB14-70" %in% em_julho$regra)
+})
+
+test_that("transfer\u00eancia de cr\u00e9dito, ajuste de compet\u00eancia e estorno com valor", {
+  transferencia = trocar_no_xml(texto_do_exemplo(), "<cClassTrib>000001</cClassTrib>", "<cClassTrib>800001</cClassTrib>")
+  transferencia = trocar_no_xml(transferencia, "<CST>000</CST>", "<CST>800</CST>")
+  zerada = trocar_o_grupo_do_item_1(transferencia, "<gTransfCred><vIBS>0.00</vIBS><vCBS>0.00</vCBS></gTransfCred>")
+  erradas = ibs_cbs_conferir(zerada)$conferencias
+  expect_identical(linha_da_regra(erradas, "UB106-30")$no_documento, "1")
+  expect_false(linha_da_regra(erradas, "UB106-31")$confere)
+  expect_identical(linha_da_regra(erradas, "UB106-40")$no_documento, "IBS 0.00, CBS 0.00")
+  certa = trocar_o_grupo_do_item_1(transferencia, "<gTransfCred><vIBS>1.00</vIBS><vCBS>0.00</vCBS></gTransfCred>")
+  certa = ibs_cbs_conferir(com_tipo_de_nota(certa, "6", "tpNFDebito", "05"), todas_as_regras = TRUE)$conferencias
+  expect_true(all(linha_da_regra(certa, c("UB106-30", "UB106-31", "UB106-40"))$confere))
+
+  ajuste = trocar_o_grupo_do_item_1(texto_do_exemplo(),
+                                    "<gAjusteCompet><competApur>2026-09</competApur><vIBS>0.00</vIBS><vCBS>0.00</vCBS></gAjusteCompet>")
+  expect_false(linha_da_regra(ibs_cbs_conferir(ajuste)$conferencias, "UB112-30")$confere)
+
+  estorno = depois_do_grupo_do_item_1(texto_do_exemplo(),
+                                      "<gEstornoCred><vIBSEstCred>0.00</vIBSEstCred><vCBSEstCred>0.00</vCBSEstCred></gEstornoCred>")
+  expect_false(linha_da_regra(ibs_cbs_conferir(estorno)$conferencias, "UB116-30")$confere)
+  # Na perda em estoque o estorno pode vir zerado.
+  na_perda = ibs_cbs_conferir(com_tipo_de_nota(estorno, "6", "tpNFDebito", "07"), todas_as_regras = TRUE)$conferencias
+  expect_false("UB116-30" %in% na_perda$regra)
+})
+
+test_that("o cr\u00e9dito presumido da ZFM: s\u00f3 na nota de cr\u00e9dito 02, compet\u00eancia e tipo sem repetir", {
+  grupo = "<gCredPresIBSZFM><competApur>2026-12</competApur><tpCredPresIBSZFM>1</tpCredPresIBSZFM><vCredPresIBSZFM>1.00</vCredPresIBSZFM></gCredPresIBSZFM>"
+  # O mesmo grupo nos dois itens.
+  texto = gsub("(?s)(<gIBSCBS>.*?</gIBSCBS>)", paste0("\\1", grupo), texto_do_exemplo(), perl = TRUE)
+  conferida = ibs_cbs_conferir(texto, todas_as_regras = TRUE)$conferencias
+  expect_false(any(linha_da_regra(conferida, "UB131-40", 1:2)$confere))
+  competencia = linha_da_regra(conferida, "UB132-10")
+  expect_false(competencia$confere)
+  expect_identical(competencia$esperado, "at\u00e9 2026-10 (o m\u00eas da emiss\u00e3o)")
+  repetido = linha_da_regra(conferida, "UB133-10", 1:2)
+  expect_identical(repetido$confere, c(TRUE, FALSE))
+})
+
+test_that("a CBS zero na \u00e1rea incentivada", {
+  grupo = paste0("<pCBS>0.00</pCBS><gALCZFMCBS><tpALCZFMCBS>2</tpALCZFMCBS><nProcSuframa>000</nProcSuframa>",
+                 "<pAliqEfetRegCBS>0.90</pAliqEfetRegCBS><vTribRegCBS>0.46</vTribRegCBS></gALCZFMCBS>")
+  texto = trocar_no_xml(texto_do_exemplo(), "<pCBS>0.90</pCBS>", grupo)
+  texto = trocar_no_xml(texto, "<vCBS>0.45</vCBS>", "<vCBS>0.00</vCBS>")
+  # Emitente em São Paulo, sem inscrição na Suframa, e o valor sem a área a 0,01 da conta (sem tolerância).
+  erradas = ibs_cbs_conferir(texto)$conferencias
+  expect_false(linha_da_regra(erradas, "UB66a-10")$confere)
+  expect_identical(linha_da_regra(erradas, "UB66a-20")$no_documento, "NCM 22011000, munic\u00edpios 3550308 e 3304557")
+  expect_identical(linha_da_regra(erradas, "UB66c-10")$no_documento, "000")
+  sem_area = linha_da_regra(erradas, "UB66e-10")
+  expect_identical(c(sem_area$no_documento, sem_area$esperado), c("0.46", "0.45"))
+  # Em Manaus os dois, com a inscrição, o processo e o valor certo: confere.
+  em_manaus = gsub("<cMun>[0-9]{7}</cMun>", "<cMun>1302603</cMun>", texto)
+  em_manaus = trocar_no_xml(em_manaus, "</emit>", "<ISUFemit>123456789</ISUFemit></emit>")
+  em_manaus = trocar_no_xml(em_manaus, "<nProcSuframa>000</nProcSuframa>", "<nProcSuframa>12345</nProcSuframa>")
+  em_manaus = trocar_no_xml(em_manaus, "<vTribRegCBS>0.46</vTribRegCBS>", "<vTribRegCBS>0.45</vTribRegCBS>")
+  certa = ibs_cbs_conferir(em_manaus, todas_as_regras = TRUE)$conferencias
+  expect_true(all(linha_da_regra(certa, c("UB66a-10", "UB66a-20", "UB66c-10", "UB66e-10"))$confere))
+})
+
+# O grupo do crédito presumido da operação no item 1, com o código e os grupos do IBS e da CBS pedidos.
+com_credito_presumido = function(texto, codigo, grupo_do_ibs = "", grupo_da_cbs = "") {
+  depois_do_grupo_do_item_1(texto, paste0("<gCredPresOper><vBCCredPres>50.00</vBCCredPres><cCredPres>", codigo,
+                                          "</cCredPres>", grupo_do_ibs, grupo_da_cbs, "</gCredPresOper>"))
+}
+
+test_that("o cr\u00e9dito presumido pela tabela de cr\u00e9dito presumido", {
+  do_ibs = "<gIBSCredPres><pCredPres>1.0000</pCredPres><vCredPres>0.02</vCredPres></gIBSCredPres>"
+  da_cbs = "<gCBSCredPres><pCredPres>1.0000</pCredPres><vCredPres>0.50</vCredPres></gCBSCredPres>"
+  # O código 99 não existe: e sem ele não dá para saber se o crédito sai do IBS do item.
+  inexistente = ibs_cbs_conferir(com_credito_presumido(texto_do_exemplo(), "99", do_ibs))$conferencias
+  expect_false(linha_da_regra(inexistente, "UB122-10")$confere)
+  ibs_do_item = linha_da_regra(inexistente, "UB54a-10")
+  expect_true(is.na(ibs_do_item$confere))
+  expect_match(ibs_do_item$observacao, "n\u00e3o est\u00e1 na tabela")
+  # O 05 exige o grupo da CBS e não permite o do IBS.
+  so_da_cbs = ibs_cbs_conferir(com_credito_presumido(texto_do_exemplo(), "05", do_ibs))$conferencias
+  expect_false(linha_da_regra(so_da_cbs, "UB123-10")$confere)
+  expect_false(linha_da_regra(so_da_cbs, "UB127-20")$confere)
+  expect_identical(linha_da_regra(so_da_cbs, "UB127-20")$codigo_sefaz, "1058")
+  # O 04 (bem móvel de pessoa física) desconta o crédito do IBS do item e não passa do valor do produto (50,00).
+  bem_movel = com_credito_presumido(texto_do_exemplo(), "04", do_ibs,
+                                    "<gCBSCredPres><pCredPres>1.0000</pCredPres><vCredPres>60.00</vCredPres></gCBSCredPres>")
+  conferida = ibs_cbs_conferir(bem_movel, todas_as_regras = TRUE)$conferencias
+  expect_identical(linha_da_regra(conferida, "UB54a-10")$esperado, "0.03")
+  expect_false(linha_da_regra(conferida, "UB54a-10")$confere)
+  expect_true(linha_da_regra(conferida, "UB125-10")$confere)
+  expect_identical(linha_da_regra(conferida, "UB129-10")$esperado, "at\u00e9 50.00 (vProd)")
+  expect_false(linha_da_regra(conferida, "UB129-10")$confere)
+  expect_true(all(linha_da_regra(conferida, c("UB122-10", "UB123-20", "UB127-20"))$confere))
+  descontado = ibs_cbs_conferir(trocar_no_xml(bem_movel, "<vIBS>0.05</vIBS>", "<vIBS>0.03</vIBS>"),
+                                todas_as_regras = TRUE)$conferencias
+  expect_true(linha_da_regra(descontado, "UB54a-10")$confere)
+  # O 05 não desconta: o IBS do item continua o da UF mais o do município.
+  sem_desconto = ibs_cbs_conferir(com_credito_presumido(texto_do_exemplo(), "05", "", da_cbs),
+                                  todas_as_regras = TRUE)$conferencias
+  expect_true(linha_da_regra(sem_desconto, "UB54a-10")$confere)
+  # O crédito em condição suspensiva: só no código 04, na CBS a partir de 2027 (a nota é de 2026).
+  suspenso = com_credito_presumido(
+    texto_do_exemplo(), "04", "",
+    "<gCBSCredPres><pCredPres>1.0000</pCredPres><vCredPresCondSus>0.50</vCredPresCondSus></gCBSCredPres>"
+  )
+  na_cbs = linha_da_regra(ibs_cbs_conferir(suspenso)$conferencias, "UB130-10")
+  expect_false(na_cbs$confere)
+  expect_identical(c(na_cbs$no_documento, na_cbs$esperado), c("cCredPres 04, emitida em 2026", "cCredPres 04, a partir de 2027"))
 })

@@ -3,10 +3,11 @@
 
 NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
-  "classificacao_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs", "meios_pagamento", "bandeiras_cartao",
-  "municipios", "codigos_dos_campos", "fontes"
+  "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs", "meios_pagamento",
+  "bandeiras_cartao", "municipios", "codigos_dos_campos", "fontes"
 )
-COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em", "publicada_em", "em_producao_ate")
+COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em", "publicada_em", "em_producao_ate", "inicio_cbs",
+                    "fim_cbs", "inicio_ibs", "fim_ibs")
 COLUNAS_DE_INDICADOR = c(
   "comunicacao", "transporte", "devolucao", "retorno", "anulacao", "remessa", "combustivel", "exclusivo_ibs_cbs",
   # O CST do IBS e da CBS: 1 = o grupo é exigido, 0 = não é permitido.
@@ -18,7 +19,10 @@ COLUNAS_DE_INDICADOR = c(
   "permitido_na_nfe", "permitido_na_nfce", "permitido_na_nfe_abi", "permitido_no_cte", "permitido_no_cte_os",
   "permitido_no_bpe", "permitido_no_bpe_ta", "permitido_no_bpe_tm", "permitido_na_nf3e", "permitido_na_nfse",
   "permitido_na_nfse_via", "permitido_na_nfcom", "permitido_na_nfag", "permitido_na_nfgas", "permitido_na_dere",
-  "permitido_na_dir", "permitido_na_duimp"
+  "permitido_na_dir", "permitido_na_duimp",
+  # O crédito presumido: como se apropria, se deduz do tributo do item, os grupos que exige ou não permite.
+  "apropria_no_documento", "apropria_por_evento", "deduz_do_tributo", "grupo_credito_cbs", "grupo_credito_ibs",
+  "declaracao_pagamento"
 )
 COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs", "aliquota_ibs_uf", "aliquota_ibs_municipio", "aliquota_cbs")
 # Cada tabela é lida do disco uma vez por sessão.
@@ -38,7 +42,8 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 #' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
-#' `"classificacao_ibs_cbs"`, `"mudancas_ibs_cbs"`, `"aliquotas_ibs_cbs"`, `"meios_pagamento"`, `"bandeiras_cartao"`,
+#' `"classificacao_ibs_cbs"`, `"credito_presumido_ibs_cbs"`, `"mudancas_ibs_cbs"`, `"aliquotas_ibs_cbs"`,
+#' `"meios_pagamento"`, `"bandeiras_cartao"`,
 #' `"municipios"`, `"codigos_dos_campos"` (o que quer dizer cada código dos
 #' campos dos documentos) ou `"fontes"` (de onde veio cada uma, com a data).
 #' Cada tabela de códigos traz o `codigo`, a descrição e a vigência:
@@ -92,10 +97,26 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   `ind` de cada um na planilha); o tipo de receita bruta do Simples Nacional
 #'   (`tipo_receita_simples`, o `tpRBSN`) e o uso do indicador de doação
 #'   (`doacao`, o `tpDoacao`), cada um com a `_descricao` das abas da planilha.
-#' - `"mudancas_ibs_cbs"`: o que mudou nas duas tabelas acima de uma versão
+#' - `"credito_presumido_ibs_cbs"`: o código de classificação do crédito
+#'   presumido do IBS e da CBS (`cCredPres`, com dois dígitos, como no XML), a
+#'   `descricao`, o `texto_da_lc_214`; como ele se apropria
+#'   (`apropria_no_documento` e `apropria_por_evento`), se o crédito é
+#'   descontado do IBS do item (`deduz_do_tributo`, o `indDeduzCredPres`) e os
+#'   grupos que exige (1) ou não permite (0) no documento: `grupo_credito_cbs`
+#'   (`ind_gCBSCredPres`) e `grupo_credito_ibs` (`ind_gIBSCredPres`); a
+#'   `declaracao_pagamento` (`indDecPag`) e os documentos em que vale
+#'   (`permitido_na_nfe`, `permitido_na_nfce`, `permitido_no_cte` e
+#'   `permitido_na_nfse`); as orientações da planilha, em texto
+#'   (`orientacao_aliquota_cbs`, `orientacao_aliquota_ibs`,
+#'   `orientacao_percentual_cbs`, `orientacao_percentual_ibs`,
+#'   `orientacao_reducao_transicao_ibs` e
+#'   `orientacao_classificacao_referenciada`); e a vigência na CBS e no IBS
+#'   (`inicio_cbs`, `fim_cbs`, `inicio_ibs` e `fim_ibs`).
+#' - `"mudancas_ibs_cbs"`: o que mudou nas tabelas acima de uma versão
 #'   publicada para a seguinte, desde a 1.20 (a que estava publicada quando as
 #'   regras de validação entraram em produção, em 10/11/2025): a `tabela`
-#'   (`"cst_ibs_cbs"` ou `"classificacao_ibs_cbs"`), o `codigo`, a `coluna` (o
+#'   (`"cst_ibs_cbs"`, `"classificacao_ibs_cbs"` ou
+#'   `"credito_presumido_ibs_cbs"`), o `codigo`, a `coluna` (o
 #'   nome da coluna na tabela, ou `"existe"` para o código que entrou ou saiu),
 #'   o valor de `antes` e o de `depois`, a `versao` do Informe Técnico
 #'   2025.002, a data em que foi `publicada_em` e o prazo em que ficou
@@ -149,8 +170,9 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   `"origem"` (origem da mercadoria), `"cst_icms"` (CST do ICMS), `"csosn"`
 #'   (CSOSN, do Simples Nacional), `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`,
 #'   `"cst_ibs_cbs"` (CST do IBS e da CBS), `"classificacao_ibs_cbs"`
-#'   (cClassTrib da Reforma), `"mudancas_ibs_cbs"` (o que mudou nessas duas
-#'   de uma versão para a outra), `"aliquotas_ibs_cbs"` (as alíquotas de cada
+#'   (cClassTrib da Reforma), `"credito_presumido_ibs_cbs"` (cCredPres),
+#'   `"mudancas_ibs_cbs"` (o que mudou nessas três de uma versão para a
+#'   outra), `"aliquotas_ibs_cbs"` (as alíquotas de cada
 #'   ano), `"meios_pagamento"` (dinheiro, cartão, PIX...),
 #'   `"bandeiras_cartao"`, `"municipios"` (código IBGE, nome e UF),
 #'   `"codigos_dos_campos"` (o significado dos códigos dos documentos) ou
@@ -161,8 +183,9 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' @source CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 #'   2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 #'   Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em
-#'   30/10/2026), e as versões dela publicadas desde 03/10/2025 para as
-#'   mudanças, com os prazos de produção do IT 2025.002 v1.71; as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
+#'   30/10/2026) e a de Crédito Presumido (publicada em 01/10/2026), e as
+#'   versões delas publicadas desde 03/10/2025 para as mudanças, com os prazos
+#'   de produção do IT 2025.002 v1.71; as alíquotas, da LC 214/2025 (texto do Planalto) e da NT
 #'   2025.002-RTC v1.53 (Portal da NF-e, 30/10/2026). NCM: a nomenclatura vigente do Portal Único Siscomex
 #'   (30/10/2026). Municípios: a API de localidades do IBGE
 #'   (servicodados.ibge.gov.br, 30/10/2026). Meios de pagamento e bandeiras de

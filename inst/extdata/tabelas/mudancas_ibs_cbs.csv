@@ -1,4 +1,5 @@
 "tabela","codigo","coluna","antes","depois","versao","publicada_em","em_producao_ate"
+"credito_presumido_ibs_cbs","02","apropria_no_documento","1","0","1.21",2025-10-07,2026-05-04
 "classificacao_ibs_cbs","000001","permitido_na_nfgas","0","1","1.30",2025-11-24,2026-05-04
 "classificacao_ibs_cbs","000002","permitido_na_nfgas","0","1","1.30",2025-11-24,2026-05-04
 "classificacao_ibs_cbs","010002","permitido_na_nfse","0","1","1.30",2025-11-24,2026-05-04
@@ -97,5 +98,7 @@
 "classificacao_ibs_cbs","550027","existe","0","1","1.70",2026-10-01,2026-10-16
 "classificacao_ibs_cbs","550028","existe","0","1","1.70",2026-10-01,2026-10-16
 "classificacao_ibs_cbs","550029","existe","0","1","1.70",2026-10-01,2026-10-16
+"credito_presumido_ibs_cbs","01","apropria_no_documento","1","0","1.70",2026-10-01,2026-10-16
+"credito_presumido_ibs_cbs","03","apropria_no_documento","1","0","1.70",2026-10-01,2026-10-16
 "classificacao_ibs_cbs","410003","permitido_na_dir","0","1","1.71",2026-10-30,2026-10-30
 "classificacao_ibs_cbs","410999","permitido_na_dir","0","1","1.71",2026-10-30,2026-10-30

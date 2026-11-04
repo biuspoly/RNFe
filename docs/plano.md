@@ -1053,11 +1053,24 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - **Como fica:** o que não confere pela regra e pela tabela de hoje, numa nota emitida antes da mudança, vem com
     `confere` vazio e o motivo (para a tabela, "a SEFAZ conferiu" quando a nota é de antes da publicação e "pode ter
     conferido" entre a publicação e o prazo).
+  - **Depois do primeiro commit (no mesmo dia), as que faltavam:**
+    - a nota de débito e de crédito: UB14-60 a UB14-80 (a classificação e o tipo da nota, pela tabela que a NT dá
+      dentro das regras), UB106-30/31/40 (transferência de crédito), UB112-30 e UB116-30 (ajuste e estorno com
+      valor), UB131-40/50, UB132-10 e UB133-10 (o crédito presumido da ZFM); o mês "atual" da UB132-10 é, aqui, o da
+      emissão;
+    - a CBS zero na área incentivada: UB66a-10/20 (a UB66a-20 mudou na v1.51, quando a ZFM entrou na tabela dela),
+      UB66c-10 e UB66e-10 (que não diz tolerância: até o centavo, depois de arredondar o calculado);
+    - o crédito presumido da operação: a tabela nova `credito_presumido_ibs_cbs` (a planilha de crédito presumido do
+      IT, 13 códigos, publicada em 01/10/2026; as orientações de texto em colunas `orientacao_*`), com a história
+      dela em `mudancas_ibs_cbs` (5 versões desde 03/10/2025; o link da de 07/10/2025 vem com espaço no lugar do
+      "+" no portal), e as regras UB122-10, UB123-10/20, UB125-10, UB126-10, UB127-10/20, UB129-10 e UB130-10 (a
+      UB123-10 e a UB127-10 perderam na v1.51 a exceção do bem móvel usado); a UB54a-10 passou a descontar o
+      crédito presumido do IBS do item quando o código manda (`deduz_do_tributo`).
+    Na amostra do acervo, nenhuma acusou nota autorizada (o acervo não tem crédito presumido nem CBS da ZFM: essas
+    estão testadas com variações do XML de exemplo).
   - **Fica de fora, por enquanto:** a tributação monofásica (reformulada na v1.50, produção em novembro de 2026), o
-    crédito presumido (UB122 a UB130, que consultam a tabela `cCredPres`, ainda fora do RNFe), o Imposto Seletivo,
-    a UB16-10 e as outras de implementação futura; e regras simples que ainda não entraram: UB14-60 a UB14-80 (o
-    cClassTrib e o tipo da nota de débito e de crédito), UB66a a UB66e (a CBS da ZFM), UB106, UB112-30, UB116-30,
-    UB131-40, UB131-50, UB132-10, UB133-10 e W07-10.
+    Imposto Seletivo, a UB16-10 e as outras de implementação futura, e a W07-10 (o total dos produtos, que é do ICMS,
+    não do IBS e da CBS).
 
 ## O robô das tabelas
 
