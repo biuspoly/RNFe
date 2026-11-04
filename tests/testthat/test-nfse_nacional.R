@@ -241,3 +241,85 @@ test_that("distribui\u00e7\u00e3o: a rejei\u00e7\u00e3o sem motivo (resposta rea
   expect_match(consulta$problema, "^sem resposta da NFS-e Nacional")
   expect_true(is.na(consulta$documentos))
 })
+
+test_that("o E2241 como a especifica\u00e7\u00e3o manda (404, nenhum documento) n\u00e3o passa por nota sem eventos", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  # O exemplo "NFS-e não referencia o contribuinte" da especificação do ADN Contribuintes.
+  e2241 = resposta_em_json(404, paste0(
+    '{"StatusProcessamento":"NENHUM_DOCUMENTO_LOCALIZADO","LoteDFe":[],"Alertas":[],"Erros":[{"Codigo":"E2241",',
+    '"Descricao":"Chave de acesso da NFS-e n\\u00e3o referencia o contribuinte solicitante e por isso n\\u00e3o pode ser ',
+    'compartilhada."}],"TipoAmbiente":"HOMOLOGACAO","VersaoAplicativo":"1.0.0.0","DataHoraProcessamento":"2026-11-04T09:56:18-03:00"}'
+  ))
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    if (startsWith(req$url, ENDERECO_DA_SEFIN)) {
+      return(nota_achada_na_sefin())
+    }
+    e2241
+  })
+  consulta = nfse_situacao(c(CHAVE_DA_NFSE_DE_EXEMPLO, CHAVE_DA_NFSE_DE_EXEMPLO), CERTIFICADO_DA_NFSE, "teste")
+  expect_identical(consulta$situacoes$encontrada, c(TRUE, TRUE))
+  expect_match(consulta$situacoes$problema[1], "^nos eventos: o ADN n\u00e3o entregou: E2241 Chave de acesso")
+  # A chave repetida vai uma vez só (dois pedidos: a nota e os eventos).
+  expect_length(pedidos, 2)
+  expect_identical(consulta$situacoes$problema[2], consulta$situacoes$problema[1])
+})
+
+test_that("resposta fora do formato, sem corpo, JSON que \u00e9 s\u00f3 um texto: problema, n\u00e3o queda", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  httr2::local_mocked_responses(function(req) {
+    if (startsWith(req$url, ENDERECO_DA_SEFIN)) {
+      return(resposta_em_json(401, '{"title":"Unauthorized","status":401}'))
+    }
+    resposta_em_json(403, '"Forbidden"')
+  })
+  situacao = nfse_situacao(CHAVE_DA_NFSE_DE_EXEMPLO, CERTIFICADO_DA_NFSE, "teste")$situacoes
+  expect_identical(situacao$situacao_http, 401L)
+  expect_identical(situacao$problema, paste0("HTTP 401: a resposta n\u00e3o \u00e9 a da Sefin Nacional (Unauthorized); ",
+                                            "nos eventos: HTTP 403: a resposta n\u00e3o \u00e9 a de sempre (Forbidden)"))
+  httr2::local_mocked_responses(function(req) httr2::response(status_code = 401))
+  situacao = nfse_situacao(CHAVE_DA_NFSE_DE_EXEMPLO, CERTIFICADO_DA_NFSE, "teste")$situacoes
+  expect_identical(situacao$problema, paste0("HTTP 401: a resposta n\u00e3o veio em JSON; ",
+                                            "nos eventos: HTTP 401: a resposta n\u00e3o veio em JSON"))
+})
+
+test_that("distribui\u00e7\u00e3o: NSU nulo, NSU maior que 2^53, erro sem c\u00f3digo e os limites do NSU pedido", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  lote = paste0(
+    '{"TipoConsulta":"CnpjBase","StatusProcessamento":"DOCUMENTOS_LOCALIZADOS","LoteDFe":[',
+    '{"NSU":null,"ChaveAcesso":"', CHAVE_DA_NFSE_DE_EXEMPLO, '","TipoDocumento":"NFSE","TipoEvento":null,"ArquivoXml":"',
+    exemplo_em_gzip_e_base64("nfse_sp_v101.xml"), '","DataHoraGeracao":"2026-10-20T17:30:05-03:00"},',
+    '{"NSU":9007199254740993,"ChaveAcesso":"', CHAVE_DA_NFSE_DE_EXEMPLO, '","TipoDocumento":"EVENTO",',
+    '"TipoEvento":"CANCELAMENTO","ArquivoXml":"', exemplo_em_gzip_e_base64("evento_nfse_cancelamento.xml"),
+    '","DataHoraGeracao":"2026-10-20T17:30:05-03:00"}],"Alertas":[],"Erros":[],"TipoAmbiente":"HOMOLOGACAO",',
+    '"VersaoAplicativo":"1.0.0.0","DataHoraProcessamento":"2026-11-04T09:56:44-03:00"}'
+  )
+  httr2::local_mocked_responses(function(req) resposta_em_json(200, lote))
+  distribuicao = nfse_distribuicao("11222333000181", CERTIFICADO_DA_NFSE, "teste")
+  # O NSU grande vem como texto, sem perder o último dígito; o nulo fica NA e não derruba.
+  expect_identical(distribuicao$documentos$nsu, c(NA, "9007199254740993"))
+  expect_identical(distribuicao$consulta$ultimo_nsu, "9007199254740993")
+  # O erro sem código: a descrição aparece, e o código fica NA (não o texto "NA").
+  sem_codigo = paste0('{"StatusProcessamento":"REJEICAO","LoteDFe":[],"Alertas":[],"Erros":[{"Codigo":null,',
+                      '"Descricao":"Falha de teste"}],"TipoAmbiente":"HOMOLOGACAO","VersaoAplicativo":"1.0.0.0",',
+                      '"DataHoraProcessamento":"2026-11-04T09:56:44-03:00"}')
+  httr2::local_mocked_responses(function(req) resposta_em_json(400, sem_codigo))
+  consulta = nfse_distribuicao("11222333000181", CERTIFICADO_DA_NFSE, "teste")$consulta
+  expect_true(is.na(consulta$codigo))
+  expect_identical(consulta$problema, "o ADN rejeitou o pedido: Falha de teste")
+  # O NSU pedido: como número, inteiro e até 2^53; como texto, até o maior inteiro de 64 bits.
+  expect_error(nsu_do_adn(2^53 + 2), "como texto")
+  expect_error(nsu_do_adn(1.5), "inteiro")
+  expect_error(nsu_do_adn("9999999999999999999"), "64 bits")
+  expect_identical(nsu_do_adn("9223372036854775807"), "9223372036854775807")
+})

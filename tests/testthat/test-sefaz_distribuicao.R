@@ -82,6 +82,15 @@ test_that("a produ\u00e7\u00e3o, um documento, um NSU ou uma chave fora do forma
   expect_error(sefaz_distribuicao("12ABC34501DE35", "qualquer.pfx", "senha", distribuicao = "CT-e", uf = "SP"), "letras")
   expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", distribuicao = "CT-e", uf = "SP",
                                   chave = "35261011222333000181570010000010011123456785"), "pela chave")
+  # Pela chave, só NF-e (NT 2014.002, regra H122); uma chave, um NSU e uma UF por pedido; o NSU é inteiro.
+  sem_digito = "3526101122233300018165001000001001112345678"
+  chave_de_nfce = paste0(sem_digito, chave_digito(sem_digito))
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", chave = chave_de_nfce), "modelo 55")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha",
+                                  chave = rep("35261011222333000181550010000010011123456785", 2)), "uma chave")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", nsu = c(1, 2)), "um NSU")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", nsu = 1.5), "inteiro")
+  expect_error(sefaz_distribuicao(CNPJ_DA_DISTRIBUICAO, "qualquer.pfx", "senha", uf = c("SP", "CE")), "uma UF")
 })
 
 test_that("nenhum documento: o pedido que vai, a resposta e a espera de uma hora", {

@@ -110,6 +110,15 @@ problema_sem_documento = function(xml_lido, nome_do_documento) {
   if (raiz_do_xml %in% c("CTeSimp", "cteSimpProc")) {
     return("\u00e9 um CT-e simplificado, que ainda n\u00e3o \u00e9 lido")
   }
+  # A NFS-e de prefeitura (o padrão Abrasf, o Ginfes e os formatos próprios) usa estes nomes; algumas, o NFe da NF-e,
+  # mas sem o infNFe dela.
+  if (raiz_do_xml %in% c("CompNfse", "Nfse", "CompNfe")) {
+    return(paste0("parece uma NFS-e de prefeitura (o XML come\u00e7a por <", raiz_do_xml, ">), que o RNFe ainda n\u00e3o l\u00ea"))
+  }
+  if (raiz_do_xml %in% c("NFe", "nfe")) {
+    return(paste0("n\u00e3o \u00e9 ", nome_do_documento, ": o XML come\u00e7a por <", raiz_do_xml, ">, mas sem o infNFe da NF-e ",
+                  "(algumas prefeituras usam esse nome na NFS-e, que o RNFe ainda n\u00e3o l\u00ea)"))
+  }
   paste0("n\u00e3o \u00e9 ", nome_do_documento, " (o XML come\u00e7a por <", raiz_do_xml, ">)")
 }
 

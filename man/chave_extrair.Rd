@@ -15,8 +15,8 @@ segundos por página).}
 }
 \value{
 Um \code{data.frame} com uma linha por chave achada (um PDF com várias
-notas dá várias linhas) e uma linha para o arquivo em que nenhuma chave
-conferiu: \code{arquivo}, \code{chave}, \code{origem} (\code{"texto do PDF"}, \code{"QR-Code"} ou
+notas, no texto ou uma por página, dá várias linhas) e uma linha para o
+arquivo em que nenhuma chave conferiu ou que não abriu: \code{arquivo}, \code{chave}, \code{origem} (\code{"texto do PDF"}, \code{"QR-Code"} ou
 \code{"OCR"}), \code{qrcode} (o texto do QR-Code, quando a chave veio dele: na NFC-e,
 a URL de consulta) e \code{problema} (vazio quando a chave foi achada).
 }
@@ -38,7 +38,12 @@ aparece em \code{problema}.
 
 Cada jeito precisa de um pacote, que só é usado se estiver instalado:
 \code{pdftools} (o texto do PDF e a página do PDF como imagem), \code{opencv} (o
-QR-Code) e \code{tesseract} (o OCR). Sem o pacote, o jeito é pulado.
+QR-Code) e \code{tesseract} (o OCR). Sem o pacote, o jeito é pulado. As páginas
+de um TIFF depois da primeira precisam do pacote \code{magick}.
+
+Os limites: o PDF que tem texto é lido só pelo texto (uma página que é só
+imagem, no mesmo PDF, fica de fora); e de cada imagem, ou página, sai um
+QR-Code só (duas notas lado a lado na mesma página dão uma chave).
 }
 \examples{
 \dontrun{

@@ -47,10 +47,10 @@ test_that("o status pela SVRS: o pedido que vai e a resposta da SEFAZ em colunas
   expect_match(corpo, '<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4">', fixed = TRUE)
   expect_match(corpo, '<consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>2</tpAmb><cUF>23</cUF><xServ>STATUS</xServ></consStatServ>', fixed = TRUE)
   expect_match(pedidos[[1]]$body$content_type, 'action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4/nfeStatusServicoNF"', fixed = TRUE)
-  # O certificado vai em PEM, com a chave à parte (cifrada pela senha).
+  # O certificado vai em PEM, com a chave à parte, cifrada por uma senha sorteada (não a do certificado).
   expect_identical(pedidos[[1]]$options$sslcerttype, "PEM")
   expect_false(is.null(pedidos[[1]]$options$sslkey))
-  expect_identical(pedidos[[1]]$options$keypasswd, "teste")
+  expect_match(pedidos[[1]]$options$keypasswd, "^[0-9a-f]{48}$")
 })
 
 # respostas/status_cte_homologacao_svrs.xml e status_mdfe_homologacao_svrs.xml: as respostas reais da SVRS de
@@ -105,6 +105,25 @@ test_that("o status do CT-e e do MDF-e: o pedido de cada um e a resposta em colu
   expect_length(pedidos, 4)
 })
 
+test_that("uma UF que responde sem corpo (um 503 vazio) n\u00e3o derruba as outras", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  httr2::local_mocked_responses(function(req) {
+    if (grepl("fazenda.sp.gov.br", req$url, fixed = TRUE)) {
+      return(httr2::response(status_code = 503))
+    }
+    resposta_gravada()
+  })
+  status = sefaz_status(c("CE", "SP", "PB"), CERTIFICADO_DE_TESTE, "teste")
+  expect_identical(status$situacao, c(107L, NA, 107L))
+  expect_identical(status$problema, c(NA, "HTTP 503: a SEFAZ n\u00e3o respondeu em XML", NA))
+  # A hora com mil\u00e9simos tamb\u00e9m abre.
+  com_milesimos = sub("(<dhRecbto>[^<]*T[0-9:]{8})", "\\1.218", paste(readLines(RESPOSTA_DA_SVRS, warn = FALSE), collapse = ""))
+  httr2::local_mocked_responses(function(req) resposta_gravada(com_milesimos))
+  expect_false(is.na(sefaz_status("CE", CERTIFICADO_DE_TESTE, "teste")$recebimento))
+})
+
 test_that("o motor de TLS pelo texto do curl: o que est\u00e1 entre par\u00eanteses est\u00e1 desligado", {
   expect_identical(motor_de_tls("(OpenSSL/3.5.8) Schannel"), "Schannel")
   expect_identical(motor_de_tls("OpenSSL/3.5.8 (Schannel)"), "OpenSSL")
@@ -119,8 +138,10 @@ test_that("a conex\u00e3o: o certificado em PEM com a chave cifrada e as ra\u00e
   expect_identical(conexao$opcoes$sslcerttype, "PEM")
   expect_match(openssl::read_cert(conexao$opcoes$sslcert)$subject, "EMPRESA DE TESTE LTDA")
   expect_true(any(grepl("ENCRYPTED", readLines(conexao$opcoes$sslkey))))
-  expect_error(openssl::read_key(conexao$opcoes$sslkey, password = "errada"))
-  expect_s3_class(openssl::read_key(conexao$opcoes$sslkey, password = "teste"), "key")
+  # A chave abre com a senha sorteada, não com a do certificado.
+  expect_error(openssl::read_key(conexao$opcoes$sslkey, password = "teste"))
+  expect_s3_class(openssl::read_key(conexao$opcoes$sslkey, password = conexao$opcoes$keypasswd), "key")
+  expect_false(identical(preparar_conexao(CERTIFICADO_DE_TESTE, "teste", pasta)$opcoes$keypasswd, conexao$opcoes$keypasswd))
   expect_identical(conexao$processo_separado, identical(motor_de_tls(), "Schannel"))
   # As raízes: a lista padrão e, no fim, a v10 da ICP-Brasil.
   lista_de_teste = file.path(pasta, "lista_padrao.pem")
@@ -139,7 +160,7 @@ test_that("o processo separado roda com o OpenSSL, devolve o erro da conex\u00e3
   pasta = tempfile("teste_do_processo_")
   dir.create(pasta)
   conexao = preparar_conexao(CERTIFICADO_DE_TESTE, "teste", pasta)
-  variaveis_de_antes = Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DO_CERTIFICADO"), unset = NA)
+  variaveis_de_antes = Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DA_CHAVE"), unset = NA)
   # Uma porta fechada deste computador: a conexão falha na hora, sem sair para a internet.
   pedido = montar_pedido("https://127.0.0.1:9/", "NFeStatusServico4", "nfeStatusServicoNF", "<teste/>")
   resultado = enviar_num_processo_separado(list(pedido), conexao)
@@ -147,7 +168,7 @@ test_that("o processo separado roda com o OpenSSL, devolve o erro da conex\u00e3
   expect_length(resultado$respostas, 1)
   expect_false(is.na(resultado$respostas[[1]]$erro))
   expect_match(ler_resposta(resultado$respostas[[1]], "retConsStatServ")$problema, "^sem resposta da SEFAZ")
-  expect_identical(Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DO_CERTIFICADO"), unset = NA), variaveis_de_antes)
+  expect_identical(Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DA_CHAVE"), unset = NA), variaveis_de_antes)
   # A senha não vai para o arquivo da tarefa.
   tarefa = readRDS(file.path(pasta, "tarefa.rds"))
   expect_null(tarefa$opcoes$keypasswd)

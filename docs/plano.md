@@ -1,13 +1,13 @@
 # Plano do RNFe
 
-Situação em 30/10/2026: **etapa 1 concluída** (chave de acesso, leitura do XML da NF-e/NFC-e e tabelas
-fiscais, conferidas com notas reais; o CEST foi adiado por decisão do usuário). **Etapa 2 concluída:** a
-leitura do CT-e e do CT-e OS, conferida com 14.370 CT-e reais; a do MDF-e, conferida pelo schema oficial,
-sem MDF-e reais para comparar; e a da NFS-e Nacional, conferida com 11.207 NFS-e reais. Os quatro leitores
-têm a tabela `campos` e o vigia olha os quatro portais. **Fechadas em 30/10/2026 as lacunas achadas na
-revisão das duas etapas:** a NFC-e (que nunca tinha sido lida de verdade: ganhou exemplo, QR-Code e
-contingência), a leitura dos eventos de todos os documentos e a tabela de municípios do IBGE. A próxima é a
-etapa 3 (certificado e SEFAZ).
+Situação em 04/11/2026: **etapas 1, 2 e 3 feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
+das da etapa 3). Etapa 1: chave de acesso, leitura do XML da NF-e/NFC-e e tabelas fiscais, conferidas com
+notas reais; o CEST foi adiado por decisão do usuário. Etapa 2: a leitura do CT-e e do CT-e OS (14.370 CT-e
+reais), da GTV-e, do MDF-e (pelo schema oficial, sem MDF-e reais para comparar), da NFS-e Nacional (11.207
+reais) e dos eventos de todos; a NFS-e de prefeitura fica para depois, por decisão do usuário. Etapa 3:
+certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados, Distribuição da NF-e e do
+CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
+deixou em aberto está no fim dela.
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -865,6 +865,67 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **Os testes não usam esses CNPJs** (regra do repositório: só os fictícios): as respostas de `tests/testthat/respostas/cnpj`
   são montadas à mão, com os mesmos campos que cada fonte devolveu, para 11.222.333/0001-81 (ativo), 11.444.777/0001-61
   (baixado) e o exemplo da Receita, 12.ABC.345/01DE-35 (que as fontes não acham). A queda de cada fonte é simulada.
+
+## Revisão das etapas 1 a 3 (04/11/2026)
+
+- **Pedido do usuário:** "você tem que ver se terminou realmente as etapas anteriores antes de prosseguir pra
+  quarta; corrigir possíveis erros e considerar brechas". Quatro frentes: o plano contra o pacote, os robôs do
+  GitHub, o acervo do Fiscal inteiro e uma revisão independente do código da etapa 3 (dois revisores, com
+  experimentos rodados: respostas simuladas, certificados falsos e um servidor local; nenhuma conexão com a SEFAZ).
+- **Os robôs:** sem aviso aberto. Disparados à mão em 04/11/2026, os dois rodaram sem erro, já com o gerador de
+  tabelas novo (os endereços do CT-e, do MDF-e e da NFC-e), que ainda não tinha rodado no GitHub.
+- **O acervo do Fiscal** (341.402 XML), por tipo de documento, uma amostra de até 300 de cada tipo em todos os
+  leitores (só contagens): os tipos que o RNFe lê saíram sem problema, sem aviso do R, e com todas as chaves
+  conferindo. Os que nenhum leitor lê são NFS-e de prefeitura (cerca de 2.200: `CompNfse`, `Nfse`, `CompNfe` e
+  `NFe`/`nfe` sem namespace, como a da prefeitura de São Paulo), que ficam para depois por decisão do usuário. A
+  mensagem para eles dizia "não é uma NF-e (o XML começa por <NFe>)", o que confunde; agora diz que parece NFS-e de
+  prefeitura, ou que o `<NFe>` não tem o infNFe da NF-e.
+- **Erros achados na revisão do código e corrigidos** (cada um com teste):
+  - uma resposta HTTP sem corpo (um 503 vazio) derrubava a chamada inteira, e no Windows, pelo processo separado,
+    levava junto as respostas boas: o `enviar_os_pedidos()` passou a aceitar o corpo vazio (vira "não respondeu em
+    XML" ou "não veio em JSON", só naquela linha);
+  - a chave de um modelo que o RNFe não consulta (59, 62, 63, 66) derrubava a `sefaz_situacao()` inteira: o trecho
+    que tratava disso tinha sido tirado em 03/11/2026 como "código morto", e não era (o `chave_decompor()` aceita
+    qualquer modelo). Agora a linha vai com "o modelo 59 não é consultado pelo RNFe";
+  - na NFS-e, o E2241 do ADN ("a nota não cita quem pergunta") vem, pela especificação, como 404 e
+    `NENHUM_DOCUMENTO_LOCALIZADO`: ele passava por "nota sem eventos". Agora só E2220, E2230 e E2240 querem dizer
+    nenhum documento; outro código vai para `problema`. O teste antigo montava o E2241 como 400 `REJEICAO`, caminho
+    que a especificação não usa;
+  - JSON fora do formato (o erro padrão do servidor, um texto solto) dava mensagem errada ou derrubava; NSU nulo
+    derrubava a distribuição da NFS-e; erro do ADN sem código virava o texto "NA"; NSU acima de 2^53 perdia o
+    último dígito (agora o JSON é lido com os inteiros grandes como texto, e o maior NSU é comparado como texto);
+  - na `cnpj_situacao()`, um 200 fora do formato (`{}`, um aviso de manutenção) virava "achou" com tudo vazio; agora
+    conta como fora do ar, e a fonte seguinte é tentada. Um campo de outro tipo (o `status` da CNPJá como texto)
+    derrubava a lista inteira;
+  - na `chave_extrair()`, um arquivo que não abre derrubava a lista inteira (agora é uma linha com o motivo); o TIFF
+    de várias páginas só tinha a primeira lida (agora o `magick`, em Suggests, separa as páginas); a chave emendada
+    com um número colado antes não era achada (agora cada janela de 44 posições é candidata); uma pasta com nome
+    de PDF e `ocr = NA` davam erro. Ficam escritos na ajuda, sem mudar: um QR-Code por imagem ou página, e o PDF
+    com texto é lido só pelo texto;
+  - a chave repetida ia duas vezes à SEFAZ (a mesma consulta repetida pode virar consumo indevido) e duplicava os
+    eventos: agora vai uma vez, na `sefaz_situacao()` e na `nfse_situacao()`;
+  - a hora com milésimos, sem fuso ou com "Z" virava NA no status e na consulta pela chave (o cadastro e a
+    distribuição já aceitavam): agora todos usam a mesma leitura; uma data fora do formato no cadastro derrubava a
+    consulta inteira;
+  - na consulta pela chave, a resposta sobre outra chave ou de outro ambiente deixava a situação e o protocolo
+    dela na linha; agora a linha fica só com o `problema`, como no cadastro. Um evento que vem na resposta e não é
+    lido vai para `problema` (antes sumia calado);
+  - na distribuição, duas chaves, dois NSU ou duas UFs viravam, sem aviso, o pedido pelo último NSU (e ligavam a
+    trava); a chave de outro modelo ia ao `consChNFe` (a NT 2014.002, regra H122, só aceita o 55); o NSU com casas
+    decimais era arredondado. Agora são recusados antes de conectar;
+  - no certificado: o CNPJ alfanumérico não era lido; a coluna `tipo_documento` saía lógica quando nenhum
+    certificado tinha documento; só a vírgula escapada do nome era desfeita (agora as do RFC 4514); o certificado
+    que ainda não vale passava na conferência; e, com senha vazia, a chave temporária ia sem cifra. **A chave
+    temporária agora é cifrada por uma senha sorteada na hora**, não a do certificado: a senha de quem usa nem vai
+    para o processo separado;
+  - o processo separado não apagava um resultado antigo e, no erro, mostrava o fim do rastro em vez da mensagem.
+- **Sem correção, porque não aconteceu de verdade:** os eventos com prefixo de namespace declarado no envelope
+  (`ns2:`). Nenhuma das respostas reais (27 UFs) faz isso, e a SEFAZ proíbe prefixo nos documentos (rejeição 404).
+  Se acontecer, agora vira `problema` em vez de sumir.
+- **Brechas que ficam em aberto** (para o usuário decidir): o **CT-e simplificado** (tpCTe 5 e 6) não é lido, e a
+  distribuição do CT-e o entrega ao tomador (nenhum no acervo); a NFS-e de prefeitura (decisão do usuário: depois);
+  a terceira camada das tabelas (o pacote buscar sozinho a tabela mais nova); o MDF-e sem documento real para
+  conferir; o dígito da chave da NFS-e, sem regra publicada.
 
 ## O robô das tabelas
 

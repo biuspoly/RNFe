@@ -69,8 +69,13 @@ endereços vêm da página da SEFAZ-MG, porque o Portal não a lista; as outras
 conferido em homologação em 03/11/2026: cada UF respondeu no seu
 autorizador, e a SVRS recusou as 8 de autorizador próprio.
 
-Chave que não confere (veja \code{\link[=chave_decompor]{chave_decompor()}}) nem é enviada: o motivo
-fica em \code{problema}. Por enquanto só o ambiente de \strong{homologação}; a
+Chave que não confere (veja \code{\link[=chave_decompor]{chave_decompor()}}), ou de um modelo que o
+RNFe não consulta (o CF-e SAT, 59, por exemplo), nem é enviada: o motivo
+fica em \code{problema}. A chave repetida vai à SEFAZ uma vez só, e as linhas
+dela saem iguais. Quando a SEFAZ responde de outro ambiente ou sobre outra
+chave, a linha fica só com o \code{problema}, sem o que essa resposta diz. Um
+evento que vem na resposta e não é lido também vai para \code{problema}. Por
+enquanto só o ambiente de \strong{homologação}; a
 produção é recusada (por isso a chave de uma nota de verdade volta 217, "não
 consta": a homologação só tem as notas emitidas em teste). A conexão é a
 mesma do \code{\link[=sefaz_status]{sefaz_status()}}, com as mesmas exigências e o mesmo processo

@@ -149,9 +149,9 @@ perguntar_a_fonte = function(fonte, cnpj) {
   }
   if (situacao_http == 404 && is.list(json)) {
     # A BrasilAPI, o Minha Receita e a CNPJá dizem em "message"; a CNPJ.ws, em "detalhes".
-    mensagem = texto_da_fonte(json$message)
+    mensagem = texto_da_fonte(valor_no_json(json, "message"))
     if (is.na(mensagem)) {
-      mensagem = texto_da_fonte(json$detalhes)
+      mensagem = texto_da_fonte(valor_no_json(json, "detalhes"))
     }
     if (!is.na(mensagem)) {
       return(list(resultado = "n\u00e3o achou", mensagem = mensagem))
@@ -160,35 +160,55 @@ perguntar_a_fonte = function(fonte, cnpj) {
   if (situacao_http != 200 || !is.list(json)) {
     return(list(resultado = "fora do ar", motivo = paste("HTTP", situacao_http)))
   }
-  if (fonte == "receitaws" && identical(texto_da_fonte(json$status), "ERROR")) {
-    return(list(resultado = "n\u00e3o achou", mensagem = texto_da_fonte(json$message)))
+  if (fonte == "receitaws" && identical(texto_da_fonte(valor_no_json(json, "status")), "ERROR")) {
+    return(list(resultado = "n\u00e3o achou", mensagem = texto_da_fonte(valor_no_json(json, "message"))))
+  }
+  # O 200 tem de trazer a situação no lugar de sempre da fonte; sem ela ({}, ou um aviso de manutenção em JSON), a fonte
+  # conta como fora do ar.
+  if (is.na(texto_da_fonte(campos_da_fonte(fonte, json)$situacao))) {
+    return(list(resultado = "fora do ar", motivo = "resposta fora do formato"))
   }
   list(resultado = "achou", json = json)
 }
 
-# Os campos da resposta de cada fonte na linha. Cada fonte tem o seu formato (conferido em 04/11/2026).
-preencher_com_a_fonte = function(linha, fonte, json) {
+# Os campos da resposta de cada fonte, cada uma no seu formato (conferido em 04/11/2026). O que não está lá vem NULL.
+campos_da_fonte = function(fonte, json) {
   if (fonte %in% c("brasilapi", "minhareceita")) {
-    campos = list(situacao = json$descricao_situacao_cadastral, data_situacao = json$data_situacao_cadastral,
-                  motivo_situacao = json$descricao_motivo_situacao_cadastral, situacao_especial = json$situacao_especial,
-                  data_situacao_especial = json$data_situacao_especial, razao_social = json$razao_social,
-                  nome_fantasia = json$nome_fantasia, atualizado_em = NULL)
-  } else if (fonte == "cnpja") {
-    campos = list(situacao = json$status$text, data_situacao = json$statusDate, motivo_situacao = json$reason$text,
-                  situacao_especial = NULL, data_situacao_especial = NULL, razao_social = json$company$name,
-                  nome_fantasia = json$alias, atualizado_em = json$updated)
-  } else if (fonte == "receitaws") {
-    campos = list(situacao = json$situacao, data_situacao = json$data_situacao, motivo_situacao = json$motivo_situacao,
-                  situacao_especial = json$situacao_especial, data_situacao_especial = json$data_situacao_especial,
-                  razao_social = json$nome, nome_fantasia = json$fantasia, atualizado_em = json$ultima_atualizacao)
-  } else {
-    # A CNPJ.ws: a situação fica no estabelecimento, e o motivo não vem (veio vazio também no CNPJ baixado).
-    estabelecimento = json$estabelecimento
-    campos = list(situacao = estabelecimento$situacao_cadastral, data_situacao = estabelecimento$data_situacao_cadastral,
-                  motivo_situacao = NULL, situacao_especial = estabelecimento$situacao_especial,
-                  data_situacao_especial = estabelecimento$data_situacao_especial, razao_social = json$razao_social,
-                  nome_fantasia = estabelecimento$nome_fantasia, atualizado_em = estabelecimento$atualizado_em)
+    return(list(situacao = valor_no_json(json, "descricao_situacao_cadastral"),
+                data_situacao = valor_no_json(json, "data_situacao_cadastral"),
+                motivo_situacao = valor_no_json(json, "descricao_motivo_situacao_cadastral"),
+                situacao_especial = valor_no_json(json, "situacao_especial"),
+                data_situacao_especial = valor_no_json(json, "data_situacao_especial"),
+                razao_social = valor_no_json(json, "razao_social"), nome_fantasia = valor_no_json(json, "nome_fantasia"),
+                atualizado_em = NULL))
   }
+  if (fonte == "cnpja") {
+    return(list(situacao = valor_no_json(json, "status", "text"), data_situacao = valor_no_json(json, "statusDate"),
+                motivo_situacao = valor_no_json(json, "reason", "text"), situacao_especial = NULL,
+                data_situacao_especial = NULL, razao_social = valor_no_json(json, "company", "name"),
+                nome_fantasia = valor_no_json(json, "alias"), atualizado_em = valor_no_json(json, "updated")))
+  }
+  if (fonte == "receitaws") {
+    return(list(situacao = valor_no_json(json, "situacao"), data_situacao = valor_no_json(json, "data_situacao"),
+                motivo_situacao = valor_no_json(json, "motivo_situacao"),
+                situacao_especial = valor_no_json(json, "situacao_especial"),
+                data_situacao_especial = valor_no_json(json, "data_situacao_especial"),
+                razao_social = valor_no_json(json, "nome"), nome_fantasia = valor_no_json(json, "fantasia"),
+                atualizado_em = valor_no_json(json, "ultima_atualizacao")))
+  }
+  # A CNPJ.ws: a situação fica no estabelecimento, e o motivo não vem (veio vazio também no CNPJ baixado).
+  list(situacao = valor_no_json(json, "estabelecimento", "situacao_cadastral"),
+       data_situacao = valor_no_json(json, "estabelecimento", "data_situacao_cadastral"), motivo_situacao = NULL,
+       situacao_especial = valor_no_json(json, "estabelecimento", "situacao_especial"),
+       data_situacao_especial = valor_no_json(json, "estabelecimento", "data_situacao_especial"),
+       razao_social = valor_no_json(json, "razao_social"),
+       nome_fantasia = valor_no_json(json, "estabelecimento", "nome_fantasia"),
+       atualizado_em = valor_no_json(json, "estabelecimento", "atualizado_em"))
+}
+
+# Os campos da fonte na linha do CNPJ.
+preencher_com_a_fonte = function(linha, fonte, json) {
+  campos = campos_da_fonte(fonte, json)
   linha$encontrado = TRUE
   linha$situacao = toupper(texto_da_fonte(campos$situacao))
   linha$data_situacao = data_da_fonte(texto_da_fonte(campos$data_situacao))

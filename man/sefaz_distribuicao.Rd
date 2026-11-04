@@ -99,8 +99,9 @@ sequência de NSU: o último NSU da NF-e não serve para o CT-e.
 
 \strong{A SEFAZ bloqueia quem pergunta demais.} Pelas NTs 2014.002 e 2015.002,
 quando a resposta diz que não há mais documentos (137, ou o \code{ultimo_nsu}
-igual ao \code{maior_nsu}), é preciso esperar uma hora antes de pedir de novo a
-partir do último NSU; antes disso, ela pode responder 656 ("Consumo
+igual ao \code{maior_nsu}), ou quando ela já respondeu 656, é preciso esperar
+uma hora antes de pedir de novo a partir do último NSU; antes disso, ela
+pode responder 656 ("Consumo
 Indevido") e, na NF-e, bloquear o CNPJ por uma hora. As consultas também
 têm de seguir o \code{ultimo_nsu} que ela devolveu. Por isso, nesta sessão do R,
 o RNFe recusa um novo pedido pelo último NSU do mesmo CNPJ, na mesma

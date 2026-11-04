@@ -91,3 +91,23 @@ gravar_certificado(
     datetime.datetime(2020, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc),
     datetime.datetime(2021, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc),
 )
+# O que ainda não vale (a partir de 2040).
+gravar_certificado(
+    "futuro.pfx",
+    "EMPRESA DE TESTE LTDA:11222333000181",
+    [outro_nome("2.16.76.1.3.3", "11222333000181")],
+    datetime.datetime(2040, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2041, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc),
+)
+# O CNPJ alfanumérico (o exemplo da Receita) no campo e no fim do nome.
+gravar_certificado(
+    "alfanumerico.pfx",
+    "EMPRESA ALFANUMERICA DE TESTE:12ABC34501DE35",
+    [outro_nome("2.16.76.1.3.3", "12ABC34501DE35")],
+    DESDE,
+    ATE,
+)
+# Sem documento nenhum: nem os campos, nem o número no fim do nome.
+gravar_certificado("sem_documento.pfx", "EMPRESA SEM NUMERO DE TESTE", [], DESDE, ATE)
+# Os caracteres que o nome traz escapados (RFC 4514).
+gravar_certificado("nome_escapado.pfx", 'A+B COMERCIO; "FILIAL" DE TESTE:11444777000161', [], DESDE, ATE)

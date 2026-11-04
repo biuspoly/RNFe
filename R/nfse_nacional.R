@@ -17,6 +17,10 @@ homologacao ; https://sefin.producaorestrita.nfse.gov.br/SefinNacional ; https:/
 # A Sefin diz o ambiente pelo número (o tpAmb, 2 na homologação); o ADN, pelo nome.
 AMBIENTE_NA_RESPOSTA_DO_ADN = c(homologacao = "HOMOLOGACAO")
 
+# Os erros do ADN que querem dizer só "não há documento" (a tabela de mensagens da especificação do ADN Contribuintes).
+# Outro erro com a mesma situação, como o E2241 (a nota não cita quem pergunta), é problema: os eventos não foram vistos.
+CODIGOS_DE_NENHUM_DOCUMENTO = c("E2220", "E2230", "E2240")
+
 #' Situação de NFS-e Nacional, pela chave
 #'
 #' Pergunta ao Sistema Nacional NFS-e cada nota pela chave de acesso (50
@@ -81,10 +85,15 @@ nfse_situacao = function(chaves, certificado, senha, ambiente = "homologacao") {
   on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
   conexao = preparar_conexao(certificado, senha, pasta_temporaria)
   chaves_limpas = limpar_chaves(chaves)
+  # A chave repetida vai uma vez só; no fim, ela recebe a linha da primeira.
+  primeira_posicao_da_chave = match(chaves_limpas, chaves_limpas)
   linhas = list()
   pedidos = list()
   linha_de_cada_chave_pedida = integer()
   for (posicao in seq_along(chaves_limpas)) {
+    if (primeira_posicao_da_chave[posicao] != posicao) {
+      next
+    }
     linhas[[posicao]] = comeco_da_situacao_da_nfse(chaves_limpas[posicao], ambiente, enderecos$sefin)
     if (is.na(linhas[[posicao]]$problema)) {
       # Dois pedidos por chave: a nota, na Sefin, e os eventos dela, no ADN.
@@ -104,6 +113,11 @@ nfse_situacao = function(chaves, certificado, senha, ambiente = "homologacao") {
     if (!is.na(resposta_dos_eventos$problema)) {
       problemas = c(linhas[[posicao]]$problema, paste("nos eventos:", resposta_dos_eventos$problema))
       linhas[[posicao]]$problema = paste(problemas[!is.na(problemas)], collapse = "; ")
+    }
+  }
+  for (posicao in seq_along(chaves_limpas)) {
+    if (primeira_posicao_da_chave[posicao] != posicao) {
+      linhas[[posicao]] = linhas[[primeira_posicao_da_chave[posicao]]]
     }
   }
   if (length(linhas) == 0) {
@@ -143,26 +157,31 @@ completar_situacao_da_nfse = function(linha, resposta_lida, ambiente) {
   }
   json = resposta_lida$json
   linha$situacao_http = resposta_lida$situacao_http
-  linha$processamento = data_hora_da_consulta(texto_do_json(json$dataHoraProcessamento))
-  linha$versao_aplicativo = texto_do_json(json$versaoAplicativo)
-  linha$codigo = texto_do_json(json$erro$codigo)
-  linha$motivo = texto_do_json(json$erro$descricao)
-  complemento = texto_do_json(json$erro$complemento)
+  # Sem o tipoAmbiente, a resposta não é a da Sefin (um erro do servidor no formato dele, por exemplo).
+  if (is.null(valor_no_json(json, "tipoAmbiente"))) {
+    linha$problema = resposta_fora_do_formato(resposta_lida, "da Sefin Nacional")
+    return(linha)
+  }
+  linha$processamento = data_hora_da_consulta(texto_do_json(valor_no_json(json, "dataHoraProcessamento")))
+  linha$versao_aplicativo = texto_do_json(valor_no_json(json, "versaoAplicativo"))
+  linha$codigo = texto_do_json(valor_no_json(json, "erro", "codigo"))
+  linha$motivo = texto_do_json(valor_no_json(json, "erro", "descricao"))
+  complemento = texto_do_json(valor_no_json(json, "erro", "complemento"))
   if (!is.na(complemento) && nzchar(complemento)) {
     linha$motivo = paste0(linha$motivo, " (", complemento, ")")
   }
-  if (!identical(texto_do_json(json$tipoAmbiente), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
+  if (!identical(texto_do_json(valor_no_json(json, "tipoAmbiente")), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
     linha$problema = "a NFS-e Nacional respondeu de outro ambiente"
     return(linha)
   }
   if (!identical(linha$situacao_http, 200L)) {
     return(linha)
   }
-  if (!identical(texto_do_json(json$chaveAcesso), linha$chave)) {
+  if (!identical(texto_do_json(valor_no_json(json, "chaveAcesso")), linha$chave)) {
     linha$problema = "a Sefin respondeu com outra chave"
     return(linha)
   }
-  xml = tryCatch(texto_do_gzip_em_base64(texto_do_json(json$nfseXmlGZipB64)), error = function(erro) NA_character_)
+  xml = tryCatch(texto_do_gzip_em_base64(texto_do_json(valor_no_json(json, "nfseXmlGZipB64"))), error = function(erro) NA_character_)
   if (is.na(xml)) {
     linha$problema = "a nota veio, mas o XML dela n\u00e3o abriu"
     return(linha)
@@ -184,9 +203,11 @@ completar_situacao_da_nfse = function(linha, resposta_lida, ambiente) {
 #' Cada chamada faz um pedido, que traz um lote dos documentos com NSU maior
 #' que `ultimo_nsu`. Para seguir, chame de novo com `ultimo_nsu` igual ao
 #' `ultimo_nsu` da resposta (o maior NSU que veio), até a resposta dizer
-#' `"NENHUM_DOCUMENTO_LOCALIZADO"`. A documentação do ADN não fala de espera
-#' nem de bloqueio, como as da NF-e e do CT-e; mesmo assim, não pergunte em
-#' laço sem pausa.
+#' `"NENHUM_DOCUMENTO_LOCALIZADO"`; com `problema` preenchido, pare e veja o
+#' motivo. Um documento cujo XML não abriu fica na tabela, com o `xml` vazio
+#' e o NSU dele em `problema`. A documentação do ADN não fala de espera nem de
+#' bloqueio, como as da NF-e e do CT-e; mesmo assim, não pergunte em laço sem
+#' pausa.
 #'
 #' Com um certificado de empresa, dá para pedir os documentos de qualquer CNPJ
 #' com a mesma raiz (os 8 primeiros dígitos); de outra raiz, ou de outro CPF,
@@ -273,8 +294,11 @@ nfse_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, ambi
   if (is.na(resposta_lida$situacao)) {
     consulta$documentos = NA_integer_
   }
-  if (nrow(documentos) > 0) {
-    consulta$ultimo_nsu = documentos$nsu[which.max(as.numeric(documentos$nsu))]
+  # O maior NSU que veio, comparado como texto (pelo tamanho e depois pelos dígitos): acima de 2^53 o número do R perde
+  # dígitos.
+  nsus_que_vieram = documentos$nsu[!is.na(documentos$nsu)]
+  if (length(nsus_que_vieram) > 0) {
+    consulta$ultimo_nsu = nsus_que_vieram[order(nchar(nsus_que_vieram), nsus_que_vieram, decreasing = TRUE)][1]
   }
   list(consulta = consulta, documentos = documentos)
 }
@@ -282,13 +306,20 @@ nfse_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, ambi
 # O NSU no caminho do pedido: só dígitos, sem os zeros da frente (o ADN o trata como número inteiro de 64 bits).
 nsu_do_adn = function(nsu) {
   if (is.numeric(nsu)) {
+    if (length(nsu) == 1 && !is.na(nsu) && (nsu != floor(nsu) || nsu > 2^53)) {
+      stop("O NSU \u00e9 um n\u00famero inteiro; acima de 2^53, passe como texto (o n\u00famero do R perde d\u00edgitos).", call. = FALSE)
+    }
     nsu = format(nsu, scientific = FALSE, trim = TRUE)
   }
   nsu = as.character(nsu)
   if (length(nsu) != 1 || is.na(nsu) || !grepl("^[0-9]{1,19}$", nsu)) {
     stop("O NSU tem de ter de 1 a 19 d\u00edgitos.", call. = FALSE)
   }
-  sub("^0+([0-9])", "\\1", nsu)
+  nsu = sub("^0+([0-9])", "\\1", nsu)
+  if (nchar(nsu) == 19 && nsu > "9223372036854775807") {
+    stop("O NSU passa do maior inteiro de 64 bits.", call. = FALSE)
+  }
+  nsu
 }
 
 # Um pedido às APIs da NFS-e Nacional: um GET, sem corpo, que pede a resposta em JSON.
@@ -305,10 +336,15 @@ ler_resposta_em_json = function(resposta) {
   }
   texto = rawToChar(resposta$corpo)
   Encoding(texto) = "UTF-8"
-  json = tryCatch(jsonlite::fromJSON(texto, simplifyVector = FALSE), error = function(erro) NULL)
+  # O número grande (o NSU) vem como texto, para não perder dígitos.
+  json = tryCatch(jsonlite::fromJSON(texto, simplifyVector = FALSE, bigint_as_char = TRUE), error = function(erro) NULL)
   if (is.null(json)) {
     return(list(json = NULL, situacao_http = as.integer(resposta$situacao_http),
                 problema = paste0("HTTP ", resposta$situacao_http, ": a resposta n\u00e3o veio em JSON")))
+  }
+  if (!is.list(json)) {
+    return(list(json = NULL, situacao_http = as.integer(resposta$situacao_http),
+                problema = paste0("HTTP ", resposta$situacao_http, ": a resposta n\u00e3o \u00e9 a de sempre (", texto_do_json(json[1]), ")")))
   }
   list(json = json, situacao_http = as.integer(resposta$situacao_http), problema = NA_character_)
 }
@@ -326,42 +362,58 @@ ler_resposta_do_adn = function(resposta_lida, ambiente) {
     return(lida)
   }
   json = resposta_lida$json
-  lida$situacao = texto_do_json(json$StatusProcessamento)
-  lida$tipo_consulta = texto_do_json(json$TipoConsulta)
-  lida$codigo = juntar_mensagens_do_adn(json$Erros, "Codigo")
-  lida$motivo = juntar_mensagens_do_adn(json$Erros, "Descricao")
-  alertas_com_codigo = character()
-  for (alerta in json$Alertas) {
-    alertas_com_codigo = c(alertas_com_codigo, paste(texto_do_json(alerta$Codigo), texto_do_json(alerta$Descricao)))
+  # Sem o TipoAmbiente, a resposta não é a do ADN (um erro do servidor no formato dele, por exemplo).
+  if (is.null(valor_no_json(json, "TipoAmbiente"))) {
+    lida$problema = resposta_fora_do_formato(resposta_lida, "do ADN")
+    return(lida)
   }
-  if (length(alertas_com_codigo) > 0) {
-    lida$alertas = paste(alertas_com_codigo, collapse = "; ")
+  lida$situacao = texto_do_json(valor_no_json(json, "StatusProcessamento"))
+  lida$tipo_consulta = texto_do_json(valor_no_json(json, "TipoConsulta"))
+  codigos_dos_erros = textos_das_mensagens_do_adn(valor_no_json(json, "Erros"), "Codigo")
+  lida$codigo = juntar_ou_na(codigos_dos_erros)
+  lida$motivo = juntar_ou_na(textos_das_mensagens_do_adn(valor_no_json(json, "Erros"), "Descricao"))
+  alertas = character()
+  for (alerta in valor_no_json(json, "Alertas")) {
+    partes_do_alerta = c(texto_do_json(valor_no_json(alerta, "Codigo")), texto_do_json(valor_no_json(alerta, "Descricao")))
+    if (any(!is.na(partes_do_alerta))) {
+      alertas = c(alertas, paste(partes_do_alerta[!is.na(partes_do_alerta)], collapse = " "))
+    }
   }
-  lida$processamento = data_hora_da_consulta(texto_do_json(json$DataHoraProcessamento))
-  lida$versao_aplicativo = texto_do_json(json$VersaoAplicativo)
-  if (!identical(texto_do_json(json$TipoAmbiente), AMBIENTE_NA_RESPOSTA_DO_ADN[[ambiente]])) {
+  lida$alertas = juntar_ou_na(alertas)
+  lida$processamento = data_hora_da_consulta(texto_do_json(valor_no_json(json, "DataHoraProcessamento")))
+  lida$versao_aplicativo = texto_do_json(valor_no_json(json, "VersaoAplicativo"))
+  if (!identical(texto_do_json(valor_no_json(json, "TipoAmbiente")), AMBIENTE_NA_RESPOSTA_DO_ADN[[ambiente]])) {
     lida$problema = "o ADN respondeu de outro ambiente"
     return(lida)
   }
+  # O código e a descrição do erro, o que vier.
+  erro_do_adn = c(lida$codigo, lida$motivo)
+  erro_do_adn = paste(erro_do_adn[!is.na(erro_do_adn)], collapse = " ")
   if (identical(lida$situacao, "REJEICAO")) {
-    if (is.na(lida$codigo)) {
+    if (erro_do_adn == "") {
       lida$problema = "o ADN rejeitou o pedido sem dizer o motivo"
     } else {
-      lida$problema = paste0("o ADN rejeitou o pedido: ", lida$codigo, " ", lida$motivo)
+      lida$problema = paste0("o ADN rejeitou o pedido: ", erro_do_adn)
     }
+    return(lida)
+  }
+  if (identical(lida$situacao, "NENHUM_DOCUMENTO_LOCALIZADO") && !all(codigos_dos_erros %in% CODIGOS_DE_NENHUM_DOCUMENTO)) {
+    lida$problema = paste0("o ADN n\u00e3o entregou: ", erro_do_adn)
     return(lida)
   }
   linhas = list()
   que_nao_abriram = character()
-  for (documento in json$LoteDFe) {
-    nsu = texto_do_json(documento$NSU)
-    xml = tryCatch(texto_do_gzip_em_base64(texto_do_json(documento$ArquivoXml)), error = function(erro) NA_character_)
+  for (documento in valor_no_json(json, "LoteDFe")) {
+    nsu = texto_do_json(valor_no_json(documento, "NSU"))
+    xml = tryCatch(texto_do_gzip_em_base64(texto_do_json(valor_no_json(documento, "ArquivoXml"))), error = function(erro) NA_character_)
     if (is.na(xml)) {
       que_nao_abriram = c(que_nao_abriram, nsu)
     }
     linhas[[length(linhas) + 1]] = data.frame(
-      nsu = nsu, chave = texto_do_json(documento$ChaveAcesso), tipo_documento = texto_do_json(documento$TipoDocumento),
-      tipo_evento = texto_do_json(documento$TipoEvento), gerado_em = data_hora_da_consulta(texto_do_json(documento$DataHoraGeracao)),
+      nsu = nsu, chave = texto_do_json(valor_no_json(documento, "ChaveAcesso")),
+      tipo_documento = texto_do_json(valor_no_json(documento, "TipoDocumento")),
+      tipo_evento = texto_do_json(valor_no_json(documento, "TipoEvento")),
+      gerado_em = data_hora_da_consulta(texto_do_json(valor_no_json(documento, "DataHoraGeracao"))),
       xml = xml
     )
   }
@@ -375,21 +427,55 @@ ler_resposta_do_adn = function(resposta_lida, ambiente) {
   lida
 }
 
-# Um campo (o Codigo ou a Descricao) de cada mensagem do ADN, separados por "; ", ou NA quando não há nenhuma.
-juntar_mensagens_do_adn = function(mensagens, campo) {
+# Um campo (o Codigo ou a Descricao) de cada mensagem do ADN; o que vem vazio (null) fica de fora.
+textos_das_mensagens_do_adn = function(mensagens, campo) {
   textos = character()
-  for (mensagem in mensagens) {
-    textos = c(textos, texto_do_json(mensagem[[campo]]))
+  if (!is.list(mensagens)) {
+    return(textos)
   }
+  for (mensagem in mensagens) {
+    texto = texto_do_json(valor_no_json(mensagem, campo))
+    if (!is.na(texto)) {
+      textos = c(textos, texto)
+    }
+  }
+  textos
+}
+
+juntar_ou_na = function(textos) {
   if (length(textos) == 0) {
     return(NA_character_)
   }
   paste(textos, collapse = "; ")
 }
 
-# Um valor do JSON como texto; o que não veio (NULL), como NA. O número grande (NSU) sai sem notação científica.
+# O problema de uma resposta que não tem os campos de sempre, com o título que o servidor pôs, quando pôs.
+resposta_fora_do_formato = function(resposta_lida, quem_responde) {
+  problema = paste0("HTTP ", resposta_lida$situacao_http, ": a resposta n\u00e3o \u00e9 a ", quem_responde)
+  titulo = texto_do_json(valor_no_json(resposta_lida$json, "title"))
+  if (!is.na(titulo)) {
+    problema = paste0(problema, " (", titulo, ")")
+  }
+  problema
+}
+
+# Um valor dentro do JSON pelo caminho de nomes (valor_no_json(json, "erro", "codigo")): o que não existe, ou um passo
+# que não é um objeto, vira NULL.
+valor_no_json = function(json, ...) {
+  valor = json
+  for (nome in c(...)) {
+    if (!is.list(valor) || is.null(valor[[nome]])) {
+      return(NULL)
+    }
+    valor = valor[[nome]]
+  }
+  valor
+}
+
+# Um valor do JSON como texto; o que não veio (NULL) ou não é um valor simples, como NA. O número sai sem notação
+# científica.
 texto_do_json = function(valor) {
-  if (is.null(valor) || length(valor) == 0) {
+  if (is.null(valor) || is.list(valor) || length(valor) == 0) {
     return(NA_character_)
   }
   if (is.numeric(valor)) {

@@ -29,15 +29,20 @@ RESOLUCAO_DA_PAGINA = 300
 #'
 #' Cada jeito precisa de um pacote, que só é usado se estiver instalado:
 #' `pdftools` (o texto do PDF e a página do PDF como imagem), `opencv` (o
-#' QR-Code) e `tesseract` (o OCR). Sem o pacote, o jeito é pulado.
+#' QR-Code) e `tesseract` (o OCR). Sem o pacote, o jeito é pulado. As páginas
+#' de um TIFF depois da primeira precisam do pacote `magick`.
+#'
+#' Os limites: o PDF que tem texto é lido só pelo texto (uma página que é só
+#' imagem, no mesmo PDF, fica de fora); e de cada imagem, ou página, sai um
+#' QR-Code só (duas notas lado a lado na mesma página dão uma chave).
 #'
 #' @param arquivos Os PDFs e as imagens: o caminho de um arquivo ou um vetor
 #'   com vários.
 #' @param ocr `FALSE` deixa o OCR de fora (é o jeito mais lento: uns 1 a 2
 #'   segundos por página).
 #' @return Um `data.frame` com uma linha por chave achada (um PDF com várias
-#'   notas dá várias linhas) e uma linha para o arquivo em que nenhuma chave
-#'   conferiu: `arquivo`, `chave`, `origem` (`"texto do PDF"`, `"QR-Code"` ou
+#'   notas, no texto ou uma por página, dá várias linhas) e uma linha para o
+#'   arquivo em que nenhuma chave conferiu ou que não abriu: `arquivo`, `chave`, `origem` (`"texto do PDF"`, `"QR-Code"` ou
 #'   `"OCR"`), `qrcode` (o texto do QR-Code, quando a chave veio dele: na NFC-e,
 #'   a URL de consulta) e `problema` (vazio quando a chave foi achada).
 #' @seealso [chave_valida()], [sefaz_situacao()]
@@ -48,9 +53,17 @@ RESOLUCAO_DA_PAGINA = 300
 #' }
 #' @export
 chave_extrair = function(arquivos, ocr = TRUE) {
+  if (!isTRUE(ocr) && !isFALSE(ocr)) {
+    stop("Informe ocr = TRUE ou ocr = FALSE.", call. = FALSE)
+  }
   linhas = list()
   for (arquivo in as.character(arquivos)) {
-    linhas[[length(linhas) + 1]] = chaves_do_arquivo(arquivo, ocr)
+    # Um arquivo que não abre (um PDF estragado, uma imagem corrompida) vira uma linha com o motivo; os outros seguem.
+    linhas[[length(linhas) + 1]] = tryCatch(
+      chaves_do_arquivo(arquivo, ocr),
+      error = function(erro) linha_da_extracao(arquivo, NA_character_, NA_character_,
+                                               paste("o arquivo n\u00e3o abriu:", conditionMessage(erro)))
+    )
   }
   if (length(linhas) == 0) {
     return(data.frame(arquivo = character(), chave = character(), origem = character(), qrcode = character(),
@@ -61,7 +74,7 @@ chave_extrair = function(arquivos, ocr = TRUE) {
 
 # As linhas de um arquivo: as chaves achadas pelo primeiro jeito que acha, ou uma linha com o problema.
 chaves_do_arquivo = function(arquivo, ocr) {
-  if (is.na(arquivo) || !file.exists(arquivo)) {
+  if (is.na(arquivo) || !file.exists(arquivo) || dir.exists(arquivo)) {
     return(linha_da_extracao(arquivo, NA_character_, NA_character_, "arquivo n\u00e3o encontrado"))
   }
   extensao = tolower(tools::file_ext(arquivo))
@@ -84,6 +97,21 @@ chaves_do_arquivo = function(arquivo, ocr) {
     imagens = file.path(tempdir(), paste0("rnfe_pagina_", seq_len(pdftools::pdf_info(arquivo)$pages), "_", basename(tempfile()), ".png"))
     pdftools::pdf_convert(arquivo, format = "png", dpi = RESOLUCAO_DA_PAGINA, filenames = imagens, verbose = FALSE)
     on.exit(unlink(imagens), add = TRUE)
+  }
+  # O opencv e o tesseract leem só a primeira página de um TIFF: com o magick, cada página vira uma imagem.
+  if (extensao %in% c("tif", "tiff")) {
+    if (requireNamespace("magick", quietly = TRUE)) {
+      paginas_do_tiff = magick::image_read(arquivo)
+      if (length(paginas_do_tiff) > 1) {
+        imagens = file.path(tempdir(), paste0("rnfe_pagina_", seq_along(paginas_do_tiff), "_", basename(tempfile()), ".png"))
+        for (numero_da_pagina in seq_along(paginas_do_tiff)) {
+          magick::image_write(paginas_do_tiff[numero_da_pagina], imagens[numero_da_pagina], format = "png")
+        }
+        on.exit(unlink(imagens), add = TRUE)
+      }
+    } else {
+      pulados = c(pulados, "as p\u00e1ginas do TIFF depois da primeira (instale o pacote magick)")
+    }
   }
   if (requireNamespace("opencv", quietly = TRUE)) {
     chaves_do_qrcode = character()
@@ -129,11 +157,17 @@ chaves_do_arquivo = function(arquivo, ocr) {
   linha_da_extracao(arquivo, NA_character_, NA_character_, problema)
 }
 
-# Os números com cara de chave num texto, separados entre os que conferem e os que não. Em cada sequência de blocos de
-# 4, cada janela de 11 blocos é uma candidata: um número de 4 dígitos logo antes da chave (um telefone) não a esconde.
+# Os números com cara de chave num texto, separados entre os que conferem e os que não. Numa sequência emendada, cada
+# janela de 44 posições é uma candidata (um número colado antes da chave não a esconde); numa sequência de blocos de 4,
+# cada janela de 11 blocos (um telefone logo antes da chave não a esconde).
 chaves_no_texto = function(texto) {
   texto = toupper(gsub("\\s+", " ", paste(texto, collapse = " ")))
-  candidatas = regmatches(texto, gregexpr(CHAVE_EMENDADA, texto, perl = TRUE))[[1]]
+  candidatas = character()
+  for (sequencia in regmatches(texto, gregexpr("[0-9A-Z]{44,}", texto, perl = TRUE))[[1]]) {
+    for (inicio in seq_len(nchar(sequencia) - 43)) {
+      candidatas = c(candidatas, substr(sequencia, inicio, inicio + 43))
+    }
+  }
   for (sequencia in regmatches(texto, gregexpr(SEQUENCIA_DE_BLOCOS, texto, perl = TRUE))[[1]]) {
     blocos = strsplit(sequencia, " ", fixed = TRUE)[[1]]
     for (inicio in seq_len(max(0, length(blocos) - 10))) {

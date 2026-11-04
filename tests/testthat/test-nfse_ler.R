@@ -162,8 +162,13 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros, e
   expect_identical(problemas[1], "arquivo n\u00e3o encontrado")
   expect_true(is.na(problemas[2]))
   expect_identical(problemas[3], "n\u00e3o \u00e9 uma NFS-e Nacional (o XML come\u00e7a por <nfeProc>)")
-  expect_identical(problemas[4], "n\u00e3o \u00e9 uma NFS-e Nacional (o XML come\u00e7a por <CompNfse>)")
+  expect_identical(problemas[4], "parece uma NFS-e de prefeitura (o XML come\u00e7a por <CompNfse>), que o RNFe ainda n\u00e3o l\u00ea")
   expect_identical(problemas[5], "vazio")
+  # A NFS-e de prefeitura que usa o nome NFe (sem o infNFe da NF-e) n\u00e3o passa por NF-e.
+  nfse_com_nome_de_nfe = "<NFe><ChaveNFe><InscricaoPrestador>1</InscricaoPrestador></ChaveNFe></NFe>"
+  expect_identical(nfe_ler(nfse_com_nome_de_nfe)$arquivos$problema,
+                   paste0("n\u00e3o \u00e9 uma NF-e: o XML come\u00e7a por <NFe>, mas sem o infNFe da NF-e (algumas prefeituras usam ",
+                          "esse nome na NFS-e, que o RNFe ainda n\u00e3o l\u00ea)"))
   expect_identical(nrow(nfe_ler(NFSE_SP)$notas), 0L)
   expect_identical(nrow(cte_ler(NFSE_SP)$ctes), 0L)
   expect_identical(nrow(mdfe_ler(NFSE_SP)$mdfes), 0L)

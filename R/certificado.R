@@ -24,6 +24,7 @@ OID_DA_PESSOA_FISICA = as.raw(c(0x06, 0x05, 0x60, 0x4c, 0x01, 0x03, 0x01))
 #' pessoa física (OID 2.16.76.1.3.1, depois da data de nascimento). Sem esses
 #' campos, vale o número que vem depois de `:` no fim do nome do titular, como
 #' os certificados costumam trazer (`EMPRESA DE TESTE LTDA:11222333000181`).
+#' O CNPJ com letras (alfanumérico) é aceito nos dois lugares.
 #'
 #' Não escreva a senha no script: guarde-a numa variável de ambiente (no
 #' arquivo `.Renviron`, por exemplo) e leia com [Sys.getenv()]. O RNFe não
@@ -91,9 +92,13 @@ ler_um_certificado = function(arquivo, senha) {
   }
   nome_do_titular = parte_do_nome(conteudo$cert$subject, "CN")
   documento = documento_do_certificado(openssl::write_der(conteudo$cert), nome_do_titular)
-  linha$titular = sub(":[0-9]{11}$|:[0-9]{14}$", "", nome_do_titular)
+  linha$titular = sub(":([0-9A-Z]{12}[0-9]{2}|[0-9]{11})$", "", nome_do_titular)
   linha$documento = documento
-  linha$tipo_documento = ifelse(nchar(documento) == 14, "CNPJ", ifelse(nchar(documento) == 11, "CPF", NA_character_))
+  if (!is.na(documento) && nchar(documento) == 14) {
+    linha$tipo_documento = "CNPJ"
+  } else if (!is.na(documento) && nchar(documento) == 11) {
+    linha$tipo_documento = "CPF"
+  }
   linha$emissor = parte_do_nome(conteudo$cert$issuer, "CN")
   linha$valido_desde = data_do_certificado(conteudo$cert$validity[1])
   linha$valido_ate = data_do_certificado(conteudo$cert$validity[2])
@@ -102,8 +107,8 @@ ler_um_certificado = function(arquivo, senha) {
   linha
 }
 
-# O valor de um atributo do nome do certificado ("CN=EMPRESA LTDA:11222333000181,OU=...,O=ICP-Brasil,C=BR"). Uma
-# vírgula dentro do valor vem escapada ("\,").
+# O valor de um atributo do nome do certificado ("CN=EMPRESA LTDA:11222333000181,OU=...,O=ICP-Brasil,C=BR"). Os
+# caracteres especiais dentro do valor vêm escapados com a barra (RFC 4514: "\,", "\+", "\;", "\"" e outros).
 parte_do_nome = function(nome_distinto, atributo) {
   partes = strsplit(nome_distinto, "(?<!\\\\),", perl = TRUE)[[1]]
   prefixo = paste0(atributo, "=")
@@ -111,20 +116,20 @@ parte_do_nome = function(nome_distinto, atributo) {
   if (length(parte) == 0) {
     return(NA_character_)
   }
-  gsub("\\\\,", ",", substring(trimws(parte[1]), nchar(prefixo) + 1))
+  gsub("\\\\([,+\"\\\\<>;=#])", "\\1", substring(trimws(parte[1]), nchar(prefixo) + 1))
 }
 
 # O CNPJ do campo 2.16.76.1.3.3 ou o CPF do 2.16.76.1.3.1; sem eles, o número no fim do nome do titular.
 documento_do_certificado = function(certificado_der, nome_do_titular) {
   cnpj = valor_do_outro_nome(certificado_der, OID_DO_CNPJ)
-  if (!is.na(cnpj) && grepl("^[0-9]{14}$", cnpj)) {
+  if (!is.na(cnpj) && grepl("^[0-9A-Z]{12}[0-9]{2}$", cnpj)) {
     return(cnpj)
   }
   pessoa_fisica = valor_do_outro_nome(certificado_der, OID_DA_PESSOA_FISICA)
   if (!is.na(pessoa_fisica) && grepl("^[0-9]{19}", pessoa_fisica)) {
     return(substr(pessoa_fisica, 9, 19))
   }
-  numero_no_nome = regmatches(nome_do_titular, regexpr("(?<=:)([0-9]{14}|[0-9]{11})$", nome_do_titular, perl = TRUE))
+  numero_no_nome = regmatches(nome_do_titular, regexpr("(?<=:)([0-9A-Z]{12}[0-9]{2}|[0-9]{11})$", nome_do_titular, perl = TRUE))
   if (length(numero_no_nome) == 1) {
     return(numero_no_nome)
   }

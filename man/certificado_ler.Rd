@@ -38,6 +38,7 @@ pessoa jurídica (OID 2.16.76.1.3.3), e o CPF, do campo do certificado de
 pessoa física (OID 2.16.76.1.3.1, depois da data de nascimento). Sem esses
 campos, vale o número que vem depois de \code{:} no fim do nome do titular, como
 os certificados costumam trazer (\verb{EMPRESA DE TESTE LTDA:11222333000181}).
+O CNPJ com letras (alfanumérico) é aceito nos dois lugares.
 
 Não escreva a senha no script: guarde-a numa variável de ambiente (no
 arquivo \code{.Renviron}, por exemplo) e leia com \code{\link[=Sys.getenv]{Sys.getenv()}}. O RNFe não

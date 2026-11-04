@@ -267,7 +267,9 @@ test_that("o CT-e cancelado e o MDF-e encerrado: o protocolo, a chave dele e o e
   consulta = sefaz_situacao(c(CHAVE_DO_CTE_SP, CHAVE_DO_MDFE_SP, chave_inventada("35", "57")), CERTIFICADO_DO_TESTE, "teste")
   situacoes = consulta$situacoes
   expect_identical(situacoes$documento, c("CT-e", "MDF-e", "CT-e"))
-  expect_identical(situacoes$situacao, c(101L, 132L, 101L))
+  # A resposta sobre outra chave não fica na linha da terceira: só o problema.
+  expect_identical(situacoes$situacao, c(101L, 132L, NA))
+  expect_true(is.na(situacoes$protocolo[3]))
   expect_identical(situacoes$protocolo[1:2], c("135260000098765", "935260000011111"))
   expect_equal(as.numeric(situacoes$autorizacao[1]), as.numeric(as.POSIXct("2026-10-15 17:01:30", tz = "UTC")))
   expect_equal(as.numeric(situacoes$autorizacao[2]), as.numeric(as.POSIXct("2026-10-15 18:00:40", tz = "UTC")))
@@ -283,6 +285,34 @@ test_that("o CT-e cancelado e o MDF-e encerrado: o protocolo, a chave dele e o e
                                        package = "RNFe"), todos_os_campos = FALSE)$eventos
   do_arquivo$arquivo = NULL
   expect_identical(eventos, do_arquivo)
+})
+
+test_that("modelo que n\u00e3o \u00e9 consultado, chave repetida, hora com mil\u00e9simos e evento que n\u00e3o foi lido", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  pedidos = list()
+  com_milesimos = sub("2026-10-16T09:00:00-03:00", "2026-10-16T09:00:00.218-03:00", resposta_da_nota_cancelada(), fixed = TRUE)
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    resposta_da_sefaz(com_milesimos)
+  })
+  # A chave do CF-e SAT (modelo 59) confere, mas n\u00e3o \u00e9 consultada: n\u00e3o derruba as outras.
+  cupom_sat = chave_inventada("35", "59")
+  consulta = sefaz_situacao(c(CHAVE_DA_NOTA_SP, cupom_sat, CHAVE_DA_NOTA_SP), CERTIFICADO_DO_TESTE, "teste")
+  situacoes = consulta$situacoes
+  expect_identical(situacoes$problema[2], "o modelo 59 n\u00e3o \u00e9 consultado pelo RNFe")
+  # A chave repetida foi uma vez s\u00f3, e a linha dela \u00e9 igual \u00e0 da primeira; o evento n\u00e3o sai em dobro.
+  expect_length(pedidos, 1)
+  expect_identical(as.list(situacoes[3, ]), as.list(situacoes[1, ]))
+  expect_identical(nrow(consulta$eventos), 1L)
+  expect_equal(as.numeric(situacoes$recebimento[1]), as.numeric(as.POSIXct("2026-10-16 12:00:00", tz = "UTC")))
+  # Um evento que veio e n\u00e3o foi lido n\u00e3o some calado.
+  evento_vazio = sub("(?s)<procEventoNFe.*</procEventoNFe>", '<procEventoNFe versao="1.00"></procEventoNFe>',
+                     resposta_da_nota_cancelada(), perl = TRUE)
+  httr2::local_mocked_responses(function(req) resposta_da_sefaz(evento_vazio))
+  situacao = sefaz_situacao(CHAVE_DA_NOTA_SP, CERTIFICADO_DO_TESTE, "teste")$situacoes
+  expect_identical(situacao$problema, "a SEFAZ mandou 1 evento(s), e o RNFe leu 0")
 })
 
 test_that("sem chave nenhuma, as tabelas v\u00eam vazias com as colunas certas", {

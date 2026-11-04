@@ -164,6 +164,32 @@ test_that("fora do ar: sem resposta, limite, erro do servidor e resposta que n\u
   expect_identical(situacao$problema, "nenhuma fonte respondeu")
 })
 
+test_that("o 200 fora do formato conta como fora do ar, e o campo de outro tipo n\u00e3o derruba", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("jsonlite")
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    if (fonte == "brasilapi") {
+      return(httr2::response(status_code = 200, headers = "Content-Type: application/json", body = charToRaw("{}")))
+    }
+    if (fonte == "minhareceita") {
+      return(httr2::response(status_code = 200, headers = "Content-Type: application/json",
+                             body = charToRaw('{"message":"Servico em manutencao"}')))
+    }
+    if (fonte == "cnpja") {
+      # O status como texto, e n\u00e3o o objeto de sempre.
+      return(httr2::response(status_code = 200, headers = "Content-Type: application/json",
+                             body = charToRaw('{"status":"Ativa","company":"x"}')))
+    }
+    resposta_da_fonte(fonte, CNPJ_BAIXADO, 200)
+  })
+  situacao = cnpj_situacao(CNPJ_BAIXADO, fontes = c("brasilapi", "minhareceita", "cnpja", "receitaws"))
+  expect_identical(situacao$fonte, "receitaws")
+  expect_identical(situacao$situacao, "BAIXADA")
+  expect_identical(situacao$fontes_fora_do_ar, paste0("brasilapi (resposta fora do formato); minhareceita (resposta fora do ",
+                                                      "formato); cnpja (resposta fora do formato)"))
+})
+
 test_that("cada CNPJ come\u00e7a de novo pela primeira fonte", {
   skip_if_not_installed("httr2")
   skip_if_not_installed("jsonlite")

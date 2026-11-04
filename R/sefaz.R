@@ -64,8 +64,9 @@ MDF-e     ; MDF-e ; MDFeConsulta         ; MDFeConsulta          ; mdfeConsultaM
 #'
 #' O certificado vai em PEM (o OpenSSL 3 não abre o `.pfx` com a cifra antiga
 #' que os certificados costumam ter), num arquivo temporário apagado no fim,
-#' com a chave cifrada pela própria senha; para o processo separado, a senha vai
-#' numa variável de ambiente só dele, nunca num arquivo. O certificado do
+#' com a chave cifrada por uma senha sorteada na hora (não a do certificado);
+#' para o processo separado, essa senha vai numa variável de ambiente só dele,
+#' nunca num arquivo. O certificado do
 #' servidor é sempre verificado, contra as raízes de sempre e a raiz v10 da
 #' ICP-Brasil (a de SSL, que vem no pacote), que os servidores da SEFAZ usam.
 #'
@@ -200,9 +201,9 @@ completar_status = function(linha, resposta_lida, ambiente) {
   retorno = resposta_lida$retorno
   linha$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
   linha$motivo = texto_do_retorno(retorno, "xMotivo")
-  linha$recebimento = data_hora(texto_do_retorno(retorno, "dhRecbto"))
+  linha$recebimento = data_hora_da_consulta(texto_do_retorno(retorno, "dhRecbto"))
   linha$tempo_medio = as.integer(texto_do_retorno(retorno, "tMed"))
-  linha$retorno_previsto = data_hora(texto_do_retorno(retorno, "dhRetorno"))
+  linha$retorno_previsto = data_hora_da_consulta(texto_do_retorno(retorno, "dhRetorno"))
   linha$observacao = texto_do_retorno(retorno, "xObs")
   linha$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
   if (!identical(texto_do_retorno(retorno, "tpAmb"), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
@@ -234,8 +235,13 @@ completar_status = function(linha, resposta_lida, ambiente) {
 #' conferido em homologação em 03/11/2026: cada UF respondeu no seu
 #' autorizador, e a SVRS recusou as 8 de autorizador próprio.
 #'
-#' Chave que não confere (veja [chave_decompor()]) nem é enviada: o motivo
-#' fica em `problema`. Por enquanto só o ambiente de **homologação**; a
+#' Chave que não confere (veja [chave_decompor()]), ou de um modelo que o
+#' RNFe não consulta (o CF-e SAT, 59, por exemplo), nem é enviada: o motivo
+#' fica em `problema`. A chave repetida vai à SEFAZ uma vez só, e as linhas
+#' dela saem iguais. Quando a SEFAZ responde de outro ambiente ou sobre outra
+#' chave, a linha fica só com o `problema`, sem o que essa resposta diz. Um
+#' evento que vem na resposta e não é lido também vai para `problema`. Por
+#' enquanto só o ambiente de **homologação**; a
 #' produção é recusada (por isso a chave de uma nota de verdade volta 217, "não
 #' consta": a homologação só tem as notas emitidas em teste). A conexão é a
 #' mesma do [sefaz_status()], com as mesmas exigências e o mesmo processo
@@ -285,11 +291,17 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
   conexao = preparar_conexao(certificado, senha, pasta_temporaria)
   chaves_limpas = limpar_chaves(chaves)
+  # A chave repetida vai à SEFAZ uma vez só (a mesma consulta repetida pode virar consumo indevido); no fim, ela recebe a
+  # linha da primeira.
+  primeira_posicao_da_chave = match(chaves_limpas, chaves_limpas)
   linhas = list()
   pedidos = list()
   linha_de_cada_pedido = integer()
   configuracao_de_cada_pedido = list()
   for (posicao in seq_along(chaves_limpas)) {
+    if (primeira_posicao_da_chave[posicao] != posicao) {
+      next
+    }
     comeco = comeco_da_situacao(chaves_limpas[posicao], ambiente)
     linhas[[posicao]] = comeco$linha
     if (!is.null(comeco$pedido)) {
@@ -301,14 +313,34 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   respostas = enviar_pedidos(pedidos, conexao)
   # Os retornos que trazem eventos (procEventoNFe, procEventoCTe, procEventoMDFe) vão, como texto, para o eventos_ler().
   retornos_com_eventos = character()
+  eventos_que_vieram = integer()
   for (numero_do_pedido in seq_along(respostas)) {
     posicao = linha_de_cada_pedido[numero_do_pedido]
     configuracao = configuracao_de_cada_pedido[[numero_do_pedido]]
     resposta_lida = ler_resposta(respostas[[numero_do_pedido]], configuracao$retorno)
     linhas[[posicao]] = completar_situacao(linhas[[posicao]], resposta_lida, ambiente, configuracao)
-    if (is.na(linhas[[posicao]]$problema) &&
-        !inherits(xml2::xml_find_first(resposta_lida$retorno, "./*[starts-with(local-name(), 'procEvento')]"), "xml_missing")) {
+    if (!is.na(linhas[[posicao]]$problema)) {
+      next
+    }
+    eventos_da_resposta = xml2::xml_find_all(resposta_lida$retorno, "./*[starts-with(local-name(), 'procEvento')]")
+    if (length(eventos_da_resposta) > 0) {
       retornos_com_eventos = c(retornos_com_eventos, as.character(resposta_lida$retorno))
+      eventos_que_vieram[linhas[[posicao]]$chave] = length(eventos_da_resposta)
+    }
+  }
+  eventos = eventos_ler(retornos_com_eventos, todos_os_campos = FALSE)$eventos
+  eventos$arquivo = NULL
+  # Evento que veio e o eventos_ler() não leu não some calado.
+  for (chave in names(eventos_que_vieram)) {
+    lidos = sum(eventos$chave == chave, na.rm = TRUE)
+    if (lidos < eventos_que_vieram[[chave]]) {
+      posicao = match(chave, chaves_limpas)
+      linhas[[posicao]]$problema = paste0("a SEFAZ mandou ", eventos_que_vieram[[chave]], " evento(s), e o RNFe leu ", lidos)
+    }
+  }
+  for (posicao in seq_along(chaves_limpas)) {
+    if (primeira_posicao_da_chave[posicao] != posicao) {
+      linhas[[posicao]] = linhas[[primeira_posicao_da_chave[posicao]]]
     }
   }
   if (length(linhas) == 0) {
@@ -319,8 +351,6 @@ sefaz_situacao = function(chaves, certificado, senha, ambiente = "homologacao") 
   # Juntar as linhas tira o fuso das datas: volta o de Brasília.
   attr(situacoes$recebimento, "tzone") = "America/Sao_Paulo"
   attr(situacoes$autorizacao, "tzone") = "America/Sao_Paulo"
-  eventos = eventos_ler(retornos_com_eventos, todos_os_campos = FALSE)$eventos
-  eventos$arquivo = NULL
   list(situacoes = situacoes, eventos = eventos)
 }
 
@@ -345,6 +375,12 @@ comeco_da_situacao = function(chave, ambiente) {
   }
   linha$uf = partes_da_chave$uf
   linha$documento = partes_da_chave$documento
+  # A chave de um modelo que o RNFe não consulta (o CF-e SAT, 59, ou a NF3e, 66, por exemplo) confere, mas não tem
+  # serviço aqui.
+  if (!(partes_da_chave$documento %in% CONSULTA_DE_CADA_DOCUMENTO$documento)) {
+    linha$problema = paste0("o modelo ", partes_da_chave$modelo, " n\u00e3o \u00e9 consultado pelo RNFe")
+    return(list(linha = linha, pedido = NULL))
+  }
   configuracao = as.list(CONSULTA_DE_CADA_DOCUMENTO[CONSULTA_DE_CADA_DOCUMENTO$documento == partes_da_chave$documento, ])
   servico = servico_da_uf(partes_da_chave$uf, configuracao$servico_da_lista, ambiente, configuracao$lista)
   if (is.null(servico)) {
@@ -368,13 +404,13 @@ completar_situacao = function(linha, resposta_lida, ambiente, configuracao) {
   retorno = resposta_lida$retorno
   linha$situacao = as.integer(texto_do_retorno(retorno, "cStat"))
   linha$motivo = texto_do_retorno(retorno, "xMotivo")
-  linha$recebimento = data_hora(texto_do_retorno(retorno, "dhRecbto"))
+  linha$recebimento = data_hora_da_consulta(texto_do_retorno(retorno, "dhRecbto"))
   linha$versao_aplicativo = texto_do_retorno(retorno, "verAplic")
   chave_da_resposta = texto_do_retorno(retorno, configuracao$campo_da_chave)
   protocolo = xml2::xml_find_first(retorno, paste0("./*[local-name()='", configuracao$protocolo, "']/*[local-name()='infProt']"))
   if (!inherits(protocolo, "xml_missing")) {
     linha$protocolo = texto_do_retorno(protocolo, "nProt")
-    linha$autorizacao = data_hora(texto_do_retorno(protocolo, "dhRecbto"))
+    linha$autorizacao = data_hora_da_consulta(texto_do_retorno(protocolo, "dhRecbto"))
     linha$digest_value = texto_do_retorno(protocolo, "digVal")
     if (is.na(chave_da_resposta)) {
       chave_da_resposta = texto_do_retorno(protocolo, configuracao$campo_da_chave)
@@ -384,6 +420,15 @@ completar_situacao = function(linha, resposta_lida, ambiente, configuracao) {
     linha$problema = "a SEFAZ respondeu de outro ambiente"
   } else if (!is.na(chave_da_resposta) && !identical(chave_da_resposta, linha$chave)) {
     linha$problema = "a SEFAZ respondeu sobre outra chave"
+  }
+  # A resposta de outro ambiente, ou sobre outra chave, não é a desta chave: o que ela diz não fica na linha.
+  if (!is.na(linha$problema)) {
+    linha$situacao = NA_integer_
+    linha$motivo = NA_character_
+    linha$recebimento = as.POSIXct(NA)
+    linha$protocolo = NA_character_
+    linha$autorizacao = as.POSIXct(NA)
+    linha$digest_value = NA_character_
   }
   linha
 }
@@ -709,7 +754,7 @@ colunas_do_cadastro = function(cadastros_do_xml, documentos_consultados) {
     if (campo$tipo == "inteiro") {
       colunas[[campo$coluna]] = as.integer(textos)
     } else if (campo$tipo == "data") {
-      colunas[[campo$coluna]] = as.Date(textos)
+      colunas[[campo$coluna]] = as.Date(textos, format = "%Y-%m-%d")
     } else {
       colunas[[campo$coluna]] = textos
     }
@@ -779,8 +824,9 @@ CT-e      ; CTeDistribuicaoDFe ; cteDistDFeInteresse ; cte     ; 1.00   ; NT 201
 #'
 #' **A SEFAZ bloqueia quem pergunta demais.** Pelas NTs 2014.002 e 2015.002,
 #' quando a resposta diz que não há mais documentos (137, ou o `ultimo_nsu`
-#' igual ao `maior_nsu`), é preciso esperar uma hora antes de pedir de novo a
-#' partir do último NSU; antes disso, ela pode responder 656 ("Consumo
+#' igual ao `maior_nsu`), ou quando ela já respondeu 656, é preciso esperar
+#' uma hora antes de pedir de novo a partir do último NSU; antes disso, ela
+#' pode responder 656 ("Consumo
 #' Indevido") e, na NF-e, bloquear o CNPJ por uma hora. As consultas também
 #' têm de seguir o `ultimo_nsu` que ela devolveu. Por isso, nesta sessão do R,
 #' o RNFe recusa um novo pedido pelo último NSU do mesmo CNPJ, na mesma
@@ -943,7 +989,10 @@ sefaz_distribuicao = function(documento, certificado, senha, ultimo_nsu = 0, nsu
 
 # O código IBGE da UF de quem pede (o cUFAutor), ou NA. O pedido do CT-e exige; o da NF-e, não.
 codigo_da_uf_de_quem_pede = function(uf, distribuicao) {
-  if (length(uf) != 1 || is.na(uf)) {
+  if (length(uf) > 1) {
+    stop("Informe uma UF s\u00f3 em `uf`.", call. = FALSE)
+  }
+  if (length(uf) == 0 || is.na(uf)) {
     if (distribuicao == "CT-e") {
       stop("A Distribui\u00e7\u00e3o do CT-e pede a UF de quem pede os documentos (o cUFAutor da NT 2015.002): ",
            "informe `uf`, como uf = \"SP\".", call. = FALSE)
@@ -959,7 +1008,10 @@ codigo_da_uf_de_quem_pede = function(uf, distribuicao) {
 
 # O grupo do pedido: o último NSU (distNSU), um NSU (consNSU) ou, na NF-e, uma chave (consChNFe). O NSU tem 15 dígitos.
 grupo_da_distribuicao = function(ultimo_nsu, nsu, chave, distribuicao = "NF-e") {
-  if (length(chave) == 1 && !is.na(chave)) {
+  if (length(chave) != 1 || length(nsu) != 1) {
+    stop("Informe uma chave ou um NSU por pedido.", call. = FALSE)
+  }
+  if (!is.na(chave)) {
     if (distribuicao != "NF-e") {
       stop("A Distribui\u00e7\u00e3o do CT-e n\u00e3o busca pela chave (o pedido da NT 2015.002 s\u00f3 tem o \u00faltimo NSU e o ",
            "NSU): use `ultimo_nsu` ou `nsu`.", call. = FALSE)
@@ -968,9 +1020,13 @@ grupo_da_distribuicao = function(ultimo_nsu, nsu, chave, distribuicao = "NF-e") 
     if (!chave_valida(chave_limpa)) {
       stop("A chave n\u00e3o confere: ", chave_decompor(chave_limpa)$problema, ".", call. = FALSE)
     }
+    # NT 2014.002, regra H122: a busca pela chave é só de NF-e (modelo 55); outro modelo volta 618.
+    if (!identical(chave_decompor(chave_limpa)$modelo, "55")) {
+      stop("A Distribui\u00e7\u00e3o de DF-e busca pela chave s\u00f3 a NF-e (modelo 55).", call. = FALSE)
+    }
     return(list(xml = paste0("<consChNFe><chNFe>", chave_limpa, "</chNFe></consChNFe>"), pelo_ultimo_nsu = FALSE))
   }
-  if (length(nsu) == 1 && !is.na(nsu)) {
+  if (!is.na(nsu)) {
     return(list(xml = paste0("<consNSU><NSU>", nsu_com_15_digitos(nsu), "</NSU></consNSU>"), pelo_ultimo_nsu = FALSE))
   }
   list(xml = paste0("<distNSU><ultNSU>", nsu_com_15_digitos(ultimo_nsu), "</ultNSU></distNSU>"), pelo_ultimo_nsu = TRUE)
@@ -978,6 +1034,9 @@ grupo_da_distribuicao = function(ultimo_nsu, nsu, chave, distribuicao = "NF-e") 
 
 nsu_com_15_digitos = function(nsu) {
   if (is.numeric(nsu)) {
+    if (length(nsu) == 1 && !is.na(nsu) && nsu != floor(nsu)) {
+      stop("O NSU \u00e9 um n\u00famero inteiro.", call. = FALSE)
+    }
     nsu = format(nsu, scientific = FALSE, trim = TRUE)
   }
   nsu = as.character(nsu)
@@ -1025,6 +1084,9 @@ conferir_certificado = function(certificado, senha) {
   }
   if (certificado_lido$vencido) {
     stop("O certificado venceu em ", format(certificado_lido$valido_ate, "%d/%m/%Y"), ".", call. = FALSE)
+  }
+  if (certificado_lido$valido_desde > Sys.time()) {
+    stop("O certificado s\u00f3 vale a partir de ", format(certificado_lido$valido_desde, "%d/%m/%Y"), ".", call. = FALSE)
   }
 }
 
@@ -1080,8 +1142,11 @@ preparar_conexao = function(certificado, senha, pasta_temporaria) {
   arquivo_do_certificado = file.path(pasta_temporaria, "certificado.pem")
   arquivo_da_chave = file.path(pasta_temporaria, "chave.pem")
   writeLines(c(openssl::write_pem(conteudo$cert), vapply(conteudo$ca, openssl::write_pem, character(1))), arquivo_do_certificado)
-  writeLines(openssl::write_pem(conteudo$key, password = senha), arquivo_da_chave)
-  opcoes = list(sslcert = arquivo_do_certificado, sslcerttype = "PEM", sslkey = arquivo_da_chave, keypasswd = senha)
+  # A chave vai cifrada por uma senha sorteada agora, não pela do certificado: a senha de quem usa não vai para o
+  # processo separado, e a chave não fica sem cifra quando o certificado não tem senha.
+  senha_da_chave = paste(as.character(openssl::rand_bytes(24)), collapse = "")
+  writeLines(openssl::write_pem(conteudo$key, password = senha_da_chave), arquivo_da_chave)
+  opcoes = list(sslcert = arquivo_do_certificado, sslcerttype = "PEM", sslkey = arquivo_da_chave, keypasswd = senha_da_chave)
   arquivo_das_raizes = juntar_raizes(pasta_temporaria)
   if (!is.na(arquivo_das_raizes)) {
     opcoes$cainfo = arquivo_das_raizes
@@ -1175,8 +1240,11 @@ enviar_os_pedidos = function(pedidos, opcoes, tempo_limite) {
     if (inherits(resposta, "error")) {
       respostas[[posicao]] = list(situacao_http = NA_integer_, corpo = NULL, erro = conditionMessage(resposta))
     } else {
-      respostas[[posicao]] = list(situacao_http = httr2::resp_status(resposta), corpo = httr2::resp_body_raw(resposta),
-                                  erro = NA_character_)
+      corpo = raw(0)
+      if (httr2::resp_has_body(resposta)) {
+        corpo = httr2::resp_body_raw(resposta)
+      }
+      respostas[[posicao]] = list(situacao_http = httr2::resp_status(resposta), corpo = corpo, erro = NA_character_)
     }
   }
   respostas
@@ -1195,9 +1263,10 @@ enviar_num_processo_separado = function(pedidos, conexao) {
   arquivo_do_resultado = file.path(conexao$pasta_temporaria, "resultado.rds")
   saveRDS(list(enviar = funcao_que_envia, pedidos = pedidos, opcoes = opcoes_sem_a_senha,
                tempo_limite = TEMPO_LIMITE_DA_SEFAZ, bibliotecas = .libPaths()), arquivo_da_tarefa)
-  variaveis_de_antes = Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DO_CERTIFICADO"), unset = NA)
+  unlink(arquivo_do_resultado)
+  variaveis_de_antes = Sys.getenv(c("CURL_SSL_BACKEND", "RNFE_SENHA_DA_CHAVE"), unset = NA)
   on.exit(restaurar_variaveis(variaveis_de_antes), add = TRUE)
-  Sys.setenv(CURL_SSL_BACKEND = "openssl", RNFE_SENHA_DO_CERTIFICADO = conexao$opcoes$keypasswd)
+  Sys.setenv(CURL_SSL_BACKEND = "openssl", RNFE_SENHA_DA_CHAVE = conexao$opcoes$keypasswd)
   roteiro = system.file("sefaz", "processo_separado.R", package = "RNFe")
   saida = suppressWarnings(system2(
     file.path(R.home("bin"), "Rscript"),
@@ -1205,7 +1274,14 @@ enviar_num_processo_separado = function(pedidos, conexao) {
     stdout = TRUE, stderr = TRUE
   ))
   if (!file.exists(arquivo_do_resultado)) {
-    erro = paste("o processo separado n\u00e3o rodou:", paste(utils::tail(saida, 3), collapse = " "))
+    # A mensagem do erro começa na linha "Error"/"Erro"; sem ela, as últimas linhas da saída.
+    inicio_do_erro = grep("^(Error|Erro)", saida)
+    if (length(inicio_do_erro) > 0) {
+      linhas_do_erro = saida[inicio_do_erro[1]:min(length(saida), inicio_do_erro[1] + 2)]
+    } else {
+      linhas_do_erro = utils::tail(saida, 3)
+    }
+    erro = paste("o processo separado n\u00e3o rodou:", paste(trimws(linhas_do_erro), collapse = " "))
     respostas = list()
     for (posicao in seq_along(pedidos)) {
       respostas[[posicao]] = list(situacao_http = NA_integer_, corpo = NULL, erro = erro)

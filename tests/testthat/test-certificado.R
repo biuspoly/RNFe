@@ -41,6 +41,25 @@ test_that("senha errada, arquivo que n\u00e3o existe e nenhum arquivo", {
   expect_identical(names(vazio), names(certificados))
 })
 
+test_that("o CNPJ alfanum\u00e9rico, o certificado sem documento e o nome com caracteres escapados", {
+  skip_if_not_installed("openssl")
+  certificados = certificado_ler(test_path("certificados", c("alfanumerico.pfx", "sem_documento.pfx", "nome_escapado.pfx")),
+                                 "teste")
+  expect_identical(certificados$titular, c("EMPRESA ALFANUMERICA DE TESTE", "EMPRESA SEM NUMERO DE TESTE",
+                                           "A+B COMERCIO; \"FILIAL\" DE TESTE"))
+  expect_identical(certificados$documento, c("12ABC34501DE35", NA, "11444777000161"))
+  expect_identical(certificados$tipo_documento, c("CNPJ", NA, "CNPJ"))
+  # Sozinho, o sem documento continua com a coluna em texto.
+  expect_type(certificado_ler(test_path("certificados", "sem_documento.pfx"), "teste")$tipo_documento, "character")
+})
+
+test_that("o certificado que ainda n\u00e3o vale \u00e9 recusado antes de conectar", {
+  skip_if_not_installed("openssl")
+  expect_error(conferir_certificado(test_path("certificados", "futuro.pfx"), "teste"), "s\u00f3 vale a partir de 01/01/2040")
+  expect_error(conferir_certificado(CERTIFICADO_VENCIDO, "teste"), "venceu")
+  expect_silent(conferir_certificado(CERTIFICADO_PJ, "teste"))
+})
+
 test_that("a validade em ingl\u00eas vira data em qualquer idioma", {
   expect_equal(as.numeric(data_do_certificado("Mar  5 14:10:00 2027 GMT")),
                as.numeric(as.POSIXct("2027-03-05 14:10:00", tz = "UTC")))

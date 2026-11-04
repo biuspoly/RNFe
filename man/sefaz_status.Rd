@@ -73,8 +73,9 @@ esse tempo.
 
 O certificado vai em PEM (o OpenSSL 3 não abre o \code{.pfx} com a cifra antiga
 que os certificados costumam ter), num arquivo temporário apagado no fim,
-com a chave cifrada pela própria senha; para o processo separado, a senha vai
-numa variável de ambiente só dele, nunca num arquivo. O certificado do
+com a chave cifrada por uma senha sorteada na hora (não a do certificado);
+para o processo separado, essa senha vai numa variável de ambiente só dele,
+nunca num arquivo. O certificado do
 servidor é sempre verificado, contra as raízes de sempre e a raiz v10 da
 ICP-Brasil (a de SSL, que vem no pacote), que os servidores da SEFAZ usam.
 }

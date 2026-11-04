@@ -66,9 +66,11 @@ eventos delas. Devolve uma lista com \code{consulta} (a resposta, numa linha) e
 Cada chamada faz um pedido, que traz um lote dos documentos com NSU maior
 que \code{ultimo_nsu}. Para seguir, chame de novo com \code{ultimo_nsu} igual ao
 \code{ultimo_nsu} da resposta (o maior NSU que veio), até a resposta dizer
-\code{"NENHUM_DOCUMENTO_LOCALIZADO"}. A documentação do ADN não fala de espera
-nem de bloqueio, como as da NF-e e do CT-e; mesmo assim, não pergunte em
-laço sem pausa.
+\code{"NENHUM_DOCUMENTO_LOCALIZADO"}; com \code{problema} preenchido, pare e veja o
+motivo. Um documento cujo XML não abriu fica na tabela, com o \code{xml} vazio
+e o NSU dele em \code{problema}. A documentação do ADN não fala de espera nem de
+bloqueio, como as da NF-e e do CT-e; mesmo assim, não pergunte em laço sem
+pausa.
 
 Com um certificado de empresa, dá para pedir os documentos de qualquer CNPJ
 com a mesma raiz (os 8 primeiros dígitos); de outra raiz, ou de outro CPF,

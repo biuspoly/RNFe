@@ -44,7 +44,8 @@ chave_extrair(c("danfe.pdf", "cupom.jpg"))   # a chave achada no PDF ou na foto
 
 `chave_extrair()` acha a chave em PDFs (DANFE, DACTE, cupom da NFC-e) e em imagens (foto, digitalização): pelo texto
 do PDF, pelo QR-Code ou por OCR, nessa ordem, com os pacotes `pdftools`, `opencv` e `tesseract`, se estiverem
-instalados. Só devolve a chave que confere. O dígito verificador e o CNPJ dentro dela pegam quase toda leitura errada;
+instalados (as páginas de um TIFF depois da primeira, com o `magick`). Um arquivo que não abre vira uma linha com o
+motivo, sem atrapalhar os outros. Só devolve a chave que confere. O dígito verificador e o CNPJ dentro dela pegam quase toda leitura errada;
 um número com cara de chave que não confere aparece em `problema`. Os outros números do documento (valores,
 quantidades) não têm essa conferência e, lidos de uma imagem, podem vir errados sem aviso: por isso a função só
 procura a chave, e os dados da nota vêm do XML.
@@ -282,8 +283,9 @@ no Windows. Lá o curl do R usa o motor de conexão segura do próprio Windows (
 MG, MT e SP; quando é ele que está ligado, o RNFe manda os pedidos por um processo R separado, aberto com o motor
 OpenSSL, e a sua sessão não muda. Isso custa uns 0,3 segundo por chamada (não por UF).
 
-O certificado vai em PEM, num arquivo temporário apagado no fim, com a chave cifrada pela senha; para o processo
-separado, a senha vai numa variável de ambiente só dele, nunca num arquivo. O certificado do servidor é sempre
+O certificado vai em PEM, num arquivo temporário apagado no fim, com a chave cifrada por uma senha sorteada na hora,
+não a do certificado; para o processo separado, essa senha vai numa variável de ambiente só dele, nunca num arquivo.
+O certificado do servidor é sempre
 verificado: contra as raízes de sempre e a raiz v10 da ICP-Brasil, que vem no pacote (conferida com a do repositório
 do ITI). O PyNFe conecta sem isso porque desliga a verificação (`verify=False`).
 

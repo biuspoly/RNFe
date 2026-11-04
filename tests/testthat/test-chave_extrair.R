@@ -20,6 +20,34 @@ test_that("os n\u00fameros com cara de chave num texto: em blocos, emendados e c
   nenhuma = chaves_no_texto("texto sem chave nenhuma 1234 5678")
   expect_length(nenhuma$validas, 0)
   expect_length(nenhuma$que_nao_conferem, 0)
+  # Emendada, com um número colado antes ("Protocolo 1" e a chave sem espaço).
+  expect_identical(chaves_no_texto(paste0("Protocolo 1", CHAVE_DAS_IMAGENS))$validas, CHAVE_DAS_IMAGENS)
+  expect_identical(chaves_no_texto(paste0("NFe", CHAVE_DAS_IMAGENS, "99"))$validas, CHAVE_DAS_IMAGENS)
+})
+
+test_that("arquivo que n\u00e3o abre n\u00e3o derruba os outros; pasta com nome de PDF; ocr s\u00f3 TRUE ou FALSE", {
+  skip_if_not_installed("pdftools")
+  estragado = tempfile(fileext = ".pdf")
+  writeLines("isto n\u00e3o \u00e9 um PDF", estragado)
+  pasta = file.path(tempdir(), "uma_pasta.pdf")
+  dir.create(pasta, showWarnings = FALSE)
+  extraidas = suppressWarnings(chave_extrair(c(estragado, pasta)))
+  expect_match(extraidas$problema[1], "^o arquivo n\u00e3o abriu: ")
+  expect_identical(extraidas$problema[2], "arquivo n\u00e3o encontrado")
+  expect_error(chave_extrair(estragado, ocr = NA), "ocr")
+  unlink(pasta, recursive = TRUE)
+})
+
+test_that("o TIFF de duas p\u00e1ginas, com o QR-Code na segunda", {
+  skip_if_not_installed("opencv")
+  skip_if_not_installed("magick")
+  qrcode = magick::image_read(imagem_de_teste("qrcode_nfce.png"))
+  em_branco = magick::image_blank(magick::image_info(qrcode)$width, magick::image_info(qrcode)$height, "white")
+  tiff = tempfile(fileext = ".tif")
+  magick::image_write(c(em_branco, qrcode), tiff, format = "tiff")
+  extraida = chave_extrair(tiff, ocr = FALSE)
+  expect_identical(extraida$chave, CHAVE_DAS_IMAGENS)
+  expect_identical(extraida$origem, "QR-Code")
 })
 
 test_that("a chave pelo texto do PDF", {
