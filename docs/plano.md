@@ -8,7 +8,8 @@ comparar), da NFS-e Nacional (11.207 reais) e dos eventos de todos; a NFS-e de p
 decisão do usuário. Etapa 3:
 certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados, Distribuição da NF-e e do
 CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
-deixou em aberto está no fim dela.
+deixou em aberto está no fim dela. Etapa 4 (a Reforma): as tabelas, a conferência e o cálculo prontos; falta a
+revisão dela antes da etapa 5.
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -31,7 +32,7 @@ Cada etapa já é útil sozinha.
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
-| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | em andamento: as tabelas e a conferência (`ibs_cbs_conferir`) prontas (04/11/2026); simular a seguir |
+| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano); falta a revisão da etapa antes da 5 |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
 
@@ -63,7 +64,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
-| Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir pronto (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão); simular a seguir |
+| Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão) e calcular ou simular outro ano, prontos |
 | Ler o SPED e pré-conferência | não | não | não | etapa 5 |
 
 ## Tabelas que se atualizam sozinhas
@@ -1170,6 +1171,53 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
         nelas.
     - **Fica de fora:** as regras que a NT deixa para implementação futura (as do Imposto Seletivo, a UB16-10, a
       UB13-40, a VC03-20 e outras) e as quatro que dependem da base da SEFAZ.
+- **Passo 3, calcular e simular (pronto, 04/11/2026):** `ibs_cbs_calcular()`. Pedido do usuário: "siga se realmente
+  tiver tudo ok"; a produção na SEFAZ continuou travada (não foi pedida com todas as letras). Decisão do usuário, entre
+  o cálculo próprio, só a calculadora da Receita ou os dois: **cálculo próprio, conferido com a calculadora oficial**.
+  - **As fontes:** as fórmulas da NT (as mesmas da conferência: alíquota efetiva em 4 casas, valor diferido, valor
+    menos o diferido, tributação regular, IBS do item como soma); a base da UB16-10, que confere com o art. 12 da LC
+    214/2025 (o texto do Planalto); e a calculadora oficial da Receita, o piloto da Reforma
+    (`piloto-cbs.tributos.gov.br/servico/calculadora-consumo/api`, versão 1.6.2, base de regras V0066; a especificação
+    OpenAPI está em `api-docs`). A Receita é que diz a vigência de cada componente da base
+    (`/base-calculo/base-calculo-unificada` devolve o aviso de cada campo ignorado): o PIS e a COFINS só em 2026; o
+    ICMS, o ICMS da UF de destino, o FCP e o ICMS monofásico de 2026 a 2032 e só no bem; o II só no bem; o ISSQN de
+    2026 a 2032 e só no serviço; o Imposto Seletivo de 2027 a 2033. Por isso o cálculo cobre de 2025 (a NT aceita em
+    2025 as regras de 2026) a 2033.
+  - **O que a sondagem da calculadora mostrou** (itens inventados, um por pedido, com 4 s entre eles; o piloto barra
+    rajadas): o diferimento da 510001 sai com 100% sem ser informado, mas a classificação oficial
+    (`dados-abertos/classificacoes-tributarias`) não traz o percentual, nem a planilha do IT: no RNFe ele vem da nota
+    ou de quem usa; a 830001 a calculadora "ainda não trata"; as classificações reduzidas de anexo recusam NCM fora do
+    anexo (o RNFe não tem as listas dos anexos e não confere isso); em 2027 ela exige as alíquotas informadas
+    (`aliquotasNominais`), como o RNFe, que tem o IBS de 2027 e 2028 mas não a CBS de referência.
+  - **O gabarito:** 51 itens inventados (bases na beira do meio centavo e componentes sorteados com semente fixa), de
+    000001, 200003, 200022, 200030, 200034, 200035, 200047, 410001, 510001, 515001 e 550001 (com NCMs que a própria
+    Receita aceita em cada anexo, conferidos em `ncm-aplicavel`), em 2026, 2027 e 2030. A primeira comparação deu 30
+    campos diferentes de 1.224:
+    - o **arredondamento**: a calculadora manda o meio centavo para o par (0,125 vai a 0,12; 0,105 a 0,10), e o RNFe
+      mandava para cima. A NT não diz e aceita 0,01; o cálculo passou a seguir a Receita, com a conta feita em
+      inteiros, em pedaços de 6 dígitos (`valor_no_centavo_ao_par`), para o ponto flutuante não decidir o meio
+      centavo. A conferência segue como estava (a tolerância cobre os dois);
+    - **dois pontos em que o RNFe segue a NT**, que é o que a SEFAZ confere: a calculadora arredonda o IBS do item à
+      parte, e em 3 itens ele saiu 0,01 diferente da soma da UF e do município (a UB54a-10 exige a soma); e na
+      200022 (CST 200 com tributação regular) ela não traz o grupo de redução, que a UB26-20 exige quando o CST tem o
+      indicador de redução.
+    Depois disso, só esses dois pontos ficaram diferentes: a base, as alíquotas, a redução, o diferimento, a tributação
+    regular e o valor de cada parte saíram iguais nos 51 itens.
+  - **O acervo inteiro** (só contagens; 12.561 arquivos em 146 s, 12 ms por arquivo): nas 12.376 NF-e, 65.336 itens,
+    62.678 calculados; os outros são do monofásico (2.516) ou não têm o grupo da Reforma (142).
+    - A base pelos componentes bateu com o `vBC` da nota em 14.453 dos 17.176 itens com o grupo. Nos 2.723 diferentes,
+      1.631 têm o `vBC` igual ao valor do produto menos o desconto, sem tirar os tributos: a UB16-10 ainda é
+      "implementação futura, aguardando orientação normativa", e nem todo emitente a segue.
+    - Com a base da própria nota, o IBS calculado bateu nos 17.176 itens e a CBS em 17.175 (a que não bate é a nota
+      de 0,02 que a conferência acusa). No centavo exato, 16.860 com o meio centavo indo para o par e 16.901 com ele
+      indo para cima, que é o que a maioria dos emissores faz; a diferença é de 0,01, dentro do que a SEFAZ aceita.
+  - **Fica sem calcular, com o motivo:** o monofásico (CST 620), a transferência de crédito, os ajustes e a tributação
+    em documento específico (CST 800 a 820), a exclusão da base (CST 830), as alíquotas fixas e uniformes (CST 010,
+    011, 220, 221 e 222), a compra governamental (o redutor de cada ente e ano está na calculadora oficial, em
+    `dados-abertos/redutores-compra-governamental`, mas não nas tabelas do RNFe), o crédito presumido, a devolução de
+    tributos e o Imposto Seletivo.
+  - **O `nfe_ler()` ganhou** os quatro componentes da base que faltavam no item (`valor_icms_monofasico`,
+    `valor_icms_uf_destino`, `valor_fcp_uf_destino` e `valor_issqn`): os itens dele servem direto no cálculo.
 
 ## O robô das tabelas
 

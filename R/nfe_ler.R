@@ -148,6 +148,10 @@ valor_fcp                 imposto/ICMS/*/vFCP                        numero
 valor_fcp_st              imposto/ICMS/*/vFCPST                      numero
 valor_icms_desonerado     imposto/ICMS/*/vICMSDeson                  numero
 valor_icms_previsto       imposto/ICMS/ICMSPrevistoPagtoAntecip/vICMSPrevisto numero
+valor_icms_monofasico     imposto/ICMS/*/vICMSMono                   numero
+valor_icms_uf_destino     imposto/ICMSUFDest/vICMSUFDest             numero
+valor_fcp_uf_destino      imposto/ICMSUFDest/vFCPUFDest              numero
+valor_issqn               imposto/ISSQN/vISSQN                       numero
 cst_ipi                   imposto/IPI/*/CST                          texto
 valor_ipi                 imposto/IPI/IPITrib/vIPI                   numero
 cst_pis                   imposto/PIS/*/CST                          texto

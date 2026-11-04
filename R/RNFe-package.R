@@ -32,7 +32,8 @@
 #' - a Reforma Tributária: [ibs_cbs_conferir()] (o IBS e a CBS da NF-e e da
 #'   NFC-e, com o monofásico dos combustíveis e o resto da nota que a mesma
 #'   nota técnica valida, pelas regras de validação da SEFAZ, como valiam no
-#'   dia da emissão).
+#'   dia da emissão) e [ibs_cbs_calcular()] (o IBS e a CBS de cada item, na
+#'   data da nota ou em outra, para simular outro ano).
 #'
 #' @section De onde vêm as regras:
 #' Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da

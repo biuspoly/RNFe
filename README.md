@@ -361,6 +361,35 @@ monofásico ficam sempre sem conferir, com o motivo: o valor ad valorem que não
 percentual (a NT não diz a unidade) e o valor da diferença do biocombustível (a tabela que ele usa ainda não foi
 publicada).
 
+## IBS e CBS: o cálculo e a simulação
+
+```r
+calculada = ibs_cbs_calcular("nota.xml")            # na data da nota: o que cada item deveria trazer
+calculada$itens                                     # base, alíquotas, redução, diferimento, valores, tributação regular
+calculada$notas                                     # os totais de cada nota
+ibs_cbs_calcular("nota.xml", data = "2027-03-10", aliquotas = c(cbs = 8.7))   # a mesma nota em 2027
+ibs_cbs_calcular(nfe_ler("nota.xml")$itens, data = "2026-11-04")              # ou itens soltos, num data.frame
+```
+
+Calcula o IBS da UF, o do município e a CBS de cada item, pelas mesmas fórmulas que a conferência confere. A base é
+a soma da regra UB16-10 da NT (produto, frete, seguro, outras despesas, II e Imposto Seletivo, menos o desconto e os
+tributos que não entram), e cada componente só entra no ano em que vale, como no art. 12 da LC 214/2025: o PIS e a
+COFINS só em 2026, o ICMS e o ISSQN até 2032, o Imposto Seletivo a partir de 2027. A alíquota é a do ano, com a
+redução da classificação; o diferimento e a tributação regular (a suspensão) entram com o que a nota informa. Para
+simular outro ano, passe a data e, enquanto a CBS de referência não for publicada, a estimativa dela em `aliquotas`.
+
+Conferido com a calculadora oficial da Receita (o piloto da Reforma) em 51 itens inventados, de todas as
+classificações que o cálculo cobre, em 2026, 2027 e 2030: a base, as alíquotas, a redução, o diferimento, a
+tributação regular e o valor de cada parte saíram iguais, até o meio centavo, que vai para o par como lá. Em dois
+pontos o RNFe segue a NT, que é o que a SEFAZ confere: o IBS do item é a soma do da UF e do município (a calculadora
+arredonda o total à parte) e a classificação do CST 200 com tributação regular traz o grupo de redução. No acervo de
+notas reais, com a base da própria nota, a CBS e o IBS calculados bateram (até 0,01) em todos os 17.176 itens com o
+grupo, menos um (a nota que a conferência também acusa).
+
+Fica sem calcular, com o motivo: o monofásico (CST 620), a transferência de crédito e os ajustes (CST 800 a 820), a
+exclusão da base (CST 830, que a calculadora oficial também não trata), as alíquotas fixas e uniformes, a compra
+governamental, o crédito presumido e o Imposto Seletivo.
+
 ## Tabelas fiscais
 
 ```r

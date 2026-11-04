@@ -39,7 +39,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     tributação monofásica dos combustíveis e o resto da nota que ela valida
     (identificação, compra governamental, Suframa, documentos referenciados),
     como a SEFAZ as aplicava no dia da emissão (com as alíquotas de cada ano e
-    o que mudou nas regras e nas tabelas de uma versão para a outra).
+    o que mudou nas regras e nas tabelas de uma versão para a outra), e
+    calcula o IBS e a CBS de cada item, na data da nota ou em outra, para
+    simular como a nota seria em outro ano.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues
@@ -79,6 +81,7 @@ Collate:
     'gtve_ler.R'
     'tabelas.R'
     'ibs_cbs_conferir.R'
+    'ibs_cbs_calcular.R'
     'ibs_cbs_monofasico.R'
     'ibs_cbs_regras_da_nota.R'
     'mdfe_ler.R'

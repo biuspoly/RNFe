@@ -1,0 +1,452 @@
+# O cálculo do IBS e da CBS de cada item da NF-e e da NFC-e (etapa 4, passo 3): a base pelos componentes do item, as
+# alíquotas do ano, a redução da classificação, o diferimento e a tributação regular, pelas mesmas fórmulas que a
+# conferência usa. A calculadora oficial da Receita serviu de gabarito (veja docs/plano.md).
+
+#' @include ler_xml.R tabelas.R ibs_cbs_conferir.R
+NULL
+
+# Os componentes da base (UB16-10 da NT 2025.002, que confere com o art. 12 da LC 214/2025): o sinal, os anos em que
+# entram e se valem no bem, no serviço ou nos dois. Os anos e a natureza são os da calculadora oficial, que ignora o
+# componente fora deles: o PIS e a COFINS só em 2026, o ICMS, o FCP e o ISSQN até 2032 (art. 12, § 2º, V), o II e o
+# ICMS só no bem, o ISSQN só no serviço e o Imposto Seletivo de 2027 a 2033.
+COMPONENTES_DA_BASE = ler_campos("
+coluna                caminho                     sinal primeiro_ano ultimo_ano natureza
+valor_produto         prod/vProd                  1     2026         2033       ambas
+valor_frete           prod/vFrete                 1     2026         2033       ambas
+valor_seguro          prod/vSeg                   1     2026         2033       ambas
+valor_outros          prod/vOutro                 1     2026         2033       ambas
+valor_ii              imposto/II/vII              1     2026         2033       bem
+valor_is              imposto/IS/vIS              1     2027         2033       ambas
+valor_desconto        prod/vDesc                  -1    2026         2033       ambas
+valor_pis             imposto/PIS/*/vPIS          -1    2026         2026       ambas
+valor_cofins          imposto/COFINS/*/vCOFINS    -1    2026         2026       ambas
+valor_icms            imposto/ICMS/*/vICMS        -1    2026         2032       bem
+valor_icms_uf_destino imposto/ICMSUFDest/vICMSUFDest -1  2026         2032       bem
+valor_fcp             imposto/ICMS/*/vFCP         -1    2026         2032       bem
+valor_fcp_uf_destino  imposto/ICMSUFDest/vFCPUFDest -1   2026         2032       bem
+valor_icms_monofasico imposto/ICMS/*/vICMSMono    -1    2026         2032       bem
+valor_issqn           imposto/ISSQN/vISSQN        -1    2026         2032       servico
+")
+
+# Os anos que o cálculo cobre: a NT aceita em 2025 as regras de 2026, e a vigência dos componentes vai até 2033.
+PRIMEIRO_ANO_DO_CALCULO = 2025
+ULTIMO_ANO_DO_CALCULO = 2033
+
+# Os CSTs que o cálculo cobre: com o grupo do IBS e da CBS, a tributação integral (000), a redução (200), o diferimento
+# (510 e 515) e a suspensão com a tributação regular (550); sem o grupo, a isenção (400) e a imunidade (410).
+CST_CALCULADOS = c("000", "200", "510", "515", "550")
+CST_SEM_O_GRUPO = c("400", "410")
+
+# O resto do item, a partir do det, e o da nota, a partir do infNFe.
+CAMPOS_DO_ITEM_PARA_CALCULAR = ler_campos("
+coluna                 caminho                                                tipo
+item                   @nItem                                                 inteiro
+cst_ibs_cbs            imposto/IBSCBS/CST                                     texto
+classificacao_ibs_cbs  imposto/IBSCBS/cClassTrib                              texto
+diferimento_ibs_uf     imposto/IBSCBS/gIBSCBS/gIBSUF/gDif/pDif                numero
+diferimento_ibs_mun    imposto/IBSCBS/gIBSCBS/gIBSMun/gDif/pDif               numero
+diferimento_cbs        imposto/IBSCBS/gIBSCBS/gCBS/gDif/pDif                  numero
+cst_regular            imposto/IBSCBS/gIBSCBS/gTribRegular/CSTReg             texto
+classificacao_regular  imposto/IBSCBS/gIBSCBS/gTribRegular/cClassTribReg      texto
+")
+CAMPOS_DA_NOTA_PARA_CALCULAR = ler_campos("
+coluna        caminho    tipo
+modelo        ide/mod    texto
+data_emissao  ide/dhEmi  texto
+")
+
+#' Calcular o IBS e a CBS de uma NF-e, de uma NFC-e ou de itens
+#'
+#' Calcula o IBS (da UF e do município) e a CBS de cada item, na data da nota
+#' ou na que você escolher: a base pelos componentes do item, as alíquotas do
+#' ano, a redução da classificação tributária, o diferimento e a tributação
+#' regular. Serve para saber o que uma nota deveria trazer e para simular como
+#' ela seria em outro ano (por exemplo, 2027, quando o PIS e a COFINS deixam de
+#' existir e a CBS passa à alíquota de referência).
+#'
+#' A conta é a mesma que a [ibs_cbs_conferir()] confere:
+#' - a base (`vBC`) é a soma da UB16-10 da NT 2025.002: o produto, o frete, o
+#'   seguro, as outras despesas, o II e o Imposto Seletivo, menos o desconto, o
+#'   PIS, a COFINS, o ICMS, o ICMS da UF de destino, o FCP, o ICMS monofásico e
+#'   o ISSQN. Cada componente só entra no ano em que vale e na natureza certa
+#'   (o PIS e a COFINS só em 2026; o ICMS, o FCP e o ISSQN até 2032; o II e o
+#'   ICMS só no bem; o ISSQN só no serviço; o Imposto Seletivo a partir de
+#'   2027), como no art. 12 da LC 214/2025 e na calculadora oficial da Receita.
+#'   A base pode vir pronta, na coluna `base`;
+#' - a alíquota é a do ano (veja `tabela_fiscal("aliquotas_ibs_cbs")`), ou a que
+#'   você passar em `aliquotas`; a da classificação com tributação regular é
+#'   zero;
+#' - com a redução (CST 200 e 515), a alíquota efetiva é a alíquota menos o
+#'   percentual da classificação, em 4 casas;
+#' - com o diferimento (CST 510 e 515), o valor diferido é a base vezes a
+#'   alíquota vezes o percentual, que vem da nota ou de você (a tabela da
+#'   classificação não traz o percentual);
+#' - o valor é a base vezes a alíquota, menos o diferido, em 2 casas, com o
+#'   meio centavo indo para o par (0,125 vai a 0,12), como a calculadora
+#'   oficial (a NT não diz e aceita 0,01 de diferença); o IBS do item é o da UF
+#'   mais o do município (UB54a-10);
+#' - na tributação regular (a suspensão, CST 550, e as classificações que a
+#'   pedem), o grupo `gTribRegular` com a alíquota e o valor da classificação
+#'   regular informada.
+#'
+#' Conferido com a calculadora oficial da Receita em 51 itens inventados
+#' (todas as classificações acima, em 2026, 2027 e 2030): tudo igual, menos em
+#' dois pontos em que o RNFe segue a NT, que é o que a SEFAZ confere: o IBS do
+#' item é a soma da UF e do município (a calculadora arredonda o total à parte,
+#' e em 3 itens ele saiu 0,01 diferente da soma), e a classificação com
+#' tributação regular no CST 200 traz a redução (a UB26-20 exige o grupo; a
+#' calculadora não o traz).
+#'
+#' Fica sem calcular, com o motivo em `observacao`: o monofásico (CST 620), a
+#' transferência de crédito, os ajustes e a tributação em documento específico
+#' (CST 800 a 820), a exclusão da base (CST 830, que a calculadora oficial
+#' também ainda não trata), as alíquotas fixas e uniformes (CST 010, 011, 220,
+#' 221 e 222), a compra governamental (o redutor de cada ente e ano não está
+#' nas tabelas), o crédito presumido, a devolução de tributos e o Imposto
+#' Seletivo, e os anos fora de 2025 a 2033. A CBS de 2027 em diante fica vazia
+#' enquanto a alíquota de referência não for publicada, a menos que você a
+#' passe em `aliquotas`.
+#'
+#' @section itens:
+#' Uma linha por item: `chave`, `item`, `data_calculo` (a data usada),
+#' `cst_ibs_cbs`, `classificacao_ibs_cbs`, `servico` (o item com ISSQN é
+#' serviço), `base`, e para `ibs_uf`, `ibs_mun` e `cbs`: `aliquota_*`,
+#' `reducao_*`, `aliquota_efetiva_*`, `diferimento_*` (percentual),
+#' `valor_diferido_*` e `valor_*`; `valor_ibs` (o da UF mais o do município);
+#' `cst_regular`, `classificacao_regular`, `aliquota_regular_*` e
+#' `valor_regular_*` (a tributação regular); `tem_grupo_ibs_cbs` (o item leva o
+#' grupo `gIBSCBS`); `calculado` (`TRUE` quando tudo foi calculado) e
+#' `observacao`. Os percentuais são como no XML (0,9 é 0,9%).
+#'
+#' @section notas:
+#' Uma linha por nota (pela `chave`; os itens sem chave juntos, numa linha sem
+#' chave): `chave`, `itens`, `itens_calculados`, `base`, `valor_ibs_uf`,
+#' `valor_ibs_mun`, `valor_ibs` e `valor_cbs`, somados nos itens calculados.
+#'
+#' @param entrada Os XMLs da NF-e ou da NFC-e (o caminho de um arquivo, um vetor
+#'   com vários ou o próprio texto do XML) ou um `data.frame` de itens com as
+#'   colunas de `nfe_ler()$itens`: `cst_ibs_cbs`, `classificacao_ibs_cbs` e os
+#'   componentes da base (`valor_produto`, `valor_frete`, `valor_seguro`,
+#'   `valor_outros`, `valor_desconto`, `valor_ii`, `valor_is`, `valor_pis`,
+#'   `valor_cofins`, `valor_icms`, `valor_icms_uf_destino`, `valor_fcp`,
+#'   `valor_fcp_uf_destino`, `valor_icms_monofasico`, `valor_issqn`; o que
+#'   faltar conta como zero) ou a `base` pronta. Opcionais: `chave`, `item`,
+#'   `data_emissao`, `servico` (`TRUE` no serviço), `diferimento_ibs_uf`,
+#'   `diferimento_ibs_mun`, `diferimento_cbs`, `cst_regular` e
+#'   `classificacao_regular`.
+#' @param data A data do cálculo (`Date` ou `"AAAA-MM-DD"`). Sem ela, a data de
+#'   emissão de cada nota (ou a coluna `data_emissao`).
+#' @param aliquotas As alíquotas, em percentual, no lugar das da tabela: um
+#'   vetor com nomes entre `ibs_uf`, `ibs_mun` e `cbs` (por exemplo,
+#'   `c(cbs = 8.7)` para simular 2027 com uma estimativa da CBS).
+#' @return Uma lista com os `data.frame`s `itens` e `notas` e, com XML,
+#'   `arquivos` (o que foi lido e o motivo do que não deu, como em
+#'   [nfe_ler()]).
+#' @source Nota Técnica 2025.002-RTC, versão 1.53 (Portal Nacional da NF-e):
+#'   a base (UB16-10) e as contas do grupo UB; LC 214/2025, art. 12 (a base) e
+#'   as alíquotas de cada ano (veja [tabela_fiscal()]); a calculadora oficial da
+#'   Receita Federal (piloto, versão 1.6.2, base de regras V0066), para a
+#'   vigência de cada componente e como gabarito.
+#' @seealso [ibs_cbs_conferir()] para conferir o que a nota trouxe;
+#'   [nfe_ler()] para ler os itens.
+#' @examples
+#' nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
+#' ibs_cbs_calcular(nota)$itens[, c("item", "base", "valor_ibs_uf", "valor_cbs")]
+#' # A mesma nota em 2027, com uma estimativa da CBS de referência.
+#' em_2027 = ibs_cbs_calcular(nota, data = "2027-03-10", aliquotas = c(cbs = 8.7))
+#' em_2027$notas
+#' # Itens soltos, sem nota.
+#' itens = data.frame(cst_ibs_cbs = c("000", "200"), classificacao_ibs_cbs = c("000001", "200047"),
+#'                    valor_produto = c(100, 50), valor_icms = c(18, 9))
+#' ibs_cbs_calcular(itens, data = "2026-11-04")$itens
+#' @export
+ibs_cbs_calcular = function(entrada, data = NULL, aliquotas = NULL) {
+  data_do_calculo = data_pedida_no_calculo(data)
+  aliquotas_pedidas = aliquotas_pedidas_no_calculo(aliquotas)
+  if (is.data.frame(entrada)) {
+    itens = itens_da_tabela_para_calcular(entrada)
+    arquivos = NULL
+  } else {
+    arquivos_lidos = ler_arquivos_xml(entrada, CAMINHO_DAS_NOTAS_PARA_CONFERIR, "uma NF-e", colunas_para_calcular, FALSE)
+    itens = juntar_tabela(arquivos_lidos, "itens", colunas_para_calcular(NULL, NA_character_, FALSE)$itens)
+    arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
+  }
+  if (!is.na(data_do_calculo)) {
+    itens$data_emissao = rep(data_do_calculo, nrow(itens))
+  }
+  calculados = calcular_os_itens(itens, aliquotas_pedidas)
+  resultado = list(itens = calculados, notas = somar_as_notas(calculados))
+  if (!is.null(arquivos)) {
+    resultado$arquivos = arquivos
+  }
+  resultado
+}
+
+data_pedida_no_calculo = function(data) {
+  if (is.null(data)) {
+    return(as.Date(NA))
+  }
+  data_convertida = tryCatch(as.Date(data), error = function(erro) as.Date(NA))
+  if (length(data) != 1 || is.na(data_convertida)) {
+    stop("Informe uma data s\u00f3, como Date ou \"AAAA-MM-DD\".", call. = FALSE)
+  }
+  data_convertida
+}
+
+aliquotas_pedidas_no_calculo = function(aliquotas) {
+  if (is.null(aliquotas)) {
+    return(c(ibs_uf = NA_real_, ibs_mun = NA_real_, cbs = NA_real_))
+  }
+  nomes_aceitos = c("ibs_uf", "ibs_mun", "cbs")
+  if (!is.numeric(aliquotas) || is.null(names(aliquotas)) || !all(names(aliquotas) %in% nomes_aceitos) ||
+      anyDuplicated(names(aliquotas)) > 0 || any(is.na(aliquotas)) || any(aliquotas < 0)) {
+    stop("Informe aliquotas como um vetor de n\u00fameros com nomes entre ibs_uf, ibs_mun e cbs, em percentual ",
+         "(por exemplo, c(cbs = 8.7)).", call. = FALSE)
+  }
+  pedidas = c(ibs_uf = NA_real_, ibs_mun = NA_real_, cbs = NA_real_)
+  pedidas[names(aliquotas)] = aliquotas
+  pedidas
+}
+
+# As colunas de um arquivo: os itens de cada nota, com a data e o modelo da nota. Com xml_lido NULL, vêm vazias.
+colunas_para_calcular = function(xml_lido, nome_do_arquivo, todos_os_campos) {
+  if (is.null(xml_lido)) {
+    xml_lido = xml2::read_xml("<vazio/>")
+  }
+  elementos_das_notas = buscar_todos(xml_lido, CAMINHO_DAS_NOTAS_PARA_CONFERIR)
+  elementos_das_notas = elementos_das_notas[!duplicated(chave_de_cada(elementos_das_notas, "infNFe"))]
+  elementos_dos_itens = buscar_todos(elementos_das_notas, "det")
+  notas = data.frame(c(list(chave = chave_de_cada(elementos_das_notas, "infNFe")),
+                       valores_dos_campos(elementos_das_notas, CAMPOS_DA_NOTA_PARA_CALCULAR)))
+  componentes = ler_campos_do_componente()
+  itens = data.frame(c(
+    list(chave = chave_de_cada(elementos_dos_itens, "infNFe")),
+    valores_dos_campos(elementos_dos_itens, CAMPOS_DO_ITEM_PARA_CALCULAR),
+    valores_dos_campos(elementos_dos_itens, componentes),
+    list(servico = !is.na(xml2::xml_name(xml2::xml_find_first(elementos_dos_itens, "imposto/ISSQN", ns = SEM_NAMESPACE))),
+         tem_compra_governamental = !is.na(xml2::xml_name(xml2::xml_find_first(
+           elementos_dos_itens, "ancestor::infNFe/ide/gCompraGov", ns = SEM_NAMESPACE))))
+  ))
+  da_nota = match(itens$chave, notas$chave)
+  itens$data_emissao = as.Date(substr(notas$data_emissao[da_nota], 1, 10))
+  itens$modelo = notas$modelo[da_nota]
+  list(notas = as.list(notas), itens = as.list(itens))
+}
+
+# Os componentes da base como lista de campos do XML (coluna, caminho e tipo).
+ler_campos_do_componente = function() {
+  data.frame(coluna = COMPONENTES_DA_BASE$coluna, caminho = COMPONENTES_DA_BASE$caminho, tipo = "numero")
+}
+
+# Os itens de um data.frame, com as colunas que faltam vazias.
+itens_da_tabela_para_calcular = function(tabela) {
+  quantidade = nrow(tabela)
+  if (!all(c("cst_ibs_cbs", "classificacao_ibs_cbs") %in% names(tabela))) {
+    stop("Os itens precisam das colunas cst_ibs_cbs e classificacao_ibs_cbs (como em nfe_ler()$itens).", call. = FALSE)
+  }
+  if (!any(c("base", "valor_produto") %in% names(tabela))) {
+    stop("Os itens precisam da base pronta (coluna base) ou dos componentes dela (pelo menos valor_produto).",
+         call. = FALSE)
+  }
+  itens = data.frame(
+    chave = if ("chave" %in% names(tabela)) as.character(tabela$chave) else rep(NA_character_, quantidade),
+    item = if ("item" %in% names(tabela)) as.integer(tabela$item) else seq_len(quantidade),
+    cst_ibs_cbs = as.character(tabela$cst_ibs_cbs),
+    classificacao_ibs_cbs = as.character(tabela$classificacao_ibs_cbs)
+  )
+  for (coluna in c(COMPONENTES_DA_BASE$coluna, "base", "diferimento_ibs_uf", "diferimento_ibs_mun", "diferimento_cbs")) {
+    itens[[coluna]] = if (coluna %in% names(tabela)) as.numeric(tabela[[coluna]]) else rep(NA_real_, quantidade)
+  }
+  for (coluna in c("cst_regular", "classificacao_regular", "modelo")) {
+    itens[[coluna]] = if (coluna %in% names(tabela)) as.character(tabela[[coluna]]) else rep(NA_character_, quantidade)
+  }
+  itens$servico = if ("servico" %in% names(tabela)) as.logical(tabela$servico) %in% TRUE else rep(FALSE, quantidade)
+  itens$tem_compra_governamental = rep(FALSE, quantidade)
+  itens$data_emissao = if ("data_emissao" %in% names(tabela)) as.Date(tabela$data_emissao) else as.Date(rep(NA, quantidade))
+  itens
+}
+
+# A base de cada item: a soma dos componentes que valem no ano e na natureza dele (a de 2025 segue a de 2026).
+base_pelos_componentes = function(itens, anos) {
+  ano_da_regra = pmax(anos, 2026)
+  base = rep(0, nrow(itens))
+  for (numero_do_componente in seq_len(nrow(COMPONENTES_DA_BASE))) {
+    componente = COMPONENTES_DA_BASE[numero_do_componente, ]
+    natureza_certa = componente$natureza == "ambas" | (componente$natureza == "servico") == itens$servico
+    entra = !is.na(ano_da_regra) & ano_da_regra >= componente$primeiro_ano & ano_da_regra <= componente$ultimo_ano &
+      natureza_certa
+    valores = valor_ou_zero(itens[[componente$coluna]])
+    base = base + ifelse(entra, componente$sinal * valores, 0)
+  }
+  arredondar_no_centavo(base)
+}
+
+# As alíquotas do ano de cada data (NA quando a tabela não tem o período), com as pedidas por cima.
+aliquotas_nas_datas = function(datas, aliquotas_pedidas) {
+  tabela = tabela_fiscal("aliquotas_ibs_cbs")
+  linha_do_periodo = rep(NA_integer_, length(datas))
+  for (numero_da_linha in seq_len(nrow(tabela))) {
+    no_periodo = !is.na(datas) & datas >= tabela$inicio[numero_da_linha] & datas <= tabela$fim[numero_da_linha]
+    linha_do_periodo[no_periodo] = numero_da_linha
+  }
+  aliquotas = data.frame(ibs_uf = tabela$aliquota_ibs_uf[linha_do_periodo],
+                         ibs_mun = tabela$aliquota_ibs_municipio[linha_do_periodo],
+                         cbs = tabela$aliquota_cbs[linha_do_periodo])
+  for (parte in names(aliquotas_pedidas)) {
+    if (!is.na(aliquotas_pedidas[[parte]])) {
+      aliquotas[[parte]] = rep(aliquotas_pedidas[[parte]], length(datas))
+    }
+  }
+  aliquotas
+}
+
+# A base (em reais) vezes a alíquota (em %) vezes o percentual (em %), no centavo, com o meio centavo indo para o par,
+# como a calculadora oficial (0,125 vai a 0,12; a NT não diz e aceita 0,01 de diferença). A base vai em centavos e os
+# percentuais em décimos de milésimo, todos inteiros, e o produto é feito em pedaços de 6 dígitos: a conta fica exata
+# enquanto a base do item não passa de 1 bilhão de reais (o double guarda inteiros exatos só até uns 9e15).
+valor_no_centavo_ao_par = function(base, aliquota, percentual = 100) {
+  centavos_da_base = round(abs(base) * 100)
+  aliquota_inteira = round(aliquota * 10000)
+  percentual_inteiro = round(percentual * 10000)
+  # A base vezes a alíquota, em dois pedaços: alto * 1e6 + baixo.
+  produto_do_pedaco_baixo = (centavos_da_base %% 1e6) * aliquota_inteira
+  baixo = produto_do_pedaco_baixo %% 1e6
+  alto = (centavos_da_base %/% 1e6) * aliquota_inteira + produto_do_pedaco_baixo %/% 1e6
+  # Vezes o percentual e dividido por 1e12 (o que sobra das casas da base e dos dois percentuais): os centavos.
+  produto_do_alto = (alto %% 1e6) * percentual_inteiro
+  centavos = (alto %/% 1e6) * percentual_inteiro + produto_do_alto %/% 1e6
+  resto = (produto_do_alto %% 1e6) * 1e6 + baixo * percentual_inteiro
+  centavos = centavos + resto %/% 1e12
+  resto = resto %% 1e12
+  sobe = resto > 5e11 | (resto == 5e11 & centavos %% 2 == 1)
+  sign(base) * (centavos + sobe) / 100
+}
+
+arredondar_em_quatro_casas = function(valores) {
+  sign(valores) * floor(abs(valores) * 10000 + 0.5 + FOLGA_DE_PONTO_FLUTUANTE) / 10000
+}
+
+# O motivo de cada item que não dá para calcular (NA quando dá), na ordem em que é conferido.
+motivo_para_nao_calcular = function(itens, ano, cst_da_tabela, classificacao_da_tabela) {
+  motivo = rep(NA_character_, nrow(itens))
+  descricao_do_cst = cst_da_tabela$descricao
+  sem_codigo = is.na(itens$cst_ibs_cbs) | is.na(itens$classificacao_ibs_cbs)
+  fora_dos_anos = is.na(ano) | ano < PRIMEIRO_ANO_DO_CALCULO | ano > ULTIMO_ANO_DO_CALCULO
+  cst_desconhecido = is.na(cst_da_tabela$codigo)
+  classificacao_desconhecida = is.na(classificacao_da_tabela$codigo)
+  classificacao_de_outro_cst = (!classificacao_desconhecida & classificacao_da_tabela$cst != itens$cst_ibs_cbs) %in% TRUE
+  cst_fora = !(itens$cst_ibs_cbs %in% c(CST_CALCULADOS, CST_SEM_O_GRUPO))
+  motivo[cst_fora] = paste0("O CST ", itens$cst_ibs_cbs[cst_fora], " (", descricao_do_cst[cst_fora],
+                            ") n\u00e3o entra no c\u00e1lculo.")
+  motivo[classificacao_de_outro_cst] = "A classifica\u00e7\u00e3o n\u00e3o \u00e9 do CST informado."
+  motivo[classificacao_desconhecida] = "A classifica\u00e7\u00e3o n\u00e3o est\u00e1 na tabela."
+  motivo[cst_desconhecido] = "O CST n\u00e3o est\u00e1 na tabela."
+  motivo[itens$tem_compra_governamental] = paste(
+    "Compra governamental: o redutor de cada ente e de cada ano n\u00e3o est\u00e1 nas tabelas do RNFe."
+  )
+  motivo[fora_dos_anos] = "O c\u00e1lculo cobre as notas de 2025 a 2033 (a vig\u00eancia dos componentes da base)."
+  motivo[sem_codigo] = "Sem o CST ou a classifica\u00e7\u00e3o do IBS e da CBS."
+  motivo
+}
+
+calcular_os_itens = function(itens, aliquotas_pedidas) {
+  quantidade = nrow(itens)
+  ano = as.integer(format(itens$data_emissao, "%Y"))
+  tabela_do_cst = tabela_fiscal("cst_ibs_cbs")
+  tabela_da_classificacao = tabela_fiscal("classificacao_ibs_cbs")
+  cst_da_tabela = tabela_do_cst[match(itens$cst_ibs_cbs, tabela_do_cst$codigo), ]
+  classificacao_da_tabela = tabela_da_classificacao[match(itens$classificacao_ibs_cbs, tabela_da_classificacao$codigo), ]
+  regular_da_tabela = tabela_da_classificacao[match(itens$classificacao_regular, tabela_da_classificacao$codigo), ]
+  cst_regular_da_tabela = tabela_do_cst[match(itens$cst_regular, tabela_do_cst$codigo), ]
+  motivo = motivo_para_nao_calcular(itens, ano, cst_da_tabela, classificacao_da_tabela)
+  da_para_calcular = is.na(motivo)
+  com_o_grupo = da_para_calcular & !(itens$cst_ibs_cbs %in% CST_SEM_O_GRUPO)
+  tributacao_regular = classificacao_da_tabela$grupo_tributacao_regular %in% 1
+  com_reducao = cst_da_tabela$grupo_reducao %in% 1
+  com_diferimento = cst_da_tabela$grupo_diferimento %in% 1
+  base_informada = if ("base" %in% names(itens)) itens$base else rep(NA_real_, quantidade)
+  base = ifelse(!is.na(base_informada), arredondar_no_centavo(base_informada), base_pelos_componentes(itens, ano))
+  aliquotas_do_ano = aliquotas_nas_datas(itens$data_emissao, aliquotas_pedidas)
+  calculados = data.frame(chave = itens$chave, item = itens$item, data_calculo = itens$data_emissao,
+                          cst_ibs_cbs = itens$cst_ibs_cbs, classificacao_ibs_cbs = itens$classificacao_ibs_cbs,
+                          servico = itens$servico, base = ifelse(com_o_grupo, base, NA_real_))
+  observacoes = list(motivo)
+  valor_ibs = rep(0, quantidade)
+  for (parte in c("ibs_uf", "ibs_mun", "cbs")) {
+    reducao_da_classificacao = if (parte == "cbs") classificacao_da_tabela$reducao_cbs else classificacao_da_tabela$reducao_ibs
+    aliquota = ifelse(tributacao_regular, 0, aliquotas_do_ano[[parte]])
+    reducao = ifelse(com_reducao, reducao_da_classificacao, NA_real_)
+    aliquota_efetiva = arredondar_em_quatro_casas(aliquota * (1 - reducao / 100))
+    aliquota_usada = ifelse(is.na(reducao), aliquota, aliquota_efetiva)
+    diferimento = ifelse(com_diferimento, itens[[paste0("diferimento_", parte)]], NA_real_)
+    valor_diferido = valor_no_centavo_ao_par(base, aliquota_usada, diferimento)
+    valor = valor_no_centavo_ao_par(base, aliquota_usada) - valor_ou_zero(valor_diferido)
+    valor[com_diferimento & is.na(diferimento)] = NA_real_
+    calculados[[paste0("aliquota_", parte)]] = ifelse(com_o_grupo, aliquota, NA_real_)
+    calculados[[paste0("reducao_", parte)]] = ifelse(com_o_grupo, reducao, NA_real_)
+    calculados[[paste0("aliquota_efetiva_", parte)]] = ifelse(com_o_grupo, aliquota_efetiva, NA_real_)
+    calculados[[paste0("diferimento_", parte)]] = ifelse(com_o_grupo, diferimento, NA_real_)
+    calculados[[paste0("valor_diferido_", parte)]] = ifelse(com_o_grupo, valor_diferido, NA_real_)
+    calculados[[paste0("valor_", parte)]] = ifelse(com_o_grupo, valor, NA_real_)
+    nome_da_parte = switch(parte, ibs_uf = "do IBS da UF", ibs_mun = "do IBS do munic\u00edpio", cbs = "da CBS")
+    observacoes[[length(observacoes) + 1]] = ifelse(
+      com_o_grupo & is.na(aliquota), paste0("Sem a al\u00edquota ", nome_da_parte, " do ano (informe em aliquotas)."), NA)
+    observacoes[[length(observacoes) + 1]] = ifelse(
+      com_o_grupo & com_diferimento & is.na(diferimento),
+      paste0("Sem o percentual do diferimento ", nome_da_parte, " (a tabela da classifica\u00e7\u00e3o n\u00e3o o traz)."), NA)
+    if (parte != "cbs") {
+      valor_ibs = valor_ibs + calculados[[paste0("valor_", parte)]]
+    }
+  }
+  calculados$valor_ibs = valor_ibs
+  # A tributação regular: a base vezes a alíquota do ano com a redução da classificação regular.
+  pede_regular = com_o_grupo & tributacao_regular
+  calculados$cst_regular = ifelse(pede_regular, itens$cst_regular, NA_character_)
+  calculados$classificacao_regular = ifelse(pede_regular, itens$classificacao_regular, NA_character_)
+  regular_conhecida = !is.na(regular_da_tabela$codigo) & !is.na(cst_regular_da_tabela$codigo)
+  for (parte in c("ibs_uf", "ibs_mun", "cbs")) {
+    reducao_regular = if (parte == "cbs") regular_da_tabela$reducao_cbs else regular_da_tabela$reducao_ibs
+    reducao_regular = ifelse(cst_regular_da_tabela$grupo_reducao %in% 1, reducao_regular, 0)
+    aliquota_regular = arredondar_em_quatro_casas(aliquotas_do_ano[[parte]] * (1 - reducao_regular / 100))
+    calculados[[paste0("aliquota_regular_", parte)]] = ifelse(pede_regular & regular_conhecida, aliquota_regular, NA_real_)
+    calculados[[paste0("valor_regular_", parte)]] = ifelse(pede_regular & regular_conhecida,
+                                                           valor_no_centavo_ao_par(base, aliquota_regular), NA_real_)
+  }
+  observacoes[[length(observacoes) + 1]] = ifelse(
+    pede_regular & !regular_conhecida,
+    "Sem o CST e a classifica\u00e7\u00e3o da tributa\u00e7\u00e3o regular (cst_regular e classificacao_regular).", NA)
+  sem_aliquota_regular = pede_regular & regular_conhecida &
+    (is.na(calculados$aliquota_regular_ibs_uf) | is.na(calculados$aliquota_regular_ibs_mun) |
+       is.na(calculados$aliquota_regular_cbs))
+  observacoes[[length(observacoes) + 1]] = ifelse(
+    sem_aliquota_regular, "Sem a al\u00edquota do ano para a tributa\u00e7\u00e3o regular (informe em aliquotas).", NA)
+  calculados$tem_grupo_ibs_cbs = com_o_grupo
+  calculados$observacao = juntar_as_observacoes(observacoes)
+  calculados$calculado = da_para_calcular & is.na(calculados$observacao)
+  calculados[, c(setdiff(names(calculados), c("calculado", "observacao")), "calculado", "observacao")]
+}
+
+# As observações de cada item numa só, separadas por espaço (NA quando não há nenhuma).
+juntar_as_observacoes = function(observacoes) {
+  juntas = rep(NA_character_, length(observacoes[[1]]))
+  for (observacao in observacoes) {
+    com_texto = !is.na(observacao)
+    juntas[com_texto] = ifelse(is.na(juntas[com_texto]), observacao[com_texto], paste(juntas[com_texto], observacao[com_texto]))
+  }
+  juntas
+}
+
+# Os totais de cada nota, somados nos itens calculados.
+somar_as_notas = function(calculados) {
+  chave_para_somar = ifelse(is.na(calculados$chave), "", calculados$chave)
+  chaves = unique(chave_para_somar)
+  contados = calculados$calculado
+  notas = data.frame(chave = ifelse(chaves == "", NA_character_, chaves),
+                     itens = as.integer(table(factor(chave_para_somar, levels = chaves))),
+                     itens_calculados = as.integer(table(factor(chave_para_somar[contados], levels = chaves))))
+  for (coluna in c("base", "valor_ibs_uf", "valor_ibs_mun", "valor_ibs", "valor_cbs")) {
+    valores = ifelse(contados, valor_ou_zero(calculados[[coluna]]), 0)
+    notas[[coluna]] = arredondar_no_centavo(as.numeric(tapply(valores, factor(chave_para_somar, levels = chaves), sum)))
+  }
+  notas
+}
