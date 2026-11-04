@@ -311,6 +311,16 @@ Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs), e a API de localid
 quando alguma tabela muda. Os municípios ficam de fora do robô, porque o IBGE não aceita conexão dos
 servidores do GitHub.
 
+```r
+tabelas_atualizar()                           # as tabelas mais novas do repositório, sem esperar versão nova
+tabelas_atualizar(usar_as_do_pacote = TRUE)   # volta às que vieram no pacote
+```
+
+O que o robô acha entra no repositório depois de uma pessoa conferir. `tabelas_atualizar()` baixa de lá as tabelas
+fiscais e os endereços da SEFAZ para a pasta de cache do R e passa a usá-las, também nas próximas sessões. Nada é
+baixado sem ela ser chamada. Uma tabela que mudou de formato não é trocada (o resultado pede para atualizar o
+pacote), e quem instala uma versão nova do pacote volta a ter as tabelas dela.
+
 Os leitores usam essas tabelas: ao lado de cada código vem o significado dele, numa coluna com o mesmo nome e
 `_descricao` no fim (`forma_emissao` 9 vem com "Contingência off-line da NFC-e e da NF-e com DANFE
 Simplificado Tipo 2"; `modal` "01", com "Rodoviário"). Os significados dos códigos do leiaute vêm da

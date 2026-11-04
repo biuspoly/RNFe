@@ -151,3 +151,92 @@ test_that("a descri\u00e7\u00e3o muda com a data da nota", {
   expect_identical(descricao_na_data("meios_pagamento", c("17", "17"), as.Date(c("2024-06-30", "2024-07-01"))),
                    c(NA, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico"))
 })
+
+# O reposit\u00f3rio de mentira: cada tabela do pacote como est\u00e1, menos as que o teste troca. A pasta de cache do R vai para
+# uma pasta tempor\u00e1ria, que \u00e9 apagada no fim.
+texto_da_tabela_do_pacote = function(nome_da_tabela) {
+  arquivo = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
+  readBin(arquivo, "raw", file.size(arquivo))
+}
+
+# A pasta de cache do R numa pasta temporária, para o teste não mexer na de quem roda. Devolve o valor de antes.
+apontar_o_cache_para = function(pasta) {
+  antes = Sys.getenv("R_USER_CACHE_DIR", unset = NA)
+  Sys.setenv(R_USER_CACHE_DIR = pasta)
+  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+  antes
+}
+
+voltar_o_cache = function(antes, pasta) {
+  if (is.na(antes)) {
+    Sys.unsetenv("R_USER_CACHE_DIR")
+  } else {
+    Sys.setenv(R_USER_CACHE_DIR = antes)
+  }
+  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+  unlink(pasta, recursive = TRUE)
+}
+
+test_that("tabelas_atualizar(): baixa do reposit\u00f3rio, usa a nova e volta \u00e0 do pacote", {
+  skip_if_not_installed("httr2")
+  pasta = tempfile("cache_do_rnfe_")
+  antes = apontar_o_cache_para(pasta)
+  on.exit(voltar_o_cache(antes, pasta), add = TRUE)
+  pedidos = character()
+  httr2::local_mocked_responses(function(req) {
+    pedidos <<- c(pedidos, req$url)
+    nome = sub("\\.csv$", "", basename(req$url))
+    corpo = texto_da_tabela_do_pacote(nome)
+    if (nome == "cst_icms") {
+      corpo = charToRaw(enc2utf8(sub("Tributada integralmente", "Tributada integralmente (texto novo)", rawToChar(corpo), fixed = TRUE)))
+    }
+    httr2::response(status_code = 200, headers = "Content-Type: text/plain; charset=utf-8", body = corpo)
+  })
+  atualizacao = tabelas_atualizar()
+  expect_identical(atualizacao$tabela, TABELAS_QUE_SE_ATUALIZAM)
+  expect_identical(atualizacao$tabela[atualizacao$mudou], "cst_icms")
+  expect_true(all(is.na(atualizacao$problema)))
+  expect_identical(pedidos[1], "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/cfop.csv")
+  # A tabela nova j\u00e1 vale nesta sess\u00e3o e nas leituras dos documentos.
+  expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente (texto novo)")
+  expect_identical(descricao_na_data("cst_icms", "00", as.Date("2026-01-01")), "Tributada integralmente (texto novo)")
+  # De novo, nada mudou; e a volta \u00e0s do pacote.
+  expect_false(any(tabelas_atualizar()$mudou))
+  tabelas_atualizar(usar_as_do_pacote = TRUE)
+  expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente")
+})
+
+test_that("tabelas_atualizar(): formato novo, tabela que n\u00e3o baixa e c\u00f3pia mais velha que a instala\u00e7\u00e3o", {
+  skip_if_not_installed("httr2")
+  pasta = tempfile("cache_do_rnfe_")
+  antes = apontar_o_cache_para(pasta)
+  on.exit(voltar_o_cache(antes, pasta), add = TRUE)
+  httr2::local_mocked_responses(function(req) {
+    nome = sub("\\.csv$", "", basename(req$url))
+    if (nome == "cfop") {
+      return(httr2::response(status_code = 200, body = charToRaw('"codigo","coluna_nova"\n"5102","x"\n')))
+    }
+    if (nome == "ncm") {
+      return(httr2::response(status_code = 404, body = charToRaw("404: Not Found")))
+    }
+    if (nome == "origem") {
+      stop("Could not resolve host")
+    }
+    httr2::response(status_code = 200, body = texto_da_tabela_do_pacote(nome))
+  })
+  atualizacao = tabelas_atualizar()
+  problemas = atualizacao$problema
+  names(problemas) = atualizacao$tabela
+  expect_identical(problemas[["cfop"]], "a tabela mudou de formato: atualize o pacote RNFe para usar a nova")
+  expect_identical(problemas[["ncm"]], "n\u00e3o baixou: HTTP 404")
+  expect_match(problemas[["origem"]], "^n\u00e3o baixou: .*Could not resolve host")
+  # As que n\u00e3o foram trocadas seguem as do pacote.
+  expect_true("titulo" %in% names(tabela_fiscal("cfop")))
+  expect_false(file.exists(file.path(pasta, "R", "RNFe", "tabelas", "cfop.csv")))
+  # Uma c\u00f3pia baixada antes da instala\u00e7\u00e3o do pacote n\u00e3o vale.
+  baixada = arquivo_da_tabela("cst_icms")
+  expect_true(startsWith(normalizePath(baixada, winslash = "/"), normalizePath(pasta, winslash = "/")))
+  Sys.setFileTime(baixada, as.POSIXct("2020-01-01"))
+  expect_identical(arquivo_da_tabela("cst_icms"), system.file("extdata", "tabelas", "cst_icms.csv", package = "RNFe"))
+  expect_error(tabelas_atualizar(usar_as_do_pacote = NA), "usar_as_do_pacote")
+})

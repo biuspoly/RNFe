@@ -13,6 +13,10 @@ COLUNAS_DE_INDICADOR = c(
 COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs")
 # Cada tabela é lida do disco uma vez por sessão.
 tabelas_ja_lidas = new.env(parent = emptyenv())
+# As tabelas que tabelas_atualizar() baixa: as fiscais e os endereços da SEFAZ. Vêm do ramo main do repositório, onde
+# só entram depois de uma pessoa conferir o que o robô semanal achou nas fontes oficiais.
+TABELAS_QUE_SE_ATUALIZAM = c(NOMES_DAS_TABELAS, "servicos_sefaz", "autorizadores_sefaz")
+ENDERECO_DAS_TABELAS_NO_REPOSITORIO = "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/"
 
 #' Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS, pagamentos, municípios e o significado de cada código
 #'
@@ -72,6 +76,10 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 #' - `"fontes"`: de onde veio cada tabela, com a versão e o dia em que foi
 #'   baixada.
 #'
+#' As tabelas vêm dentro do pacote. Para usar as mais novas sem esperar uma
+#' versão nova, chame [tabelas_atualizar()]: a partir daí, elas vêm da cópia
+#' baixada do repositório do RNFe.
+#'
 #' As tabelas do SPED começam em 2009, quando o SPED Fiscal começou: uma nota
 #' mais antiga fica sem a descrição, em vez de receber uma que talvez não fosse
 #' a da época. O CSOSN não tem datas porque as do SPED não servem para a NF-e:
@@ -128,7 +136,7 @@ tabela_fiscal = function(nome_da_tabela) {
 }
 
 ler_tabela_do_pacote = function(nome_da_tabela) {
-  arquivo_csv = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
+  arquivo_csv = arquivo_da_tabela(nome_da_tabela)
   tabela_do_pacote = utils::read.csv(arquivo_csv, colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
   for (nome_da_coluna in names(tabela_do_pacote)) {
     if (nome_da_coluna %in% COLUNAS_DE_DATA) {
@@ -143,6 +151,120 @@ ler_tabela_do_pacote = function(nome_da_tabela) {
     tabela_do_pacote$descricao_completa = descricao_completa_do_ncm(tabela_do_pacote)
   }
   tabela_do_pacote
+}
+
+# O arquivo da tabela: a cópia que tabelas_atualizar() baixou, quando ela é mais nova que a instalação do pacote; senão,
+# a do pacote. Quem instala uma versão nova do pacote volta a ter as tabelas dela, até atualizar de novo.
+arquivo_da_tabela = function(nome_da_tabela) {
+  do_pacote = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
+  baixado = file.path(pasta_das_tabelas_baixadas(), paste0(nome_da_tabela, ".csv"))
+  # O DESCRIPTION do pacote instalado é gravado na instalação.
+  instalado_em = file.mtime(system.file("DESCRIPTION", package = "RNFe"))
+  if (file.exists(baixado) && !is.na(instalado_em) && file.mtime(baixado) > instalado_em) {
+    return(baixado)
+  }
+  do_pacote
+}
+
+pasta_das_tabelas_baixadas = function() {
+  file.path(tools::R_user_dir("RNFe", which = "cache"), "tabelas")
+}
+
+#' Atualizar as tabelas fiscais pelo repositório do RNFe
+#'
+#' Baixa as tabelas fiscais (as de [tabela_fiscal()]) e os endereços da SEFAZ
+#' do repositório do RNFe no GitHub e passa a usá-las no lugar das que vieram
+#' no pacote. Lá, um robô confere toda semana as fontes oficiais (o Portal da
+#' NF-e, o SPED, o Siscomex, o IBGE), e uma pessoa junta ao repositório o que
+#' mudou depois de conferir: assim as tabelas ficam em dia sem esperar uma
+#' versão nova do pacote.
+#'
+#' Nada é baixado sem esta função ser chamada. As tabelas ficam na pasta de
+#' cache do R para o RNFe ([tools::R_user_dir()]) e valem para as próximas
+#' sessões também. Uma tabela só é trocada quando a nova tem as mesmas colunas
+#' que a do pacote; se o formato mudou, ela fica como está, e o resultado diz
+#' que é preciso atualizar o pacote. Quem instala uma versão nova do pacote
+#' volta a ter as tabelas dela, que já vêm atualizadas, até chamar esta função
+#' de novo.
+#'
+#' Precisa do pacote `httr2`.
+#'
+#' @param usar_as_do_pacote `TRUE` apaga as tabelas baixadas e volta a usar as
+#'   que vieram no pacote, sem baixar nada.
+#' @return Um `data.frame` com uma linha por tabela: `tabela`,
+#'   `linhas_antes` (as da tabela em uso antes de baixar), `linhas_agora`,
+#'   `mudou` (`TRUE` quando a tabela baixada é diferente da que estava em uso)
+#'   e `problema` (por que a tabela não foi trocada; vazio quando foi). Com
+#'   `usar_as_do_pacote = TRUE`, nada (invisível).
+#' @seealso [tabela_fiscal()]
+#' @examples
+#' \dontrun{
+#' atualizacao = tabelas_atualizar()
+#' atualizacao[atualizacao$mudou, ]
+#' tabela_fiscal("fontes")   # de onde veio e quando foi baixada cada tabela
+#' tabelas_atualizar(usar_as_do_pacote = TRUE)   # volta às do pacote
+#' }
+#' @export
+tabelas_atualizar = function(usar_as_do_pacote = FALSE) {
+  if (!isTRUE(usar_as_do_pacote) && !isFALSE(usar_as_do_pacote)) {
+    stop("Informe usar_as_do_pacote = TRUE ou FALSE.", call. = FALSE)
+  }
+  pasta = pasta_das_tabelas_baixadas()
+  if (usar_as_do_pacote) {
+    unlink(pasta, recursive = TRUE)
+    rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+    return(invisible(NULL))
+  }
+  exigir_pacotes("httr2")
+  dir.create(pasta, recursive = TRUE, showWarnings = FALSE)
+  linhas = list()
+  for (nome_da_tabela in TABELAS_QUE_SE_ATUALIZAM) {
+    linhas[[length(linhas) + 1]] = atualizar_uma_tabela(nome_da_tabela, pasta)
+  }
+  # A próxima leitura de cada tabela já pega a nova.
+  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+  do.call(rbind, linhas)
+}
+
+# Baixa uma tabela e a grava na pasta, se ela abre e tem as colunas da do pacote. Grava num arquivo temporário e só
+# depois troca, para uma tabela pela metade nunca ficar no lugar.
+atualizar_uma_tabela = function(nome_da_tabela, pasta) {
+  em_uso = utils::read.csv(arquivo_da_tabela(nome_da_tabela), colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
+  do_pacote = utils::read.csv(system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe"),
+                              colClasses = "character", fileEncoding = "UTF-8", na.strings = "", nrows = 1)
+  linha = data.frame(tabela = nome_da_tabela, linhas_antes = nrow(em_uso), linhas_agora = nrow(em_uso), mudou = FALSE,
+                     problema = NA_character_)
+  pedido = httr2::request(paste0(ENDERECO_DAS_TABELAS_NO_REPOSITORIO, nome_da_tabela, ".csv"))
+  pedido = httr2::req_user_agent(pedido, "RNFe (https://github.com/biuspoly/RNFe)")
+  pedido = httr2::req_timeout(pedido, 120)
+  pedido = httr2::req_error(pedido, is_error = function(resposta) FALSE)
+  resposta = tryCatch(httr2::req_perform(pedido), error = function(erro) erro)
+  if (inherits(resposta, "error")) {
+    linha$problema = paste("n\u00e3o baixou:", gsub("\\s+", " ", conditionMessage(resposta)))
+    return(linha)
+  }
+  if (httr2::resp_status(resposta) != 200 || !httr2::resp_has_body(resposta)) {
+    linha$problema = paste("n\u00e3o baixou: HTTP", httr2::resp_status(resposta))
+    return(linha)
+  }
+  temporario = file.path(pasta, paste0(nome_da_tabela, ".csv.baixando"))
+  writeBin(httr2::resp_body_raw(resposta), temporario)
+  baixada = tryCatch(utils::read.csv(temporario, colClasses = "character", fileEncoding = "UTF-8", na.strings = ""),
+                     error = function(erro) NULL)
+  if (is.null(baixada) || nrow(baixada) == 0) {
+    unlink(temporario)
+    linha$problema = "a tabela baixada n\u00e3o abriu ou veio vazia"
+    return(linha)
+  }
+  if (!identical(names(baixada), names(do_pacote))) {
+    unlink(temporario)
+    linha$problema = "a tabela mudou de formato: atualize o pacote RNFe para usar a nova"
+    return(linha)
+  }
+  file.rename(temporario, file.path(pasta, paste0(nome_da_tabela, ".csv")))
+  linha$linhas_agora = nrow(baixada)
+  linha$mudou = !identical(baixada, em_uso)
+  linha
 }
 
 # No NCM, o subitem diz pouco sozinho ("-- Outros"). A descrição completa junta a da posição (4 dígitos)

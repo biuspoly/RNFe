@@ -18,7 +18,8 @@ Distribuição de DF-e entrega), \code{\link[=cte_ler]{cte_ler()}}, \code{\link[
 \code{\link[=nfse_ler]{nfse_ler()}} e, para os eventos de todos eles (cancelamento, carta de
 correção, manifestação, encerramento...), \code{\link[=eventos_ler]{eventos_ler()}};
 \item as tabelas fiscais, com a vigência de cada código, e os municípios do
-IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}};
+IBGE: \code{\link[=tabela_fiscal]{tabela_fiscal()}}, e as mais novas do repositório, sem esperar
+versão nova do pacote: \code{\link[=tabelas_atualizar]{tabelas_atualizar()}};
 \item o certificado digital A1: \code{\link[=certificado_ler]{certificado_ler()}} (titular, CNPJ ou CPF e
 validade);
 \item a conversa com a SEFAZ, por enquanto só no ambiente de homologação:

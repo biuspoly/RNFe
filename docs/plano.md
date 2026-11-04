@@ -70,7 +70,8 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 O CRAN só recebe versão nova de tempos em tempos, então as tabelas vivem em três camadas: uma cópia dentro do
 pacote (funciona sem internet), um repositório de dados no GitHub que um robô semanal atualiza a partir das
 fontes oficiais, e o pacote buscando a mais nova de lá. Cada linha guarda "vale desde" e "vale até", para a
-nota antiga ser lida com a tabela da época.
+nota antiga ser lida com a tabela da época. As três existem desde 04/11/2026: o repositório é o próprio do RNFe
+(o robô avisa, uma pessoa confere e junta ao `main`), e a busca é a `tabelas_atualizar()`.
 
 | Tabela | Fonte oficial | Atualização automática |
 |---|---|---|
@@ -927,7 +928,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   Se acontecer, agora vira `problema` em vez de sumir.
 - **Brechas que ficam em aberto** (para o usuário decidir): o **CT-e simplificado** (tpCTe 5 e 6) não é lido, e a
   distribuição do CT-e o entrega ao tomador (nenhum no acervo); a NFS-e de prefeitura (decisão do usuário: depois);
-  a terceira camada das tabelas (o pacote buscar sozinho a tabela mais nova); o MDF-e sem documento real para
+  a terceira camada das tabelas (o pacote buscar sozinho a tabela mais nova; feita no mesmo dia, veja "O robô das
+  tabelas"); o MDF-e sem documento real para
   conferir; o dígito da chave da NFS-e, sem regra publicada.
 
 ## O robô das tabelas
@@ -946,8 +948,22 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   o Windows gravava como `\r\r\n` e o Linux como `\r\n`. Desde então o gerador troca quebra dentro da célula
   por espaço e grava sempre com `\n`, e o `.gitattributes` guarda os CSV com LF. Na execução seguinte o robô
   não achou mudança, e o aviso falso foi fechado com a explicação.
-- **Falta a terceira camada:** o pacote buscar sozinho, no computador de quem usa, a tabela mais nova do
-  repositório.
+- **A terceira camada, desde 04/11/2026** (pedido do usuário depois da revisão, "faça todos"):
+  `tabelas_atualizar()` baixa do ramo `main` do repositório (`raw.githubusercontent.com`) as tabelas fiscais e os
+  endereços da SEFAZ para a pasta de cache do R para o RNFe (`tools::R_user_dir`), e a leitura passa a usá-las. As
+  decisões:
+  - **do `main`, não do ramo do robô:** só o que uma pessoa já conferiu chega a quem usa;
+  - **só quando a pessoa chama:** o pacote não sai para a internet sozinho ao ler uma tabela;
+  - **o formato tem de ser o mesmo:** a tabela baixada só substitui a do pacote se tiver as mesmas colunas; senão
+    fica a do pacote, e o resultado pede para atualizar o pacote (uma versão velha não quebra com uma tabela de
+    formato novo);
+  - **a mais nova vale:** a cópia baixada só é usada se for mais nova que a instalação do pacote (a data do
+    `DESCRIPTION` instalado, gravado na instalação, conferido em 04/11/2026). Quem instala uma versão nova volta a
+    ter as tabelas dela;
+  - grava num arquivo temporário e só depois troca: uma tabela pela metade nunca fica no lugar;
+  - `tabelas_atualizar(usar_as_do_pacote = TRUE)` apaga a cópia e volta às do pacote.
+  Testado em 04/11/2026 de verdade, com uma pasta de cache temporária: as 17 tabelas em 5,5 s, nenhuma diferente
+  (o `main` e o pacote estavam iguais), e a leitura usando a cópia baixada e voltando à do pacote.
 
 ## O vigia dos schemas
 

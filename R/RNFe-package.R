@@ -11,7 +11,8 @@
 #'   [nfse_ler()] e, para os eventos de todos eles (cancelamento, carta de
 #'   correção, manifestação, encerramento...), [eventos_ler()];
 #' - as tabelas fiscais, com a vigência de cada código, e os municípios do
-#'   IBGE: [tabela_fiscal()];
+#'   IBGE: [tabela_fiscal()], e as mais novas do repositório, sem esperar
+#'   versão nova do pacote: [tabelas_atualizar()];
 #' - o certificado digital A1: [certificado_ler()] (titular, CNPJ ou CPF e
 #'   validade);
 #' - a conversa com a SEFAZ, por enquanto só no ambiente de homologação:

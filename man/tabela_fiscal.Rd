@@ -100,6 +100,10 @@ não é do IBGE e não está nela.
 baixada.
 }
 
+As tabelas vêm dentro do pacote. Para usar as mais novas sem esperar uma
+versão nova, chame \code{\link[=tabelas_atualizar]{tabelas_atualizar()}}: a partir daí, elas vêm da cópia
+baixada do repositório do RNFe.
+
 As tabelas do SPED começam em 2009, quando o SPED Fiscal começou: uma nota
 mais antiga fica sem a descrição, em vez de receber uma que talvez não fosse
 a da época. O CSOSN não tem datas porque as do SPED não servem para a NF-e:
