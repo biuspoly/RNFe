@@ -27,7 +27,10 @@ no ar?), \code{\link[=sefaz_situacao]{sefaz_situacao()}} (a situação de cada d
 \code{\link[=sefaz_mdfe_nao_encerrados]{sefaz_mdfe_nao_encerrados()}} (os MDF-e que um emitente ainda não
 encerrou), \code{\link[=sefaz_cadastro]{sefaz_cadastro()}} (o cadastro de contribuintes, pelo CNPJ,
 CPF ou IE) e \code{\link[=sefaz_distribuicao]{sefaz_distribuicao()}} (as NF-e e os CT-e emitidos contra
-um CNPJ).
+um CNPJ);
+\item a NFS-e Nacional, pelas APIs do Sistema Nacional NFS-e, por enquanto só
+na Produção Restrita: \code{\link[=nfse_situacao]{nfse_situacao()}} (a nota pela chave, com os
+eventos) e \code{\link[=nfse_distribuicao]{nfse_distribuicao()}} (as notas e os eventos de um CNPJ).
 }
 }
 \section{De onde vêm as regras}{
@@ -35,7 +38,8 @@ um CNPJ).
 Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
 NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
 versão em cada função (\verb{@source}). Só as funções \code{sefaz_} falam com a
-SEFAZ, e só no ambiente de homologação.
+SEFAZ, e as \code{nfse_situacao()} e \code{nfse_distribuicao()} com o Sistema
+Nacional NFS-e, todas só no ambiente de homologação.
 }
 
 \seealso{

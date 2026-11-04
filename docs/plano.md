@@ -29,7 +29,7 @@ Cada etapa já é útil sozinha.
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
-| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; a chave num PDF ou numa foto |
+| 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | começada: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
@@ -50,17 +50,17 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Ler NFS-e Nacional em tabelas | não | não | não | pronto (etapa 2) |
 | Ler os eventos (cancelamento, carta de correção, manifestação, encerramento) em tabelas | não | não | não | pronto (etapa 2) |
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
-| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e, da NFC-e, do CT-e e do MDF-e, e os MDF-e não encerrados, prontos em homologação; a NFS-e na etapa 3 |
-| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e e CT-e prontos em homologação; NFS-e na etapa 3 |
+| Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e, da NFC-e, do CT-e e do MDF-e, e os MDF-e não encerrados, prontos em homologação; a NFS-e Nacional pela chave, com os eventos, pronta na Produção Restrita |
+| Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e, CT-e e NFS-e Nacional prontos em homologação (a da NFS-e na Produção Restrita) |
 | Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
 | Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | última |
 | Manifestação do destinatário | sim | não | não | última |
 | MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | última (entrou agora no plano) |
 | CT-e: consultar e registrar desacordo | não | não | não | consultar: pronto em homologação (etapa 3); desacordo: última |
-| NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | etapa 3 e última |
+| NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | consultar e ler os eventos: pronto na Produção Restrita (etapa 3); emitir e cancelar: última |
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
-| Baixar o DANFSe oficial | não | sim | não | etapa 3 |
+| Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
 | Calculadora da Reforma: conferir e simular | não | não | não | etapa 4 |
 | Ler o SPED e pré-conferência | não | não | não | etapa 5 |
@@ -786,6 +786,47 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   também voltou 137, e não o 589 ("NSU superior ao maior") que a regra H06 da NT prevê. A resposta do 137 ficou gravada para os
   testes (não tem dado de empresa). O pedido montado pelo RNFe (pelo último NSU, por um NSU e com CPF), a resposta real
   e a resposta montada dos testes (um CT-e, o cancelamento dele e uma GTV-e) passam nos schemas do pacote.
+
+## Etapa 3, sétimo passo: a NFS-e Nacional (04/11/2026)
+
+- **Pedido do usuário** ("pode começar"; a Produção Restrita, que é a homologação da NFS-e Nacional, foi liberada por
+  ele). Duas funções novas, em `R/nfse_nacional.R`: `nfse_situacao(chaves, certificado, senha)`, a nota pela chave na
+  Sefin Nacional (`GET /nfse/<chave>`) e os eventos dela no ADN (`GET /NFSe/<chave>/Eventos`); e
+  `nfse_distribuicao(documento, certificado, senha, ultimo_nsu)`, as NFS-e e os eventos de um CNPJ ou CPF no ADN
+  (`GET /DFe/<NSU>`). As notas vão para o `nfse_ler()` e os eventos para o `eventos_ler()`, que já liam os dois.
+- **Fontes:** a página "APIs - Prod. Restrita e Produção" do gov.br/nfse (os endereços), as especificações OpenAPI da
+  Sefin Nacional e do ADN Contribuintes, baixadas da Produção Restrita com o certificado (só a documentação), e os dois
+  manuais de contribuintes (Emissor Público Nacional, v1.0 de 17/03/2025; APIs do ADN, v1.0 de 12/02/2026). A chave
+  tem 50 números (o `TSChaveNFSe` do schema 1.01); a que não tem nem é enviada.
+- **O jeito é outro:** APIs REST, GET sem corpo e respostas em JSON, também nos erros (a Sefin manda `erro` com
+  `codigo` e `descricao`; o ADN, `Erros` e `Alertas`), com os documentos em gzip dentro do base64. O
+  `enviar_os_pedidos()` passou a mandar GET quando o pedido não tem corpo, também no processo separado. O JSON é lido
+  com o `jsonlite`, que entrou em Suggests.
+- **A NFS-e não tem situação como a NF-e:** o cancelamento, a substituição e a manifestação são eventos. A
+  `nfse_situacao()` devolve se a nota veio, o erro da Sefin (`E2401`, chave não encontrada; 403 para quem não está na
+  nota) e o XML, e os eventos numa tabela à parte. Nota que não existe e nota sem eventos (`E2240`) são resposta, não
+  problema.
+- **O DANFSe oficial não existe mais.** A API do DANFSe do ADN foi desativada em 03/08/2026 (página "Atualizações e
+  Implantações" do gov.br/nfse: "Desativação da API do DANFSe do ADN (versão 1.0)"). Pela NT SE/CGNFS-e 008/2026, cada
+  sistema gera o seu DANFSe, num leiaute único. Na Produção Restrita a documentação do DANFSe responde 404, e o
+  `GET /DANFSe` da Sefin responde 501 ("serviço movido"). Por isso a etapa 3 não baixa o DANFSe: ele entra com os PDFs,
+  no leiaute da NT 008.
+- **Teste real na Produção Restrita (04/11/2026)**, com o certificado de teste:
+  - a chave inventada (50 números, CNPJ de exemplo) voltou 404, `E2401` "Chave de acesso não encontrada.", em 1,6 s,
+    com os eventos dela;
+  - os eventos voltaram 404, `E2240`;
+  - a chave curta voltou 400, `E2406`, e no RNFe nem vai;
+  - a distribuição com o CNPJ do certificado voltou 404, `E2220` "Nenhum documento localizado", autorizada como
+    `CnpjBase`, em 0,8 s, pelo processo separado de uma sessão comum do Windows.
+- **Achado do teste real:** sem o `cnpjConsulta`, que a documentação diz ser opcional, a distribuição voltou 400,
+  "REJEICAO", sem erro nenhum na lista (NSU 0 e 1, com e sem `lote`). Com ele, respondeu normalmente. Por isso a
+  `nfse_distribuicao()` sempre manda o CNPJ (ou o `cpfConsulta`), e a rejeição sem motivo tem mensagem própria.
+- **Não há trava de uma hora** na distribuição da NFS-e: a documentação do ADN não fala de espera nem de bloqueio
+  (diferente das NTs da NF-e e do CT-e), e o RNFe não inventa regra. A ajuda pede para não perguntar em laço sem pausa.
+- As quatro respostas reais ficaram gravadas para os testes (não têm dado de empresa). As respostas com documentos são
+  montadas com a NFS-e e o cancelamento de exemplo, no formato da especificação. O que não foi visto na resposta real,
+  porque a Produção Restrita não tem nota desse CNPJ: o `ArquivoXml` do ADN em gzip e base64 (é o padrão que a
+  especificação diz para as mensagens) e o formato do `DataHoraGeracao`.
 
 ## O robô das tabelas
 

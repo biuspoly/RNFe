@@ -26,8 +26,10 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e, da
     NFC-e, do CT-e e do MDF-e, a situação de cada documento pela chave, os
     MDF-e não encerrados, o cadastro de contribuintes e as NF-e e os CT-e
-    emitidos contra um CNPJ (Distribuição de DF-e), por enquanto só no
-    ambiente de homologação. Acha a chave de acesso num PDF ou numa imagem,
+    emitidos contra um CNPJ (Distribuição de DF-e), e pergunta ao Sistema
+    Nacional NFS-e a nota pela chave, com os eventos, e as notas de um CNPJ,
+    por enquanto só no ambiente de homologação (a Produção Restrita, na
+    NFS-e). Acha a chave de acesso num PDF ou numa imagem,
     pelo texto, pelo QR-Code ou por OCR.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
@@ -42,6 +44,7 @@ Imports:
 Suggests:
     curl,
     httr2 (>= 1.0.0),
+    jsonlite,
     opencv,
     openssl,
     pdftools,
@@ -63,4 +66,5 @@ Collate:
     'nfe_ler.R'
     'nfse_ler.R'
     'sefaz.R'
+    'nfse_nacional.R'
     'tabelas.R'

@@ -993,13 +993,18 @@ documentos_da_distribuicao = function(documentos_zipados) {
   schemas = xml2::xml_attr(documentos_zipados, "schema")
   textos = character(length(documentos_zipados))
   for (posicao in seq_along(documentos_zipados)) {
-    compactado = openssl::base64_decode(xml2::xml_text(documentos_zipados[[posicao]]))
-    texto = rawToChar(memDecompress(compactado, type = "gzip"))
-    Encoding(texto) = "UTF-8"
-    textos[posicao] = texto
+    textos[posicao] = texto_do_gzip_em_base64(xml2::xml_text(documentos_zipados[[posicao]]))
   }
   data.frame(nsu = as.character(nsus), schema = as.character(schemas), tipo = sub("_v?[0-9.]+\\.xsd$", "", as.character(schemas)),
              xml = textos)
+}
+
+# O documento que a SEFAZ e a NFS-e Nacional mandam compactado: gzip dentro do base64. Volta o texto do XML.
+texto_do_gzip_em_base64 = function(base64) {
+  compactado = openssl::base64_decode(base64)
+  texto = rawToChar(memDecompress(compactado, type = "gzip"))
+  Encoding(texto) = "UTF-8"
+  texto
 }
 
 conferir_ambiente = function(ambiente) {
@@ -1157,7 +1162,12 @@ enviar_os_pedidos = function(pedidos, opcoes, tempo_limite) {
   respostas = list()
   for (posicao in seq_along(pedidos)) {
     pedido = httr2::request(pedidos[[posicao]]$endereco)
-    pedido = httr2::req_body_raw(pedido, pedidos[[posicao]]$corpo, type = pedidos[[posicao]]$tipo_do_conteudo)
+    # O pedido sem corpo é um GET (as APIs da NFS-e Nacional), que diz o formato que aceita.
+    if (is.null(pedidos[[posicao]]$corpo)) {
+      pedido = httr2::req_headers(pedido, Accept = pedidos[[posicao]]$aceita)
+    } else {
+      pedido = httr2::req_body_raw(pedido, pedidos[[posicao]]$corpo, type = pedidos[[posicao]]$tipo_do_conteudo)
+    }
     pedido = do.call(httr2::req_options, c(list(pedido), opcoes))
     pedido = httr2::req_timeout(pedido, tempo_limite)
     pedido = httr2::req_error(pedido, is_error = function(resposta) FALSE)

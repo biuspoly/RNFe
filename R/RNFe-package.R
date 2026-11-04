@@ -20,13 +20,17 @@
 #'   [sefaz_mdfe_nao_encerrados()] (os MDF-e que um emitente ainda não
 #'   encerrou), [sefaz_cadastro()] (o cadastro de contribuintes, pelo CNPJ,
 #'   CPF ou IE) e [sefaz_distribuicao()] (as NF-e e os CT-e emitidos contra
-#'   um CNPJ).
+#'   um CNPJ);
+#' - a NFS-e Nacional, pelas APIs do Sistema Nacional NFS-e, por enquanto só
+#'   na Produção Restrita: [nfse_situacao()] (a nota pela chave, com os
+#'   eventos) e [nfse_distribuicao()] (as notas e os eventos de um CNPJ).
 #'
 #' @section De onde vêm as regras:
 #' Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
 #' NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
 #' versão em cada função (`@source`). Só as funções `sefaz_` falam com a
-#' SEFAZ, e só no ambiente de homologação.
+#' SEFAZ, e as `nfse_situacao()` e `nfse_distribuicao()` com o Sistema
+#' Nacional NFS-e, todas só no ambiente de homologação.
 #'
 #' @keywords internal
 "_PACKAGE"

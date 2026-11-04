@@ -7,7 +7,8 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > eventos de todos eles, e as tabelas fiscais (CFOP, NCM, CSTs, as
 > da Reforma, os municípios do IBGE, os meios de pagamento e o significado dos códigos de cada leiaute). Da
 > SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta pela chave (NF-e, NFC-e,
-> CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e (NF-e e CT-e), em homologação; o plano está em
+> CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e (NF-e e CT-e), em homologação;
+> da NFS-e Nacional, a consulta pela chave e a distribuição, na Produção Restrita; o plano está em
 > [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
@@ -236,6 +237,26 @@ uma hora recebe 656 ("Consumo Indevido"), e na NF-e o CNPJ fica bloqueado por um
 nesta sessão do R, antes de ir à SEFAZ. A NF-e e o CT-e têm cada um a sua sequência de NSU e a sua espera. Também dá
 para pedir um NSU que faltou (`nsu`) ou, só na NF-e, uma nota pela chave (`chave`). O emitente não recebe os próprios
 CT-e, e o schema da distribuição do CT-e (1.00) ainda não aceita o CNPJ com letras.
+
+```r
+# NFS-e Nacional: a nota pela chave (Sefin Nacional) e os eventos dela (ADN)
+consulta = nfse_situacao("35503082211222333000181000000000012326101234567898", "empresa.pfx", senha)
+consulta$situacoes   # encontrada?, o erro da Sefin (E2401: não existe) e o XML da nota
+consulta$eventos     # o cancelamento (101101) e os outros eventos
+nfse_ler(consulta$situacoes$xml)
+
+# as NFS-e e os eventos em que o CNPJ aparece (emitente, tomador ou intermediário), por NSU
+distribuicao = nfse_distribuicao("11222333000181", "empresa.pfx", senha)
+nfse_ler(distribuicao$documentos$xml)
+nfse_distribuicao("11222333000181", "empresa.pfx", senha, ultimo_nsu = distribuicao$consulta$ultimo_nsu)
+```
+
+A NFS-e Nacional não passa pela SEFAZ: são as APIs do Sistema Nacional NFS-e (a Sefin Nacional, que gera e consulta
+a nota, e o ADN, o Ambiente de Dados Nacional, que guarda e distribui), com o mesmo certificado e respostas em JSON
+(precisa do pacote `jsonlite`). O ambiente de teste lá se chama **Produção Restrita**, e é ele que o RNFe usa com
+`ambiente = "homologacao"`. A NFS-e não tem código de situação: o cancelamento e os outros fatos vêm em eventos. Só
+quem aparece na nota consegue consultá-la. O DANFSe oficial não é mais baixado do sistema nacional: a API dele foi
+desativada em 03/08/2026, e pela NT 008/2026 cada sistema gera o seu.
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada
