@@ -35,7 +35,8 @@ listar_codigos = function(codigos, maximo_na_lista = 20) {
 }
 
 linhas_do_resumo = c("As fontes oficiais mudaram. Confira antes de juntar ao pacote.", "")
-arquivos_das_tabelas = setdiff(list.files(pasta_de_depois, pattern = "\\.csv$"), "fontes.csv")
+# A lista de conferência muda junto com qualquer tabela: não é ela que a pessoa confere.
+arquivos_das_tabelas = setdiff(list.files(pasta_de_depois, pattern = "\\.csv$"), c("fontes.csv", "conferencia.csv"))
 for (arquivo_da_tabela in arquivos_das_tabelas) {
   tabela_de_antes = ler_tabela_gravada(file.path(pasta_de_antes, arquivo_da_tabela))
   tabela_de_depois = ler_tabela_gravada(file.path(pasta_de_depois, arquivo_da_tabela))

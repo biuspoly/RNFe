@@ -130,15 +130,53 @@ test_that("os componentes e os documentos de cada entrega", {
   expect_true(all(chave_valida(documentos$documento_chave)))
 })
 
-test_that("o CT-e substitu\u00eddo vem em documentos, sem entrega", {
+test_that("o CT-e substitu\u00eddo vem em documentos, sem entrega, com a troca do tomador", {
   texto = paste(readLines(CTE_SIMPLIFICADO_SP, encoding = "UTF-8"), collapse = "\n")
   substituido = "35261012ABC34501DE35570010000007761135792460"
-  com_substituicao = sub("<imp>", paste0("<infCteSub><chCte>", substituido, "</chCte></infCteSub><imp>"), texto, fixed = TRUE)
+  com_substituicao = sub("<imp>", paste0("<infCteSub><chCte>", substituido, "</chCte><indAlteraToma>1</indAlteraToma>",
+                                         "</infCteSub><imp>"), texto, fixed = TRUE)
   com_substituicao = sub("<tpCTe>5</tpCTe>", "<tpCTe>6</tpCTe>", com_substituicao, fixed = TRUE)
   documentos = cte_simplificado_ler(com_substituicao)$documentos
   expect_identical(documentos$tipo[4], "infCteSub")
   expect_identical(documentos$documento_chave[4], substituido)
   expect_true(is.na(documentos$entrega[4]))
+  expect_identical(documentos$altera_tomador, c(NA, NA, NA, 1L))
+  expect_identical(documentos$altera_tomador_descricao[4], "CT-e de altera\u00e7\u00e3o de tomador")
+})
+
+# Os grupos da Reforma no fim do ide: a compra governamental (com o documento anterior) e o pagamento antecipado.
+COMPRA_GOVERNAMENTAL_E_PAGAMENTO_ANTECIPADO = paste0(
+  "<gCompraGov><tpEnteGov>1</tpEnteGov><pRedutor>5.0000</pRedutor><tpOperGov>2</tpOperGov>",
+  "<refDFeAnt>35261011222333000181550010000010011123456785</refDFeAnt></gCompraGov>",
+  "<tpPagAnt>3</tpPagAnt><gPagAntecipado><chDFePagAnt>35261012ABC34501DE35570010000007761135792460</chDFePagAnt>",
+  "</gPagAntecipado>"
+)
+
+test_that("os documentos da Reforma no ide: o da compra governamental e o do pagamento antecipado", {
+  texto = paste(readLines(CTE_SIMPLIFICADO_SP, encoding = "UTF-8"), collapse = "\n")
+  com_reforma = sub("<retira>1</retira>", paste0("<retira>1</retira>", COMPRA_GOVERNAMENTAL_E_PAGAMENTO_ANTECIPADO), texto,
+                    fixed = TRUE)
+  documentos = cte_simplificado_ler(com_reforma)$documentos
+  expect_identical(documentos$tipo, c("refDFeAnt", "chDFePagAnt", "infNFe", "infDocAnt", "infNFeTranspParcial"))
+  expect_identical(documentos$documento_chave[1:2], c("35261011222333000181550010000010011123456785",
+                                                      "35261012ABC34501DE35570010000007761135792460"))
+  expect_identical(documentos$entrega, c(NA, NA, 1L, 2L, 2L))
+  cte = system.file("exemplos", "cte_proc_sp.xml", package = "RNFe")
+  texto_do_cte = paste(readLines(cte, encoding = "UTF-8"), collapse = "\n")
+  cte_com_reforma = sub("</toma3>", paste0("</toma3>", COMPRA_GOVERNAMENTAL_E_PAGAMENTO_ANTECIPADO), texto_do_cte, fixed = TRUE)
+  documentos_do_cte = cte_ler(cte_com_reforma)$documentos
+  expect_identical(documentos_do_cte$tipo, c("refDFeAnt", "chDFePagAnt", "infNFe", "infNFe"))
+  expect_true(all(is.na(documentos_do_cte$altera_tomador)))
+})
+
+test_that("o prefixo no namespace e o CT-e simplificado dentro de outro grupo", {
+  com_prefixo = '<cte:CTeSimp xmlns:cte="http://www.portalfiscal.inf.br/cte"><cte:infCte versao="4.00" Id="CTe1"/></cte:CTeSimp>'
+  mensagem = "o XML usa prefixo no namespace do documento (<cte:CTeSimp>), que a SEFAZ n\u00e3o aceita e o RNFe n\u00e3o l\u00ea"
+  expect_identical(cte_simplificado_ler(com_prefixo)$arquivos$problema, mensagem)
+  expect_identical(cte_ler(com_prefixo)$arquivos$problema, mensagem)
+  dentro_de_outro = '<lote><CTeSimp xmlns="http://www.portalfiscal.inf.br/cte"><infCte versao="4.00" Id="CTe1"/></CTeSimp></lote>'
+  expect_identical(cte_ler(dentro_de_outro)$arquivos$problema, "\u00e9 um CT-e simplificado, lido por cte_simplificado_ler()")
+  expect_identical(cte_simplificado_ler(dentro_de_outro)$arquivos$ctes, 1L)
 })
 
 test_that("a carga, com o tipo da medida em c\u00f3digo", {

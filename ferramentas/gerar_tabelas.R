@@ -650,3 +650,7 @@ gravar_tabela(tabelas_do_sped$cst_ipi, "cst_ipi")
 gravar_tabela(tabelas_do_sped$cst_pis, "cst_pis")
 gravar_tabela(tabelas_do_sped$cst_cofins, "cst_cofins")
 gravar_tabela(fontes, "fontes")
+
+# A lista de conferência que o tabelas_atualizar() usa: as linhas e o md5 de cada tabela, e a versão do conjunto.
+source("ferramentas/gerar_conferencia_das_tabelas.R", encoding = "UTF-8")
+gravar_conferencia_das_tabelas(PASTA_DAS_TABELAS)

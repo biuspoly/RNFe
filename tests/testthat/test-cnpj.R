@@ -180,7 +180,8 @@ test_that("fora do ar: sem resposta, limite, erro do servidor e resposta que n\u
   expect_identical(situacao$fonte, "cnpjws")
   expect_identical(situacao$situacao, "BAIXADA")
   expect_match(situacao$fontes_fora_do_ar,
-               "^brasilapi \\(HTTP 503\\); minhareceita \\(sem resposta: .*Timeout was reached.*\\); cnpja \\(HTTP 429\\); receitaws \\(HTTP 404\\)$")
+               paste0("^brasilapi \\(HTTP 503: Servi\u00e7o indispon\u00edvel\\); minhareceita \\(sem resposta: .*Timeout was ",
+                      "reached.*\\); cnpja \\(HTTP 429\\); receitaws \\(HTTP 404\\)$"))
   expect_true(is.na(situacao$problema))
   # Nenhuma responde.
   httr2::local_mocked_responses(function(req) httr2::response(status_code = 502))
@@ -188,7 +189,7 @@ test_that("fora do ar: sem resposta, limite, erro do servidor e resposta que n\u
   expect_true(is.na(situacao$encontrado))
   expect_true(is.na(situacao$fonte))
   expect_identical(situacao$fontes_fora_do_ar, "brasilapi (HTTP 502); cnpja (HTTP 502)")
-  expect_identical(situacao$problema, "nenhuma fonte respondeu")
+  expect_identical(situacao$problema, "nenhuma fonte deu resposta sobre o CNPJ")
 })
 
 test_that("o 200 fora do formato conta como fora do ar, e o campo de outro tipo n\u00e3o derruba", {
@@ -232,4 +233,74 @@ test_that("cada CNPJ come\u00e7a de novo pela primeira fonte", {
   expect_identical(situacoes$fonte, c("cnpja", "brasilapi"))
   expect_identical(situacoes$situacao, c("BAIXADA", "ATIVA"))
   expect_identical(attr(situacoes$atualizado_em, "tzone"), "America/Sao_Paulo")
+})
+
+test_that("n\u00e3o achado e uma das seguintes fora do ar: n\u00e3o d\u00e1 para dizer que o CNPJ n\u00e3o existe", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("jsonlite")
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    if (fonte == "brasilapi") {
+      return(resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 404))
+    }
+    httr2::response(status_code = 429, body = charToRaw("Too Many Requests"))
+  })
+  situacao = cnpj_situacao(CNPJ_QUE_NAO_EXISTE)
+  expect_true(is.na(situacao$encontrado))
+  expect_match(situacao$problema, "n\u00e3o d\u00e1 para dizer que ele n\u00e3o existe")
+  expect_identical(situacao$mensagem, "brasilapi: CNPJ 12.ABC.345/01DE-35 n\u00e3o encontrado.")
+  expect_identical(situacao$fontes_fora_do_ar, "cnpja (HTTP 429); receitaws (HTTP 429); cnpjws (HTTP 429)")
+  # A fonte fora do ar antes do primeiro "não achou" não muda a conclusão das que vieram depois.
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    if (fonte == "brasilapi") {
+      return(httr2::response(status_code = 503))
+    }
+    if (fonte == "receitaws") {
+      return(resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 200))
+    }
+    resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 404)
+  })
+  situacao = cnpj_situacao(CNPJ_QUE_NAO_EXISTE)
+  expect_false(situacao$encontrado)
+  expect_true(is.na(situacao$problema))
+})
+
+test_that("s\u00f3 o \"n\u00e3o achou\" no formato de cada fonte conta; o resto \u00e9 fora do ar, com o que a fonte disse", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("jsonlite")
+  resposta_json = function(situacao_http, texto) {
+    httr2::response(status_code = situacao_http, headers = "Content-Type: application/json", body = charToRaw(enc2utf8(texto)))
+  }
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    switch(fonte,
+           brasilapi = resposta_json(404, '{"message":"Not Found"}'),
+           minhareceita = resposta_json(400, '{"message":"CNPJ com letras ainda n\\u00e3o \\u00e9 aceito"}'),
+           cnpja = resposta_json(404, '{"message":"route not found"}'),
+           receitaws = resposta_json(200, '{"status":"ERROR","message":"Erro ao consultar a Receita, tente mais tarde"}'),
+           cnpjws = resposta_json(200, '{"status":"ERROR"}'))
+  })
+  situacao = cnpj_situacao(CNPJ_ATIVO)
+  expect_true(is.na(situacao$encontrado))
+  expect_true(is.na(situacao$mensagem))
+  expect_identical(situacao$fontes_fora_do_ar, paste0(
+    "brasilapi (HTTP 404: Not Found); minhareceita (HTTP 400: CNPJ com letras ainda n\u00e3o \u00e9 aceito); ",
+    "cnpja (HTTP 404: route not found); receitaws (ERROR: Erro ao consultar a Receita, tente mais tarde); ",
+    "cnpjws (resposta fora do formato)"
+  ))
+  expect_identical(situacao$problema, "nenhuma fonte deu resposta sobre o CNPJ")
+})
+
+test_that("a BrasilAPI e o Minha Receita s\u00e3o a mesma base em qualquer ordem, e a fonte repetida vai uma vez", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("jsonlite")
+  pedidos = character()
+  httr2::local_mocked_responses(function(req) {
+    fonte = fonte_do_pedido(req)
+    pedidos <<- c(pedidos, fonte)
+    resposta_da_fonte(fonte, CNPJ_QUE_NAO_EXISTE, 404)
+  })
+  cnpj_situacao(CNPJ_QUE_NAO_EXISTE, fontes = c("minhareceita", "brasilapi", "cnpja", "cnpja"))
+  expect_identical(pedidos, c("minhareceita", "cnpja"))
 })

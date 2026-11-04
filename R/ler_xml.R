@@ -102,22 +102,36 @@ ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_docu
   arquivo_lido
 }
 
-# A GTV-e e o CT-e simplificado têm leitor próprio: os outros leitores dizem qual é. O próprio leitor deles, com a
-# raiz certa mas sem o infCte, diz o que falta.
+# Por que o arquivo não tem o documento pedido. O documento com prefixo no namespace (<cte:CTe>) vem primeiro: o
+# xml_ns_strip() só tira o namespace sem prefixo, e a SEFAZ não aceita prefixo. A GTV-e e o CT-e simplificado têm leitor
+# próprio: os outros leitores dizem qual é, mesmo com o documento dentro de outro grupo; o próprio leitor deles, com o
+# documento mas sem o infCte, diz o que falta.
 problema_sem_documento = function(xml_lido, nome_do_documento) {
   raiz_do_xml = xml2::xml_name(xml2::xml_root(xml_lido))
-  if (raiz_do_xml %in% c("GTVe", "GTVeProc", "CTeSimp", "cteSimpProc")) {
-    if (raiz_do_xml %in% c("GTVe", "GTVeProc")) {
-      documento_da_raiz = "uma GTV-e"
-      leitor_da_raiz = "\u00e9 uma GTV-e, lida por gtve_ler()"
+  elemento_com_prefixo = xml2::xml_find_first(
+    xml_lido,
+    "//*[contains(namespace-uri(), 'portalfiscal.inf.br') or contains(namespace-uri(), 'sped.fazenda.gov.br')]",
+    ns = SEM_NAMESPACE
+  )
+  if (!inherits(elemento_com_prefixo, "xml_missing")) {
+    nome_com_prefixo = xml2::xml_name(elemento_com_prefixo, ns = xml2::xml_ns(xml_lido))
+    return(paste0("o XML usa prefixo no namespace do documento (<", nome_com_prefixo, ">), que a SEFAZ n\u00e3o aceita e o ",
+                  "RNFe n\u00e3o l\u00ea"))
+  }
+  tem_gtve = raiz_do_xml %in% c("GTVe", "GTVeProc") || length(buscar_todos(xml_lido, "//GTVe")) > 0
+  tem_cte_simplificado = raiz_do_xml %in% c("CTeSimp", "cteSimpProc") || length(buscar_todos(xml_lido, "//CTeSimp")) > 0
+  if (tem_gtve || tem_cte_simplificado) {
+    if (tem_gtve) {
+      documento_achado = "uma GTV-e"
+      leitor_do_documento = "\u00e9 uma GTV-e, lida por gtve_ler()"
     } else {
-      documento_da_raiz = "um CT-e simplificado"
-      leitor_da_raiz = "\u00e9 um CT-e simplificado, lido por cte_simplificado_ler()"
+      documento_achado = "um CT-e simplificado"
+      leitor_do_documento = "\u00e9 um CT-e simplificado, lido por cte_simplificado_ler()"
     }
-    if (nome_do_documento == documento_da_raiz) {
+    if (nome_do_documento == documento_achado) {
       return(paste0("o XML come\u00e7a por <", raiz_do_xml, ">, mas sem o infCte"))
     }
-    return(leitor_da_raiz)
+    return(leitor_do_documento)
   }
   # A NFS-e de prefeitura (o padrão Abrasf, o Ginfes e os formatos próprios) usa estes nomes; algumas, o NFe da NF-e,
   # mas sem o infNFe dela.

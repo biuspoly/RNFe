@@ -42,7 +42,7 @@ motivo do que não deu).
 O CT-e simplificado tem a chave e o protocolo do CT-e, e os eventos dele
 (o cancelamento, por exemplo) são os do CT-e, lidos por \code{\link[=eventos_ler]{eventos_ler()}}.
 Mas, no lugar do remetente, do destinatário e dos documentos de uma
-prestação só, traz o tomador e um grupo por entrega (\code{det}, até 999), cada
+prestação só, traz o tomador e um grupo por entrega (\code{det}, até 990), cada
 um com o seu valor, o IBS e a CBS e os seus documentos. Por isso tem leitor
 próprio, e não entra em \code{\link[=cte_ler]{cte_ler()}}. Lê o leiaute 4.00, com ou sem o
 protocolo de autorização (\code{cteSimpProc} ou só \code{CTeSimp}), de um arquivo,
@@ -97,16 +97,21 @@ linha: \code{chave}, \code{entrega} (\verb{ancestor::det/@nItem}), \code{nome} (
 \section{documentos}{
 
 Os documentos que o CT-e simplificado cita, um por linha: \code{chave},
-\code{entrega} (\verb{ancestor::det/@nItem}), \code{tipo} (\verb{self::*}), \code{documento_chave} (\code{chNFe|chCTe|chCte}), \code{pin} (\code{PIN}), \code{previsao_entrega} (\code{dPrev}), \code{tipo_prestacao} (\code{tpPrest}), \code{cte_anterior_chave} (\code{parent::infDocAnt/chCTe}).
+\code{entrega} (\verb{ancestor::det/@nItem}), \code{tipo} (\verb{self::*}), \code{documento_chave} (\code{chNFe|chCTe|chCte|self::chDFePagAnt|self::refDFeAnt}), \code{pin} (\code{PIN}), \code{previsao_entrega} (\code{dPrev}), \code{tipo_prestacao} (\code{tpPrest}), \code{cte_anterior_chave} (\code{parent::infDocAnt/chCTe}), \code{altera_tomador} (\code{indAlteraToma}).
 Cada grupo tem só alguns desses campos. \code{tipo} é o grupo de onde o documento
 veio:
 \itemize{
+\item \code{chDFePagAnt}: o documento do pagamento antecipado cujas parcelas este
+abate (grupo \code{gPagAntecipado}, da Reforma; sem \code{entrega});
+\item \code{refDFeAnt}: o documento fiscal anterior da compra governamental (grupo
+\code{gCompraGov}, da Reforma; sem \code{entrega});
 \item \code{infNFe}: as NF-e da entrega;
 \item \code{infDocAnt}: o CT-e anterior da entrega, com \code{tipo_prestacao}, que diz se
 a prestação é total ou parcial em relação às notas dele;
 \item \code{infNFeTranspParcial}: as NF-e informadas dentro do grupo do CT-e
 anterior, que vem em \code{cte_anterior_chave};
-\item \code{infCteSub}: o CT-e que este substitui (sem \code{entrega}).
+\item \code{infCteSub}: o CT-e que este substitui (sem \code{entrega}), e
+\code{altera_tomador} diz se a substituição é para trocar o tomador.
 }
 }
 
@@ -147,7 +152,9 @@ pagamento é o da tabela do Informe Técnico 2026.001.
 
 Só com \code{todos_os_campos = TRUE}. Todos os campos do CT-e simplificado, um
 por linha: \code{chave}, \code{caminho} (onde o campo está, a partir do \code{infCte}, com
-a posição quando o grupo se repete, por exemplo \code{det[2]/Comp/vComp}),
+a posição quando o grupo se repete, por exemplo \code{det[2]/Comp/vComp}; o
+número entre colchetes é a posição no XML, e o número da entrega, que o
+schema não obriga a seguir a ordem, está em \code{entregas}),
 \code{grupo} (o grupo logo acima do campo), \code{campo} (o nome no leiaute) e
 \code{valor} (o texto do XML). É onde ficam os endereços completos, as unidades
 de carga e de transporte de cada NF-e, as compras governamentais, os

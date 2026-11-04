@@ -121,7 +121,7 @@ lido$arquivos      # o que foi lido, e o motivo de cada arquivo que não deu
 ```
 
 O CT-e simplificado (modelo 57, tipo 5, e o de substituição, tipo 6) tem a chave, o protocolo e os eventos do
-CT-e, mas no lugar do remetente, do destinatário e dos documentos de uma prestação só traz o tomador e até 999
+CT-e, mas no lugar do remetente, do destinatário e dos documentos de uma prestação só traz o tomador e até 990
 entregas, cada uma com o seu valor, o IBS e a CBS e os seus documentos. Por isso tem leitor próprio. Segue o
 schema oficial (tipo `TCTeSimp`); nenhum CT-e simplificado real passou por ele ainda, só o exemplo do pacote,
 validado contra o schema.
@@ -290,10 +290,13 @@ cnpj_situacao(c("11.222.333/0001-81", "11.444.777/0001-61"))
 A situação vem da BrasilAPI e, quando ela está fora do ar, do Minha Receita, da CNPJá, da ReceitaWS e da CNPJ.ws,
 uma depois da outra: todas públicas, republicando o cadastro da Receita. Fora do ar é sem resposta, limite de
 consultas (429), erro do servidor ou resposta fora do formato. O CNPJ que uma fonte não tem também é procurado na
-próxima (o aberto há pouco pode não estar ainda nos dados abertos que a BrasilAPI usa); o Minha Receita só entra
-quando a BrasilAPI está fora do ar, porque ela busca nele. `encontrado` fica `FALSE` quando nenhuma das que
-responderam achou. A ReceitaWS e a CNPJ.ws aceitam poucas consultas por minuto (3, em 04/11/2026), e
-por isso vêm por último; dá para escolher as fontes e a ordem com `fontes`.
+próxima (o aberto há pouco pode não estar ainda nos dados abertos que a BrasilAPI usa). Só conta como "não achou"
+a resposta no formato de cada fonte para o CNPJ que não existe; outra (o 404 de um proxy, um erro de consulta)
+conta como fora do ar. A BrasilAPI e o Minha Receita são a mesma base: quando uma responde, a outra não é
+perguntada. `encontrado` fica `FALSE` quando as que responderam não acharam e todas as seguintes responderam; se
+alguma ficou fora do ar depois de um "não achou", ele fica `NA`, com o motivo em `problema`, porque ela poderia ter
+achado. A ReceitaWS e a CNPJ.ws aceitam poucas consultas por minuto (3, em 04/11/2026), e por isso vêm por último;
+dá para escolher as fontes e a ordem com `fontes`.
 
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada
@@ -338,8 +341,12 @@ tabelas_atualizar(usar_as_do_pacote = TRUE)   # volta às que vieram no pacote
 
 O que o robô acha entra no repositório depois de uma pessoa conferir. `tabelas_atualizar()` baixa de lá as tabelas
 fiscais e os endereços da SEFAZ para a pasta de cache do R e passa a usá-las, também nas próximas sessões. Nada é
-baixado sem ela ser chamada. Uma tabela que mudou de formato não é trocada (o resultado pede para atualizar o
-pacote), e quem instala uma versão nova do pacote volta a ter as tabelas dela.
+baixado sem ela ser chamada. Primeiro vem a lista de conferência do repositório (`conferencia.csv`: as linhas e a
+soma de conferência de cada tabela, e a versão do conjunto). Cada tabela baixada tem de conferir com ela, abrir sem
+erro e ter as colunas da do pacote (se o formato mudou, o resultado pede para atualizar o pacote), e as tabelas são
+trocadas todas juntas ou nenhuma. As baixadas valem enquanto o conjunto delas for mais novo que o do pacote
+instalado: quem instala um pacote com tabelas mais novas volta a ter as dele. Depois de mexer numa tabela à mão,
+rode `ferramentas/gerar_conferencia_das_tabelas.R` (o teste reclama se a lista ficar para trás).
 
 Os leitores usam essas tabelas: ao lado de cada código vem o significado dele, numa coluna com o mesmo nome e
 `_descricao` no fim (`forma_emissao` 9 vem com "Contingência off-line da NFC-e e da NF-e com DANFE

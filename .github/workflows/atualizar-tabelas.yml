@@ -1,5 +1,6 @@
 # Toda segunda-feira, baixa as tabelas fiscais das fontes oficiais (ferramentas/gerar_tabelas.R). Se alguma
-# mudou de verdade (a data de download em fontes.csv não conta), grava as novas num ramo e abre um aviso
+# mudou de verdade (a data de download em fontes.csv não conta, nem a lista de conferência, conferencia.csv, que
+# muda junto com o fontes.csv), grava as novas num ramo e abre um aviso
 # (issue) com o resumo e o link para comparar: quem junta ao pacote é uma pessoa, depois de conferir.
 # Um aviso e não um pull request porque o repositório não deixa o Actions abrir pull request.
 
@@ -36,7 +37,7 @@ jobs:
       - name: Ver se alguma tabela mudou
         id: mudancas
         run: |
-          if git diff --quiet -- inst/extdata/tabelas ':!inst/extdata/tabelas/fontes.csv' && [ -z "$(git status --porcelain inst/extdata/tabelas | grep -v fontes.csv)" ]; then
+          if git diff --quiet -- inst/extdata/tabelas ':!inst/extdata/tabelas/fontes.csv' ':!inst/extdata/tabelas/conferencia.csv' && [ -z "$(git status --porcelain inst/extdata/tabelas | grep -v -e fontes.csv -e conferencia.csv)" ]; then
             echo "mudou=nao" >> "$GITHUB_OUTPUT"
             echo "Nenhuma tabela mudou."
           else

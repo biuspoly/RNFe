@@ -29,10 +29,16 @@ TEMPO_LIMITE_DAS_FONTES_DO_CNPJ = 15
 #' erro do servidor (5xx) ou uma resposta que não é a de sempre. O CNPJ que
 #' uma fonte não acha também é procurado na próxima: o aberto há pouco pode
 #' ainda não estar nos dados abertos que a BrasilAPI usa, e estar na CNPJá ou
-#' na ReceitaWS. O Minha Receita só é perguntado quando a BrasilAPI está fora
-#' do ar, porque ela busca nele (perguntar aos dois é perguntar duas vezes à
-#' mesma base). `encontrado` fica `FALSE` quando nenhuma das que responderam
-#' achou. CNPJ com o dígito errado nem é perguntado.
+#' na ReceitaWS. Só conta como "não achou" a resposta no formato de cada fonte
+#' para o CNPJ que não existe; outra (o 404 de um proxy, um erro de consulta da
+#' ReceitaWS) conta como fora do ar. A BrasilAPI e o Minha Receita são a mesma
+#' base (a BrasilAPI busca nele): quando uma das duas responde, a outra não é
+#' perguntada. CNPJ com o dígito errado nem é perguntado.
+#'
+#' `encontrado` fica `FALSE` quando as fontes que responderam não acharam o
+#' CNPJ e todas as seguintes responderam. Se alguma das seguintes ficou fora do
+#' ar (no limite de consultas, por exemplo), ele fica `NA`, com o motivo em
+#' `problema`: ela poderia ter achado.
 #'
 #' Os dados de cada fonte têm a sua data: a BrasilAPI e o Minha Receita usam os
 #' dados abertos da Receita e não dizem a data no registro; a CNPJá, a
@@ -47,16 +53,19 @@ TEMPO_LIMITE_DAS_FONTES_DO_CNPJ = 15
 #' @param cnpjs Os CNPJs: um texto ou um vetor. Pontos, barras e traços são
 #'   ignorados; o CNPJ com letras (alfanumérico) é aceito.
 #' @param fontes As fontes, na ordem em que são tentadas: todas, se nada for
-#'   dito. Dá para tirar alguma ou trocar a ordem.
+#'   dito. Dá para tirar alguma ou trocar a ordem; a repetida é perguntada uma
+#'   vez só.
 #' @return Um `data.frame` com uma linha por CNPJ: `cnpj`, `encontrado`
-#'   (`TRUE`, `FALSE` quando nenhuma das que responderam tem o CNPJ, `NA`
-#'   quando nenhuma respondeu), `situacao`, `data_situacao`, `motivo_situacao`,
+#'   (`TRUE`; `FALSE` quando as que responderam não têm o CNPJ e todas as
+#'   seguintes responderam; `NA` quando não dá para saber), `situacao`,
+#'   `data_situacao`, `motivo_situacao`,
 #'   `situacao_especial` e `data_situacao_especial`, `razao_social`,
 #'   `nome_fantasia`, `atualizado_em` (quando a fonte diz de quando são os
 #'   dados, no horário de Brasília), `fonte` (a que achou), `mensagem` (o que
 #'   disseram as fontes que não acharam, cada uma com o nome),
 #'   `fontes_fora_do_ar` (as que foram tentadas e não responderam, com o
-#'   motivo) e `problema` (vazio quando alguma fonte respondeu).
+#'   motivo e, quando a fonte disse, o que ela disse) e `problema` (por que não
+#'   dá para saber; vazio quando dá).
 #' @seealso [sefaz_cadastro()] para a inscrição estadual, na SEFAZ.
 #' @source As respostas de cada fonte, conferidas em 04/11/2026 com um CNPJ
 #'   ativo, um baixado e um que não existe: a BrasilAPI
@@ -72,7 +81,7 @@ TEMPO_LIMITE_DAS_FONTES_DO_CNPJ = 15
 #' }
 #' @export
 cnpj_situacao = function(cnpjs, fontes = c("brasilapi", "minhareceita", "cnpja", "receitaws", "cnpjws")) {
-  fontes = as.character(fontes)
+  fontes = unique(as.character(fontes))
   if (length(fontes) == 0 || anyNA(fontes) || !all(fontes %in% FONTES_DO_CNPJ$fonte)) {
     stop("Informe as fontes entre ", paste0('"', FONTES_DO_CNPJ$fonte, '"', collapse = ", "), ".", call. = FALSE)
   }
@@ -109,19 +118,25 @@ situacao_de_um_cnpj = function(cnpj, fontes) {
   }
   fora_do_ar = character()
   nao_acharam = character()
-  brasilapi_respondeu = FALSE
+  # A BrasilAPI busca no Minha Receita: quando uma das duas respondeu, a outra diria o mesmo.
+  base_do_minha_receita_respondeu = FALSE
+  # Uma fonte fora do ar depois de um "não achou" poderia ter achado: aí não dá para dizer que o CNPJ não existe.
+  ficou_fonte_sem_resposta = FALSE
   for (fonte in fontes) {
-    # A BrasilAPI busca no Minha Receita: quando ela respondeu, o Minha Receita diria o mesmo.
-    if (fonte == "minhareceita" && brasilapi_respondeu) {
+    da_base_do_minha_receita = fonte %in% c("brasilapi", "minhareceita")
+    if (da_base_do_minha_receita && base_do_minha_receita_respondeu) {
       next
     }
     resposta = perguntar_a_fonte(fonte, cnpj)
     if (resposta$resultado == "fora do ar") {
       fora_do_ar = c(fora_do_ar, paste0(fonte, " (", resposta$motivo, ")"))
+      if (length(nao_acharam) > 0) {
+        ficou_fonte_sem_resposta = TRUE
+      }
       next
     }
-    if (fonte == "brasilapi") {
-      brasilapi_respondeu = TRUE
+    if (da_base_do_minha_receita) {
+      base_do_minha_receita_respondeu = TRUE
     }
     if (resposta$resultado == "n\u00e3o achou") {
       nao_acharam = c(nao_acharam, paste0(fonte, ": ", resposta$mensagem))
@@ -137,17 +152,21 @@ situacao_de_um_cnpj = function(cnpj, fontes) {
   if (length(fora_do_ar) > 0) {
     linha$fontes_fora_do_ar = paste(fora_do_ar, collapse = "; ")
   }
-  if (is.na(linha$fonte) && length(nao_acharam) > 0) {
-    linha$encontrado = FALSE
-  }
-  if (is.na(linha$fonte) && length(nao_acharam) == 0) {
-    linha$problema = "nenhuma fonte respondeu"
+  if (is.na(linha$fonte)) {
+    if (length(nao_acharam) == 0) {
+      linha$problema = "nenhuma fonte deu resposta sobre o CNPJ"
+    } else if (ficou_fonte_sem_resposta) {
+      linha$problema = paste("as fontes que responderam n\u00e3o acharam o CNPJ, mas alguma das seguintes ficou fora do ar:",
+                             "n\u00e3o d\u00e1 para dizer que ele n\u00e3o existe")
+    } else {
+      linha$encontrado = FALSE
+    }
   }
   linha
 }
 
-# A resposta de uma fonte: "achou" (200, com o JSON), "não achou" (404 com a mensagem da fonte, ou o status ERROR da
-# ReceitaWS, que responde 200) ou "fora do ar" (sem resposta, 429, 5xx, ou o que não é a resposta de sempre).
+# A resposta de uma fonte: "achou" (200, com o JSON), "não achou" (no formato da fonte, veja mensagem_de_nao_achou())
+# ou "fora do ar" (sem resposta, 429, 5xx, ou o que não é a resposta de sempre).
 perguntar_a_fonte = function(fonte, cnpj) {
   pedido = httr2::request(paste0(FONTES_DO_CNPJ$endereco[FONTES_DO_CNPJ$fonte == fonte], cnpj))
   pedido = httr2::req_headers(pedido, Accept = "application/json")
@@ -165,21 +184,25 @@ perguntar_a_fonte = function(fonte, cnpj) {
     Encoding(texto) = "UTF-8"
     json = tryCatch(jsonlite::fromJSON(texto, simplifyVector = FALSE), error = function(erro) NULL)
   }
-  if (situacao_http == 404 && is.list(json)) {
-    # A BrasilAPI, o Minha Receita e a CNPJá dizem em "message"; a CNPJ.ws, em "detalhes".
-    mensagem = texto_da_fonte(valor_no_json(json, "message"))
-    if (is.na(mensagem)) {
-      mensagem = texto_da_fonte(valor_no_json(json, "detalhes"))
-    }
-    if (!is.na(mensagem)) {
-      return(list(resultado = "n\u00e3o achou", mensagem = mensagem))
-    }
+  mensagem_de_nao_achou = mensagem_de_nao_achou(fonte, situacao_http, json)
+  if (!is.na(mensagem_de_nao_achou)) {
+    return(list(resultado = "n\u00e3o achou", mensagem = mensagem_de_nao_achou))
   }
   if (situacao_http != 200 || !is.list(json)) {
-    return(list(resultado = "fora do ar", motivo = paste("HTTP", situacao_http)))
+    # Quando a fonte disse por quê (um 400 que recusa o CNPJ, por exemplo), o motivo leva o que ela disse.
+    motivo = paste("HTTP", situacao_http)
+    mensagem_da_fonte = mensagem_no_json(json)
+    if (!is.na(mensagem_da_fonte)) {
+      motivo = paste0(motivo, ": ", mensagem_da_fonte)
+    }
+    return(list(resultado = "fora do ar", motivo = motivo))
   }
   if (fonte == "receitaws" && identical(texto_da_fonte(valor_no_json(json, "status")), "ERROR")) {
-    return(list(resultado = "n\u00e3o achou", mensagem = texto_da_fonte(valor_no_json(json, "message"))))
+    mensagem_da_fonte = mensagem_no_json(json)
+    if (is.na(mensagem_da_fonte)) {
+      mensagem_da_fonte = "sem mensagem"
+    }
+    return(list(resultado = "fora do ar", motivo = paste("ERROR:", mensagem_da_fonte)))
   }
   # O 200 tem de trazer a situação no lugar de sempre da fonte; sem ela ({}, ou um aviso de manutenção em JSON), a fonte
   # conta como fora do ar.
@@ -187,6 +210,51 @@ perguntar_a_fonte = function(fonte, cnpj) {
     return(list(resultado = "fora do ar", motivo = "resposta fora do formato"))
   }
   list(resultado = "achou", json = json)
+}
+
+# O "não achou" de cada fonte, no formato que ela devolveu para um CNPJ que não existe (conferido em 04/11/2026): a
+# mensagem dela, ou NA quando a resposta não é essa. Outro 404 (o de um proxy, por exemplo) não diz que o CNPJ não existe.
+mensagem_de_nao_achou = function(fonte, situacao_http, json) {
+  if (!is.list(json)) {
+    return(NA_character_)
+  }
+  mensagem = mensagem_no_json(json)
+  if (fonte == "receitaws") {
+    # A ReceitaWS responde 200, com o status ERROR e "CNPJ rejeitado pela Receita Federal".
+    rejeitado = situacao_http == 200 && identical(texto_da_fonte(valor_no_json(json, "status")), "ERROR") &&
+      !is.na(mensagem) && grepl("rejeitado", mensagem, fixed = TRUE)
+    if (rejeitado) {
+      return(mensagem)
+    }
+    return(NA_character_)
+  }
+  if (situacao_http != 404 || is.na(mensagem)) {
+    return(NA_character_)
+  }
+  formato_de_nao_achou = switch(
+    fonte,
+    brasilapi = identical(texto_da_fonte(valor_no_json(json, "type")), "not_found"),
+    minhareceita = grepl("n\u00e3o encontrado", mensagem, fixed = TRUE),
+    cnpja = identical(texto_da_fonte(valor_no_json(json, "code")), "404"),
+    cnpjws = identical(texto_da_fonte(valor_no_json(json, "status")), "404"),
+    FALSE
+  )
+  if (formato_de_nao_achou) {
+    return(mensagem)
+  }
+  NA_character_
+}
+
+# O que a fonte disse no JSON: "message" na BrasilAPI, no Minha Receita, na CNPJá e na ReceitaWS; "detalhes" na CNPJ.ws.
+mensagem_no_json = function(json) {
+  if (!is.list(json)) {
+    return(NA_character_)
+  }
+  mensagem = texto_da_fonte(valor_no_json(json, "message"))
+  if (is.na(mensagem)) {
+    mensagem = texto_da_fonte(valor_no_json(json, "detalhes"))
+  }
+  mensagem
 }
 
 # Os campos da resposta de cada fonte, cada uma no seu formato (conferido em 04/11/2026). O que não está lá vem NULL.

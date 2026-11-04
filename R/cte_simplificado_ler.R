@@ -159,25 +159,36 @@ nome    xNome                 texto
 valor   vComp                 numero
 ")
 
-# Os documentos que o CT-e simplificado cita, nesta ordem: em cada entrega, as NF-e (infNFe) ou o CT-e anterior
-# (infDocAnt) com as NF-e informadas dentro dele (infNFeTranspParcial); e o CT-e que este substitui (infCteSub).
-CAMINHO_DOS_DOCUMENTOS_DO_SIMPLIFICADO = "det/infNFe|det/infDocAnt|det/infDocAnt/infNFeTranspParcial|infCteSub"
+# Os documentos que o CT-e simplificado cita, na ordem do XML: os da Reforma no ide (o do pagamento antecipado e o
+# anterior da compra governamental); em cada entrega, as NF-e (infNFe) ou o CT-e anterior (infDocAnt) com as NF-e
+# informadas dentro dele (infNFeTranspParcial); e o CT-e que este substitui (infCteSub).
+CAMINHO_DOS_DOCUMENTOS_DO_SIMPLIFICADO = paste(
+  "ide/gPagAntecipado/chDFePagAnt",
+  "ide/gCompraGov/refDFeAnt",
+  "det/infNFe",
+  "det/infDocAnt",
+  "det/infDocAnt/infNFeTranspParcial",
+  "infCteSub",
+  sep = "|"
+)
 
 # A partir de cada documento. Cada grupo tem só alguns destes campos; o resto fica NA.
 CAMPOS_DO_DOCUMENTO_DO_SIMPLIFICADO = ler_campos("
 coluna              caminho                  tipo
 entrega             ancestor::det/@nItem     inteiro
 tipo                self::*                  elemento
-documento_chave     chNFe|chCTe|chCte        texto
+documento_chave     chNFe|chCTe|chCte|self::chDFePagAnt|self::refDFeAnt  texto
 pin                 PIN                      texto
 previsao_entrega    dPrev                    data
 tipo_prestacao      tpPrest                  inteiro
 cte_anterior_chave  parent::infDocAnt/chCTe  texto
+altera_tomador      indAlteraToma            inteiro
 ")
 
 SIGNIFICADOS_DO_DOCUMENTO_DO_SIMPLIFICADO = ler_campos("
-coluna_do_codigo campo   coluna_do_contexto
-tipo_prestacao   tpPrest -
+coluna_do_codigo campo         coluna_do_contexto
+tipo_prestacao   tpPrest       -
+altera_tomador   indAlteraToma -
 ")
 
 # No CT-e simplificado o tipo da medida é um código; no CT-e é texto livre.
@@ -204,7 +215,7 @@ tipo_medida      tpMed -
 #' O CT-e simplificado tem a chave e o protocolo do CT-e, e os eventos dele
 #' (o cancelamento, por exemplo) são os do CT-e, lidos por [eventos_ler()].
 #' Mas, no lugar do remetente, do destinatário e dos documentos de uma
-#' prestação só, traz o tomador e um grupo por entrega (`det`, até 999), cada
+#' prestação só, traz o tomador e um grupo por entrega (`det`, até 990), cada
 #' um com o seu valor, o IBS e a CBS e os seus documentos. Por isso tem leitor
 #' próprio, e não entra em [cte_ler()]. Lê o leiaute 4.00, com ou sem o
 #' protocolo de autorização (`cteSimpProc` ou só `CTeSimp`), de um arquivo,
@@ -255,12 +266,17 @@ tipo_medida      tpMed -
 #' `r documentar_campos(CAMPOS_DO_DOCUMENTO_DO_SIMPLIFICADO)`.
 #' Cada grupo tem só alguns desses campos. `tipo` é o grupo de onde o documento
 #' veio:
+#' * `chDFePagAnt`: o documento do pagamento antecipado cujas parcelas este
+#'   abate (grupo `gPagAntecipado`, da Reforma; sem `entrega`);
+#' * `refDFeAnt`: o documento fiscal anterior da compra governamental (grupo
+#'   `gCompraGov`, da Reforma; sem `entrega`);
 #' * `infNFe`: as NF-e da entrega;
 #' * `infDocAnt`: o CT-e anterior da entrega, com `tipo_prestacao`, que diz se
 #'   a prestação é total ou parcial em relação às notas dele;
 #' * `infNFeTranspParcial`: as NF-e informadas dentro do grupo do CT-e
 #'   anterior, que vem em `cte_anterior_chave`;
-#' * `infCteSub`: o CT-e que este substitui (sem `entrega`).
+#' * `infCteSub`: o CT-e que este substitui (sem `entrega`), e
+#'   `altera_tomador` diz se a substituição é para trocar o tomador.
 #'
 #' @section cargas:
 #' As quantidades da carga, uma por linha (o mesmo CT-e pode trazer o peso e o
@@ -292,7 +308,9 @@ tipo_medida      tpMed -
 #' @section campos:
 #' Só com `todos_os_campos = TRUE`. Todos os campos do CT-e simplificado, um
 #' por linha: `chave`, `caminho` (onde o campo está, a partir do `infCte`, com
-#' a posição quando o grupo se repete, por exemplo `det[2]/Comp/vComp`),
+#' a posição quando o grupo se repete, por exemplo `det[2]/Comp/vComp`; o
+#' número entre colchetes é a posição no XML, e o número da entrega, que o
+#' schema não obriga a seguir a ordem, está em `entregas`),
 #' `grupo` (o grupo logo acima do campo), `campo` (o nome no leiaute) e
 #' `valor` (o texto do XML). É onde ficam os endereços completos, as unidades
 #' de carga e de transporte de cada NF-e, as compras governamentais, os

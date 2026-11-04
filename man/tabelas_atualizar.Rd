@@ -12,10 +12,12 @@ que vieram no pacote, sem baixar nada.}
 }
 \value{
 Um \code{data.frame} com uma linha por tabela: \code{tabela},
-\code{linhas_antes} (as da tabela em uso antes de baixar), \code{linhas_agora},
-\code{mudou} (\code{TRUE} quando a tabela baixada é diferente da que estava em uso)
-e \code{problema} (por que a tabela não foi trocada; vazio quando foi). Com
-\code{usar_as_do_pacote = TRUE}, nada (invisível).
+\code{linhas_antes} (as da tabela em uso antes de baixar), \code{linhas_agora} (as
+da tabela em uso depois), \code{mudou} (\code{TRUE} quando a tabela em uso agora é
+diferente da de antes) e \code{problema} (por que as tabelas não foram
+trocadas; vazio quando foram). Com \code{usar_as_do_pacote = TRUE}, nada
+(invisível); dá erro se não conseguir apagar a pasta (um arquivo aberto
+por outro programa, no Windows).
 }
 \description{
 Baixa as tabelas fiscais (as de \code{\link[=tabela_fiscal]{tabela_fiscal()}}) e os endereços da SEFAZ
@@ -26,13 +28,21 @@ mudou depois de conferir: assim as tabelas ficam em dia sem esperar uma
 versão nova do pacote.
 }
 \details{
-Nada é baixado sem esta função ser chamada. As tabelas ficam na pasta de
-cache do R para o RNFe (\code{\link[tools:R_user_dir]{tools::R_user_dir()}}) e valem para as próximas
-sessões também. Uma tabela só é trocada quando a nova tem as mesmas colunas
-que a do pacote; se o formato mudou, ela fica como está, e o resultado diz
-que é preciso atualizar o pacote. Quem instala uma versão nova do pacote
-volta a ter as tabelas dela, que já vêm atualizadas, até chamar esta função
-de novo.
+Nada é baixado sem esta função ser chamada. Primeiro vem a lista de
+conferência do repositório, com a soma de conferência (md5) e o número de
+linhas de cada tabela e a versão do conjunto. Quando o pacote instalado já
+tem esse conjunto (ou um mais novo), nada mais é baixado. Senão, cada tabela
+baixada tem de conferir com a lista, abrir sem erro e ter as mesmas colunas
+que a do pacote; se o formato mudou, o resultado diz que é preciso atualizar
+o pacote. \strong{As tabelas são trocadas todas juntas ou nenhuma:} se uma der
+problema, ficam as que estavam em uso, para nunca misturar tabelas de
+origens diferentes.
+
+As tabelas baixadas ficam na pasta de cache do R para o RNFe
+(\code{\link[tools:R_user_dir]{tools::R_user_dir()}}) e valem para as próximas sessões também, enquanto
+forem mais novas que as do pacote instalado (pela versão do conjunto, não
+pela data dos arquivos). Quem instala uma versão do pacote com tabelas mais
+novas volta a ter as dele.
 
 Precisa do pacote \code{httr2}.
 }

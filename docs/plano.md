@@ -328,7 +328,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   `documentos`, `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`, `observacoes`, `campos` e `arquivos`.
 - **Leitor próprio, não o `cte_ler()`:** tem a chave, o protocolo e os eventos do CT-e, mas não tem o remetente, o
   expedidor, o recebedor nem o destinatário. Traz o tomador, com os dados no próprio grupo `toma` (o papel só diz
-  quem ele é), e um grupo `det` por entrega (até 999), cada um com os municípios de início e de fim, o valor, os
+  quem ele é), e um grupo `det` por entrega (até 990; o schema aceita o `nItem` de 1 a 990), cada um com os municípios de início e de fim, o valor, os
   componentes, o IBS e a CBS e os documentos. O valor e o IBS e a CBS do CT-e inteiro vêm do grupo `total`; o ICMS
   é um só, como no CT-e. No `ctes` do `cte_ler()`, as entregas não caberiam.
 - **A entrega liga as tabelas:** `entregas` tem o número dela (`nItem`), e `componentes`, `documentos` e `impostos`
@@ -969,6 +969,34 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   aberto:** a NFS-e de prefeitura (decisão do usuário: depois); o MDF-e e o CT-e simplificado sem documento real para
   conferir; o dígito da chave da NFS-e, sem regra publicada.
 
+## Revisão do código novo (04/11/2026, antes da etapa 4)
+
+- **Por quê:** o código das três brechas (o CT-e simplificado, o `tabelas_atualizar()` e a fonte seguinte no CNPJ)
+  foi escrito depois da revisão das etapas 1 a 3. Dois revisores independentes, com o código e o schema e sem a
+  conclusão de quem escreveu, com experimentos (variações validadas pelo schema, respostas simuladas, arquivo preso).
+- **O leitor do CT-e simplificado:** com XML válido pelo schema, nenhum resultado errado (os grupos de ICMS, CPF,
+  contingência, vários documentos anteriores, `nItem` 990, sem protocolo, dois documentos num arquivo). Corrigidos:
+  - o documento com prefixo no namespace (`<cte:CTe>`) ganhava a mensagem "sem o infCte", que é falsa: agora diz que
+    usa prefixo, que a SEFAZ não aceita e o RNFe não lê. No acervo (341.402 XML), nenhum usa prefixo no namespace
+    fiscal; os 147 com prefixo são NFS-e de prefeitura (`ns4:Nfse`), que já tinham a mensagem certa;
+  - os documentos que o CT-e e o CT-e simplificado citam pela chave nos grupos da Reforma (o do pagamento
+    antecipado, `chDFePagAnt`, e o anterior da compra governamental, `refDFeAnt`) passaram a `documentos`, e o
+    indicador de que a substituição troca o tomador (`indAlteraToma`), a coluna `altera_tomador`, nos dois leitores;
+  - a ajuda dizia "até 999" entregas: o `nItem` só vai de 1 a 990. Na tabela `campos`, o `[k]` do `det` é a posição
+    no XML, não o número da entrega (agora dito na ajuda);
+  - o CT-e simplificado e a GTV-e dentro de outro grupo também são apontados aos leitores deles.
+- **O `tabelas_atualizar()`:** refeito (veja "O robô das tabelas"). Achados: tabela cortada, com data fora do formato
+  ou com coluna a mais entrava como certa e quebrava a leitura das notas, nesta sessão e nas próximas; falha no meio
+  misturava tabelas; a escolha pela data do arquivo errava ao reinstalar e com `load_all()`; arquivo preso fazia a
+  troca falhar com só um aviso; os testes liam a pasta de cache de quem roda.
+- **A `cnpj_situacao()`:**
+  - `encontrado` saía `FALSE` quando só a BrasilAPI respondeu "não achou" e as seguintes estavam fora do ar (o
+    limite de 3 por minuto torna isso comum num lote): agora fica `NA`, com o motivo, porque elas poderiam ter
+    achado;
+  - qualquer 404 com mensagem contava como "não achou" (o de um proxy também): agora só o formato de cada fonte para
+    o CNPJ que não existe, o que elas devolveram em 04/11/2026; o resto é fora do ar, com o que a fonte disse;
+  - com o Minha Receita antes da BrasilAPI na lista, a mesma base era perguntada duas vezes; fonte repetida também.
+
 ## O robô das tabelas
 
 - `.github/workflows/atualizar-tabelas.yml` roda toda segunda às 9h UTC (6h em Brasília), e também à mão. Ele
@@ -994,13 +1022,27 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   - **o formato tem de ser o mesmo:** a tabela baixada só substitui a do pacote se tiver as mesmas colunas; senão
     fica a do pacote, e o resultado pede para atualizar o pacote (uma versão velha não quebra com uma tabela de
     formato novo);
-  - **a mais nova vale:** a cópia baixada só é usada se for mais nova que a instalação do pacote (a data do
-    `DESCRIPTION` instalado, gravado na instalação, conferido em 04/11/2026). Quem instala uma versão nova volta a
-    ter as tabelas dela;
-  - grava num arquivo temporário e só depois troca: uma tabela pela metade nunca fica no lugar;
   - `tabelas_atualizar(usar_as_do_pacote = TRUE)` apaga a cópia e volta às do pacote.
   Testado em 04/11/2026 de verdade, com uma pasta de cache temporária: as 17 tabelas em 5,5 s, nenhuma diferente
   (o `main` e o pacote estavam iguais), e a leitura usando a cópia baixada e voltando à do pacote.
+- **Refeita no mesmo dia, depois da revisão independente do código novo** (veja "Revisão do código novo"), que
+  achou tabela quebrada entrando como certa, mistura de tabelas numa falha no meio e a escolha pela data errada:
+  - **a lista de conferência** (`inst/extdata/tabelas/conferencia.csv`): de cada tabela, as linhas e a soma de
+    conferência (md5) do arquivo, e a versão do conjunto (a data e a hora, em UTC, em que alguma tabela mudou).
+    Quem grava é `ferramentas/gerar_conferencia_das_tabelas.R`, que o `gerar_tabelas.R` roda no fim; a versão só
+    muda quando alguma tabela mudou. O teste reclama se a lista ficar para trás das tabelas (quem mexe numa tabela à
+    mão roda a ferramenta). O robô não conta a lista ao ver se algo mudou (ela muda junto com o `fontes.csv`);
+  - **a lista vem primeiro;** quando a versão do pacote instalado já é a dela ou mais nova, nada mais é baixado e
+    a cópia velha sai;
+  - **cada tabela confere:** o md5 e as linhas com a lista, as colunas com as do pacote, e a leitura sem erro nem
+    aviso. Página da web no lugar da tabela (um proxy) tem mensagem própria;
+  - **tudo ou nada:** tudo vai para uma pasta ao lado; se uma tabela der problema, nenhuma é trocada (antes, a falha
+    no meio deixava tabelas de origens diferentes, e a `fontes` mentia). A pasta entra no lugar de uma vez; se a
+    troca falha (no Windows, um arquivo aberto por outro programa), volta a que estava, e o resultado diz;
+  - **a escolha pela versão do conjunto, não pela data do arquivo:** a data do `DESCRIPTION` falhava ao reinstalar
+    a mesma versão (a cópia nova era ignorada) e com `load_all()` (a cópia velha vencia um `git pull`). A tabela
+    baixada com colunas diferentes das do pacote fica com a do pacote também na leitura;
+  - **os testes não leem a pasta de cache de quem roda** (`tests/testthat/setup.R` a troca por uma temporária).
 
 ## O vigia dos schemas
 

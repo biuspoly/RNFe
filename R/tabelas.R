@@ -17,6 +17,11 @@ tabelas_ja_lidas = new.env(parent = emptyenv())
 # só entram depois de uma pessoa conferir o que o robô semanal achou nas fontes oficiais.
 TABELAS_QUE_SE_ATUALIZAM = c(NOMES_DAS_TABELAS, "servicos_sefaz", "autorizadores_sefaz")
 ENDERECO_DAS_TABELAS_NO_REPOSITORIO = "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/"
+# A lista de conferência: de cada tabela, as linhas e a soma de conferência (md5) do arquivo, e a versão do conjunto (a
+# data e a hora, em UTC, em que alguma tabela mudou). Vai no pacote e no repositório; quem grava é
+# ferramentas/gerar_conferencia_das_tabelas.R.
+ARQUIVO_DA_CONFERENCIA = "conferencia.csv"
+COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 
 #' Tabelas fiscais: CFOP, NCM, CSTs, IBS e CBS, pagamentos, municípios e o significado de cada código
 #'
@@ -63,9 +68,10 @@ ENDERECO_DAS_TABELAS_NO_REPOSITORIO = "https://raw.githubusercontent.com/biuspol
 #' - `"codigos_dos_campos"`: o que quer dizer cada código dos campos dos
 #'   documentos que não têm tabela própria (forma de emissão, finalidade,
 #'   modal, tipo de carga, regime do Simples Nacional...): `documento`
-#'   (`"NF-e"`, `"CT-e"`, `"MDF-e"`, `"NFS-e"` ou `"evento"`), `campo` (o nome
-#'   no leiaute, como `tpEmis`), `contexto` (quando o significado depende de
-#'   outra coisa: o modelo do CT-e ou o grupo do documento), `codigo` e
+#'   (`"NF-e"`, `"CT-e"`, `"GTV-e"`, `"MDF-e"`, `"NFS-e"` ou `"evento"`; o CT-e
+#'   OS e o CT-e simplificado usam os do `"CT-e"`), `campo` (o nome no leiaute,
+#'   como `tpEmis`), `contexto` (quando o significado depende de outra coisa: o
+#'   modelo do CT-e, o tipo do CT-e ou o grupo do documento), `codigo` e
 #'   `descricao`. Os textos vêm da documentação dos schemas oficiais; os
 #'   leitores os põem ao lado de cada coluna de código (`*_descricao`).
 #' - `"municipios"`: os municípios vigentes do IBGE, com o `codigo` de 7
@@ -136,38 +142,93 @@ tabela_fiscal = function(nome_da_tabela) {
 }
 
 ler_tabela_do_pacote = function(nome_da_tabela) {
-  arquivo_csv = arquivo_da_tabela(nome_da_tabela)
-  tabela_do_pacote = utils::read.csv(arquivo_csv, colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
-  for (nome_da_coluna in names(tabela_do_pacote)) {
+  ler_tabela_csv(arquivo_da_tabela(nome_da_tabela), nome_da_tabela)
+}
+
+ler_tabela_csv = function(arquivo_csv, nome_da_tabela) {
+  tabela_lida = utils::read.csv(arquivo_csv, colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
+  for (nome_da_coluna in names(tabela_lida)) {
     if (nome_da_coluna %in% COLUNAS_DE_DATA) {
-      tabela_do_pacote[[nome_da_coluna]] = as.Date(tabela_do_pacote[[nome_da_coluna]])
+      tabela_lida[[nome_da_coluna]] = as.Date(tabela_lida[[nome_da_coluna]])
     } else if (nome_da_coluna %in% COLUNAS_DE_INDICADOR) {
-      tabela_do_pacote[[nome_da_coluna]] = as.integer(tabela_do_pacote[[nome_da_coluna]])
+      tabela_lida[[nome_da_coluna]] = as.integer(tabela_lida[[nome_da_coluna]])
     } else if (nome_da_coluna %in% COLUNAS_DE_NUMERO) {
-      tabela_do_pacote[[nome_da_coluna]] = as.numeric(tabela_do_pacote[[nome_da_coluna]])
+      tabela_lida[[nome_da_coluna]] = as.numeric(tabela_lida[[nome_da_coluna]])
     }
   }
   if (nome_da_tabela == "ncm") {
-    tabela_do_pacote$descricao_completa = descricao_completa_do_ncm(tabela_do_pacote)
+    tabela_lida$descricao_completa = descricao_completa_do_ncm(tabela_lida)
   }
-  tabela_do_pacote
+  tabela_lida
 }
 
-# O arquivo da tabela: a cópia que tabelas_atualizar() baixou, quando ela é mais nova que a instalação do pacote; senão,
-# a do pacote. Quem instala uma versão nova do pacote volta a ter as tabelas dela, até atualizar de novo.
+# O arquivo da tabela: o que tabelas_atualizar() baixou, quando o conjunto baixado é mais novo que o do pacote e a
+# tabela tem as mesmas colunas que a do pacote; senão, o do pacote. Quem instala um pacote com tabelas mais novas que
+# as baixadas volta a ter as dele.
 arquivo_da_tabela = function(nome_da_tabela) {
   do_pacote = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
-  baixado = file.path(pasta_das_tabelas_baixadas(), paste0(nome_da_tabela, ".csv"))
-  # O DESCRIPTION do pacote instalado é gravado na instalação.
-  instalado_em = file.mtime(system.file("DESCRIPTION", package = "RNFe"))
-  if (file.exists(baixado) && !is.na(instalado_em) && file.mtime(baixado) > instalado_em) {
-    return(baixado)
+  if (usar_as_tabelas_baixadas()) {
+    baixado = file.path(pasta_das_tabelas_baixadas(), paste0(nome_da_tabela, ".csv"))
+    if (file.exists(baixado) && identical(primeira_linha(baixado), primeira_linha(do_pacote))) {
+      return(baixado)
+    }
   }
   do_pacote
 }
 
+# A escolha vale para a sessão inteira (até a próxima chamada de tabelas_atualizar()): é feita uma vez, pela versão do
+# conjunto gravada na lista de conferência de cada lado, e não pela data dos arquivos, que muda a cada instalação.
+usar_as_tabelas_baixadas = function() {
+  if (is.null(tabelas_ja_lidas[["usar_as_baixadas"]])) {
+    versao_baixada = versao_da_conferencia(file.path(pasta_das_tabelas_baixadas(), ARQUIVO_DA_CONFERENCIA))
+    versao_do_pacote = versao_da_conferencia(arquivo_da_conferencia_do_pacote())
+    tabelas_ja_lidas[["usar_as_baixadas"]] = !is.na(versao_baixada) && !is.na(versao_do_pacote) &&
+      versao_baixada > versao_do_pacote
+  }
+  tabelas_ja_lidas[["usar_as_baixadas"]]
+}
+
+arquivo_da_conferencia_do_pacote = function() {
+  system.file("extdata", "tabelas", ARQUIVO_DA_CONFERENCIA, package = "RNFe")
+}
+
 pasta_das_tabelas_baixadas = function() {
   file.path(tools::R_user_dir("RNFe", which = "cache"), "tabelas")
+}
+
+primeira_linha = function(arquivo) {
+  readLines(arquivo, n = 1, warn = FALSE, encoding = "UTF-8")
+}
+
+# A versão do conjunto de uma lista de conferência; NA quando ela não existe ou não está no formato.
+versao_da_conferencia = function(arquivo) {
+  conferencia = ler_conferencia(arquivo)
+  if (is.null(conferencia)) {
+    return(NA_character_)
+  }
+  conferencia$versao_do_conjunto[1]
+}
+
+# A lista de conferência lida, ou NULL quando o arquivo não existe, não abre (um aviso da leitura conta como erro) ou
+# não tem as colunas, uma versão só e a versão no formato "AAAA-MM-DD HH:MM:SS".
+ler_conferencia = function(arquivo) {
+  if (!nzchar(arquivo) || !file.exists(arquivo)) {
+    return(NULL)
+  }
+  conferencia = tryCatch(
+    withCallingHandlers(
+      utils::read.csv(arquivo, colClasses = "character", fileEncoding = "UTF-8", na.strings = ""),
+      warning = function(aviso) stop(conditionMessage(aviso), call. = FALSE)
+    ),
+    error = function(erro) NULL
+  )
+  formato_certo = !is.null(conferencia) && identical(names(conferencia), COLUNAS_DA_CONFERENCIA) &&
+    nrow(conferencia) > 0 && !anyNA(conferencia) && length(unique(conferencia$versao_do_conjunto)) == 1 &&
+    grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$", conferencia$versao_do_conjunto[1])
+  if (!formato_certo) {
+    return(NULL)
+  }
+  conferencia
 }
 
 #' Atualizar as tabelas fiscais pelo repositório do RNFe
@@ -179,23 +240,33 @@ pasta_das_tabelas_baixadas = function() {
 #' mudou depois de conferir: assim as tabelas ficam em dia sem esperar uma
 #' versão nova do pacote.
 #'
-#' Nada é baixado sem esta função ser chamada. As tabelas ficam na pasta de
-#' cache do R para o RNFe ([tools::R_user_dir()]) e valem para as próximas
-#' sessões também. Uma tabela só é trocada quando a nova tem as mesmas colunas
-#' que a do pacote; se o formato mudou, ela fica como está, e o resultado diz
-#' que é preciso atualizar o pacote. Quem instala uma versão nova do pacote
-#' volta a ter as tabelas dela, que já vêm atualizadas, até chamar esta função
-#' de novo.
+#' Nada é baixado sem esta função ser chamada. Primeiro vem a lista de
+#' conferência do repositório, com a soma de conferência (md5) e o número de
+#' linhas de cada tabela e a versão do conjunto. Quando o pacote instalado já
+#' tem esse conjunto (ou um mais novo), nada mais é baixado. Senão, cada tabela
+#' baixada tem de conferir com a lista, abrir sem erro e ter as mesmas colunas
+#' que a do pacote; se o formato mudou, o resultado diz que é preciso atualizar
+#' o pacote. **As tabelas são trocadas todas juntas ou nenhuma:** se uma der
+#' problema, ficam as que estavam em uso, para nunca misturar tabelas de
+#' origens diferentes.
+#'
+#' As tabelas baixadas ficam na pasta de cache do R para o RNFe
+#' ([tools::R_user_dir()]) e valem para as próximas sessões também, enquanto
+#' forem mais novas que as do pacote instalado (pela versão do conjunto, não
+#' pela data dos arquivos). Quem instala uma versão do pacote com tabelas mais
+#' novas volta a ter as dele.
 #'
 #' Precisa do pacote `httr2`.
 #'
 #' @param usar_as_do_pacote `TRUE` apaga as tabelas baixadas e volta a usar as
 #'   que vieram no pacote, sem baixar nada.
 #' @return Um `data.frame` com uma linha por tabela: `tabela`,
-#'   `linhas_antes` (as da tabela em uso antes de baixar), `linhas_agora`,
-#'   `mudou` (`TRUE` quando a tabela baixada é diferente da que estava em uso)
-#'   e `problema` (por que a tabela não foi trocada; vazio quando foi). Com
-#'   `usar_as_do_pacote = TRUE`, nada (invisível).
+#'   `linhas_antes` (as da tabela em uso antes de baixar), `linhas_agora` (as
+#'   da tabela em uso depois), `mudou` (`TRUE` quando a tabela em uso agora é
+#'   diferente da de antes) e `problema` (por que as tabelas não foram
+#'   trocadas; vazio quando foram). Com `usar_as_do_pacote = TRUE`, nada
+#'   (invisível); dá erro se não conseguir apagar a pasta (um arquivo aberto
+#'   por outro programa, no Windows).
 #' @seealso [tabela_fiscal()]
 #' @examples
 #' \dontrun{
@@ -210,61 +281,177 @@ tabelas_atualizar = function(usar_as_do_pacote = FALSE) {
     stop("Informe usar_as_do_pacote = TRUE ou FALSE.", call. = FALSE)
   }
   pasta = pasta_das_tabelas_baixadas()
+  # Dê certo ou não, a próxima leitura de cada tabela, e a escolha entre as baixadas e as do pacote, voltam ao disco.
+  on.exit(rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas), add = TRUE)
   if (usar_as_do_pacote) {
-    unlink(pasta, recursive = TRUE)
-    rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+    if (!apagar_pasta(pasta)) {
+      stop("N\u00e3o deu para apagar as tabelas baixadas (algum arquivo aberto por outro programa?): ", pasta, call. = FALSE)
+    }
     return(invisible(NULL))
   }
   exigir_pacotes("httr2")
-  dir.create(pasta, recursive = TRUE, showWarnings = FALSE)
-  linhas = list()
-  for (nome_da_tabela in TABELAS_QUE_SE_ATUALIZAM) {
-    linhas[[length(linhas) + 1]] = atualizar_uma_tabela(nome_da_tabela, pasta)
+
+  arquivos_em_uso = vapply(TABELAS_QUE_SE_ATUALIZAM, arquivo_da_tabela, character(1), USE.NAMES = FALSE)
+  md5_em_uso = unname(tools::md5sum(arquivos_em_uso))
+  linhas_em_uso = vapply(arquivos_em_uso, contar_linhas_da_tabela, integer(1), USE.NAMES = FALSE)
+  resultado = data.frame(tabela = TABELAS_QUE_SE_ATUALIZAM, linhas_antes = linhas_em_uso, linhas_agora = linhas_em_uso,
+                         mudou = FALSE, problema = NA_character_)
+
+  # Tudo é baixado numa pasta ao lado, e só ela inteira entra no lugar da pasta em uso.
+  preparada = paste0(pasta, "_preparando")
+  if (!apagar_pasta(preparada)) {
+    resultado$problema = paste("n\u00e3o deu para apagar a pasta de uma atualiza\u00e7\u00e3o anterior:", preparada)
+    return(resultado)
   }
-  # A próxima leitura de cada tabela já pega a nova.
-  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
-  do.call(rbind, linhas)
+  dir.create(preparada, recursive = TRUE, showWarnings = FALSE)
+  on.exit(apagar_pasta(preparada), add = TRUE)
+
+  problema_da_conferencia = baixar_do_repositorio(ARQUIVO_DA_CONFERENCIA, preparada)
+  conferencia = ler_conferencia(file.path(preparada, ARQUIVO_DA_CONFERENCIA))
+  if (is.na(problema_da_conferencia) && is.null(conferencia)) {
+    problema_da_conferencia = "veio fora do formato"
+  }
+  if (!is.na(problema_da_conferencia)) {
+    resultado$problema = paste("a lista de confer\u00eancia do reposit\u00f3rio", problema_da_conferencia)
+    return(resultado)
+  }
+  versao_do_pacote = versao_da_conferencia(arquivo_da_conferencia_do_pacote())
+  if (!is.na(versao_do_pacote) && conferencia$versao_do_conjunto[1] <= versao_do_pacote) {
+    # O pacote instalado já tem estas tabelas, ou mais novas: as baixadas antes, se houver, não servem mais.
+    apagar_pasta(pasta)
+    tabelas_ja_lidas[["usar_as_baixadas"]] = NULL
+    arquivos_do_pacote = vapply(TABELAS_QUE_SE_ATUALIZAM, arquivo_da_tabela, character(1), USE.NAMES = FALSE)
+    resultado$linhas_agora = vapply(arquivos_do_pacote, contar_linhas_da_tabela, integer(1), USE.NAMES = FALSE)
+    resultado$mudou = unname(tools::md5sum(arquivos_do_pacote)) != md5_em_uso
+    return(resultado)
+  }
+
+  for (posicao in seq_along(TABELAS_QUE_SE_ATUALIZAM)) {
+    conferida = tryCatch(
+      baixar_e_conferir_tabela(TABELAS_QUE_SE_ATUALIZAM[posicao], preparada, conferencia),
+      error = function(erro) list(problema = paste("erro:", conditionMessage(erro)), linhas = NA_integer_)
+    )
+    resultado$problema[posicao] = conferida$problema
+    resultado$linhas_agora[posicao] = conferida$linhas
+  }
+  if (any(!is.na(resultado$problema))) {
+    resultado$problema[is.na(resultado$problema)] = paste(
+      "n\u00e3o trocada: as tabelas s\u00f3 s\u00e3o trocadas todas juntas, e outra deu problema"
+    )
+    resultado$linhas_agora = resultado$linhas_antes
+    return(resultado)
+  }
+  problema_da_troca = trocar_a_pasta(preparada, pasta)
+  if (!is.na(problema_da_troca)) {
+    resultado$problema = problema_da_troca
+    resultado$linhas_agora = resultado$linhas_antes
+    return(resultado)
+  }
+  md5_agora = unname(tools::md5sum(file.path(pasta, paste0(TABELAS_QUE_SE_ATUALIZAM, ".csv"))))
+  resultado$mudou = md5_agora != md5_em_uso
+  resultado
 }
 
-# Baixa uma tabela e a grava na pasta, se ela abre e tem as colunas da do pacote. Grava num arquivo temporário e só
-# depois troca, para uma tabela pela metade nunca ficar no lugar.
-atualizar_uma_tabela = function(nome_da_tabela, pasta) {
-  em_uso = utils::read.csv(arquivo_da_tabela(nome_da_tabela), colClasses = "character", fileEncoding = "UTF-8", na.strings = "")
-  do_pacote = utils::read.csv(system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe"),
-                              colClasses = "character", fileEncoding = "UTF-8", na.strings = "", nrows = 1)
-  linha = data.frame(tabela = nome_da_tabela, linhas_antes = nrow(em_uso), linhas_agora = nrow(em_uso), mudou = FALSE,
-                     problema = NA_character_)
-  pedido = httr2::request(paste0(ENDERECO_DAS_TABELAS_NO_REPOSITORIO, nome_da_tabela, ".csv"))
+contar_linhas_da_tabela = function(arquivo_csv) {
+  nrow(utils::read.csv(arquivo_csv, colClasses = "character", fileEncoding = "UTF-8", na.strings = ""))
+}
+
+# Baixa um arquivo do repositório para a pasta. Devolve NA quando deu certo, ou o problema.
+baixar_do_repositorio = function(nome_do_arquivo, pasta) {
+  pedido = httr2::request(paste0(ENDERECO_DAS_TABELAS_NO_REPOSITORIO, nome_do_arquivo))
   pedido = httr2::req_user_agent(pedido, "RNFe (https://github.com/biuspoly/RNFe)")
   pedido = httr2::req_timeout(pedido, 120)
   pedido = httr2::req_error(pedido, is_error = function(resposta) FALSE)
   resposta = tryCatch(httr2::req_perform(pedido), error = function(erro) erro)
   if (inherits(resposta, "error")) {
-    linha$problema = paste("n\u00e3o baixou:", gsub("\\s+", " ", conditionMessage(resposta)))
-    return(linha)
+    return(paste("n\u00e3o baixou:", gsub("\\s+", " ", conditionMessage(resposta))))
   }
-  if (httr2::resp_status(resposta) != 200 || !httr2::resp_has_body(resposta)) {
-    linha$problema = paste("n\u00e3o baixou: HTTP", httr2::resp_status(resposta))
-    return(linha)
+  if (httr2::resp_status(resposta) != 200) {
+    return(paste("n\u00e3o baixou: HTTP", httr2::resp_status(resposta)))
   }
-  temporario = file.path(pasta, paste0(nome_da_tabela, ".csv.baixando"))
-  writeBin(httr2::resp_body_raw(resposta), temporario)
-  baixada = tryCatch(utils::read.csv(temporario, colClasses = "character", fileEncoding = "UTF-8", na.strings = ""),
-                     error = function(erro) NULL)
-  if (is.null(baixada) || nrow(baixada) == 0) {
-    unlink(temporario)
-    linha$problema = "a tabela baixada n\u00e3o abriu ou veio vazia"
-    return(linha)
+  corpo = raw(0)
+  if (httr2::resp_has_body(resposta)) {
+    corpo = httr2::resp_body_raw(resposta)
   }
-  if (!identical(names(baixada), names(do_pacote))) {
-    unlink(temporario)
-    linha$problema = "a tabela mudou de formato: atualize o pacote RNFe para usar a nova"
-    return(linha)
+  if (length(corpo) == 0) {
+    return("veio vazia")
   }
-  file.rename(temporario, file.path(pasta, paste0(nome_da_tabela, ".csv")))
-  linha$linhas_agora = nrow(baixada)
-  linha$mudou = !identical(baixada, em_uso)
-  linha
+  primeiro_caractere = corpo[!(corpo %in% charToRaw(" \t\r\n"))][1]
+  if (identical(primeiro_caractere, charToRaw("<"))) {
+    return("veio como p\u00e1gina da web, n\u00e3o como tabela (algum proxy ou portal de rede no caminho?)")
+  }
+  writeBin(corpo, file.path(pasta, nome_do_arquivo))
+  NA_character_
+}
+
+# Baixa uma tabela e confere: a soma de conferência e o número de linhas da lista, as colunas da do pacote e a leitura
+# sem erro nem aviso (como o pacote vai ler). Devolve o problema (NA quando deu certo) e as linhas.
+baixar_e_conferir_tabela = function(nome_da_tabela, pasta, conferencia) {
+  sem_linhas = NA_integer_
+  da_conferencia = conferencia[conferencia$tabela == nome_da_tabela, ]
+  if (nrow(da_conferencia) != 1) {
+    return(list(problema = "a lista de confer\u00eancia do reposit\u00f3rio n\u00e3o traz esta tabela", linhas = sem_linhas))
+  }
+  nome_do_arquivo = paste0(nome_da_tabela, ".csv")
+  problema = baixar_do_repositorio(nome_do_arquivo, pasta)
+  if (!is.na(problema)) {
+    return(list(problema = problema, linhas = sem_linhas))
+  }
+  baixado = file.path(pasta, nome_do_arquivo)
+  if (!identical(unname(tools::md5sum(baixado)), da_conferencia$md5)) {
+    return(list(problema = paste("n\u00e3o confere com a lista de confer\u00eancia do reposit\u00f3rio (veio pela metade",
+                                 "ou diferente)"), linhas = sem_linhas))
+  }
+  do_pacote = system.file("extdata", "tabelas", nome_do_arquivo, package = "RNFe")
+  if (!identical(primeira_linha(baixado), primeira_linha(do_pacote))) {
+    return(list(problema = "a tabela mudou de formato: atualize o pacote RNFe para usar as tabelas novas",
+                linhas = sem_linhas))
+  }
+  lida = tryCatch(
+    withCallingHandlers(ler_tabela_csv(baixado, nome_da_tabela),
+                        warning = function(aviso) stop(conditionMessage(aviso), call. = FALSE)),
+    error = function(erro) erro
+  )
+  if (inherits(lida, "error")) {
+    return(list(problema = paste("a tabela baixada n\u00e3o abre:", conditionMessage(lida)), linhas = sem_linhas))
+  }
+  if (nrow(lida) != as.integer(da_conferencia$linhas)) {
+    return(list(problema = paste("a tabela baixada tem", nrow(lida), "linhas, e a lista de confer\u00eancia diz",
+                                 da_conferencia$linhas), linhas = sem_linhas))
+  }
+  list(problema = NA_character_, linhas = nrow(lida))
+}
+
+# Põe a pasta preparada no lugar da pasta em uso, de uma vez: a em uso sai do caminho e só é apagada depois que a nova
+# entrou. Se algo falha (no Windows, um arquivo aberto por outro programa), volta a que estava. Devolve NA quando deu
+# certo, ou o problema.
+trocar_a_pasta = function(preparada, pasta) {
+  antiga = paste0(pasta, "_antiga")
+  if (!apagar_pasta(antiga)) {
+    return(paste("n\u00e3o deu para trocar as tabelas: n\u00e3o deu para apagar", antiga))
+  }
+  tinha_tabelas_baixadas = dir.exists(pasta)
+  if (tinha_tabelas_baixadas && !renomear(pasta, antiga)) {
+    return("n\u00e3o deu para trocar as tabelas: as baixadas antes est\u00e3o abertas por outro programa")
+  }
+  if (!renomear(preparada, pasta)) {
+    if (tinha_tabelas_baixadas) {
+      renomear(antiga, pasta)
+    }
+    return("n\u00e3o deu para trocar as tabelas: a pasta nova n\u00e3o p\u00f4de entrar no lugar")
+  }
+  apagar_pasta(antiga)
+  NA_character_
+}
+
+renomear = function(de, para) {
+  suppressWarnings(file.rename(de, para))
+}
+
+# Apaga a pasta e diz se ela sumiu mesmo: no Windows, um arquivo aberto por outro programa impede.
+apagar_pasta = function(pasta) {
+  unlink(pasta, recursive = TRUE)
+  !dir.exists(pasta)
 }
 
 # No NCM, o subitem diz pouco sozinho ("-- Outros"). A descrição completa junta a da posição (4 dígitos)

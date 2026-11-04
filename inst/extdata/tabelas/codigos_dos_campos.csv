@@ -109,6 +109,7 @@
 "CT-e","procEmi","67","0","Emissão com aplicativo do contribuinte",,
 "CT-e","procEmi","67","3","Emissão pelo contribuinte com aplicativo fornecido pelo Fisco",,
 "CT-e","indGlobalizado",,"1","CT-e globalizado",,
+"CT-e","indAlteraToma",,"1","CT-e de alteração de tomador",,
 "CT-e","retira",,"0","Sim: o recebedor retira no aeroporto, filial, porto ou estação de destino",,
 "CT-e","retira",,"1","Não",,
 "CT-e","toma",,"0","Remetente",,

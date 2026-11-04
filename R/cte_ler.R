@@ -174,9 +174,10 @@ unidade          cUnid -
 ")
 
 SIGNIFICADOS_DO_DOCUMENTO = ler_campos("
-coluna_do_codigo campo coluna_do_contexto
-modelo           mod   -
-tipo_documento   tpDoc tipo
+coluna_do_codigo campo         coluna_do_contexto
+modelo           mod           -
+tipo_documento   tpDoc         tipo
+altera_tomador   indAlteraToma -
 ")
 
 # A partir de cada Comp (vPrest/Comp).
@@ -186,10 +187,13 @@ nome   xNome   texto
 valor  vComp   numero
 ")
 
-# Os documentos que o CT-e cita, a partir do infCte, nesta ordem: os transportados (infNFe, infNF,
-# infOutros, infDCe), os de transporte anterior (idDocAntEle, idDocAntPap), o CT-e complementado, o
-# substituído, o CT-e multimodal do serviço vinculado e, no CT-e OS, os documentos referenciados e as GTV-e.
+# Os documentos que o CT-e cita, a partir do infCte, na ordem do XML: os da Reforma no ide (o do pagamento
+# antecipado e o anterior da compra governamental), os transportados (infNFe, infNF, infOutros, infDCe), os de
+# transporte anterior (idDocAntEle, idDocAntPap), o CT-e complementado, o substituído, o CT-e multimodal do serviço
+# vinculado e, no CT-e OS, os documentos referenciados e as GTV-e.
 CAMINHO_DOS_DOCUMENTOS = paste(
+  "ide/gPagAntecipado/chDFePagAnt",
+  "ide/gCompraGov/refDFeAnt",
   "infCTeNorm/infDoc/*",
   "infCTeNorm/docAnt/emiDocAnt/idDocAnt/*",
   "infCteComp",
@@ -204,7 +208,7 @@ CAMINHO_DOS_DOCUMENTOS = paste(
 CAMPOS_DO_DOCUMENTO = ler_campos("
 coluna              caminho                                            tipo
 tipo                self::*                                            elemento
-documento_chave     chave|chCTe|chCte|chBPe|chCTeMultimodal            texto
+documento_chave     chave|chCTe|chCte|chBPe|chCTeMultimodal|self::chDFePagAnt|self::refDFeAnt  texto
 modelo              mod                                                texto
 tipo_documento      tpDoc                                              texto
 descricao           descOutros                                         texto
@@ -226,6 +230,7 @@ pedido              nPed                                               texto
 emitente_documento  ancestor::emiDocAnt/CNPJ|ancestor::emiDocAnt/CPF   texto
 emitente_nome       ancestor::emiDocAnt/xNome                          texto
 emitente_uf         ancestor::emiDocAnt/UF                             texto
+altera_tomador      indAlteraToma                                      inteiro
 ")
 
 # A partir de cada infQ (infCTeNorm/infCarga/infQ).
@@ -310,12 +315,17 @@ texto  xTexto   texto
 #' `r documentar_campos(CAMPOS_DO_DOCUMENTO)`.
 #' Cada grupo tem só alguns desses campos. `tipo` é o grupo de onde o documento
 #' veio:
+#' * `chDFePagAnt`: o documento do pagamento antecipado cujas parcelas este
+#'   abate (grupo `gPagAntecipado`, da Reforma);
+#' * `refDFeAnt`: o documento fiscal anterior da compra governamental (grupo
+#'   `gCompraGov`, da Reforma);
 #' * `infNFe`, `infNF`, `infOutros` e `infDCe`: os documentos transportados
 #'   (NF-e, nota fiscal em papel, outros documentos e DC-e);
 #' * `idDocAntEle` e `idDocAntPap`: os documentos de transporte anterior
 #'   (eletrônico e em papel), com o emitente;
 #' * `infCteComp`: o CT-e que este complementa;
-#' * `infCteSub`: o CT-e que este substitui;
+#' * `infCteSub`: o CT-e que este substitui, e `altera_tomador` diz se a
+#'   substituição é para trocar o tomador;
 #' * `infCTeMultimodal`: o CT-e multimodal do serviço vinculado;
 #' * `infDocRef` e `infGTVe`: no CT-e OS, os documentos referenciados (ou o
 #'   BP-e) e as GTV-e.

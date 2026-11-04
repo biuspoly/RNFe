@@ -86,9 +86,10 @@ tabela do Portal da NF-e (o \code{tBand}).
 \item \code{"codigos_dos_campos"}: o que quer dizer cada código dos campos dos
 documentos que não têm tabela própria (forma de emissão, finalidade,
 modal, tipo de carga, regime do Simples Nacional...): \code{documento}
-(\code{"NF-e"}, \code{"CT-e"}, \code{"MDF-e"}, \code{"NFS-e"} ou \code{"evento"}), \code{campo} (o nome
-no leiaute, como \code{tpEmis}), \code{contexto} (quando o significado depende de
-outra coisa: o modelo do CT-e ou o grupo do documento), \code{codigo} e
+(\code{"NF-e"}, \code{"CT-e"}, \code{"GTV-e"}, \code{"MDF-e"}, \code{"NFS-e"} ou \code{"evento"}; o CT-e
+OS e o CT-e simplificado usam os do \code{"CT-e"}), \code{campo} (o nome no leiaute,
+como \code{tpEmis}), \code{contexto} (quando o significado depende de outra coisa: o
+modelo do CT-e, o tipo do CT-e ou o grupo do documento), \code{codigo} e
 \code{descricao}. Os textos vêm da documentação dos schemas oficiais; os
 leitores os põem ao lado de cada coluna de código (\verb{*_descricao}).
 \item \code{"municipios"}: os municípios vigentes do IBGE, com o \code{codigo} de 7

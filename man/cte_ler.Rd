@@ -92,16 +92,21 @@ Os componentes do valor da prestação (frete peso, pedágio...), um por linha:
 \section{documentos}{
 
 Os documentos que o CT-e cita, um por linha: \code{chave},
-\code{tipo} (\verb{self::*}), \code{documento_chave} (\code{chave|chCTe|chCte|chBPe|chCTeMultimodal}), \code{modelo} (\code{mod}), \code{tipo_documento} (\code{tpDoc}), \code{descricao} (\code{descOutros}), \code{serie} (\code{serie}), \code{subserie} (\code{subser|subserie}), \code{numero} (\code{nDoc}), \code{emissao} (\code{dEmi}), \code{valor} (\code{vNF|vDocFisc|vDoc}), \code{base_icms} (\code{vBC}), \code{valor_icms} (\code{vICMS}), \code{base_icms_st} (\code{vBCST}), \code{valor_icms_st} (\code{vST}), \code{valor_produtos} (\code{vProd}), \code{cfop} (\code{nCFOP}), \code{peso} (\code{nPeso}), \code{previsao_entrega} (\code{dPrev}), \code{romaneio} (\code{nRoma}), \code{pedido} (\code{nPed}), \code{emitente_documento} (\code{ancestor::emiDocAnt/CNPJ|ancestor::emiDocAnt/CPF}), \code{emitente_nome} (\code{ancestor::emiDocAnt/xNome}), \code{emitente_uf} (\code{ancestor::emiDocAnt/UF}).
+\code{tipo} (\verb{self::*}), \code{documento_chave} (\code{chave|chCTe|chCte|chBPe|chCTeMultimodal|self::chDFePagAnt|self::refDFeAnt}), \code{modelo} (\code{mod}), \code{tipo_documento} (\code{tpDoc}), \code{descricao} (\code{descOutros}), \code{serie} (\code{serie}), \code{subserie} (\code{subser|subserie}), \code{numero} (\code{nDoc}), \code{emissao} (\code{dEmi}), \code{valor} (\code{vNF|vDocFisc|vDoc}), \code{base_icms} (\code{vBC}), \code{valor_icms} (\code{vICMS}), \code{base_icms_st} (\code{vBCST}), \code{valor_icms_st} (\code{vST}), \code{valor_produtos} (\code{vProd}), \code{cfop} (\code{nCFOP}), \code{peso} (\code{nPeso}), \code{previsao_entrega} (\code{dPrev}), \code{romaneio} (\code{nRoma}), \code{pedido} (\code{nPed}), \code{emitente_documento} (\code{ancestor::emiDocAnt/CNPJ|ancestor::emiDocAnt/CPF}), \code{emitente_nome} (\code{ancestor::emiDocAnt/xNome}), \code{emitente_uf} (\code{ancestor::emiDocAnt/UF}), \code{altera_tomador} (\code{indAlteraToma}).
 Cada grupo tem só alguns desses campos. \code{tipo} é o grupo de onde o documento
 veio:
 \itemize{
+\item \code{chDFePagAnt}: o documento do pagamento antecipado cujas parcelas este
+abate (grupo \code{gPagAntecipado}, da Reforma);
+\item \code{refDFeAnt}: o documento fiscal anterior da compra governamental (grupo
+\code{gCompraGov}, da Reforma);
 \item \code{infNFe}, \code{infNF}, \code{infOutros} e \code{infDCe}: os documentos transportados
 (NF-e, nota fiscal em papel, outros documentos e DC-e);
 \item \code{idDocAntEle} e \code{idDocAntPap}: os documentos de transporte anterior
 (eletrônico e em papel), com o emitente;
 \item \code{infCteComp}: o CT-e que este complementa;
-\item \code{infCteSub}: o CT-e que este substitui;
+\item \code{infCteSub}: o CT-e que este substitui, e \code{altera_tomador} diz se a
+substituição é para trocar o tomador;
 \item \code{infCTeMultimodal}: o CT-e multimodal do serviço vinculado;
 \item \code{infDocRef} e \code{infGTVe}: no CT-e OS, os documentos referenciados (ou o
 BP-e) e as GTV-e.

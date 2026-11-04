@@ -152,14 +152,57 @@ test_that("a descri\u00e7\u00e3o muda com a data da nota", {
                    c(NA, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico"))
 })
 
-# O repositório de mentira: cada tabela do pacote como está, menos as que o teste troca. A pasta de cache do R vai para
-# uma pasta temporária, que é apagada no fim.
+# O repositório de mentira: cada tabela do pacote como está, menos as trocadas, e a lista de conferência delas com a
+# versão pedida. `trocadas` é uma lista nome = corpo (raw); `fora_da_lista` são as tabelas que a lista não traz.
 texto_da_tabela_do_pacote = function(nome_da_tabela) {
   arquivo = system.file("extdata", "tabelas", paste0(nome_da_tabela, ".csv"), package = "RNFe")
   readBin(arquivo, "raw", file.size(arquivo))
 }
 
-# A pasta de cache do R numa pasta temporária, para o teste não mexer na de quem roda. Devolve o valor de antes.
+texto_trocado = function(nome_da_tabela, de, para) {
+  charToRaw(enc2utf8(sub(de, para, rawToChar(texto_da_tabela_do_pacote(nome_da_tabela)), fixed = TRUE)))
+}
+
+repositorio_de_mentira = function(versao, trocadas = list(), fora_da_lista = character()) {
+  corpos = list()
+  linhas_da_lista = data.frame()
+  for (nome_da_tabela in TABELAS_QUE_SE_ATUALIZAM) {
+    corpo = trocadas[[nome_da_tabela]]
+    if (is.null(corpo)) {
+      corpo = texto_da_tabela_do_pacote(nome_da_tabela)
+    }
+    corpos[[nome_da_tabela]] = corpo
+    arquivo_temporario = tempfile(fileext = ".csv")
+    writeBin(corpo, arquivo_temporario)
+    linhas = nrow(utils::read.csv(arquivo_temporario, colClasses = "character", fileEncoding = "UTF-8", na.strings = ""))
+    linhas_da_lista = rbind(linhas_da_lista, data.frame(tabela = nome_da_tabela, linhas = linhas,
+                                                        md5 = unname(tools::md5sum(arquivo_temporario)),
+                                                        versao_do_conjunto = versao))
+    unlink(arquivo_temporario)
+  }
+  linhas_da_lista = linhas_da_lista[!(linhas_da_lista$tabela %in% fora_da_lista), ]
+  arquivo_temporario = tempfile(fileext = ".csv")
+  utils::write.csv(linhas_da_lista, arquivo_temporario, row.names = FALSE)
+  corpos[["conferencia"]] = readBin(arquivo_temporario, "raw", file.size(arquivo_temporario))
+  unlink(arquivo_temporario)
+  corpos
+}
+
+# Responde como o GitHub, com os corpos do repositório de mentira; `especiais` troca a resposta de alguns arquivos
+# (uma função que devolve a resposta ou dá erro). Guarda os endereços pedidos em `pedidos`, no ambiente de quem chamou.
+responder_com = function(corpos, especiais = list(), ambiente = parent.frame()) {
+  assign("pedidos", character(), envir = ambiente)
+  function(req) {
+    assign("pedidos", c(get("pedidos", envir = ambiente), req$url), envir = ambiente)
+    nome = sub("\\.csv$", "", basename(req$url))
+    if (!is.null(especiais[[nome]])) {
+      return(especiais[[nome]]())
+    }
+    httr2::response(status_code = 200, headers = "Content-Type: text/plain; charset=utf-8", body = corpos[[nome]])
+  }
+}
+
+# A pasta de cache do R numa pasta temporária, para o teste começar sem nada baixado. Devolve o valor de antes.
 apontar_o_cache_para = function(pasta) {
   antes = Sys.getenv("R_USER_CACHE_DIR", unset = NA)
   Sys.setenv(R_USER_CACHE_DIR = pasta)
@@ -177,66 +220,192 @@ voltar_o_cache = function(antes, pasta) {
   unlink(pasta, recursive = TRUE)
 }
 
+VERSAO_NOVA = "2099-01-01 00:00:00"
+ARQUIVO_DO_CST_ICMS_DO_PACOTE = system.file("extdata", "tabelas", "cst_icms.csv", package = "RNFe")
+
+test_that("os testes n\u00e3o usam a pasta de cache do R de quem roda", {
+  expect_identical(Sys.getenv("R_USER_CACHE_DIR"), file.path(tempdir(), "cache_dos_testes_do_rnfe"))
+})
+
+test_that("a lista de confer\u00eancia est\u00e1 em dia com as tabelas do pacote", {
+  pasta_das_tabelas = system.file("extdata", "tabelas", package = "RNFe")
+  conferencia = ler_conferencia(file.path(pasta_das_tabelas, "conferencia.csv"))
+  expect_false(is.null(conferencia))
+  arquivos_das_tabelas = setdiff(list.files(pasta_das_tabelas, pattern = "\\.csv$"), "conferencia.csv")
+  expect_setequal(paste0(conferencia$tabela, ".csv"), arquivos_das_tabelas)
+  expect_true(all(TABELAS_QUE_SE_ATUALIZAM %in% conferencia$tabela))
+  for (numero_da_linha in seq_len(nrow(conferencia))) {
+    arquivo = file.path(pasta_das_tabelas, paste0(conferencia$tabela[numero_da_linha], ".csv"))
+    # Se falhar: rode ferramentas/gerar_conferencia_das_tabelas.R depois de mexer numa tabela.
+    expect_identical(unname(tools::md5sum(arquivo)), conferencia$md5[numero_da_linha], label = conferencia$tabela[numero_da_linha])
+    expect_identical(contar_linhas_da_tabela(arquivo), as.integer(conferencia$linhas[numero_da_linha]))
+  }
+})
+
 test_that("tabelas_atualizar(): baixa do reposit\u00f3rio, usa a nova e volta \u00e0 do pacote", {
   skip_if_not_installed("httr2")
   pasta = tempfile("cache_do_rnfe_")
   antes = apontar_o_cache_para(pasta)
   on.exit(voltar_o_cache(antes, pasta), add = TRUE)
-  pedidos = character()
-  httr2::local_mocked_responses(function(req) {
-    pedidos <<- c(pedidos, req$url)
-    nome = sub("\\.csv$", "", basename(req$url))
-    corpo = texto_da_tabela_do_pacote(nome)
-    if (nome == "cst_icms") {
-      corpo = charToRaw(enc2utf8(sub("Tributada integralmente", "Tributada integralmente (texto novo)", rawToChar(corpo), fixed = TRUE)))
-    }
-    httr2::response(status_code = 200, headers = "Content-Type: text/plain; charset=utf-8", body = corpo)
-  })
+  corpos = repositorio_de_mentira(VERSAO_NOVA, list(
+    cst_icms = texto_trocado("cst_icms", "Tributada integralmente", "Tributada integralmente (texto novo)")
+  ))
+  httr2::local_mocked_responses(responder_com(corpos))
   atualizacao = tabelas_atualizar()
   expect_identical(atualizacao$tabela, TABELAS_QUE_SE_ATUALIZAM)
   expect_identical(atualizacao$tabela[atualizacao$mudou], "cst_icms")
   expect_true(all(is.na(atualizacao$problema)))
-  expect_identical(pedidos[1], "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/cfop.csv")
+  expect_identical(atualizacao$linhas_agora, atualizacao$linhas_antes)
+  # A lista de conferência vem primeiro.
+  expect_identical(pedidos[1], "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/conferencia.csv")
+  expect_identical(pedidos[2], "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/cfop.csv")
   # A tabela nova já vale nesta sessão e nas leituras dos documentos.
   expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente (texto novo)")
   expect_identical(descricao_na_data("cst_icms", "00", as.Date("2026-01-01")), "Tributada integralmente (texto novo)")
-  # De novo, nada mudou; e a volta às do pacote.
+  expect_false(dir.exists(paste0(pasta_das_tabelas_baixadas(), "_preparando")))
+  # De novo, nada mudou; e a volta às do pacote, que apaga a pasta.
   expect_false(any(tabelas_atualizar()$mudou))
   tabelas_atualizar(usar_as_do_pacote = TRUE)
   expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente")
+  expect_false(dir.exists(pasta_das_tabelas_baixadas()))
+  expect_error(tabelas_atualizar(usar_as_do_pacote = NA), "usar_as_do_pacote")
 })
 
-test_that("tabelas_atualizar(): formato novo, tabela que n\u00e3o baixa e c\u00f3pia mais velha que a instala\u00e7\u00e3o", {
+test_that("tabelas_atualizar(): quando o pacote j\u00e1 tem o conjunto do reposit\u00f3rio, s\u00f3 a lista \u00e9 baixada", {
   skip_if_not_installed("httr2")
   pasta = tempfile("cache_do_rnfe_")
   antes = apontar_o_cache_para(pasta)
   on.exit(voltar_o_cache(antes, pasta), add = TRUE)
-  httr2::local_mocked_responses(function(req) {
-    nome = sub("\\.csv$", "", basename(req$url))
-    if (nome == "cfop") {
-      return(httr2::response(status_code = 200, body = charToRaw('"codigo","coluna_nova"\n"5102","x"\n')))
-    }
-    if (nome == "ncm") {
-      return(httr2::response(status_code = 404, body = charToRaw("404: Not Found")))
-    }
-    if (nome == "origem") {
-      stop("Could not resolve host")
-    }
-    httr2::response(status_code = 200, body = texto_da_tabela_do_pacote(nome))
-  })
+  httr2::local_mocked_responses(responder_com(repositorio_de_mentira(VERSAO_NOVA, list(
+    cst_icms = texto_trocado("cst_icms", "Tributada integralmente", "Tributada integralmente (texto novo)")
+  ))))
+  tabelas_atualizar()
+  expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente (texto novo)")
+  # O repositório volta a ter o que o pacote tem: a cópia baixada antes deixa de servir e sai.
+  versao_do_pacote = versao_da_conferencia(arquivo_da_conferencia_do_pacote())
+  httr2::local_mocked_responses(responder_com(repositorio_de_mentira(versao_do_pacote)))
+  atualizacao = tabelas_atualizar()
+  expect_identical(pedidos, "https://raw.githubusercontent.com/biuspoly/RNFe/main/inst/extdata/tabelas/conferencia.csv")
+  expect_identical(atualizacao$tabela[atualizacao$mudou], "cst_icms")
+  expect_true(all(is.na(atualizacao$problema)))
+  expect_false(dir.exists(pasta_das_tabelas_baixadas()))
+  expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente")
+})
+
+test_that("tabelas_atualizar(): uma tabela com problema e nenhuma \u00e9 trocada", {
+  skip_if_not_installed("httr2")
+  pasta = tempfile("cache_do_rnfe_")
+  antes = apontar_o_cache_para(pasta)
+  on.exit(voltar_o_cache(antes, pasta), add = TRUE)
+  corpos = repositorio_de_mentira(VERSAO_NOVA, trocadas = list(
+    cfop = charToRaw('"codigo","coluna_nova"\n"5102","x"\n'),
+    cst_icms = texto_trocado("cst_icms", "Tributada integralmente", "Tributada integralmente (texto novo)")
+  ), fora_da_lista = "csosn")
+  # A tabela pela metade: a lista confere o arquivo inteiro, e vem só o começo.
+  cst_ipi_pela_metade = utils::head(corpos$cst_ipi, 150)
+  httr2::local_mocked_responses(responder_com(corpos, especiais = list(
+    ncm = function() httr2::response(status_code = 404, body = charToRaw("404: Not Found")),
+    origem = function() stop("Could not resolve host"),
+    cst_ipi = function() httr2::response(status_code = 200, body = cst_ipi_pela_metade),
+    cst_pis = function() httr2::response(status_code = 200, body = charToRaw("<html><body>Acesso bloqueado</body></html>")),
+    cst_cofins = function() httr2::response(status_code = 200)
+  )))
   atualizacao = tabelas_atualizar()
   problemas = atualizacao$problema
   names(problemas) = atualizacao$tabela
-  expect_identical(problemas[["cfop"]], "a tabela mudou de formato: atualize o pacote RNFe para usar a nova")
+  expect_identical(problemas[["cfop"]], "a tabela mudou de formato: atualize o pacote RNFe para usar as tabelas novas")
   expect_identical(problemas[["ncm"]], "n\u00e3o baixou: HTTP 404")
   expect_match(problemas[["origem"]], "^n\u00e3o baixou: .*Could not resolve host")
-  # As que não foram trocadas seguem as do pacote.
+  expect_match(problemas[["cst_ipi"]], "^n\u00e3o confere com a lista de confer\u00eancia")
+  expect_match(problemas[["cst_pis"]], "^veio como p\u00e1gina da web")
+  expect_identical(problemas[["cst_cofins"]], "veio vazia")
+  expect_identical(problemas[["csosn"]], "a lista de confer\u00eancia do reposit\u00f3rio n\u00e3o traz esta tabela")
+  expect_match(problemas[["cst_icms"]], "^n\u00e3o trocada: as tabelas s\u00f3 s\u00e3o trocadas todas juntas")
+  expect_false(any(atualizacao$mudou))
+  expect_identical(atualizacao$linhas_agora, atualizacao$linhas_antes)
+  # Nenhuma foi trocada: nem a que veio certa.
+  expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente")
   expect_true("titulo" %in% names(tabela_fiscal("cfop")))
-  expect_false(file.exists(file.path(pasta, "R", "RNFe", "tabelas", "cfop.csv")))
-  # Uma cópia baixada antes da instalação do pacote não vale.
-  baixada = arquivo_da_tabela("cst_icms")
-  expect_true(startsWith(normalizePath(baixada, winslash = "/"), normalizePath(pasta, winslash = "/")))
-  Sys.setFileTime(baixada, as.POSIXct("2020-01-01"))
-  expect_identical(arquivo_da_tabela("cst_icms"), system.file("extdata", "tabelas", "cst_icms.csv", package = "RNFe"))
-  expect_error(tabelas_atualizar(usar_as_do_pacote = NA), "usar_as_do_pacote")
+  expect_false(dir.exists(pasta_das_tabelas_baixadas()))
+  expect_false(dir.exists(paste0(pasta_das_tabelas_baixadas(), "_preparando")))
+})
+
+test_that("tabelas_atualizar(): a lista de confer\u00eancia que n\u00e3o vem ou vem fora do formato", {
+  skip_if_not_installed("httr2")
+  pasta = tempfile("cache_do_rnfe_")
+  antes = apontar_o_cache_para(pasta)
+  on.exit(voltar_o_cache(antes, pasta), add = TRUE)
+  corpos = repositorio_de_mentira(VERSAO_NOVA)
+  httr2::local_mocked_responses(responder_com(corpos, especiais = list(
+    conferencia = function() httr2::response(status_code = 503)
+  )))
+  atualizacao = tabelas_atualizar()
+  expect_true(all(atualizacao$problema == "a lista de confer\u00eancia do reposit\u00f3rio n\u00e3o baixou: HTTP 503"))
+  expect_false(any(atualizacao$mudou))
+  httr2::local_mocked_responses(responder_com(corpos, especiais = list(
+    conferencia = function() httr2::response(status_code = 200, body = charToRaw('"tabela","md5"\n"cfop","x"\n'))
+  )))
+  expect_true(all(tabelas_atualizar()$problema == "a lista de confer\u00eancia do reposit\u00f3rio veio fora do formato"))
+})
+
+test_that("as baixadas valem pela vers\u00e3o do conjunto, n\u00e3o pela data dos arquivos", {
+  skip_if_not_installed("httr2")
+  pasta = tempfile("cache_do_rnfe_")
+  antes = apontar_o_cache_para(pasta)
+  on.exit(voltar_o_cache(antes, pasta), add = TRUE)
+  httr2::local_mocked_responses(responder_com(repositorio_de_mentira(VERSAO_NOVA)))
+  tabelas_atualizar()
+  baixadas = pasta_das_tabelas_baixadas()
+  na_pasta_baixada = function(arquivo) startsWith(normalizePath(arquivo, winslash = "/"), normalizePath(baixadas, winslash = "/"))
+  expect_true(na_pasta_baixada(arquivo_da_tabela("cst_icms")))
+  # Um arquivo com data antiga continua valendo: a data não conta.
+  Sys.setFileTime(file.path(baixadas, "cst_icms.csv"), as.POSIXct("2020-01-01"))
+  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+  expect_true(na_pasta_baixada(arquivo_da_tabela("cst_icms")))
+  # Um conjunto mais velho que o do pacote não vale.
+  arquivo_da_lista = file.path(baixadas, "conferencia.csv")
+  lista = utils::read.csv(arquivo_da_lista, colClasses = "character")
+  lista$versao_do_conjunto = "2000-01-01 00:00:00"
+  utils::write.csv(lista, arquivo_da_lista, row.names = FALSE)
+  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+  expect_identical(arquivo_da_tabela("cst_icms"), ARQUIVO_DO_CST_ICMS_DO_PACOTE)
+  # Mais novo, vale; mas a tabela com outras colunas que a do pacote fica com a do pacote.
+  lista$versao_do_conjunto = VERSAO_NOVA
+  utils::write.csv(lista, arquivo_da_lista, row.names = FALSE)
+  writeLines(c('"codigo","outra_coluna"', '"00","x"'), file.path(baixadas, "cst_icms.csv"))
+  rm(list = ls(tabelas_ja_lidas), envir = tabelas_ja_lidas)
+  expect_identical(arquivo_da_tabela("cst_icms"), ARQUIVO_DO_CST_ICMS_DO_PACOTE)
+  expect_true(na_pasta_baixada(arquivo_da_tabela("cst_ipi")))
+})
+
+test_that("a troca que falha deixa as tabelas como estavam", {
+  skip_if_not_installed("httr2")
+  pasta = tempfile("cache_do_rnfe_")
+  antes = apontar_o_cache_para(pasta)
+  on.exit(voltar_o_cache(antes, pasta), add = TRUE)
+  httr2::local_mocked_responses(responder_com(repositorio_de_mentira(VERSAO_NOVA, list(
+    cst_icms = texto_trocado("cst_icms", "Tributada integralmente", "Tributada integralmente (primeira)")
+  ))))
+  tabelas_atualizar()
+  # A segunda atualização não consegue pôr a pasta nova no lugar (no Windows, um arquivo aberto por outro programa):
+  # a primeira renomeação (a em uso sai do caminho) dá certo, a segunda não, e a em uso volta.
+  renomeacoes = 0
+  local_mocked_bindings(renomear = function(de, para) {
+    renomeacoes <<- renomeacoes + 1
+    if (renomeacoes == 2) {
+      return(FALSE)
+    }
+    suppressWarnings(file.rename(de, para))
+  })
+  httr2::local_mocked_responses(responder_com(repositorio_de_mentira("2100-01-01 00:00:00", list(
+    cst_icms = texto_trocado("cst_icms", "Tributada integralmente", "Tributada integralmente (segunda)")
+  ))))
+  atualizacao = tabelas_atualizar()
+  expect_true(all(atualizacao$problema == "n\u00e3o deu para trocar as tabelas: a pasta nova n\u00e3o p\u00f4de entrar no lugar"))
+  expect_false(any(atualizacao$mudou))
+  expect_identical(tabela_fiscal("cst_icms")$descricao[1], "Tributada integralmente (primeira)")
+  expect_false(dir.exists(paste0(pasta_das_tabelas_baixadas(), "_preparando")))
+  # A volta às do pacote que não consegue apagar a pasta dá erro, em vez de seguir com as baixadas sem dizer.
+  local_mocked_bindings(apagar_pasta = function(pasta) FALSE)
+  expect_error(tabelas_atualizar(usar_as_do_pacote = TRUE), "N\u00e3o deu para apagar as tabelas baixadas")
 })
