@@ -1363,6 +1363,76 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   etapa: cruzar a EFD com as NF-e (a nota que falta, o valor ou a situação diferentes), a EFD-Contribuições (o mesmo
   formato, outro leiaute) e a pré-conferência da NF-e.
 
+## Etapa 5, segundo passo: a EFD contra as NF-e (05/11/2026)
+
+- **Pedido do usuário:** "já vai fazendo logo tudo e só fale quando finalizar e tiver tudo ok" (o resto do plano,
+  sem relatórios no meio; ele testa as funções no fim).
+- **`efd_icms_ipi_cruzar_nfe(efd, notas, eventos)`:** cada C100 dos modelos 55 e 65 com o XML dela, pela chave, e as
+  notas do contribuinte do 0000 (emitente ou destinatário) emitidas no período e fora do C100. Compara o modelo, a
+  série, o número, a data, o valor do documento, o desconto, as mercadorias, o frete, o seguro e as outras despesas;
+  na emissão própria, também as bases e os valores do ICMS, do ICMS-ST, do IPI, do PIS e da COFINS (na nota de
+  terceiros, o Guia Prático manda informar só o crédito do declarante: não se comparam); o `IND_EMIT` contra o
+  emitente, o `IND_OPER` contra o `tpNF` na emissão própria, o participante (o CNPJ ou CPF do 0150) contra o outro
+  lado da nota e, com os eventos, a situação (o cancelamento 110111 contra o `COD_SIT` 02 ou 03). A nota cancelada,
+  denegada ou inutilizada na EFD só traz a identificação, e só ela se compara. A nota de terceiros que falta pode ter
+  entrado em outro período (vem com a observação); a de terceiros cancelada não é escriturada.
+- **A EFD-Contribuições ficou de fora** (não estava no pedido; era sugestão minha no passo 1): o Guia Prático dela é
+  de 18/06/2021 (versão 1.35), a mudança de leiaute de 2025 está só na NT 010/2025, em Word, e a NT 011/2026 diz que
+  ela deixa de ser usada para fatos geradores a partir de 2027 (o PIS e a COFINS acabam). Montar o leiaute de 2025
+  sobre um guia de 2021 não teria a mesma certeza do da EFD ICMS/IPI. Fica para o usuário decidir.
+
+## Etapa 5, terceiro passo: a pré-conferência da NF-e (05/11/2026)
+
+- **`nfe_conferir(arquivos, agora, todas_as_regras)`:** a NF-e e a NFC-e como a SEFAZ confere ao receber. O schema é
+  o do pacote de liberação mais novo do Portal (PL_010g v1.03, de 26/10/2026), copiado para `inst/schemas/nfe` (os
+  cinco arquivos da pasta NFe; 456 KB). Cada NFe do arquivo vira um documento só dela antes de validar
+  (`xml_new_root`, que leva o namespace), e o erro de assinatura que falta não conta: a nota pode ainda não estar
+  assinada. As regras vêm de `inst/extdata/regras_nfe.csv` (247 regras: código, mensagem, aplicação, fonte e as
+  datas), escritas em `R/nfe_conferir_regras.R`, um grupo do Anexo I por função; as da Reforma vêm de
+  `ibs_cbs_conferir()`, na mesma tabela (a B25b-20, que as duas têm, fica com a redação da NT 2026.002).
+- **As fontes:** o Anexo I do MOC 7.0 (466 regras, de 2020) e as notas técnicas da NF-e publicadas de 2020 em diante
+  (190 PDF, a versão mais nova de cada uma), baixadas do Portal. Para cada regra escolhida, a redação vale a da nota
+  técnica mais nova que a traz como linha de tabela.
+- **O texto riscado:** as notas técnicas marcam o que sai com o texto riscado, que a extração do PDF não mostra. Por
+  isso cada regra que alguma nota técnica mudou foi conferida na imagem da página. Mudou o que vinha do texto: a
+  C02a-04 (NFC-e de emitente CPF) saiu na NT 2022.003; a BA06-10, a BA13-10 e a BA14-10 saíram na NT 2026.002, e a
+  BA03-10, a BA10-10 e a BA20-30 passaram a proibir a NF modelo 1 e 2, a de produtor e o cupom fiscal (05/10/2026); a
+  X03-10 e a X03-20 saíram na NT 2023.004; na B26-10 e na B26-20 a parte do PAA foi riscada (vale a B26-24, da
+  SVRS); a B25c-10 tirou o indPres 1; a W16-40 a W16-60 voltaram a ser só da NFC-e; na W16-10, a exceção 3 saiu e a 4
+  ficou, e no faturamento direto de veículos o ICMS monofásico com retenção saiu da conta; o B03-10 e o BA20-30
+  deixaram de valer para a NFC-e.
+- **O que ficou de fora:** o que a SEFAZ confere na base dela (cadastro, duplicidade, a nota referenciada, o CCC e a
+  LCC), o cálculo da inscrição estadual de cada UF, as tabelas de cada UF (benefício fiscal, GTIN do CCG, limite da
+  NFC-e de cada UF além do padrão), o país do Banco Central, os prazos que dependem de parâmetro da UF e as regras com
+  "implementação futura" (a G01-10, a YA03-10 na NF-e). A B28-40 (a data de entrada em contingência) ficou de fora
+  porque a redação não diz em que sentido conta os 30 dias. Onde a NT 2026.002 deixa a regra em dúvida para a NF-e com
+  DANFE Simplificado Tipo 2 (a E01-10, a E04-10 e a E05-10, que ela não mudou), a regra fica sem conferir com o motivo.
+- **As datas:** cada regra tem `em_producao_desde` (a que entrou depois, como as do PAA, 05/10/2026, e as da NT
+  2026.007, 16/11/2026), `em_producao_ate` (a C17-10, até 15/11/2026) e `mudou_em_producao_em` (a YA03-30, que passou a
+  valer para o tPag 91 em 03/11/2025): a nota de antes da mudança que não confere pela redação de hoje fica sem
+  conferir, com o motivo.
+- **O acervo:** 4.200 NF-e autorizadas (300 de cada pasta, de todas as UF, 2021 a 2026), só contagens. Corrigido pelo
+  que apareceu: a B10-40 compara as datas, não as horas (há saída minutos antes da emissão, no mesmo dia); o B03-10
+  compara o cNF com o nNF como texto (há NF-e com o cNF 00000856 e o nNF 856); o CNPJ vazio da retirada e da entrega
+  (o leiaute aceita) não é "informado"; a BA02-30 e a BA02-40 só valem para a chave da NF-e e da NFC-e (a do CF-e é
+  montada de outro jeito); o NCM de nota de antes de 01/04/2022 (o começo da tabela) fica sem conferir; o tPag e a
+  bandeira só precisam estar na tabela (o início das linhas é o da descrição de hoje: o 05 e o 17 já existiam); o
+  troco zero com o pagamento abaixo do total é a YA03-10, não a YA09-10; a IE ISENTO do transportador não pede a UF;
+  depois de 30 dias de atraso a rejeição é escolha da UF (B09-20 sem conferir); a E16a-30 na operação interna fica
+  sem conferir (PE autorizou). Ficaram acusando erro em nota autorizada as facultativas e as que nem toda SEFAZ
+  aplica, com a observação dizendo isso (B25c-10 em SP, X05-10 no RN, Y01-20 no RJ, Y06-10 no PI, Y08-10 no AM,
+  I03-30 e I12-60 em SP, I08-160 em AL e MG). Erro meu achado nos testes: o dígito da chave era comparado com `%in%`
+  (contra todos os dígitos da tabela, não o da linha).
+- **O schema e as notas antigas:** o PL_010g mudou o grupo do monofásico da Reforma (o `gMonoPadrao` e o `gMonoRet`
+  saíram para os grupos ad rem e ad valorem). A nota emitida no leiaute anterior acusa erro de schema aqui, e a
+  `descANP` mudou de padrão. Para a nota nova, vale o pacote mais novo; para a antiga, o erro de schema pode ser só a
+  versão do leiaute.
+- **Achado para a revisão da etapa 5:** a NT 2026.002 usa o código VC02-40 para outra regra (o modelo da chave
+  referenciada no item, 679, em 14/12/2026) que a NT 2025.002 (o emitente igual em todos os itens, 1193): a
+  `ibs_cbs_conferir()` tem a da NT 2025.002.
+- **Tempo:** perto de 10 ms por nota na leitura e nas regras, 30 ms no schema e 30 ms nas regras da Reforma (que
+  monta um `data.frame` por arquivo); a primeira leitura de muitos arquivos pequenos no Windows é mais lenta.
+
 ## O robô das tabelas
 
 - `.github/workflows/atualizar-tabelas.yml` roda toda segunda às 9h UTC (6h em Brasília), e também à mão. Ele

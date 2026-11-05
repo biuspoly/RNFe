@@ -319,6 +319,44 @@ O certificado do servidor é sempre
 verificado: contra as raízes de sempre e a raiz v10 da ICP-Brasil, que vem no pacote (conferida com a do repositório
 do ITI). O PyNFe conecta sem isso porque desliga a verificação (`verify=False`).
 
+## Antes de enviar: a pré-conferência da NF-e
+
+```r
+conferida = nfe_conferir("nota.xml")     # um arquivo, vários ou o texto do XML, assinado ou não
+conferida$notas                           # por nota: se está assinada, se o schema valida, regras erradas e sem conferir
+conferida$schema                          # cada erro do schema, com o campo e o que ele esperava
+conferida$conferencias                    # cada regra que não confere: o campo, o que veio, o esperado, o código e a
+                                          # mensagem da rejeição, se a regra é obrigatória ou facultativa e a observação
+nfe_conferir("nota.xml", agora = Sys.time() + 600)   # o momento do envio, para as regras de prazo
+```
+
+Confere a NF-e e a NFC-e como a SEFAZ confere ao receber, para saber antes de enviar o que seria rejeitado. Primeiro o
+schema: o XML contra o pacote de liberação mais novo do Portal da NF-e (o PL_010g, versão 1.03, que vai junto com o
+RNFe), com a mensagem do validador para cada campo errado. A nota ainda sem a assinatura é conferida assim mesmo (a
+falta dela não conta como erro). Depois, as regras de validação do Anexo I do Manual de Orientação do Contribuinte,
+cada uma pela redação da nota técnica mais nova que a mudou: a chave de acesso e o código numérico, os prazos da
+emissão e da saída, o modelo do DANFE, a finalidade, a presença e o intermediador, a série de cada processo de emissão
+(o PAA da NT 2026.001 entre eles), a contingência, os documentos referenciados (o dígito, a UF, o modelo e a repetição
+de cada chave; a NF modelo 1, a de produtor e o cupom fiscal, que a NT 2026.002 proibiu), o emitente e o destinatário
+(o CNPJ e o CPF com o dígito, o município, a UF de cada tipo de operação, o estrangeiro, a inscrição estadual e a da
+Suframa), a retirada e a entrega, quem pode baixar o XML, o produto (o GTIN com o dígito, o NCM e o CFOP nas tabelas
+do pacote, o CFOP de cada operação e as contas do valor), o ICMS do item, os grupos que a NFC-e não pode ter, os totais,
+o transporte, a cobrança, os pagamentos e o QR-Code. A NF-e com o DANFE Simplificado Tipo 2 (NT 2026.002) segue as
+regras da NFC-e. As regras da Reforma vêm de `ibs_cbs_conferir()`, na mesma tabela, para a nota que tem o IBS e a CBS.
+
+Cada regra vale como a SEFAZ a aplicava no dia da emissão: a C17-10 (a IE do emitente) sai em 16/11/2026, quando a NT
+2026.007 deixa o contribuinte só do IBS e da CBS emitir sem ela, e a C17-42 entra; a BA02-35 (a NFC-e referenciada na
+NF-e de saída) só entra em 14/12/2026. O código que não está na tabela de hoje numa nota de antes dela fica sem
+conferir. A regra que vale "a critério da UF" fica sem conferir quando não confere, com o motivo, e a facultativa vem
+marcada assim, porque a SEFAZ pode não aplicá-la. Fica de fora o que depende da base da SEFAZ (o cadastro, a
+duplicidade, a nota referenciada que ela guarda), a inscrição estadual (o cálculo muda de UF para UF) e as tabelas de
+cada UF.
+
+Conferido em 4.200 NF-e reais autorizadas, de todas as UF, de 2021 a 2026: as regras que acusam erro em nota
+autorizada são as facultativas (contas que a SEFAZ não confere ao centavo) e as que nem toda SEFAZ aplica, que dizem
+isso na observação (o indicador do intermediador em SP, o CPF zerado do transportador no RN). O schema acusa as notas
+do monofásico de combustíveis da Reforma emitidas no leiaute anterior ao pacote 010g.
+
 ## IBS e CBS: a conferência da Reforma
 
 ```r
@@ -408,6 +446,9 @@ efd$C100                             # as notas, com os nomes de campo do leiaut
 efd$C170                             # os itens; linha_pai é a linha do C100 de cada um
 efd$problemas                        # cada linha que não entrou numa tabela, com o motivo
 efd_icms_ipi_ler("efd.txt", registros = c("C100", "C170"))   # só o que interessa
+cruzamento = efd_icms_ipi_cruzar_nfe("efd.txt", "notas/", eventos = "eventos/")  # a EFD contra os XML das notas
+cruzamento$notas                     # cada nota: nas duas, só na EFD ou só nos XML
+cruzamento$diferencas                # cada campo que não confere, com os dois valores
 ```
 
 Lê o arquivo da Escrituração Fiscal Digital do ICMS e do IPI, o que a empresa gera todo mês e transmite pelo programa
@@ -416,6 +457,12 @@ leiaute oficial, e `linha_pai` liga cada registro ao de nível acima (o item à 
 arquivo: um arquivo de 2016 é lido sem os campos que entraram depois e com o E310 e o C177 da época. Os valores com
 casas decimais viram número, as datas viram `Date` e o resto fica texto, com os zeros à esquerda (CNPJ, CFOP, CST,
 chave). O arquivo pode estar em Latin-1, como pede o leiaute, ou em UTF-8, e a assinatura depois do 9999 é ignorada.
+
+O cruzamento confere cada nota do C100 (NF-e e NFC-e) com o XML dela, pela chave: o número, a data, os valores, o
+participante e, com os eventos, a situação (a cancelada tem de estar escriturada como cancelada). Na nota de
+terceiros, os impostos da EFD são os do crédito de quem escritura e não se comparam com os do XML. As notas do
+contribuinte que estão nos XML e não na EFD também aparecem: a emissão própria do período tem de estar lá; a de
+terceiros pode ter entrado em outro mês.
 
 O leiaute está em `tabela_fiscal("leiaute_efd_icms_ipi")`: os 270 registros e os 2.225 campos, com a descrição e a
 vigência de cada um. Ele sai do Guia Prático da EFD ICMS/IPI (versão 3.2.2) e da Nota Técnica do leiaute 020, do
@@ -492,6 +539,10 @@ XMLs segue os schemas oficiais do Portal da NF-e, do
 [Portal do MDF-e](https://dfe-portal.svrs.rs.gov.br/Mdfe) e do
 [portal da NFS-e Nacional](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica). Nada aqui consulta
 a SEFAZ.
+
+A pré-conferência usa os schemas do pacote de liberação 010g (versão 1.03) do Portal da NF-e, que vão no pacote em
+`inst/schemas/nfe`, e as regras de validação do Anexo I do MOC 7.0 com as notas técnicas que as mudaram depois; a
+regra, o código, a mensagem e a fonte de cada uma estão em `inst/extdata/regras_nfe.csv`.
 
 Nos exemplos e nos testes, só CNPJs e CPFs fictícios; o 12.ABC.345/01DE-35 é o exemplo da Receita Federal.
 

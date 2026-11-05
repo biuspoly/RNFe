@@ -43,7 +43,10 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     calcula o IBS e a CBS de cada item, na data da nota ou em outra, para
     simular como a nota seria em outro ano. Lê a EFD ICMS/IPI (o SPED
     Fiscal) em tabelas, uma por registro, pelo leiaute do período do
-    arquivo.
+    arquivo, e a cruza com os XML das NF-e. Faz a pré-conferência da NF-e
+    e da NFC-e antes do envio: o schema do leiaute e as regras de validação
+    do Manual de Orientação do Contribuinte, cada uma pela redação da nota
+    técnica mais nova.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues
@@ -79,8 +82,10 @@ Collate:
     'cnpj.R'
     'cte_ler.R'
     'cte_simplificado_ler.R'
+    'nfe_ler.R'
     'tabelas.R'
     'efd_icms_ipi_ler.R'
+    'efd_icms_ipi_cruzar_nfe.R'
     'eventos_ler.R'
     'gtve_ler.R'
     'ibs_cbs_conferir.R'
@@ -88,5 +93,6 @@ Collate:
     'ibs_cbs_monofasico.R'
     'ibs_cbs_regras_da_nota.R'
     'mdfe_ler.R'
-    'nfe_ler.R'
+    'nfe_conferir.R'
+    'nfe_conferir_regras.R'
     'nfse_ler.R'
