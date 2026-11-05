@@ -44,7 +44,8 @@ ano), \code{"local_operacao_ibs_cbs"} (cIndOp), \code{"biocombustivel_ibs_cbs"} 
 etanol anidro obrigatório na gasolina C), \code{"combustiveis_monofasicos"} (os
 do ICMS monofásico), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
 \code{"bandeiras_cartao"}, \code{"municipios"} (código IBGE, nome e UF),
-\code{"codigos_dos_campos"} (o significado dos códigos dos documentos) ou
+\code{"codigos_dos_campos"} (o significado dos códigos dos documentos),
+\code{"leiaute_efd_icms_ipi"} (os registros e os campos do SPED Fiscal) ou
 \code{"fontes"} (de onde veio cada tabela).}
 }
 \value{
@@ -195,6 +196,16 @@ dígitos que vai nos documentos (\code{cMun}, \code{cMunFG}, \code{cLocIncid}...
 a \code{uf} e o \code{codigo_uf} (o que abre a chave de acesso). Sem datas: o IBGE só
 publica a lista de hoje. O código 9999999, que a NF-e usa para o exterior,
 não é do IBGE e não está nela.
+\item \code{"leiaute_efd_icms_ipi"}: os registros e os campos da EFD ICMS/IPI (o
+SPED Fiscal), que o \code{\link[=efd_icms_ipi_ler]{efd_icms_ipi_ler()}} usa: o \code{registro}, a vigência
+(\code{inicio} e \code{fim}: o campo que entrou depois tem o \code{inicio}; o E310 e o
+C177 antigos, que mudaram inteiros, têm o \code{fim}), o \code{nivel} na hierarquia
+do arquivo, o \code{numero} do campo, o \code{campo} (o nome do leiaute), a \code{coluna}
+(o nome na leitura: o mesmo, com o número do campo quando o nome se repete
+no registro), o \code{tipo} (\code{"C"} texto, \code{"N"} número), o \code{tamanho} (com \code{*}
+quando é exato) e as \code{decimais}, e a \code{descricao}. Do Guia Prático e da
+Nota Técnica do leiaute, conferidos um contra o outro; quando os dois
+discordam, vale o Guia, o mais novo. Sem \code{codigo}: uma linha por campo.
 \item \code{"fontes"}: de onde veio cada tabela, com a versão e o dia em que foi
 baixada.
 }

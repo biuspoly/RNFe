@@ -1,3 +1,5 @@
 # As tabelas fiscais são geradas no Windows e pelo robô no Linux: fim de linha sempre LF, para uma não
 # parecer diferente da outra.
 *.csv text eol=lf
+# A EFD de exemplo fica como o leiaute pede: Latin-1 e CR LF no fim de cada linha, sem conversão.
+inst/exemplos/*.txt -text

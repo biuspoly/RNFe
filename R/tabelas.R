@@ -5,7 +5,7 @@ NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
   "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs",
   "local_operacao_ibs_cbs", "biocombustivel_ibs_cbs", "combustiveis_monofasicos", "meios_pagamento", "bandeiras_cartao",
-  "municipios", "codigos_dos_campos", "fontes"
+  "municipios", "codigos_dos_campos", "leiaute_efd_icms_ipi", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em", "publicada_em", "em_producao_ate", "inicio_cbs",
                     "fim_cbs", "inicio_ibs", "fim_ibs")
@@ -28,7 +28,7 @@ COLUNAS_DE_INDICADOR = c(
   "exige_pbio"
 )
 COLUNAS_DE_NUMERO = c("reducao_ibs", "reducao_cbs", "aliquota_ibs_uf", "aliquota_ibs_municipio", "aliquota_cbs",
-                      "mistura_obrigatoria", "aliquota_ad_rem_icms")
+                      "mistura_obrigatoria", "aliquota_ad_rem_icms", "nivel")
 # Cada tabela é lida do disco uma vez por sessão.
 tabelas_ja_lidas = new.env(parent = emptyenv())
 # As tabelas que tabelas_atualizar() baixa: as fiscais e os endereços da SEFAZ. Vêm do ramo main do repositório, onde
@@ -183,6 +183,16 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   a `uf` e o `codigo_uf` (o que abre a chave de acesso). Sem datas: o IBGE só
 #'   publica a lista de hoje. O código 9999999, que a NF-e usa para o exterior,
 #'   não é do IBGE e não está nela.
+#' - `"leiaute_efd_icms_ipi"`: os registros e os campos da EFD ICMS/IPI (o
+#'   SPED Fiscal), que o [efd_icms_ipi_ler()] usa: o `registro`, a vigência
+#'   (`inicio` e `fim`: o campo que entrou depois tem o `inicio`; o E310 e o
+#'   C177 antigos, que mudaram inteiros, têm o `fim`), o `nivel` na hierarquia
+#'   do arquivo, o `numero` do campo, o `campo` (o nome do leiaute), a `coluna`
+#'   (o nome na leitura: o mesmo, com o número do campo quando o nome se repete
+#'   no registro), o `tipo` (`"C"` texto, `"N"` número), o `tamanho` (com `*`
+#'   quando é exato) e as `decimais`, e a `descricao`. Do Guia Prático e da
+#'   Nota Técnica do leiaute, conferidos um contra o outro; quando os dois
+#'   discordam, vale o Guia, o mais novo. Sem `codigo`: uma linha por campo.
 #' - `"fontes"`: de onde veio cada tabela, com a versão e o dia em que foi
 #'   baixada.
 #'
@@ -208,7 +218,8 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   etanol anidro obrigatório na gasolina C), `"combustiveis_monofasicos"` (os
 #'   do ICMS monofásico), `"meios_pagamento"` (dinheiro, cartão, PIX...),
 #'   `"bandeiras_cartao"`, `"municipios"` (código IBGE, nome e UF),
-#'   `"codigos_dos_campos"` (o significado dos códigos dos documentos) ou
+#'   `"codigos_dos_campos"` (o significado dos códigos dos documentos),
+#'   `"leiaute_efd_icms_ipi"` (os registros e os campos do SPED Fiscal) ou
 #'   `"fontes"` (de onde veio cada tabela).
 #' @return Um `data.frame`. Na maioria, com `codigo`, a descrição (`titulo` e
 #'   `nota_explicativa` no CFOP, `nome` nos municípios, `descricao` nas

@@ -399,6 +399,30 @@ de débito, que dependem da operação original), o monofásico (CST 620), a tra
 a compra governamental, o item com crédito presumido ou com valor de devolução de tributos, a base negativa e o Imposto
 Seletivo.
 
+## SPED Fiscal: a EFD ICMS/IPI em tabelas
+
+```r
+efd = efd_icms_ipi_ler("efd.txt")    # um arquivo, vários ou o próprio texto
+efd$arquivos                         # o período, a versão do leiaute e o que não deu para ler
+efd$C100                             # as notas, com os nomes de campo do leiaute (NUM_DOC, CHV_NFE, VL_DOC...)
+efd$C170                             # os itens; linha_pai é a linha do C100 de cada um
+efd$problemas                        # cada linha que não entrou numa tabela, com o motivo
+efd_icms_ipi_ler("efd.txt", registros = c("C100", "C170"))   # só o que interessa
+```
+
+Lê o arquivo da Escrituração Fiscal Digital do ICMS e do IPI, o que a empresa gera todo mês e transmite pelo programa
+da Receita (o RNFe só lê o arquivo; não transmite nada). Cada registro vira uma tabela, com os nomes de campo do
+leiaute oficial, e `linha_pai` liga cada registro ao de nível acima (o item à nota). O leiaute é o do período do
+arquivo: um arquivo de 2016 é lido sem os campos que entraram depois e com o E310 e o C177 da época. Os valores com
+casas decimais viram número, as datas viram `Date` e o resto fica texto, com os zeros à esquerda (CNPJ, CFOP, CST,
+chave). O arquivo pode estar em Latin-1, como pede o leiaute, ou em UTF-8, e a assinatura depois do 9999 é ignorada.
+
+O leiaute está em `tabela_fiscal("leiaute_efd_icms_ipi")`: os 270 registros e os 2.225 campos, com a descrição e a
+vigência de cada um. Ele sai do Guia Prático da EFD ICMS/IPI (versão 3.2.2) e da Nota Técnica do leiaute 020, do
+portal do SPED, lidos e conferidos um contra o outro por `ferramentas/gerar_leiaute_efd.py`. As poucas divergências
+entre os dois documentos estão em `ferramentas/leiaute_efd_decisoes.csv`, com o motivo; quando eles discordam, vale o
+Guia, que é o mais novo.
+
 ## Tabelas fiscais
 
 ```r
@@ -415,6 +439,7 @@ tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_
 tabela_fiscal("municipios")              # os municípios do IBGE: código de 7 dígitos, nome e UF
 tabela_fiscal("meios_pagamento")         # o tPag da NF-e e da NFC-e (PIX, boleto...), e "bandeiras_cartao"
 tabela_fiscal("codigos_dos_campos")      # o significado dos códigos do leiaute (tpEmis, modFrete, toma...)
+tabela_fiscal("leiaute_efd_icms_ipi")    # os registros e os campos do SPED Fiscal, com a vigência
 tabela_fiscal("fontes")                  # de onde veio cada tabela, com a versão e a data
 ```
 

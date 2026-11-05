@@ -33,7 +33,7 @@ Cada etapa já é útil sozinha.
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026) e revisada (05/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano) |
-| 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
+| 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | em andamento: a leitura da EFD ICMS/IPI pronta (05/11/2026) |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
 
 A assinatura é a peça mais delicada: vai ser comparada com a que o PyNFe faz.
@@ -65,7 +65,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
 | Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão) e calcular ou simular outro ano, prontos |
-| Ler o SPED e pré-conferência | não | não | não | etapa 5 |
+| Ler o SPED e pré-conferência | não | não | não | etapa 5: a leitura da EFD ICMS/IPI pronta |
 
 ## Tabelas que se atualizam sozinhas
 
@@ -1304,6 +1304,64 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   temporário com um robô só para ele (2.537 conferências, nenhuma falha; check sem NOTE, no Linux). O acervo e o
   gabarito rodaram aqui, pelo `load_all()`. Isso pesa na última etapa (a emissão em homologação precisa do curl
   local): é decisão do usuário.
+
+## Etapa 5, primeiro passo: a leitura da EFD ICMS/IPI (05/11/2026)
+
+- **O pedido:** a etapa 5 do plano ("ler o SPED; pré-conferência"). O usuário perguntou se o SPED "tem na SEFAZ": não;
+  é o arquivo que a empresa gera todo mês e transmite pelo programa da Receita (a SEFAZ recebe uma cópia, mas não tem
+  serviço para consultar ou baixar). Ler é só abrir o arquivo; nada é enviado ("se tiver algo como só homologação ou
+  teste, tudo bem"). Decisões do usuário: as colunas com os **nomes do leiaute** (REG, COD_PART, VL_DOC...), não nomes
+  descritivos; a conferência com arquivos reais **depois** (os SPED do Fiscal ficam no servidor; a pasta local está
+  vazia): por enquanto, arquivos inventados.
+- **As fontes:** o Guia Prático da EFD ICMS/IPI 3.2.2 (11/02/2026) e a Nota Técnica 2025.001 v1.0 (leiaute 020), do
+  portal do SPED (`sped.rfb.gov.br`, "Manuais e Guias Práticos"). As duas trazem a tabela de campos de cada registro,
+  em PDF. O programa validador da Receita (o PVA) não foi aberto por dentro: a licença dele limita o uso ao fim a que
+  se destina (validar a escrituração).
+- **Como o leiaute foi montado** (`ferramentas/gerar_leiaute_efd.py`): o PDF quebra as linhas das tabelas de jeitos
+  diferentes, e o nome longo quebra na coluna estreita ("COD_MU" e "N"). Cada documento é lido duas vezes, pelo texto
+  corrido e pelas linhas e colunas da tabela (a faixa entre duas linhas horizontais que cruzam a coluna Nº é um campo,
+  porque o número fica centralizado na célula, às vezes abaixo do nome), e cada coluna de cada campo sai da votação
+  das quatro leituras; o nome que o texto do Guia escreve por extenso ("Campo 06 (COD_MOT_REST_COMPL)", 1.645 campos)
+  vale mais que o cortado. O que a votação não decide está em `ferramentas/leiaute_efd_decisoes.csv`, com o motivo, e
+  a ferramenta não grava enquanto houver campo sem decisão. Achados no caminho:
+  - a Nota Técnica não traz o campo 16 do C100 (VL_MERC) nem as tabelas do 1250, do 1255 e do D990, e se contradiz
+    no nível do K275 (4 na tabela de registros, 5 na seção dele; o Guia diz 4 nos dois lugares);
+  - os nomes oficiais têm acento e minúscula (CHV_DOCe, NÍVEL, DT_SAÍDA, VL_RETENÇAO_ST): ficam como estão;
+  - divergências de verdade entre os dois documentos, decididas pelo Guia (o mais novo): o tipo do NUM_DOC do C350,
+    do IND_PROC do E312 e da SER do D700; o tamanho do COD_ITEM do 1300 e do IND_MOV do H001; o nome do campo 03 do
+    C120 (NUM_DOC_IMP no Guia, NUM_DOC__IMP na NT). O histórico do Guia chama o campo 27 do C176 de VL_UNIT_RES_FCP e
+    as duas tabelas de VL_UNIT_RES_FCP_ST: vale o das tabelas;
+  - o C170 tem dois campos com o mesmo nome (ALIQ_PIS, em percentual e em reais; o mesmo com a COFINS): na leitura,
+    cada um leva o número do campo (`ALIQ_PIS_27`, `ALIQ_PIS_29`).
+  Resultado: 270 registros e 2.225 campos, em `tabela_fiscal("leiaute_efd_icms_ipi")` (está nas tabelas fiscais, com
+  a lista de conferência; o `tabelas_atualizar()` também o traz).
+- **A vigência:** o título do registro diz as versões que mudaram inteiras (o E310 até 2016 e desde 2017, o C177 até
+  2018 e desde 2019; o 0210 e o 1600 valeram até 2021), e o Capítulo II do Guia lista os registros e os campos
+  incluídos em cada ano desde 2010 (114 registros e 71 campos; o de 2012 vem em prosa, e o título do período às vezes
+  quebra a linha antes do ano). **Todo campo incluído ocupa o fim do registro** (a ferramenta confere): por isso um
+  arquivo antigo é lido pela posição, com o leiaute do período dele (o `DT_INI` do 0000).
+- **Os tipos:** só o campo N com casas decimais vira número; todo `DT_` vira data (ddmmaaaa: há `DT_` sem o `*` no
+  bloco K e um C no 1391); o resto fica texto. A regra "N sem tamanho exato vira número" foi descartada ao olhar a
+  lista: estragaria a chave do CF-e (44 dígitos), o CNPJ ou CPF com zero à esquerda, o TIPO_ITEM ("00"), o COD_SIT
+  e o NUM_AUT.
+- **O leitor** (`efd_icms_ipi_ler(arquivos, registros)`): uma tabela por registro, com `arquivo`, `linha` e
+  `linha_pai` (a última linha antes, com o nível um a menos: liga o C170 ao C100), e as tabelas `arquivos` e
+  `problemas` (a linha fora do formato, o registro que o leiaute do período não tem, o número de campos diferente, o
+  valor de número ou de data fora do formato, que fica `NA`). O arquivo em Latin-1 (o do leiaute), em Windows-1252
+  ou em UTF-8; a assinatura do PVA depois do 9999, com bytes nulos, é cortada antes de virar texto. Erro meu achado
+  no primeiro teste: o corte procurava o primeiro "|9999|", que está no 9900 que o conta; agora é a linha que começa
+  por ele. 77 linhas do exemplo em 0,17 s.
+- **O exemplo** (`inst/exemplos/efd_icms_ipi_sp.txt`, `ferramentas/gerar_efd_de_exemplo.py`): outubro de 2026, a
+  empresa fictícia da NF-e de exemplo, com a venda da nota 1001 do `nfe_proc_sp.xml` (C100 e C190), uma compra com o
+  item (C170), as apurações do ICMS e do IPI e as contagens dos blocos e do bloco 9, montado pelos nomes do leiaute e
+  conferido no número de campos; em Latin-1, com CR LF.
+- **Testes:** 63 conferências da leitura (o exemplo, os tipos, a hierarquia, as contagens do bloco 9, um arquivo de
+  2016, a assinatura, o UTF-8 e cada problema); a suíte inteira, 2.602, sem falha, e o R CMD check sem NOTE, no
+  GitHub (a máquina local não carrega o testthat).
+- **Em aberto:** a conferência com arquivos reais (quando o usuário copiar alguns do servidor); validar o exemplo no
+  PVA (o uso para que ele serve, mas é instalar um programa da Receita: só com o usuário). Os próximos passos da
+  etapa: cruzar a EFD com as NF-e (a nota que falta, o valor ou a situação diferentes), a EFD-Contribuições (o mesmo
+  formato, outro leiaute) e a pré-conferência da NF-e.
 
 ## O robô das tabelas
 

@@ -21,3 +21,4 @@
 "aliquotas_ibs_cbs","LC 214/2025 (arts. 343, 344, 346, 347 e 348, texto do Planalto) e NT 2025.002-RTC v1.53 (regras UB18-10, UB37-10 e UB56-10), escrita à mão; a CBS de 2027 em diante depende da alíquota de referência do Senado (art. 349)",,,"2026-11-04"
 "municipios","IBGE, API de localidades (servicodados.ibge.gov.br), municípios vigentes",,,"2026-11-04"
 "local_operacao_ibs_cbs","Portal da NFS-e, documentação técnica da RTC (https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc), Anexo VII (IndOp_IBSCBS) v1.03.00",,,"2026-11-05"
+"leiaute_efd_icms_ipi","Portal do SPED, Guia Prático da EFD ICMS IPI 3.2.2 e Nota Técnica 2025.001 v1.0 (leiaute versão 020): as tabelas de campos das duas, lidas e conferidas uma contra a outra por ferramentas/gerar_leiaute_efd.py (as divergências em ferramentas/leiaute_efd_decisoes.csv); a vigência pelo título do registro e pelo histórico de campos incluídos do Guia","3.2.2","2026-02-11","2026-11-05"

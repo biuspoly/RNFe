@@ -1118,9 +1118,11 @@ fontes = rbind(fontes, data.frame(
 
 # A tabela dos códigos dos campos e a das alíquotas do IBS e da CBS não são baixadas: são escritas à mão, a primeira a
 # partir da documentação dos schemas (conferida por ferramentas/conferir_codigos_dos_campos.R), a segunda a partir da
-# LC 214/2025 e da NT 2025.002. A linha de cada uma nas fontes passa adiante como está.
+# LC 214/2025 e da NT 2025.002. O leiaute da EFD ICMS/IPI sai de PDFs, por ferramentas/gerar_leiaute_efd.py. A linha
+# de cada uma nas fontes passa adiante como está.
 fontes_de_antes = utils::read.csv(file.path(PASTA_DAS_TABELAS, "fontes.csv"), colClasses = "character", na.strings = "")
-fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela %in% c("codigos_dos_campos", "aliquotas_ibs_cbs"), ])
+fontes = rbind(fontes, fontes_de_antes[fontes_de_antes$tabela %in% c("codigos_dos_campos", "aliquotas_ibs_cbs",
+                                                                     "leiaute_efd_icms_ipi"), ])
 
 # O IBGE não aceita conexão dos servidores do GitHub (tempo esgotado em 120 s, testado em 30/10/2026). Quando ele não
 # responde, fica a cópia que já está no pacote, com a data dela, e as outras tabelas seguem; o aviso aparece na
