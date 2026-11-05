@@ -46,7 +46,14 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     arquivo, e a cruza com os XML das NF-e. Faz a pré-conferência da NF-e
     e da NFC-e antes do envio: o schema do leiaute e as regras de validação
     do Manual de Orientação do Contribuinte, cada uma pela redação da nota
-    técnica mais nova.
+    técnica mais nova. Assina os XML com o certificado A1 e, por enquanto
+    só em homologação, autoriza a NF-e e a NFC-e (com o QR-Code da NFC-e),
+    registra o cancelamento, a carta de correção e a manifestação do
+    destinatário, registra o desacordo do CT-e, autoriza o MDF-e, inclui
+    condutor e o encerra, e emite e cancela a NFS-e Nacional na Produção
+    Restrita. Desenha em PDF o DANFE, o DANFE Simplificado (também a
+    Etiqueta), o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de
+    correção.
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues
@@ -54,6 +61,8 @@ Encoding: UTF-8
 Language: pt-BR
 Depends: R (>= 4.1.0)
 Imports:
+    grDevices,
+    grid,
     tools,
     utils,
     xml2
@@ -65,6 +74,7 @@ Suggests:
     opencv,
     openssl,
     pdftools,
+    qrcode,
     tesseract,
     testthat (>= 3.0.0),
     withr
@@ -83,6 +93,15 @@ Collate:
     'cnpj.R'
     'cte_ler.R'
     'cte_simplificado_ler.R'
+    'pdf_comum.R'
+    'danfe.R'
+    'dacce.R'
+    'dacte.R'
+    'damdfe.R'
+    'danfce.R'
+    'danfe_simplificado.R'
+    'nfse_ler.R'
+    'danfse.R'
     'nfe_ler.R'
     'tabelas.R'
     'efd_icms_ipi_ler.R'
@@ -98,7 +117,6 @@ Collate:
     'nfe_conferir.R'
     'nfe_conferir_regras.R'
     'nfse_emitir.R'
-    'nfse_ler.R'
     'sefaz_autorizar.R'
     'sefaz_evento.R'
     'sefaz_evento_cte.R'

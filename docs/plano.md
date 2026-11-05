@@ -10,9 +10,10 @@ certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados
 CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
 deixou em aberto está no fim dela. Etapa 4 (a Reforma): as tabelas, a conferência e o cálculo prontos, e
 revisados em 05/11/2026 (seção "Revisão da etapa 4", no fim da etapa 4). Etapa 5: a leitura da EFD ICMS/IPI, o
-cruzamento com as NF-e e a pré-conferência da NF-e, prontos e revisados (05/11/2026). Em andamento: a última etapa
-(assinatura, autorização da NF-e e da NFC-e, eventos, QR-Code da NFC-e, desacordo do CT-e, MDF-e e a emissão e o
-cancelamento da NFS-e Nacional prontos, em homologação; faltam os PDFs).
+cruzamento com as NF-e e a pré-conferência da NF-e, prontos e revisados (05/11/2026). Última etapa: assinatura,
+autorização da NF-e e da NFC-e, eventos, QR-Code da NFC-e, desacordo do CT-e, MDF-e e a emissão e o cancelamento da
+NFS-e Nacional prontos, em homologação, e os PDFs (DANFE, DANFE Simplificado e Etiqueta, DANFE NFC-e, DACTE, DAMDFE,
+DANFSe e a carta de correção) prontos (05/11/2026).
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -37,7 +38,7 @@ Cada etapa já é útil sozinha.
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026) e revisada (05/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano) |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | pronta e revisada (05/11/2026): a EFD ICMS/IPI em tabelas, o cruzamento com as NF-e e a pré-conferência da NF-e e da NFC-e (`nfe_conferir`) |
-| por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | em andamento, só em homologação: assinatura, autorização da NF-e e da NFC-e, cancelamento, carta de correção, manifestação, QR-Code da NFC-e, desacordo do CT-e, MDF-e (autorização, condutor e encerramento) e a NFS-e Nacional (emissão e cancelamento) prontos; faltam os PDFs |
+| por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | em andamento, só em homologação: assinatura, autorização da NF-e e da NFC-e, cancelamento, carta de correção, manifestação, QR-Code da NFC-e, desacordo do CT-e, MDF-e (autorização, condutor e encerramento) e a NFS-e Nacional (emissão e cancelamento) prontos; os PDFs prontos (sem certificado) |
 
 A assinatura é a peça mais delicada: vai ser comparada com a que o PyNFe faz.
 
@@ -66,7 +67,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | consultar e ler os eventos (etapa 3), emitir e cancelar: prontos na Produção Restrita |
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
-| PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
+| PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | prontos (05/11/2026): DANFE, DANFE Simplificado e Etiqueta, DANFE NFC-e, DACTE e DACTE OS, DAMDFE, DANFSe v2.0 e a carta de correção (NF-e e CT-e) |
 | Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão) e calcular ou simular outro ano, prontos |
 | Ler o SPED e pré-conferência | não | não | não | etapa 5, pronta: a EFD ICMS/IPI, o cruzamento com as NF-e e a pré-conferência da NF-e e da NFC-e |
 
@@ -1532,6 +1533,32 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 - **O vigia das notas técnicas** (`ferramentas/vigiar_notas_tecnicas.R`, no mesmo robô dos schemas): abre um aviso
   para cada nota técnica nova no Portal da NF-e, que pode mudar as regras da pré-conferência. As 326 que o portal
   listava em 05/11/2026 estão em `ferramentas/notas_tecnicas_vistas.csv`.
+
+## Última etapa, segundo passo: os PDFs (05/11/2026)
+
+- **Desenho:** o `grid` do próprio R, no dispositivo `pdf()` com a codificação do Windows (`WinAnsi.enc`; o
+  `CP1252.enc` não existe no R e o Latin-1 desenha o hífen como sinal de menos; o hífen vai como o hífen opcional,
+  U+00AD). Só o QR-Code precisa de outro pacote (`qrcode`, em Suggests). Nada de modelo pronto de outra biblioteca:
+  cada desenho vem do manual oficial.
+- **Código de barras da chave:** o CODE-128C do Anexo II do MOC 7.0, conferido com o exemplo do manual (09758364, o
+  dígito 48 e a sequência de larguras); com o CNPJ alfanumérico, o modelo C e A da NT Conjunta 2025.001 (item 6). Os
+  códigos e os QR-Code de todos os exemplos foram lidos de volta pelo zxing, com a chave e o endereço certos.
+- **DANFE** (`danfe_pdf`): A4 retrato, nas posições do Anexo II (3.8.1), com as folhas adicionais quando os itens não
+  cabem e a continuação das informações complementares. **DANFE Simplificado e Etiqueta**
+  (`danfe_simplificado_pdf`): o manual (3.11 e 3.12) só dá os campos mínimos, o papel (55 mm ou mais) e a chave no
+  alto; o desenho é do pacote, em 10 cm de largura, porque a chave com o CNPJ alfanumérico em 7,4 cm daria o módulo
+  de 0,0198 cm, abaixo do mínimo de 0,02 cm do item 2. O Tipo 2 da NT 2026.002 ficou de fora: a nota não traz leiaute.
+- **DANFE NFC-e** (`danfce_pdf`): a bobina de 80 mm do Manual de Padrões Técnicos 6.0, com as divisões I a IX, a
+  contingência e o QR-Code de 3 cm. **DACTE** (`dacte_pdf`), do CT-e e do CT-e OS; **DAMDFE** (`damdfe_pdf`), o
+  modelo do rodoviário (2.8.1 do Anexo II do MDF-e).
+- **DANFSe** (`danfse_pdf`): a versão 2.0 da NT 008/2026 (Anexo I), com a disposição do modelo quando a tabela de
+  tamanhos não bate com ele; as linhas únicas das notas 2, 3 e 4 (sem tomador, destinatário, intermediário ou
+  ISSQN; o ISSQN "não sujeito" é a falta do grupo ou o `tribISSQN` 4); a linha do PIS e da COFINS só até a
+  competência de 2026 (nota 6); as exclusões da base do IBS e da CBS somam o que a nota tiver, também os dois ajustes
+  da NT 009 que substituíram o `vCalcReeRepRes`. A logomarca da NFS-e não vai (o texto "NFS-e" no lugar dela).
+- **Carta de correção** (`dacce_pdf`): não há modelo oficial; o desenho é do pacote (a chave em código de barras, o
+  registro, a correção e as condições de uso; a do CT-e em tabela). O ";" do texto não quebra a linha (no DANFE,
+  quebra, nas informações complementares).
 
 ## O robô das tabelas
 

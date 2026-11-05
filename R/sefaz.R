@@ -762,11 +762,13 @@ colunas_do_cadastro = function(cadastros_do_xml, documentos_consultados) {
   list2DF(colunas)
 }
 
-# O texto do campo pelo caminho, só com nomes locais ("ender/xLgr"); "CNPJ|CPF" pega o que existir.
+# O texto do campo pelo caminho, só com nomes locais ("ender/xLgr"); "CNPJ|CPF" pega o que existir, e o "*" é qualquer
+# elemento ("imposto/ICMS/*/CST", o grupo do ICMS que o item tiver).
 texto_pelo_caminho = function(elemento, caminho) {
   for (caminho_possivel in strsplit(caminho, "|", fixed = TRUE)[[1]]) {
     passos = strsplit(caminho_possivel, "/", fixed = TRUE)[[1]]
-    caminho_do_xml = paste0("./", paste0("*[local-name()='", passos, "']", collapse = "/"))
+    passos_do_xml = ifelse(passos == "*", "*", paste0("*[local-name()='", passos, "']"))
+    caminho_do_xml = paste0("./", paste(passos_do_xml, collapse = "/"))
     achado = xml2::xml_find_first(elemento, caminho_do_xml)
     if (!inherits(achado, "xml_missing")) {
       return(xml2::xml_text(achado))
