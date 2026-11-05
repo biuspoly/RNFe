@@ -112,6 +112,23 @@ test_that("a presta\u00e7\u00e3o em desacordo do CT-e: o motivo vai em observaca
   expect_true(is.na(evento$justificativa))
 })
 
+test_that("a tributa\u00e7\u00e3o do Simples Nacional do CT-e (NT 2026.005): o detalhe de cada item vai em campos", {
+  texto = paste(readLines(CANCELAMENTO_CTE, encoding = "UTF-8"), collapse = "\n")
+  grupo_do_simples = paste0(
+    "<evTributacaoSN><descEvento>Tributa\u00e7\u00e3o do Simples Nacional</descEvento><nProt>135260000012345</nProt>",
+    "<gTribItemSN nItem=\"1\"><vRBSNItem>300.00</vRBSNItem><tpRBSN>1</tpRBSN><pIBSSN>0.0500</pIBSSN><vIBSSN>0.15</vIBSSN>",
+    "</gTribItemSN><gTotalSN><vRBSNTot>300.00</vRBSNTot><vIBSSNTot>0.15</vIBSSNTot></gTotalSN></evTributacaoSN>")
+  texto = sub("(?s)<evCancCTe>.*</evCancCTe>", grupo_do_simples, texto, perl = TRUE)
+  texto = gsub("110111", "412140", texto, fixed = TRUE)
+  lido = eventos_ler(texto, todos_os_campos = TRUE)
+  expect_identical(lido$eventos$tipo, "412140")
+  expect_identical(lido$eventos$descricao, "Tributa\u00e7\u00e3o do Simples Nacional")
+  expect_identical(lido$eventos$protocolo_documento, "135260000012345")
+  campos = lido$campos
+  expect_identical(campos$valor[campos$campo == "vIBSSN"], "0.15")
+  expect_identical(campos$valor[campos$campo == "vRBSNTot"], "300.00")
+})
+
 test_that("o cancelamento da NFS-e: o tipo pelo nome do grupo e o registro pelo sistema nacional", {
   lido = eventos_ler(CANCELAMENTO_NFSE)
   evento = lido$eventos

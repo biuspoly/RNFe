@@ -299,7 +299,9 @@ PAGINA_DA_DOCUMENTACAO_DA_NFSE = "https://www.gov.br/nfse/pt-br/biblioteca/docum
 
 baixar_local_operacao = function(pasta_temporaria) {
   pagina = xml2::read_html(httr2::resp_body_string(httr2::req_perform(httr2::request(PAGINA_DA_DOCUMENTACAO_DA_NFSE))))
-  enderecos = xml2::xml_attr(xml2::xml_find_all(pagina, "//a[contains(@href, 'anexovii-indop')]"), "href")
+  # A página também lista documentos só da Produção Restrita: esses ficam de fora.
+  enderecos = xml2::xml_attr(xml2::xml_find_all(
+    pagina, "//a[contains(@href, 'anexovii-indop') and not(contains(@href, 'producao-restrita'))]"), "href")
   if (length(enderecos) == 0) {
     stop("A página da documentação da NFS-e não tem mais o Anexo VII (anexovii-indop)", call. = FALSE)
   }
@@ -403,7 +405,7 @@ ler_aba_de_cst = function(arquivo_da_planilha, nome_da_aba, tipos_das_colunas = 
 # (cClassTrib), a aba CST os CST, e as abas tpRBSN e tpDoacao o significado desses dois códigos. O Excel guarda alguns
 # CST como número (400 em vez de "400"): todo CST volta a ter três dígitos.
 baixar_tabelas_da_reforma = function(pasta_temporaria) {
-  planilha_baixada = baixar_do_portal("Tabela de Classificação Tributária do IBS e CBS", pasta_temporaria)
+  planilha_baixada = baixar_planilha_mais_nova_da_reforma("classificacao", pasta_temporaria)
   abas = abas_da_planilha_da_reforma(planilha_baixada$arquivo)
   classificacoes = readxl::read_excel(planilha_baixada$arquivo, sheet = abas$classificacao)
   conferir_colunas(classificacoes, c(
@@ -415,8 +417,9 @@ baixar_tabelas_da_reforma = function(pasta_temporaria) {
   significados_da_doacao = significados_da_aba(planilha_baixada$arquivo, "tpDoacao")
   tipo_de_receita = as.character(as.integer(classificacoes[["tpRBSN"]]))
   doacao = as.character(as.integer(classificacoes[["tpDoacao"]]))
+  # O código volta a ter seis dígitos: a planilha guarda alguns como número (o CST dos 400003 e 400004, na 1.70).
   classificacao = data.frame(
-    codigo = classificacoes[["cClassTrib"]],
+    codigo = formatC(as.integer(classificacoes[["cClassTrib"]]), width = 6, flag = "0"),
     cst = sprintf("%03d", as.integer(classificacoes[["CST-IBS/CBS"]])),
     nome = trimws(classificacoes[["Nome cClassTrib"]]),
     descricao = trimws(classificacoes[["Descrição cClassTrib"]]),
@@ -463,6 +466,16 @@ COLUNAS_DO_CREDITO_PRESUMIDO = c(
   indCTe = "permitido_no_cte", indNFSe = "permitido_na_nfse"
 )
 
+# O texto de uma coluna de orientação. A célula de número vem do Excel com 17 dígitos ("7.0000000000000007E-2" para
+# os 7%): volta ao número que a planilha mostra, em 10 algarismos e sem notação científica ("0.07").
+texto_da_orientacao = function(valores) {
+  textos = trimws(as.character(valores))
+  numeros = suppressWarnings(as.numeric(textos))
+  de_numero = !is.na(numeros) & grepl("^[-+0-9.eE]+$", textos)
+  textos[de_numero] = format(signif(numeros[de_numero], 10), scientific = FALSE, drop0trailing = TRUE, trim = TRUE)
+  textos
+}
+
 ler_aba_de_credito_presumido = function(arquivo_da_planilha, tipos_das_colunas = NULL) {
   creditos = readxl::read_excel(arquivo_da_planilha, sheet = "cCredPres", col_types = tipos_das_colunas)
   names(creditos)[names(creditos) == "ind_DeduzCredPres"] = "indDeduzCredPres"
@@ -470,7 +483,7 @@ ler_aba_de_credito_presumido = function(arquivo_da_planilha, tipos_das_colunas =
 }
 
 baixar_credito_presumido = function(pasta_temporaria) {
-  planilha_baixada = baixar_do_portal("Tabela de Código de Crédito Presumido do IBS", pasta_temporaria)
+  planilha_baixada = baixar_planilha_mais_nova_da_reforma("credito_presumido", pasta_temporaria)
   creditos = ler_aba_de_credito_presumido(planilha_baixada$arquivo)
   conferir_colunas(creditos, c(
     "cCredPres", "Descrição", "LC 214/2025", "Alíquota CBS", "Alíquota IBS", "pAliqCredPresCBS", "pAliqCredPresIBS",
@@ -481,12 +494,12 @@ baixar_credito_presumido = function(pasta_temporaria) {
     codigo = sprintf("%02d", as.integer(creditos[["cCredPres"]])),
     descricao = trimws(creditos[["Descrição"]]),
     texto_da_lc_214 = trimws(creditos[["LC 214/2025"]]),
-    orientacao_aliquota_cbs = trimws(as.character(creditos[["Alíquota CBS"]])),
-    orientacao_aliquota_ibs = trimws(as.character(creditos[["Alíquota IBS"]])),
-    orientacao_percentual_cbs = trimws(as.character(creditos[["pAliqCredPresCBS"]])),
-    orientacao_percentual_ibs = trimws(as.character(creditos[["pAliqCredPresIBS"]])),
-    orientacao_reducao_transicao_ibs = trimws(as.character(creditos[["pRedTransicaoIBS"]])),
-    orientacao_classificacao_referenciada = trimws(as.character(creditos[["cClassTrib nota referenciada"]])),
+    orientacao_aliquota_cbs = texto_da_orientacao(creditos[["Alíquota CBS"]]),
+    orientacao_aliquota_ibs = texto_da_orientacao(creditos[["Alíquota IBS"]]),
+    orientacao_percentual_cbs = texto_da_orientacao(creditos[["pAliqCredPresCBS"]]),
+    orientacao_percentual_ibs = texto_da_orientacao(creditos[["pAliqCredPresIBS"]]),
+    orientacao_reducao_transicao_ibs = texto_da_orientacao(creditos[["pRedTransicaoIBS"]]),
+    orientacao_classificacao_referenciada = texto_da_orientacao(creditos[["cClassTrib nota referenciada"]]),
     inicio_cbs = as.Date(creditos[["dIniVigCBS"]]),
     fim_cbs = as.Date(creditos[["dFimVigCBS"]]),
     inicio_ibs = as.Date(creditos[["dIniVigIBS"]]),
@@ -498,10 +511,11 @@ baixar_credito_presumido = function(pasta_temporaria) {
   list(tabela = credito_presumido, titulo = planilha_baixada$titulo)
 }
 
-# O controle de versões do Informe Técnico 2025.002 (v1.71): o prazo de produção de cada versão ("Até 04/05/26"). As
-# versões sem prazo lá ficam sem prazo conhecido. O da versão seguinte não serve: a 1.40 tirou a 200001 da NF-e, a 1.50
-# (prazo de 04/05/2026) já trazia isso, e a SEFAZ autorizou NF-e com a 200001 em 01/06/2026. Versão nova: uma linha
-# aqui, com o prazo do IT dela; enquanto não tiver, as mudanças dela também ficam sem prazo conhecido.
+# O controle de versões do Informe Técnico 2025.002 (v1.71): o prazo de produção de cada versão ("Até 04/05/26"). A
+# mudança de uma versão sem prazo lá está em produção, no máximo, no prazo da versão mais nova que ainda a traz (a que a
+# SEFAZ teria de ter implantado até lá). O prazo da primeira versão seguinte não serve: a 1.40 tirou a 200001 da NF-e,
+# a 1.50 (prazo de 04/05/2026) já trazia isso, e a SEFAZ autorizou NF-e com a 200001 em 01/06/2026. Versão nova: uma
+# linha aqui, com o prazo do IT dela; enquanto não tiver, as mudanças só dela ficam sem prazo conhecido.
 VERSOES_DO_INFORME_TECNICO = data.frame(
   versao = c("1.20", "1.21", "1.30", "1.31", "1.40", "1.50", "1.60", "1.70", "1.71"),
   prazo_de_producao = as.Date(c(NA, NA, NA, NA, NA, "2026-05-04", "2026-07-06", "2026-10-16", "2026-10-30"))
@@ -524,6 +538,19 @@ LINKS_DAS_PLANILHAS_DA_REFORMA = c(
   classificacao = "contains(normalize-space(.), 'Classificação Tributária do IBS')",
   credito_presumido = "contains(normalize-space(.), 'Crédito Presumido do IBS')"
 )
+
+# A planilha da Reforma publicada por último, pela data no texto do link ("Publicada em 30/10/2026"), com o mesmo
+# filtro da história: o começo do título já mudou três vezes, e a página não é ordenada por data.
+baixar_planilha_mais_nova_da_reforma = function(planilha, pasta_temporaria) {
+  links_achados = links_do_portal(LINKS_DAS_PLANILHAS_DA_REFORMA[[planilha]], pasta_temporaria)
+  publicada_em = as.Date(sub(".*Publicad[ao] em (\\d{2}/\\d{2}/\\d{4}).*", "\\1", links_achados$titulo), format = "%d/%m/%Y")
+  if (nrow(links_achados) == 0 || anyNA(publicada_em)) {
+    stop("A página do portal não tem a planilha da Reforma (", planilha, ") com a data de publicação no link", call. = FALSE)
+  }
+  mais_nova = which.max(publicada_em)
+  list(arquivo = baixar_link_do_portal(links_achados$endereco[mais_nova], pasta_temporaria),
+       titulo = links_achados$titulo[mais_nova])
+}
 
 # O prazo de produção de cada versão do IT, pelo nome da versão (NA quando o IT não diz).
 prazo_de_cada_versao = function() {
@@ -629,6 +656,50 @@ versoes_publicadas = function(planilha, pasta_temporaria) {
   links_achados
 }
 
+# O prazo de produção de cada mudança da versão na `posicao`: o da própria versão; sem ele, o da versão mais nova
+# (com prazo) que ainda traz o mesmo valor, sem ter mudado de novo no caminho; NA quando nenhuma traz. O da primeira
+# versão com prazo não serve: a SEFAZ autorizou NF-e com a 200001, que a 1.40 tirou da NF-e, depois do prazo da 1.50.
+prazo_de_quem_traz_a_mudanca = function(mudancas_da_versao, posicao, versoes, valores_de_cada_versao) {
+  prazos = rep(as.Date(unname(versoes$em_producao_ate[posicao])), nrow(mudancas_da_versao))
+  if (!anyNA(prazos)) {
+    return(prazos)
+  }
+  chaves_das_mudancas = paste(mudancas_da_versao$tabela, mudancas_da_versao$codigo, mudancas_da_versao$coluna)
+  da_coluna_existe = mudancas_da_versao$coluna == "existe"
+  ainda_traz = is.na(prazos)
+  for (seguinte in seq_len(nrow(versoes))[seq_len(nrow(versoes)) > posicao]) {
+    valores = valores_de_cada_versao[[seguinte]]
+    valor_na_seguinte = valores$valor[match(chaves_das_mudancas, paste(valores$tabela, valores$codigo, valores$coluna))]
+    valor_na_seguinte[da_coluna_existe & is.na(valor_na_seguinte)] = "0"
+    mesmo_valor = (is.na(valor_na_seguinte) & is.na(mudancas_da_versao$valor_depois)) |
+      (!is.na(valor_na_seguinte) & !is.na(mudancas_da_versao$valor_depois) & valor_na_seguinte == mudancas_da_versao$valor_depois)
+    ainda_traz = ainda_traz & mesmo_valor
+    prazo_da_seguinte = as.Date(unname(versoes$em_producao_ate[seguinte]))
+    if (!is.na(prazo_da_seguinte)) {
+      prazos[ainda_traz] = prazo_da_seguinte
+    }
+  }
+  prazos
+}
+
+# A mudança que ficou sem prazo porque outra versão a desfez antes de alguma com prazo trazer o valor dela (o 000002
+# na NFGas entrou na 1.30 e saiu na 1.31) vale até o prazo de quem a desfez: depois dele, a produção já passou dela. As
+# mudanças vêm da mais antiga para a mais nova; a conta vai de trás para a frente, para a seguinte já ter o prazo.
+prazo_de_quem_desfaz_a_mudanca = function(mudancas_da_planilha) {
+  chaves = paste(mudancas_da_planilha$tabela, mudancas_da_planilha$codigo, mudancas_da_planilha$coluna)
+  for (linha in rev(seq_len(nrow(mudancas_da_planilha)))) {
+    if (!is.na(mudancas_da_planilha$em_producao_ate[linha])) {
+      next
+    }
+    seguintes = which(chaves == chaves[linha] & mudancas_da_planilha$publicada_em > mudancas_da_planilha$publicada_em[linha])
+    if (length(seguintes) > 0) {
+      quem_desfaz = seguintes[which.min(mudancas_da_planilha$publicada_em[seguintes])]
+      mudancas_da_planilha$em_producao_ate[linha] = mudancas_da_planilha$em_producao_ate[quem_desfaz]
+    }
+  }
+  mudancas_da_planilha
+}
+
 # A história das planilhas da Reforma: baixa do portal cada versão publicada desde a 1.20 e lista o que mudou em cada
 # uma, com o prazo de produção dela. É o que a conferência do IBS e da CBS consulta para uma nota emitida antes de uma
 # mudança, que a SEFAZ conferiu pela versão da época.
@@ -638,24 +709,28 @@ baixar_historia_da_reforma = function(pasta_temporaria) {
   for (planilha in names(LINKS_DAS_PLANILHAS_DA_REFORMA)) {
     versoes = versoes_publicadas(planilha, pasta_temporaria)
     publicadas[[planilha]] = versoes$publicada_em
-    valores_antes = NULL
+    valores_de_cada_versao = list()
     for (posicao in seq_len(nrow(versoes))) {
       arquivo_da_versao = baixar_link_do_portal(versoes$endereco[posicao], pasta_temporaria)
       if (planilha == "classificacao") {
-        valores_depois = valores_da_classificacao(arquivo_da_versao)
+        valores_de_cada_versao[[posicao]] = valores_da_classificacao(arquivo_da_versao)
       } else {
-        valores_depois = valores_do_credito_presumido(arquivo_da_versao)
+        valores_de_cada_versao[[posicao]] = valores_do_credito_presumido(arquivo_da_versao)
       }
-      if (!is.null(valores_antes)) {
-        mudancas_da_versao = mudancas_entre_versoes(valores_antes, valores_depois)
-        if (nrow(mudancas_da_versao) > 0) {
-          mudancas_da_versao$versao = versoes$versao[posicao]
-          mudancas_da_versao$publicada_em = versoes$publicada_em[posicao]
-          mudancas_da_versao$em_producao_ate = unname(versoes$em_producao_ate[posicao])
-          mudancas[[length(mudancas) + 1]] = mudancas_da_versao
-        }
+    }
+    mudancas_da_planilha = list()
+    for (posicao in seq_len(nrow(versoes))[-1]) {
+      mudancas_da_versao = mudancas_entre_versoes(valores_de_cada_versao[[posicao - 1]], valores_de_cada_versao[[posicao]])
+      if (nrow(mudancas_da_versao) > 0) {
+        mudancas_da_versao$versao = versoes$versao[posicao]
+        mudancas_da_versao$publicada_em = versoes$publicada_em[posicao]
+        mudancas_da_versao$em_producao_ate = prazo_de_quem_traz_a_mudanca(mudancas_da_versao, posicao, versoes,
+                                                                           valores_de_cada_versao)
+        mudancas_da_planilha[[length(mudancas_da_planilha) + 1]] = mudancas_da_versao
       }
-      valores_antes = valores_depois
+    }
+    if (length(mudancas_da_planilha) > 0) {
+      mudancas[[length(mudancas) + 1]] = prazo_de_quem_desfaz_a_mudanca(do.call(rbind, mudancas_da_planilha))
     }
   }
   historia = do.call(rbind, mudancas)

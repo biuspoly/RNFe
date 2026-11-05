@@ -2,7 +2,7 @@
 # protocolo do CT-e, mas no lugar do remetente, do destinatário e dos documentos de uma prestação só traz o tomador
 # (com os dados dele) e um grupo det por entrega, cada um com os municípios, o valor, os componentes, o IBS e a CBS e
 # os documentos dela. Os caminhos seguem o tipo TCTeSimp do schema oficial do Portal do CT-e (pacote de liberação
-# PL_CTe_400 NT 2026.004 RTC 1.00).
+# PL_CTe_400 NT 2026.005 RTC SN 1.00, de 04/11/2026).
 
 #' @include ler_xml.R cte_ler.R
 NULL
@@ -80,6 +80,8 @@ valor_ibs_uf                    total/IBSCBSTot/gIBS/gIBSUF/vIBSUF              
 valor_ibs_municipio             total/IBSCBSTot/gIBS/gIBSMun/vIBSMun              numero
 valor_ibs                       total/IBSCBSTot/gIBS/vIBS                         numero
 valor_cbs                       total/IBSCBSTot/gCBS/vCBS                         numero
+valor_ibs_simples_nacional      total/IBSCBSTot/gTribSN/vIBSSN                    numero
+valor_cbs_simples_nacional      total/IBSCBSTot/gTribSN/vCBSSN                    numero
 valor_total_documento           total/vTotDFe                                     numero
 valor_carga                     infCarga/vCarga                                   numero
 produto_predominante            infCarga/proPred                                  texto
@@ -142,6 +144,10 @@ valor_ibs_municipio           IBSCBS/gIBSCBS/gIBSMun/vIBSMun   numero
 valor_ibs                     IBSCBS/gIBSCBS/vIBS              numero
 aliquota_cbs                  IBSCBS/gIBSCBS/gCBS/pCBS         numero
 valor_cbs                     IBSCBS/gIBSCBS/gCBS/vCBS         numero
+aliquota_ibs_simples_nacional IBSCBS/gTribSN/gIBSSN/pIBSSN     numero
+valor_ibs_simples_nacional    IBSCBS/gTribSN/gIBSSN/vIBSSN     numero
+aliquota_cbs_simples_nacional IBSCBS/gTribSN/gCBSSN/pCBSSN     numero
+valor_cbs_simples_nacional    IBSCBS/gTribSN/gCBSSN/vCBSSN     numero
 ")
 
 # O nome do CST e da classificação tributária do IBS e da CBS de cada entrega, na data de emissão do CT-e.
@@ -159,12 +165,13 @@ nome    xNome                 texto
 valor   vComp                 numero
 ")
 
-# Os documentos que o CT-e simplificado cita, na ordem do XML: os da Reforma no ide (o do pagamento antecipado e o
-# anterior da compra governamental); em cada entrega, as NF-e (infNFe) ou o CT-e anterior (infDocAnt) com as NF-e
+# Os documentos que o CT-e simplificado cita, na ordem do XML: os da Reforma no ide (o do pagamento antecipado, o
+# anterior da compra governamental e o CT-e de que este cobra multa e juros); em cada entrega, as NF-e (infNFe) ou o CT-e anterior (infDocAnt) com as NF-e
 # informadas dentro dele (infNFeTranspParcial); e o CT-e que este substitui (infCteSub).
 CAMINHO_DOS_DOCUMENTOS_DO_SIMPLIFICADO = paste(
   "ide/gPagAntecipado/chDFePagAnt",
   "ide/gCompraGov/refDFeAnt",
+  "ide/gMultaJuros/chCTeRef",
   "det/infNFe",
   "det/infDocAnt",
   "det/infDocAnt/infNFeTranspParcial",
@@ -177,7 +184,7 @@ CAMPOS_DO_DOCUMENTO_DO_SIMPLIFICADO = ler_campos("
 coluna              caminho                  tipo
 entrega             ancestor::det/@nItem     inteiro
 tipo                self::*                  elemento
-documento_chave     chNFe|chCTe|chCte|self::chDFePagAnt|self::refDFeAnt  texto
+documento_chave     chNFe|chCTe|chCte|self::chDFePagAnt|self::refDFeAnt|self::chCTeRef  texto
 pin                 PIN                      texto
 previsao_entrega    dPrev                    data
 tipo_prestacao      tpPrest                  inteiro
@@ -270,6 +277,8 @@ tipo_medida      tpMed -
 #'   abate (grupo `gPagAntecipado`, da Reforma; sem `entrega`);
 #' * `refDFeAnt`: o documento fiscal anterior da compra governamental (grupo
 #'   `gCompraGov`, da Reforma; sem `entrega`);
+#' * `chCTeRef`: o CT-e de que este cobra multa e juros (grupo `gMultaJuros`,
+#'   da Reforma; sem `entrega`);
 #' * `infNFe`: as NF-e da entrega;
 #' * `infDocAnt`: o CT-e anterior da entrega, com `tipo_prestacao`, que diz se
 #'   a prestação é total ou parcial em relação às notas dele;
@@ -329,10 +338,10 @@ tipo_medida      tpMed -
 #' @return Uma lista com os `data.frame`s `ctes`, `entregas`, `componentes`,
 #'   `documentos`, `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`,
 #'   `observacoes`, `campos` (só com `todos_os_campos = TRUE`) e `arquivos`.
-#' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.004
-#'   RTC 1.00 (tipo `TCTeSimp`, `cteSimp_v4.00.xsd` e
-#'   `procCTeSimp_v4.00.xsd`), publicado no Portal Nacional do CT-e
-#'   (republicado em 16/10/2026).
+#' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.005
+#'   RTC SN 1.00 (tipo `TCTeSimp`, `cteSimp_v4.00.xsd` e
+#'   `procCTeSimp_v4.00.xsd`), publicado no Portal Nacional do CT-e em
+#'   04/11/2026.
 #' @examples
 #' simplificado = system.file("exemplos", "cte_simp_proc_sp.xml", package = "RNFe")
 #' lido = cte_simplificado_ler(simplificado)

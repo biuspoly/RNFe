@@ -906,15 +906,20 @@ conferir_as_aliquotas = function(itens) {
   tributacao_regular = itens$grupo_tributacao_regular_da_classificacao %in% 1
   sem_regra_do_ibs = itens$finalidade %in% "4" | itens$tipo_nota_credito %in% c("03", "04", "06")
   linhas = list()
+  # De 2029 em diante a alíquota do IBS é "a ser publicada" (UB18-10 e UB37-10): só dá para conferir o zero da
+  # tributação regular; o resto fica sem conferir, com o motivo.
   for (parte in c("ibs_uf", "ibs_mun")) {
     regra = switch(parte, ibs_uf = "UB18-10", ibs_mun = "UB37-10")
     campo = switch(parte, ibs_uf = "gIBSUF/pIBSUF", ibs_mun = "gIBSMun/pIBSMun")
     aliquota = itens[[paste0("aliquota_", parte)]]
     esperada = ifelse(tributacao_regular, 0, itens[[paste0("aliquota_do_ano_", parte)]])
+    sem_aliquota_publicada = is.na(esperada)
     linhas[[length(linhas) + 1]] = linhas_da_regra(
-      regra, itens, aplica = itens$tem_grupo_ibs_cbs & itens$tem_aliquota_do_ano & !sem_regra_do_ibs,
-      confere = igual_com_tolerancia(aliquota, esperada, TOLERANCIA_DO_PERCENTUAL), campo = campo,
-      no_documento = texto_da_aliquota(aliquota), esperado = texto_da_aliquota(esperada)
+      regra, itens, aplica = itens$tem_grupo_ibs_cbs & !is.na(itens$data_emissao) & !sem_regra_do_ibs,
+      confere = ifelse(sem_aliquota_publicada, NA, igual_com_tolerancia(aliquota, esperada, TOLERANCIA_DO_PERCENTUAL)),
+      campo = campo, no_documento = texto_da_aliquota(aliquota),
+      esperado = ifelse(sem_aliquota_publicada, "a al\u00edquota do ano, a ser publicada", texto_da_aliquota(esperada)),
+      observacao = ifelse(sem_aliquota_publicada, "A al\u00edquota do IBS deste ano ainda n\u00e3o foi publicada.", NA)
     )
   }
   # A CBS pelo ano da emissão: a UB56-10 é a de 2025 e 2026; a UB56-20, a de 2027 em diante, com outras exceções.
@@ -932,19 +937,19 @@ conferir_as_aliquotas = function(itens) {
     esperado = ifelse(tributacao_regular, "0 (classifica\u00e7\u00e3o com tributa\u00e7\u00e3o regular)",
                       paste0(texto_da_aliquota(esperada_cbs), " (ou 0 na mesma \u00e1rea incentivada, ZFM ou ALC)"))
   )
-  # De 2027 em diante, enquanto a alíquota de referência não for publicada, só dá para conferir o zero obrigatório.
+  # De 2027 em diante, enquanto a alíquota da CBS do ano não for publicada (a de referência, menos 0,1 ponto em 2027 e
+  # 2028, pelo art. 347), só dá para conferir o zero obrigatório.
   cbs_zero = tributacao_regular | itens$tem_area_incentivada_cbs
   aliquota_publicada = !is.na(itens$aliquota_do_ano_cbs)
   esperada_cbs_depois = ifelse(cbs_zero, 0, itens$aliquota_do_ano_cbs)
   da_para_conferir = cbs_zero | aliquota_publicada
   linhas[[length(linhas) + 1]] = linhas_da_regra(
-    "UB56-20", itens, aplica = itens$tem_grupo_ibs_cbs & itens$tem_aliquota_do_ano & de_2027_em_diante & !sem_regra_do_ibs,
+    "UB56-20", itens, aplica = itens$tem_grupo_ibs_cbs & de_2027_em_diante & !sem_regra_do_ibs,
     confere = ifelse(da_para_conferir, igual_com_tolerancia(itens$aliquota_cbs, esperada_cbs_depois, TOLERANCIA_DO_PERCENTUAL),
                      NA),
     campo = "gCBS/pCBS", no_documento = texto_da_aliquota(itens$aliquota_cbs),
-    esperado = ifelse(da_para_conferir, texto_da_aliquota(esperada_cbs_depois),
-                      "a al\u00edquota de refer\u00eancia do ano menos 0,1 ponto percentual"),
-    observacao = ifelse(da_para_conferir, NA, "A al\u00edquota de refer\u00eancia da CBS deste ano ainda n\u00e3o foi publicada.")
+    esperado = ifelse(da_para_conferir, texto_da_aliquota(esperada_cbs_depois), "a al\u00edquota do ano, a ser publicada"),
+    observacao = ifelse(da_para_conferir, NA, "A al\u00edquota da CBS deste ano ainda n\u00e3o foi publicada.")
   )
   juntar_linhas(linhas)
 }

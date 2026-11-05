@@ -1,6 +1,6 @@
 # Plano do RNFe
 
-Situação em 04/11/2026: **etapas 1, 2 e 3 feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
+Situação em 05/11/2026: **etapas 1 a 4 feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
 das da etapa 3). Etapa 1: chave de acesso, leitura do XML da NF-e/NFC-e e tabelas fiscais, conferidas com
 notas reais; o CEST foi adiado por decisão do usuário. Etapa 2: a leitura do CT-e e do CT-e OS (14.370 CT-e
 reais), da GTV-e, do CT-e simplificado e do MDF-e (os dois pelo schema oficial, sem documentos reais para
@@ -8,8 +8,8 @@ comparar), da NFS-e Nacional (11.207 reais) e dos eventos de todos; a NFS-e de p
 decisão do usuário. Etapa 3:
 certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados, Distribuição da NF-e e do
 CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
-deixou em aberto está no fim dela. Etapa 4 (a Reforma): as tabelas, a conferência e o cálculo prontos; falta a
-revisão dela antes da etapa 5.
+deixou em aberto está no fim dela. Etapa 4 (a Reforma): as tabelas, a conferência e o cálculo prontos, e
+revisados em 05/11/2026 (seção "Revisão da etapa 4", no fim da etapa 4). Próxima: a etapa 5.
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -32,7 +32,7 @@ Cada etapa já é útil sozinha.
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
-| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano); falta a revisão da etapa antes da 5 |
+| 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026) e revisada (05/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano) |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | |
 | por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
 
@@ -240,7 +240,14 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
 
 - `cte_ler()` lê o CT-e (modelo 57) e o CT-e OS (modelo 67), leiautes 3.00 e 4.00, pelo schema oficial do
   pacote PL_CTe_400 NT 2026.004 RTC 1.00 (Portal do CT-e, republicado em 16/10/2026), que já traz o IBS e a
-  CBS. Devolve `ctes`, `componentes`, `documentos`, `cargas`, `impostos`, `parcelas`, `observacoes` e
+  CBS. **Desde 05/11/2026, o pacote PL_CTe_400 NT 2026.005 RTC SN 1.00** (publicado em 04/11/2026; o vigia avisou na
+  revisão da etapa 4): ele traz tudo o da NT 2026.004 v1.01, publicada no mesmo dia (o grupo `gMultaJuros`, com o
+  CT-e de que se cobra multa e juros, no CT-e, no CT-e OS e no simplificado), e mais o `gTribSN`, o IBS e a CBS do
+  Simples Nacional (no `imp/IBSCBS` do CT-e e do CT-e OS, e no item e no total do simplificado), e dois eventos: a
+  tributação do Simples Nacional (412140) e o cancelamento dela (412141). A GTV-e não mudou. O `chCTeRef` foi para
+  `documentos`, como os outros documentos da Reforma; o `gTribSN`, para colunas `*_simples_nacional`; os eventos o
+  `eventos_ler()` já lia (o detalhe de cada item vai para `campos`). Os 19 exemplos passam no schema novo. As duas
+  publicações do BP-e, no mesmo dia, não mudam nada no RNFe. Devolve `ctes`, `componentes`, `documentos`, `cargas`, `impostos`, `parcelas`, `observacoes` e
   `arquivos`, ligadas pela chave, no mesmo molde do `nfe_ler()`. O que as duas leituras fazem igual está em
   `R/ler_xml.R`.
 - **O CT-e OS entrou junto** porque usa o mesmo `infCte` e quase os mesmos grupos; muda o tomador (grupo
@@ -1048,10 +1055,13 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     quando as regras entraram em produção) foram comparadas; as 100 mudanças estão em `mudancas_ibs_cbs`, com o prazo
     de produção do controle de versões do IT 2025.002 v1.71 (da 1.21 à 1.40 não há prazo lá; até o acervo inteiro,
     elas valiam até o prazo da 1.50, 04/05/2026, que já as traz, mas uma NF-e autorizada com a 200001 em 01/06/2026
-    desmentiu isso: agora ficam sem prazo conhecido). A coluna DataAtualização da planilha não serve para isso: a 1.70 mexeu no
-    texto das 170 linhas, e todas ficaram com 01/10/2026. O robô refaz a comparação toda semana; versão nova sem
-    prazo em `VERSOES_DA_TABELA_DA_REFORMA` gera um aviso e as mudanças dela ficam sem prazo (a conferência as trata
-    como talvez não em produção).
+    desmentiu isso; na revisão da etapa 4 passaram a valer até o prazo da versão mais nova que ainda traz o mesmo
+    valor, hoje a 1.71, 30/10/2026, e a mudança que outra versão desfez, até o prazo de quem a desfez). A coluna
+    DataAtualização da planilha não serve para isso: a 1.70 mexeu no texto das 170 linhas, e todas ficaram com
+    01/10/2026. O robô refaz a comparação toda semana; a planilha nova que ainda não está em `PUBLICACOES_DA_REFORMA`
+    (no `gerar_tabelas.R`) gera um aviso, e as mudanças dela ficam sem prazo até sair uma versão com prazo que ainda
+    traga o valor (a conferência as trata como talvez não em produção). As 100 mudanças são da planilha de classificação (95 de classificação e 5 de CST); com as 3 da de
+    crédito presumido, a tabela tem 103.
   - **Como fica:** o que não confere pela regra e pela tabela de hoje, numa nota emitida antes da mudança, vem com
     `confere` vazio e o motivo (para a tabela, "a SEFAZ conferiu" quando a nota é de antes da publicação e "pode ter
     conferido" entre a publicação e o prazo).
@@ -1061,8 +1071,8 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
       valor), UB131-40/50, UB132-10 e UB133-10 (o crédito presumido da ZFM); o mês "atual" da UB132-10 é o da
       autorização (o `dhRecbto` do protocolo; sem ele, o mês depois da emissão fica sem conferir: desde a revisão
       independente, que achou o caso da contingência);
-    - a CBS zero na área incentivada: UB66a-10/20 (a UB66a-20 mudou na v1.51, quando a ZFM entrou na tabela dela),
-      UB66c-10 e UB66e-10 (que não diz tolerância: até o centavo, depois de arredondar o calculado);
+    - a CBS zero na área incentivada: UB66a-10/20 (na v1.51 a ZFM entrou na lista da UB66a-20, o que só afrouxou a
+      regra: sem marca de mudança, desde a revisão independente), UB66c-10 e UB66e-10 (que não diz tolerância: até o centavo, depois de arredondar o calculado);
     - o crédito presumido da operação: a tabela nova `credito_presumido_ibs_cbs` (a planilha de crédito presumido do
       IT, 13 códigos, publicada em 01/10/2026; as orientações de texto em colunas `orientacao_*`), com a história
       dela em `mudancas_ibs_cbs` (5 versões desde 03/10/2025; o link da de 07/10/2025 vem com espaço no lugar do
@@ -1157,7 +1167,7 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
       - **UB66a-20:** a v1.51 só acrescentou a ZFM à lista (afrouxou): saiu a marca de mudança;
       - **UB13-20, falso:** o revisor leu na v1.30 o texto antigo, que lá está riscado (a v1.30 mostra o antigo
         riscado e o novo realçado; conferido na imagem da página 33). Desde 10/11/2025 vale o novo; nada a mudar;
-      - **um `"﻿"` do `gerar_tabelas.R` virou o caractere invisível** quando desfiz os escapes do arquivo (as
+      - **um `"\ufeff"` do `gerar_tabelas.R` virou o caractere invisível** quando desfiz os escapes do arquivo (as
         ferramentas guardam acento cru no código): voltou o escape;
       - **a ajuda:** o item vazio em todas as regras da nota, a linha por chave anterior na BB05 e o que acontece com
         a mudança que afrouxou a regra (vale para a nota de antes);
@@ -1217,7 +1227,83 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
     `dados-abertos/redutores-compra-governamental`, mas não nas tabelas do RNFe), o crédito presumido, a devolução de
     tributos e o Imposto Seletivo.
   - **O `nfe_ler()` ganhou** os quatro componentes da base que faltavam no item (`valor_icms_monofasico`,
-    `valor_icms_uf_destino`, `valor_fcp_uf_destino` e `valor_issqn`): os itens dele servem direto no cálculo.
+    `valor_icms_uf_destino`, `valor_fcp_uf_destino` e `valor_issqn`). Na revisão da etapa 4, o cálculo passou a
+    pedir o resultado inteiro do `nfe_ler()` (a lista), não só os itens: a data, a finalidade e a compra
+    governamental estão nas notas.
+
+## Revisão da etapa 4 (05/11/2026)
+
+- **Pedido do usuário:** "siga com isso", tudo na ordem, cada etapa revisada antes da seguinte. As mesmas quatro
+  frentes da revisão das etapas 1 a 3: o plano contra o pacote, os robôs do GitHub, o acervo do Fiscal inteiro e uma
+  revisão independente (dois revisores, um do cálculo e um das tabelas e da conferência, com o código, a NT, a LC
+  214/2025 e as planilhas oficiais, sem as minhas conclusões, com experimentos rodados).
+- **Os robôs:** o das tabelas rodou sem mudança. O vigia achou quatro publicações de 04/11/2026 no portal do CT-e: os
+  schemas do CT-e da NT 2026.004 v1.01 e da NT 2026.005 (Simples Nacional) v1.00, e os do BP-e das mesmas duas notas.
+  O BP-e o RNFe não lê. O pacote do CT-e da NT 2026.005 contém tudo o da 2026.004 v1.01 e traz: a referência ao CT-e
+  da multa e dos juros (`gMultaJuros/chCTeRef`, no CT-e, no CT-e OS e no simplificado), o IBS e a CBS do Simples
+  Nacional (`gTribSN`, no imposto do CT-e e do CT-e OS e na entrega e no total do simplificado) e os eventos 412140 e
+  412141 (a tributação do Simples Nacional e o cancelamento dela). A GTV-e não mudou. Os leitores passaram ao pacote
+  novo: as colunas `*_simples_nacional` e o `chCTeRef` nos documentos. No acervo, os 15.078 CT-e e as 285 GTV-e
+  continuam lidos sem aviso; nenhum tem os grupos novos ainda.
+- **O plano contra o pacote:** o texto de `tabela_fiscal()` e do README dizia que toda tabela tem `inicio` e `fim`
+  (não valia para o local da operação, as mudanças, o crédito presumido e as alíquotas, e o CST do IBS e da CBS tem as
+  duas vazias); e que a CBS de 2027 em diante é a de referência menos 0,1 ponto (o art. 347 só vale em 2027 e 2028).
+  Corrigidos, com o que a tabela tem de fato. No plano, a contagem das mudanças (100 da classificação, 103 com o
+  crédito presumido) e a UB66a-20 (a v1.51 só afrouxou a regra).
+- **A revisão do cálculo achou, e foi corrigido** (cada um com teste):
+  - o item com crédito presumido da operação (`gCredPresOper`) ou com devolução de tributos (`gDevTrib`) saía
+    calculado, com o valor sem eles: agora fica sem calcular, com o motivo. A devolução só quando o valor não é zero
+    (achado no acervo: os 167 itens com o grupo trazem todos 0,00, e o `vDevTrib` só é subtraído do valor, UB35-10,
+    UB54-10 e UB67-10);
+  - a nota que não é normal (a devolução, a complementar, a de ajuste e as de crédito e de débito) saía calculada como
+    venda: na devolução a base é a da operação original (art. 12, § 7º); agora fica sem calcular;
+  - pelo `nfe_ler()$itens`, o cálculo perdia a data, o modelo, a finalidade, a compra governamental e o diferimento:
+    agora pede a lista inteira do `nfe_ler()` (e recusa só os itens, com a explicação), e o `nfe_ler()` passou a trazer
+    o diferimento, a devolução de tributos, a tributação regular e o código do crédito presumido de cada item;
+  - no `data.frame`, a coluna de número como fator ou como texto com vírgula virava outro número sem aviso; a data com
+    hora em UTC mudava de dia; `data = 2027` passava; a alíquota infinita passava. Agora são recusados, e a data com
+    hora vale no horário de Brasília;
+  - a mesma nota em dois arquivos dobrava os totais; a base negativa saía com valor negativo (a calculadora oficial a
+    recusa); a NFC-e somava o II e o ICMS da UF de destino (a calculadora só os aceita na NF-e); a isenção e a
+    imunidade com compra governamental saíam sem calcular; o item sem data não dizia o motivo;
+  - os nomes `ibs_mun` passaram a `ibs_municipio`, como no `nfe_ler()` e nas tabelas.
+- **A revisão das tabelas e da conferência achou, e foi corrigido:**
+  - as mudanças das versões sem prazo no IT (1.21 a 1.40) ficavam sem conferir para sempre (uma NF-e de 2027 com a
+    200001 sairia "a SEFAZ pode ter conferido pela versão anterior"). O prazo da primeira versão com prazo, a 1.50, já
+    tinha sido desmentido pela NF-e autorizada em 01/06/2026; passou a valer o da versão mais nova que ainda traz o
+    mesmo valor (hoje a 1.71, 30/10/2026). E, achado meu ao conferir as tabelas refeitas, a mudança que outra versão
+    desfez antes de alguma com prazo (o 000002 na NFGas entrou na 1.30 e saiu na 1.31) vale até o prazo de quem a
+    desfez;
+  - de 2029 em diante, a UB18-10, a UB37-10 e a UB56-20 sumiam sem linha nem motivo: agora vêm sem conferir, "a
+    alíquota do ano, a ser publicada";
+  - a NF-e avulsa referenciada (série 890 a 899) tirava a B25-50 e a B25-60 caladas: a chave dela traz o CNPJ do
+    Fisco, então a B25-50 fica sem conferir com o motivo, e a B25-60 vale (a UF da chave é a verdadeira);
+  - a exceção 3 da NA01-20 (devolução de NF-e anterior a 2016) só olhava o cabeçalho, e contava a NF modelo 1 e a
+    de produtor; agora olha também a chave referenciada no item, e só a NF-e;
+  - a VC02-14 entre a publicação da v1.53 (30/10/2026) e 15/11/2026: a SEFAZ podia aplicar a redação antiga ou a nova;
+    onde elas discordam, fica sem conferir;
+  - no gerador: os números da planilha de crédito presumido em notação científica (7.0000000000000007E-2 virou 0.07);
+    o código da classificação lido como número; a planilha mais nova escolhida pela ordem da página (agora pela data
+    "Publicada em"); o Anexo VII da Produção Restrita podendo entrar no lugar do de produção.
+- **Achado meu na revisão:** no `data.frame` sem a coluna `servico`, todo item com `valor_issqn` preenchido virava
+  serviço, também com zero (uma planilha com a coluna zerada perdia o II e o ICMS da base). Agora só o ISSQN acima de
+  zero; pela lista do `nfe_ler()`, a presença do grupo ISSQN, como no XML.
+- **O gabarito da calculadora oficial**, de novo com o cálculo refeito: os mesmos 51 itens, só as duas diferenças em
+  que o RNFe segue a NT (o grupo de redução da 200022 e o IBS do item como soma).
+- **O acervo inteiro, de novo** (só contagens): a conferência deu o mesmo de antes (1.688.508 conferências, 1 errada,
+  a UB67-10 de 0,02, e 172 sem conferir, todas com o motivo; as 6 da 200001 continuam "pode ter conferido", agora com
+  o prazo de 30/10/2026). No cálculo, a mesma nota em mais de um arquivo passou a contar uma vez: 63.150 itens (eram
+  65.336 com as repetições), 55.668 calculados; ficam sem calcular 4.956 de nota que não é normal (4.947 de
+  devolução), 2.384 do monofásico e 142 sem o grupo da Reforma. Pela lista do `nfe_ler()` e pelos arquivos, o mesmo
+  resultado. Com a base da própria nota, nos 15.816 itens calculados com o grupo e as alíquotas de 2026, o IBS bateu
+  (até 0,01) em todos e a CBS em todos menos um (a nota de 0,02).
+- **A máquina local passou a barrar o R:** em 05/11/2026 o Controle Inteligente de Aplicativos do Windows (ligado,
+  `VerifiedAndReputablePolicyState` 1) começou a barrar as DLLs sem assinatura de vários pacotes (curl, testthat,
+  roxygen2, knitr, processx); o xml2 e o pkgload carregam. Desligar o antivírus não muda isso. Por isso as tabelas
+  foram refeitas pelo robô num ramo temporário, e a ajuda, os testes e o R CMD check rodaram no GitHub, num ramo
+  temporário com um robô só para ele (2.537 conferências, nenhuma falha; check sem NOTE, no Linux). O acervo e o
+  gabarito rodaram aqui, pelo `load_all()`. Isso pesa na última etapa (a emissão em homologação precisa do curl
+  local): é decisão do usuário.
 
 ## O robô das tabelas
 

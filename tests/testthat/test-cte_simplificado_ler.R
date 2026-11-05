@@ -169,6 +169,30 @@ test_that("os documentos da Reforma no ide: o da compra governamental e o do pag
   expect_true(all(is.na(documentos_do_cte$altera_tomador)))
 })
 
+# Os grupos da NT 2026.004 v1.01 e da NT 2026.005 (pacote de 04/11/2026): o CT-e de que este cobra multa e juros, e
+# o IBS e a CBS do Simples Nacional.
+MULTA_E_JUROS = "<gMultaJuros><chCTeRef>35261012ABC34501DE35570010000007761135792460</chCTeRef></gMultaJuros>"
+TRIBUTACAO_DO_SIMPLES = paste0("<gTribSN><gIBSSN><pIBSSN>0.0500</pIBSSN><vIBSSN>0.15</vIBSSN></gIBSSN>",
+                               "<gCBSSN><pCBSSN>0.4500</pCBSSN><vCBSSN>1.35</vCBSSN></gCBSSN></gTribSN>")
+
+test_that("a multa e juros e o IBS e a CBS do Simples Nacional", {
+  texto = paste(readLines(CTE_SIMPLIFICADO_SP, encoding = "UTF-8"), collapse = "\n")
+  texto = sub("</ide>", paste0(MULTA_E_JUROS, "</ide>"), texto, fixed = TRUE)
+  texto = sub("</IBSCBS>", paste0(TRIBUTACAO_DO_SIMPLES, "</IBSCBS>"), texto, fixed = TRUE)
+  texto = sub("</IBSCBSTot>", "<gTribSN><vIBSSN>0.15</vIBSSN><vCBSSN>1.35</vCBSSN></gTribSN></IBSCBSTot>", texto, fixed = TRUE)
+  lido = cte_simplificado_ler(texto)
+  documentos = lido$documentos
+  expect_identical(documentos$tipo[1], "chCTeRef")
+  expect_identical(documentos$documento_chave[1], "35261012ABC34501DE35570010000007761135792460")
+  expect_true(is.na(documentos$entrega[1]))
+  expect_equal(lido$entregas$aliquota_ibs_simples_nacional, c(0.05, NA))
+  expect_equal(lido$entregas$valor_cbs_simples_nacional, c(1.35, NA))
+  expect_equal(c(lido$ctes$valor_ibs_simples_nacional, lido$ctes$valor_cbs_simples_nacional), c(0.15, 1.35))
+  expect_true(all(c("gIBSSN", "gCBSSN", "gTribSN") %in% lido$impostos$grupo))
+  # Sem os grupos, as colunas ficam vazias.
+  expect_true(all(is.na(cte_simplificado_ler(CTE_SIMPLIFICADO_SP)$entregas$valor_ibs_simples_nacional)))
+})
+
 test_that("o prefixo no namespace e o CT-e simplificado dentro de outro grupo", {
   com_prefixo = '<cte:CTeSimp xmlns:cte="http://www.portalfiscal.inf.br/cte"><cte:infCte versao="4.00" Id="CTe1"/></cte:CTeSimp>'
   mensagem = "o XML usa prefixo no namespace do documento (<cte:CTeSimp>), que a SEFAZ n\u00e3o aceita e o RNFe n\u00e3o l\u00ea"

@@ -8,7 +8,8 @@ Schemas oficiais: o leiaute genérico de eventos da NF-e (PL_Evento
 do pacote 010d v1.01, NT 2026.004, Portal da NF-e, 08/06/2026), o do
 cancelamento (atualizado em 21/12/2018) e o da carta de correção (v1.01,
 30/05/2014), o resumo de evento da Distribuição de DF-e v1.04
-(03/07/2026), os eventos do CT-e (PL_CTe_400 NT 2026.004), do MDF-e
+(03/07/2026), os eventos do CT-e (PL_CTe_400 NT 2026.005 RTC SN, com a
+tributação do Simples Nacional, 412140, e o cancelamento dela, 412141), do MDF-e
 (PL_MDFe_300b da NT 2025.001 v1.04) e da NFS-e Nacional
 (NFSe-ESQUEMAS_XSD-v1.01-20260209).
 }

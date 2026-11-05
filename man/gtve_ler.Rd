@@ -4,9 +4,9 @@
 \alias{gtve_ler}
 \title{Ler o XML da GTV-e}
 \source{
-Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.004
-RTC 1.00 (tipo \code{TGTVe}, \code{GTVe_v4.00.xsd} e \code{procGTVe_v4.00.xsd}), publicado
-no Portal Nacional do CT-e (republicado em 16/10/2026), e o Manual de
+Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.005
+RTC SN 1.00 (tipo \code{TGTVe}, \code{GTVe_v4.00.xsd} e \code{procGTVe_v4.00.xsd}),
+publicado no Portal Nacional do CT-e em 04/11/2026, e o Manual de
 Orientação do Contribuinte do CT-e, versão 4.00 (fevereiro/2023), item
 2.1.2.
 }

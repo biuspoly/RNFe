@@ -48,9 +48,9 @@ do ICMS monofásico), \code{"meios_pagamento"} (dinheiro, cartão, PIX...),
 \code{"fontes"} (de onde veio cada tabela).}
 }
 \value{
-Um \code{data.frame} com \code{codigo}, a descrição (\code{titulo} e
-\code{nota_explicativa} no CFOP, \code{nome} nos municípios, \code{descricao} nas outras),
-\code{inicio} e \code{fim}.
+Um \code{data.frame}. Na maioria, com \code{codigo}, a descrição (\code{titulo} e
+\code{nota_explicativa} no CFOP, \code{nome} nos municípios, \code{descricao} nas
+outras), \code{inicio} e \code{fim}; as colunas de cada uma estão acima.
 }
 \description{
 Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
@@ -61,9 +61,13 @@ oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{
 \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
 \code{"municipios"}, \code{"codigos_dos_campos"} (o que quer dizer cada código dos
 campos dos documentos) ou \code{"fontes"} (de onde veio cada uma, com a data).
-Cada tabela de códigos traz o \code{codigo}, a descrição e a vigência:
+A maioria das tabelas de códigos traz o \code{codigo}, a descrição e a vigência:
 \code{inicio} (desde quando vale) e \code{fim} (até quando valeu, vazio quando ainda
-vale). Um código que mudou de descrição tem uma linha por período.
+vale). Um código que mudou de descrição tem uma linha por período. As que
+fogem disso estão na descrição de cada uma, abaixo: o CSOSN, o CST do IBS e
+da CBS e os municípios têm as colunas vazias (a fonte não data), o crédito
+presumido tem a vigência na CBS e no IBS, as mudanças têm a versão e o
+prazo, as alíquotas não têm código e o local da operação não tem datas.
 }
 \details{
 O que cada tabela tem:
@@ -95,7 +99,8 @@ documento, com o nome oficial entre parênteses: \code{grupo_ibs_cbs}
 \code{grupo_credito_presumido_zfm} (\code{ind_gCredPresIBSZFM}),
 \code{grupo_ajuste_competencia} (\code{ind_gAjusteCompet}) e \code{redutor_base_calculo}
 (\code{ind_RedutorBC}). São os indicadores que as regras de validação da NT
-2025.002 consultam.
+2025.002 consultam. O \code{inicio} e o \code{fim} ficam vazios: a planilha não
+data o CST (o que mudou de uma versão para outra está nas mudanças).
 \item \code{"classificacao_ibs_cbs"}: a classificação tributária do IBS e da CBS
 (\code{cClassTrib}), com o \code{cst} dela, o \code{nome}, a \code{descricao}, o artigo da LC
 214/2025 (\code{artigo_lc_214}), o \code{tipo_aliquota}, os percentuais de redução
@@ -137,19 +142,23 @@ regras de validação entraram em produção, em 10/11/2025): a \code{tabela}
 nome da coluna na tabela, ou \code{"existe"} para o código que entrou ou saiu),
 o valor de \code{antes} e o de \code{depois}, a \code{versao} do Informe Técnico
 2025.002, a data em que foi \code{publicada_em} e o prazo em que ficou
-\code{em_producao_ate} (o do controle de versões do IT; vazio quando a versão
-não tem prazo lá, da 1.21 à 1.40: o da versão seguinte não serve, porque
-a SEFAZ autorizou NF-e com a classificação 200001, que a 1.40 tirou da
-NF-e, depois do prazo da 1.50). É o que o \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}}
-consulta para uma nota emitida antes de uma mudança, que a SEFAZ conferiu
-pela versão da época.
+\code{em_producao_ate} (o do controle de versões do IT). Da 1.21 à 1.40 o IT
+não dá prazo: vale o da versão mais nova que ainda traz o mesmo valor
+(hoje, a 1.71: 30/10/2026), porque o da primeira com prazo não serviu (a
+SEFAZ autorizou NF-e com a classificação 200001, que a 1.40 tirou da
+NF-e, depois do prazo da 1.50); quando sai uma versão nova com prazo que
+ainda traz o valor, o prazo passa a ser o dela. A mudança que outra
+versão desfez vale até o prazo de quem a desfez. É o que o
+\code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}} consulta para uma nota emitida antes de uma mudança,
+que a SEFAZ conferiu pela versão da época.
 \item \code{"aliquotas_ibs_cbs"}: as alíquotas do IBS (da UF e do município) e da
 CBS de cada período, em percentual, com a \code{base_legal} e a \code{observacao}:
 0,1\% de IBS da UF e 0,9\% de CBS em 2026 (LC 214/2025, arts. 343 e 346; a
 NT 2025.002 aceita as mesmas em 2025), 0,05\% de IBS da UF e 0,05\% do
-município em 2027 e 2028 (art. 344). A CBS de 2027 em diante é a alíquota
+município em 2027 e 2028 (art. 344). A CBS de 2027 e 2028 é a alíquota
 de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
-(art. 347) e fica vazia enquanto não for publicada. Sem \code{codigo}: uma
+(art. 347) e fica vazia enquanto não for publicada. A tabela vai até 2028:
+as alíquotas de 2029 em diante ainda serão publicadas. Sem \code{codigo}: uma
 linha por período (\code{inicio} e \code{fim}).
 \item \code{"local_operacao_ibs_cbs"}: o código indicador do local da operação
 (\code{cIndOp}, art. 11 da LC 214/2025), do Anexo VII da documentação da NFS-e

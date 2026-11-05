@@ -167,6 +167,15 @@ aliquota_ibs_municipio    imposto/IBSCBS/gIBSCBS/gIBSMun/pIBSMun     numero
 valor_ibs                 imposto/IBSCBS/gIBSCBS/vIBS                numero
 aliquota_cbs              imposto/IBSCBS/gIBSCBS/gCBS/pCBS           numero
 valor_cbs                 imposto/IBSCBS/gIBSCBS/gCBS/vCBS           numero
+diferimento_ibs_uf        imposto/IBSCBS/gIBSCBS/gIBSUF/gDif/pDif    numero
+diferimento_ibs_municipio imposto/IBSCBS/gIBSCBS/gIBSMun/gDif/pDif   numero
+diferimento_cbs           imposto/IBSCBS/gIBSCBS/gCBS/gDif/pDif      numero
+valor_devolvido_ibs_uf    imposto/IBSCBS/gIBSCBS/gIBSUF/gDevTrib/vDevTrib numero
+valor_devolvido_ibs_municipio imposto/IBSCBS/gIBSCBS/gIBSMun/gDevTrib/vDevTrib numero
+valor_devolvido_cbs       imposto/IBSCBS/gIBSCBS/gCBS/gDevTrib/vDevTrib numero
+cst_regular               imposto/IBSCBS/gIBSCBS/gTribRegular/CSTReg texto
+classificacao_regular     imposto/IBSCBS/gIBSCBS/gTribRegular/cClassTribReg texto
+credito_presumido_codigo  imposto/IBSCBS/gCredPresOper/cCredPres     texto
 valor_total_ibs_monofasico imposto/IBSCBS/gIBSCBSMono/vTotIBSMonoItem numero
 valor_total_cbs_monofasica imposto/IBSCBS/gIBSCBSMono/vTotCBSMonoItem numero
 valor_is                  imposto/IS/vIS                             numero
@@ -333,7 +342,10 @@ autorizacao      card/cAut  texto
 #' grupo `gMono` dos totais, sem a retenção e o retido, que têm campos
 #' próprios), `valor_item` é a participação do item no total da nota e
 #' `referenciado_chave` e `referenciado_item`, o item de outro documento que
-#' ele cita (nota de crédito ou de débito, devolução), todos da Reforma.
+#' ele cita (nota de crédito ou de débito, devolução), todos da Reforma. Do
+#' IBS e da CBS vêm também o percentual do diferimento, o tributo devolvido, a
+#' tributação regular e o código do crédito presumido da operação, o que
+#' [ibs_cbs_calcular()] usa quando recebe o resultado do `nfe_ler()`.
 #'
 #' @section impostos:
 #' Todos os campos dos impostos de cada item, um por linha: `chave`, `item`,

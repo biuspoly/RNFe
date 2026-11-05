@@ -16,8 +16,10 @@ PRODUTOS_ANP_DA_PARTILHA = c("820101001", "820101010", "810102001", "810102004",
                              "220101006", "560101001")
 UFS_DA_SUFRAMA = c("AC", "AM", "RO", "RR")
 MUNICIPIOS_DO_AMAPA_NA_SUFRAMA = c("1600303", "1600600")
-# Desde 16/11/2026, as mudanças da devolução da NT v1.53 (a B25-40 e a VC02-14).
+# Desde 16/11/2026, as mudanças da devolução da NT v1.53 (a B25-40 e a VC02-14). A v1.53 foi publicada em 30/10/2026,
+# e a VC02-14 nova entra "até 16/11/2026" (a B25-40, em 16/11/2026).
 INICIO_DA_DEVOLUCAO_NOVA = as.Date("2026-11-16")
+PUBLICACAO_DA_DEVOLUCAO_NOVA = as.Date("2026-10-30")
 # Os documentos que a redação antiga da VC02-14 aceita no cabeçalho da devolução (NF-e, NFC-e, NF modelo 1, NF de
 # produtor e ECF).
 REFERENCIAS_DA_DEVOLUCAO_ANTIGA = c("refNFe", "refNFeSig", "refNF", "refNFP", "refECF")
@@ -115,13 +117,17 @@ conferir_a_identificacao_da_nota = function(notas, referencias) {
   # Na devolução, uma referência só a partir de 16/11/2026 (NT v1.53).
   devolucao_com_uma_referencia = notas$finalidade %in% "4" & !is.na(notas$data_emissao) &
     notas$data_emissao >= INICIO_DA_DEVOLUCAO_NOVA
-  referencias_da_nota = referencias[referencias$tipo %in% c("refNFe", "refNFeSig", "refNF", "refNFP") &
-                                      !(referencias$tipo %in% c("refNFe", "refNFeSig") & serie_avulsa(referencias$serie)), ]
+  # B25-50 e B25-60: a NF referenciada. A chave da NF-e avulsa (série 890 a 899) traz o CNPJ do Fisco, não o do
+  # emitente: na B25-50 ela fica sem conferir; na B25-60 vale (a UF da chave é a verdadeira).
+  referencias_da_nota = referencias[referencias$tipo %in% c("refNFe", "refNFeSig", "refNF", "refNFP"), ]
+  de_avulsa = referencias_da_nota$tipo %in% c("refNFe", "refNFeSig") & serie_avulsa(referencias_da_nota$serie)
   da_nota = match(referencias_da_nota$chave, notas$chave)
   documento_do_emitente = documento_com_14_posicoes(ifelse(is.na(notas$cnpj_emitente), notas$cpf_emitente,
                                                            notas$cnpj_emitente))
-  outro_emitente = referencias_da_nota$chave[documento_com_14_posicoes(referencias_da_nota$documento) !=
+  outro_emitente = referencias_da_nota$chave[!de_avulsa & documento_com_14_posicoes(referencias_da_nota$documento) !=
                                                documento_do_emitente[da_nota]]
+  com_avulsa = referencias_da_nota$chave[de_avulsa]
+  emitente_sem_saber = notas$chave %in% com_avulsa & !(notas$chave %in% outro_emitente)
   outra_uf = referencias_da_nota$chave[referencias_da_nota$uf != notas$uf_codigo[da_nota]]
   nfe_referenciadas = referencias[referencias$tipo == "refNFe", ]
   do_credito_de_retorno = notas$tipo_nota_credito[match(nfe_referenciadas$chave, notas$chave)] %in% "03"
@@ -159,9 +165,13 @@ conferir_a_identificacao_da_nota = function(notas, referencias) {
                     no_documento = paste0(quantas_referencias, " referenciadas"), esperado = "no m\u00e1ximo uma",
                     itens_da_regra = sem_item),
     linhas_da_regra("B25-50", notas, aplica = complementar_ou_credito & notas$chave %in% referencias_da_nota$chave,
-                    confere = !(notas$chave %in% outro_emitente), campo = "ide/NFref",
-                    no_documento = ifelse(notas$chave %in% outro_emitente, "emitente diferente", "o mesmo emitente"),
-                    esperado = "o mesmo CNPJ ou CPF do emitente desta nota", itens_da_regra = sem_item),
+                    confere = ifelse(emitente_sem_saber, NA, !(notas$chave %in% outro_emitente)), campo = "ide/NFref",
+                    no_documento = ifelse(notas$chave %in% outro_emitente, "emitente diferente",
+                                          ifelse(emitente_sem_saber, "NF-e avulsa", "o mesmo emitente")),
+                    esperado = "o mesmo CNPJ ou CPF do emitente desta nota", itens_da_regra = sem_item,
+                    observacao = ifelse(emitente_sem_saber, paste(
+                      "A chave da NF-e avulsa (s\u00e9rie 890 a 899) traz o CNPJ do Fisco: s\u00f3 a base da SEFAZ diz o emitente."
+                    ), NA)),
     linhas_da_regra("B25-60", notas, aplica = complementar_ou_credito & notas$chave %in% referencias_da_nota$chave,
                     confere = !(notas$chave %in% outra_uf), campo = "ide/NFref",
                     no_documento = ifelse(notas$chave %in% outra_uf, "outra UF", "a mesma UF"),
@@ -368,13 +378,16 @@ conferir_os_itens_da_nota = function(itens, referencias) {
   cfop_aceito_na_devolucao = cfop_de_devolucao | itens$cfop %in% c("1949", "2949") |
     (itens$cfop %in% c("5949", "6949") & itens$ncm %in% "27112100")
   # NA01-20: o ICMS da UF de destino na venda interestadual a consumidor final não contribuinte, com as exceções.
-  referencias_antigas = referencias$chave[referencias$tipo %in% c("refNFe", "refNFeSig", "refNF", "refNFP") &
-                                            suppressWarnings(as.integer(referencias$ano)) < 16]
+  # A exceção 3 fala da NF "com chave de acesso" anterior a 2016: a do cabeçalho ou a do próprio item (DFeReferenciado).
+  referencias_antigas = referencias$chave[referencias$tipo %in% c("refNFe", "refNFeSig") &
+                                            (suppressWarnings(as.integer(referencias$ano)) < 16) %in% TRUE]
+  item_referencia_chave_antiga = (suppressWarnings(as.integer(substr(itens$referenciado_chave, 3, 4))) < 16) %in% TRUE
   combustivel_fora_da_partilha = itens$tem_combustivel & !(itens$produto_anp %in% PRODUTOS_ANP_DA_PARTILHA)
   icms_sem_partilha = itens$cst_icms %in% c("40", "41") | itens$csosn %in% c("103", "300", "400")
   pede_icms_do_destino = itens$destino_operacao %in% "2" & itens$consumidor_final %in% "1" &
     itens$indicador_ie_destinatario %in% "9" & !itens$tem_issqn & !itens$tem_icms_partilha &
-    !(finalidade %in% "4" & itens$chave %in% referencias_antigas) & !(tabela_de_cfop$retorno[do_cfop] %in% 1) &
+    !(finalidade %in% "4" & (itens$chave %in% referencias_antigas | item_referencia_chave_antiga)) &
+    !(tabela_de_cfop$retorno[do_cfop] %in% 1) &
     !(itens$tipo_operacao %in% "0") & !combustivel_fora_da_partilha &
     !(!is.na(itens$uf_entrega) & itens$uf_entrega == itens$uf_emitente) & !(tabela_de_cfop$remessa[do_cfop] %in% 1) &
     !(itens$cfop %in% c("6552", "6922", "6929")) & !icms_sem_partilha & !(finalidade %in% c("2", "3", "5", "6")) &
@@ -393,10 +406,22 @@ conferir_os_itens_da_nota = function(itens, referencias) {
   emitente_na_suframa = itens$uf_emitente %in% UFS_DA_SUFRAMA |
     (itens$uf_emitente %in% "AP" & itens$municipio_emitente %in% MUNICIPIOS_DO_AMAPA_NA_SUFRAMA)
   zero_fora_da_suframa = itens$tipo_credito_zfm_produto %in% "0" & !emitente_na_suframa
-  # VC02-14: até 15/11/2026, a redação antiga (NT 2013/005): a devolução referencia um documento no cabeçalho (NFref)
-  # ou no item, menos nos CFOP da exceção. Desde 16/11/2026 (v1.53), sem o refNFe no cabeçalho, o item referencia.
+  # VC02-14: a redação antiga (NT 2013/005): a devolução referencia um documento no cabeçalho (NFref) ou no item, menos
+  # nos CFOP da exceção. A da v1.53: sem o refNFe no cabeçalho, o item referencia. O cronograma da v1.53 (publicada em
+  # 30/10/2026) põe a nova em produção "até 16/11/2026": entre as duas datas, quando as redações discordam, fica sem
+  # conferir.
   devolucao_nova = (itens$data_emissao >= INICIO_DA_DEVOLUCAO_NOVA) %in% TRUE
+  devolucao_na_janela = !devolucao_nova & (itens$data_emissao >= PUBLICACAO_DA_DEVOLUCAO_NOVA) %in% TRUE
   com_referencia_antiga = itens$chave %in% referencias$chave[referencias$tipo %in% REFERENCIAS_DA_DEVOLUCAO_ANTIGA]
+  aplica_a_antiga = finalidade %in% "4" & !(itens$cfop %in% CFOP_FORA_DA_DEVOLUCAO_ANTIGA)
+  aplica_a_nova = finalidade %in% "4" & !nfe_no_cabecalho & !(itens$cfop %in% c("5921", "6921"))
+  errada_pela_antiga = aplica_a_antiga & !(com_dfe | com_referencia_antiga)
+  errada_pela_nova = aplica_a_nova & !com_dfe
+  aplica_a_devolucao = ifelse(devolucao_nova, aplica_a_nova,
+                              ifelse(devolucao_na_janela, aplica_a_antiga | aplica_a_nova, aplica_a_antiga))
+  confere_a_devolucao = ifelse(devolucao_nova, !errada_pela_nova,
+                               ifelse(devolucao_na_janela, ifelse(errada_pela_antiga == errada_pela_nova, !errada_pela_nova, NA),
+                                      !errada_pela_antiga))
   linhas = list(
     linhas_da_regra("B25-80", itens, aplica = debito_ou_credito & !(credito %in% c("03", "04", "06")) & !(debito %in% "07"),
                     confere = nomes_a_mais == "", campo = "imposto", no_documento = ifelse(nomes_a_mais == "", "s\u00f3 o IBS e a CBS",
@@ -450,13 +475,13 @@ conferir_os_itens_da_nota = function(itens, referencias) {
                     campo = "DFeReferenciado", no_documento = texto_da_presenca(com_dfe), esperado = "n\u00e3o informado"),
     linhas_da_regra("VC02-10", itens, aplica = debito %in% c("03", "04") | credito %in% "06", confere = com_dfe,
                     campo = "DFeReferenciado", no_documento = texto_da_presenca(com_dfe), esperado = "informado"),
-    linhas_da_regra("VC02-14", itens,
-                    aplica = finalidade %in% "4" & ifelse(devolucao_nova, !nfe_no_cabecalho & !(itens$cfop %in% c("5921", "6921")),
-                                                          !(itens$cfop %in% CFOP_FORA_DA_DEVOLUCAO_ANTIGA)),
-                    confere = com_dfe | (!devolucao_nova & com_referencia_antiga), campo = "DFeReferenciado",
+    linhas_da_regra("VC02-14", itens, aplica = aplica_a_devolucao, confere = confere_a_devolucao, campo = "DFeReferenciado",
                     no_documento = ifelse(com_referencia_antiga, "NFref no cabe\u00e7alho", texto_da_presenca(com_dfe)),
                     esperado = ifelse(devolucao_nova, "informado (sem refNFe no cabe\u00e7alho)",
-                                      "informado, ou um documento no NFref do cabe\u00e7alho")),
+                                      "informado, ou um documento no NFref do cabe\u00e7alho"),
+                    observacao = ifelse(devolucao_na_janela & is.na(confere_a_devolucao), paste(
+                      "Entre 30/10 e 15/11/2026 a SEFAZ podia aplicar a reda\u00e7\u00e3o antiga ou a da NT v1.53 (em produ\u00e7\u00e3o",
+                      "\"at\u00e9 16/11/2026\"), e elas discordam aqui."), NA)),
     linhas_da_regra("VC02-30", itens, aplica = com_dfe & !(debito %in% c("03", "07")) & !(finalidade %in% "4"),
                     confere = documentos_diferentes <= 1, campo = "DFeReferenciado/chaveAcesso",
                     no_documento = paste0(documentos_diferentes, " documentos na nota"), esperado = "um documento s\u00f3"),

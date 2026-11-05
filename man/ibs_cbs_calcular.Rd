@@ -14,23 +14,36 @@ vigência de cada componente e como gabarito.
 ibs_cbs_calcular(entrada, data = NULL, aliquotas = NULL)
 }
 \arguments{
-\item{entrada}{Os XMLs da NF-e ou da NFC-e (o caminho de um arquivo, um vetor
-com vários ou o próprio texto do XML) ou um \code{data.frame} de itens com as
-colunas de \code{nfe_ler()$itens}: \code{cst_ibs_cbs}, \code{classificacao_ibs_cbs} e os
-componentes da base (\code{valor_produto}, \code{valor_frete}, \code{valor_seguro},
-\code{valor_outros}, \code{valor_desconto}, \code{valor_ii}, \code{valor_is}, \code{valor_pis},
-\code{valor_cofins}, \code{valor_icms}, \code{valor_icms_uf_destino}, \code{valor_fcp},
-\code{valor_fcp_uf_destino}, \code{valor_icms_monofasico}, \code{valor_issqn}; o que
-faltar conta como zero) ou a \code{base} pronta. Opcionais: \code{chave}, \code{item},
-\code{data_emissao}, \code{servico} (\code{TRUE} no serviço), \code{diferimento_ibs_uf},
-\code{diferimento_ibs_mun}, \code{diferimento_cbs}, \code{cst_regular} e
-\code{classificacao_regular}.}
+\item{entrada}{O que calcular:
+\itemize{
+\item os XMLs da NF-e ou da NFC-e: o caminho de um arquivo, um vetor com
+vários ou o próprio texto do XML;
+\item o resultado inteiro de \code{\link[=nfe_ler]{nfe_ler()}} (a lista): a data, o modelo, a
+finalidade e a compra governamental vêm de \code{notas}, e o resto de
+\code{itens}. Só \code{nfe_ler()$itens} não serve, porque não traz o que está na
+nota (a função recusa, com a explicação);
+\item um \code{data.frame} de itens que você monta: \code{cst_ibs_cbs},
+\code{classificacao_ibs_cbs} e os componentes da base (\code{valor_produto},
+\code{valor_frete}, \code{valor_seguro}, \code{valor_outros}, \code{valor_desconto},
+\code{valor_ii}, \code{valor_is}, \code{valor_pis}, \code{valor_cofins}, \code{valor_icms},
+\code{valor_icms_uf_destino}, \code{valor_fcp}, \code{valor_fcp_uf_destino},
+\code{valor_icms_monofasico}, \code{valor_issqn}; o que faltar conta como zero) ou
+a \code{base} pronta, em número. Opcionais: \code{chave}, \code{item}, \code{data_emissao},
+\code{modelo} (\code{"55"} sem ela), \code{finalidade} (\code{"1"}, a nota normal, sem ela),
+\code{compra_governamental} (\code{TRUE} ou \code{FALSE}), \code{servico} (sem ela, o item
+com \code{valor_issqn} acima de zero é serviço), \code{diferimento_ibs_uf},
+\code{diferimento_ibs_municipio}, \code{diferimento_cbs}, \code{cst_regular},
+\code{classificacao_regular}, \code{credito_presumido_codigo},
+\code{valor_devolvido_ibs_uf}, \code{valor_devolvido_ibs_municipio} e
+\code{valor_devolvido_cbs}.
+}}
 
-\item{data}{A data do cálculo (\code{Date} ou \code{"AAAA-MM-DD"}). Sem ela, a data de
-emissão de cada nota (ou a coluna \code{data_emissao}).}
+\item{data}{A data do cálculo (\code{Date}, data e hora, que vale no horário de
+Brasília, ou \code{"AAAA-MM-DD"}). Sem ela, a data de emissão de cada nota (ou a
+coluna \code{data_emissao}).}
 
 \item{aliquotas}{As alíquotas, em percentual, no lugar das da tabela: um
-vetor com nomes entre \code{ibs_uf}, \code{ibs_mun} e \code{cbs} (por exemplo,
+vetor com nomes entre \code{ibs_uf}, \code{ibs_municipio} e \code{cbs} (por exemplo,
 \code{c(cbs = 8.7)} para simular 2027 com uma estimativa da CBS).}
 }
 \value{
@@ -43,8 +56,8 @@ Calcula o IBS (da UF e do município) e a CBS de cada item, na data da nota
 ou na que você escolher: a base pelos componentes do item, as alíquotas do
 ano, a redução da classificação tributária, o diferimento e a tributação
 regular. Serve para saber o que uma nota deveria trazer e para simular como
-ela seria em outro ano (por exemplo, 2027, quando o PIS e a COFINS deixam de
-existir e a CBS passa à alíquota de referência).
+ela seria em outro ano (por exemplo, 2027, quando o PIS e a COFINS saem da
+base e a CBS passa à alíquota de referência).
 }
 \details{
 A conta é a mesma que a \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}} confere:
@@ -52,11 +65,17 @@ A conta é a mesma que a \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}} con
 \item a base (\code{vBC}) é a soma da UB16-10 da NT 2025.002: o produto, o frete, o
 seguro, as outras despesas, o II e o Imposto Seletivo, menos o desconto, o
 PIS, a COFINS, o ICMS, o ICMS da UF de destino, o FCP, o ICMS monofásico e
-o ISSQN. Cada componente só entra no ano em que vale e na natureza certa
-(o PIS e a COFINS só em 2026; o ICMS, o FCP e o ISSQN até 2032; o II e o
-ICMS só no bem; o ISSQN só no serviço; o Imposto Seletivo a partir de
-2027), como no art. 12 da LC 214/2025 e na calculadora oficial da Receita.
-A base pode vir pronta, na coluna \code{base};
+o ISSQN. Cada componente só entra no ano, na natureza e no modelo em que a
+calculadora oficial da Receita o aceita: o PIS e a COFINS só em 2026 (o
+art. 12, § 2º, V da LC 214/2025 os tira da base de 2026 a 2032, e a
+calculadora não os aceita depois de 2026); o ICMS, o FCP e o ISSQN até
+2032; o II e o ICMS só no bem; o ISSQN só no serviço (o item com ISSQN); o
+Imposto Seletivo a partir de 2027; o II, o ICMS da UF de destino e o FCP
+dele só na NF-e. Em 2025 vale a regra de 2026 (a NT aceita em 2025 as
+alíquotas de 2026; a calculadora não calcula 2025). O PIS e a COFINS por
+substituição tributária não entram (a calculadora não tem esses campos, e
+a UB16-10 ainda é implementação futura). A base pode vir pronta, na coluna
+\code{base};
 \item a alíquota é a do ano (veja \code{tabela_fiscal("aliquotas_ibs_cbs")}), ou a que
 você passar em \code{aliquotas}; a da classificação com tributação regular é
 zero;
@@ -74,42 +93,49 @@ pedem), o grupo \code{gTribRegular} com a alíquota e o valor da classificação
 regular informada.
 }
 
-Conferido com a calculadora oficial da Receita em 51 itens inventados
-(todas as classificações acima, em 2026, 2027 e 2030): tudo igual, menos em
-dois pontos em que o RNFe segue a NT, que é o que a SEFAZ confere: o IBS do
-item é a soma da UF e do município (a calculadora arredonda o total à parte,
-e em 3 itens ele saiu 0,01 diferente da soma), e a classificação com
+Conferido com a calculadora oficial da Receita em 51 itens inventados, de 11
+classificações (uma de cada caso acima), em 2026, 2027 e 2030: tudo igual,
+menos em dois pontos em que o RNFe segue a NT, que é o que a SEFAZ confere: o
+IBS do item é a soma da UF e do município (a calculadora arredonda o total à
+parte, e em 3 itens ele saiu 0,01 diferente da soma), e a classificação com
 tributação regular no CST 200 traz a redução (a UB26-20 exige o grupo; a
 calculadora não o traz).
 
-Fica sem calcular, com o motivo em \code{observacao}: o monofásico (CST 620), a
-transferência de crédito, os ajustes e a tributação em documento específico
-(CST 800 a 820), a exclusão da base (CST 830, que a calculadora oficial
-também ainda não trata), as alíquotas fixas e uniformes (CST 010, 011, 220,
-221 e 222), a compra governamental (o redutor de cada ente e ano não está
-nas tabelas), o crédito presumido, a devolução de tributos e o Imposto
-Seletivo, e os anos fora de 2025 a 2033. A CBS de 2027 em diante fica vazia
-enquanto a alíquota de referência não for publicada, a menos que você a
-passe em \code{aliquotas}.
+Fica sem calcular, com o motivo em \code{observacao}: a nota que não é normal
+(a complementar, a de ajuste, a devolução e as notas de crédito e de débito,
+que dependem da operação original: na devolução, a base é a dela, pelo art.
+12, § 7º); o monofásico (CST 620), a transferência de crédito, os ajustes e a
+tributação em documento específico (CST 800 a 820), a exclusão da base (CST
+830, que a calculadora oficial também ainda não trata), as alíquotas fixas e
+uniformes (CST 010, 011, 220, 221 e 222); o item com crédito presumido da
+operação ou com valor de devolução de tributos (o grupo com zero não muda a
+conta e é calculado); a compra governamental (o redutor de
+cada ente e ano não está nas tabelas); a base negativa (a calculadora a
+recusa); e o item sem a data, ou fora de 2025 a 2033. O Imposto Seletivo não
+é calculado (o valor dele só entra na base). As alíquotas da tabela vão até
+2028 e a CBS de 2027 em diante não foi publicada: sem elas, o valor fica
+vazio, a menos que você as passe em \code{aliquotas}.
 }
 \section{itens}{
 
 Uma linha por item: \code{chave}, \code{item}, \code{data_calculo} (a data usada),
 \code{cst_ibs_cbs}, \code{classificacao_ibs_cbs}, \code{servico} (o item com ISSQN é
-serviço), \code{base}, e para \code{ibs_uf}, \code{ibs_mun} e \code{cbs}: \verb{aliquota_*},
+serviço), \code{base}, e para \code{ibs_uf}, \code{ibs_municipio} e \code{cbs}: \verb{aliquota_*},
 \verb{reducao_*}, \verb{aliquota_efetiva_*}, \verb{diferimento_*} (percentual),
 \verb{valor_diferido_*} e \verb{valor_*}; \code{valor_ibs} (o da UF mais o do município);
 \code{cst_regular}, \code{classificacao_regular}, \verb{aliquota_regular_*} e
 \verb{valor_regular_*} (a tributação regular); \code{tem_grupo_ibs_cbs} (o item leva o
 grupo \code{gIBSCBS}); \code{calculado} (\code{TRUE} quando tudo foi calculado) e
-\code{observacao}. Os percentuais são como no XML (0,9 é 0,9\%).
+\code{observacao}. Os percentuais são como no XML (0,9 é 0,9\%). A mesma nota em
+mais de um arquivo é calculada uma vez.
 }
 
 \section{notas}{
 
 Uma linha por nota (pela \code{chave}; os itens sem chave juntos, numa linha sem
 chave): \code{chave}, \code{itens}, \code{itens_calculados}, \code{base}, \code{valor_ibs_uf},
-\code{valor_ibs_mun}, \code{valor_ibs} e \code{valor_cbs}, somados nos itens calculados.
+\code{valor_ibs_municipio}, \code{valor_ibs} e \code{valor_cbs}, somados nos itens
+calculados.
 }
 
 \examples{
@@ -118,6 +144,8 @@ ibs_cbs_calcular(nota)$itens[, c("item", "base", "valor_ibs_uf", "valor_cbs")]
 # A mesma nota em 2027, com uma estimativa da CBS de referência.
 em_2027 = ibs_cbs_calcular(nota, data = "2027-03-10", aliquotas = c(cbs = 8.7))
 em_2027$notas
+# Pelo que o nfe_ler() leu (a lista inteira).
+ibs_cbs_calcular(nfe_ler(nota))$notas
 # Itens soltos, sem nota.
 itens = data.frame(cst_ibs_cbs = c("000", "200"), classificacao_ibs_cbs = c("000001", "200047"),
                    valor_produto = c(100, 50), valor_icms = c(18, 9))
@@ -125,5 +153,5 @@ ibs_cbs_calcular(itens, data = "2026-11-04")$itens
 }
 \seealso{
 \code{\link[=ibs_cbs_conferir]{ibs_cbs_conferir()}} para conferir o que a nota trouxe;
-\code{\link[=nfe_ler]{nfe_ler()}} para ler os itens.
+\code{\link[=nfe_ler]{nfe_ler()}} para ler as notas.
 }

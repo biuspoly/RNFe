@@ -9,8 +9,9 @@ Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e, MDF-e, NF
 > SEFAZ, por enquanto, a leitura do certificado digital, o status do serviço e a consulta pela chave (NF-e, NFC-e,
 > CT-e e MDF-e), os MDF-e não encerrados, a consulta de cadastro e a Distribuição de DF-e (NF-e e CT-e), em homologação;
 > da NFS-e Nacional, a consulta pela chave e a distribuição, na Produção Restrita; e a situação do CNPJ na Receita
-> Federal, pelas fontes públicas; o plano está em
-> [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
+> Federal, pelas fontes públicas. Da Reforma Tributária, a conferência do IBS e da CBS da NF-e e da NFC-e pelas regras
+> de validação da SEFAZ, como valiam no dia da emissão, e o cálculo de cada item, também para simular outro ano. O
+> plano está em [docs/plano.md](https://github.com/biuspoly/RNFe/blob/main/docs/plano.md).
 
 ## Instalar
 
@@ -105,7 +106,8 @@ cte_ler("cte1.xml", todos_os_campos = TRUE)$campos   # todos os campos do CT-e (
 ```
 
 Lê o CT-e (modelo 57) e o CT-e OS (modelo 67), nos leiautes 3.00 e 4.00, pelo schema oficial mais recente
-(PL_CTe_400 NT 2026.004, republicado em 16/10/2026). O tomador vem pronto: quando o XML só diz o papel dele
+(PL_CTe_400 NT 2026.005 RTC SN, de 04/11/2026, com o IBS e a CBS do Simples Nacional e o CT-e de que se cobra
+multa e juros). O tomador vem pronto: quando o XML só diz o papel dele
 (remetente, expedidor, recebedor ou destinatário), os dados dessa pessoa são copiados para as colunas
 `tomador_`. Conferido com 14 mil CT-e reais (que não estão no repositório), contra outro sistema e contra um
 segundo leitor do XML: os campos e as contagens comparados bateram em todos.
@@ -368,27 +370,34 @@ calculada = ibs_cbs_calcular("nota.xml")            # na data da nota: o que cad
 calculada$itens                                     # base, alíquotas, redução, diferimento, valores, tributação regular
 calculada$notas                                     # os totais de cada nota
 ibs_cbs_calcular("nota.xml", data = "2027-03-10", aliquotas = c(cbs = 8.7))   # a mesma nota em 2027
-ibs_cbs_calcular(nfe_ler("nota.xml")$itens, data = "2026-11-04")              # ou itens soltos, num data.frame
+ibs_cbs_calcular(nfe_ler("nota.xml"))                # ou o que o nfe_ler() leu (a lista inteira)
+ibs_cbs_calcular(itens, data = "2026-11-04")         # ou itens soltos, num data.frame que você monta
 ```
 
 Calcula o IBS da UF, o do município e a CBS de cada item, pelas mesmas fórmulas que a conferência confere. A base é
 a soma da regra UB16-10 da NT (produto, frete, seguro, outras despesas, II e Imposto Seletivo, menos o desconto e os
-tributos que não entram), e cada componente só entra no ano em que vale, como no art. 12 da LC 214/2025: o PIS e a
-COFINS só em 2026, o ICMS e o ISSQN até 2032, o Imposto Seletivo a partir de 2027. A alíquota é a do ano, com a
-redução da classificação; o diferimento e a tributação regular (a suspensão) entram com o que a nota informa. Para
-simular outro ano, passe a data e, enquanto a CBS de referência não for publicada, a estimativa dela em `aliquotas`.
+tributos que não entram), e cada componente só entra no ano, na natureza e no modelo em que a calculadora oficial o
+aceita: o PIS e a COFINS só em 2026, o ICMS e o ISSQN até 2032, o Imposto Seletivo a partir de 2027, o II e o ICMS
+só no bem, o ISSQN só no serviço, o II, o ICMS da UF de destino e o FCP dele só na NF-e. A alíquota é a do ano, com a redução da
+classificação; o diferimento e a tributação regular (a suspensão) entram com o que a nota informa. Para simular
+outro ano, passe a data e, enquanto a alíquota do ano não for publicada (a CBS de 2027 em diante, o IBS de 2029 em
+diante), a estimativa dela em `aliquotas`. Só `nfe_ler()$itens` não serve: a data, a finalidade e a compra
+governamental estão nas notas, e a função pede a lista inteira.
 
-Conferido com a calculadora oficial da Receita (o piloto da Reforma) em 51 itens inventados, de todas as
-classificações que o cálculo cobre, em 2026, 2027 e 2030: a base, as alíquotas, a redução, o diferimento, a
+Conferido com a calculadora oficial da Receita (o piloto da Reforma) em 51 itens inventados, de 11 classificações
+(uma de cada caso que o cálculo cobre), em 2026, 2027 e 2030: a base, as alíquotas, a redução, o diferimento, a
 tributação regular e o valor de cada parte saíram iguais, até o meio centavo, que vai para o par como lá. Em dois
 pontos o RNFe segue a NT, que é o que a SEFAZ confere: o IBS do item é a soma do da UF e do município (a calculadora
 arredonda o total à parte) e a classificação do CST 200 com tributação regular traz o grupo de redução. No acervo de
-notas reais, com a base da própria nota, a CBS e o IBS calculados bateram (até 0,01) em todos os 17.176 itens com o
-grupo, menos um (a nota que a conferência também acusa).
+notas reais, com a base da própria nota, o IBS e a CBS calculados bateram (até 0,01) com os da nota em todos os
+15.816 itens calculados com o grupo e as alíquotas de 2026, menos um (a CBS de uma nota que a conferência também
+acusa).
 
-Fica sem calcular, com o motivo: o monofásico (CST 620), a transferência de crédito e os ajustes (CST 800 a 820), a
-exclusão da base (CST 830, que a calculadora oficial também não trata), as alíquotas fixas e uniformes, a compra
-governamental, o crédito presumido e o Imposto Seletivo.
+Fica sem calcular, com o motivo: a nota que não é normal (a devolução, a complementar, a de ajuste e as de crédito e
+de débito, que dependem da operação original), o monofásico (CST 620), a transferência de crédito e os ajustes (CST
+800 a 820), a exclusão da base (CST 830, que a calculadora oficial também não trata), as alíquotas fixas e uniformes,
+a compra governamental, o item com crédito presumido ou com valor de devolução de tributos, a base negativa e o Imposto
+Seletivo.
 
 ## Tabelas fiscais
 
@@ -409,15 +418,16 @@ tabela_fiscal("codigos_dos_campos")      # o significado dos códigos do leiaute
 tabela_fiscal("fontes")                  # de onde veio cada tabela, com a versão e a data
 ```
 
-Cada linha tem o `inicio` e o `fim` da vigência (vazios no CSOSN e nos municípios, que a fonte não data). As
+A maioria tem o `inicio` e o `fim` da vigência (vazios no CSOSN, no CST do IBS e da CBS e nos municípios, que a
+fonte não data; a ajuda de `tabela_fiscal()` diz as colunas de cada uma). As
 fontes são oficiais: o Portal da NF-e (CFOP, Reforma, combustíveis, meios de pagamento e bandeiras), o Portal da
 NFS-e Nacional (o local da operação da Reforma), o Portal Único
 Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios).
 O CST e a classificação do IBS e da CBS trazem os indicadores da planilha oficial (os grupos que cada um exige ou
 não permite no documento e os documentos em que a classificação vale), que as regras de validação da NT 2025.002
 consultam. As alíquotas do IBS e da CBS vêm da LC 214/2025: 0,1% de IBS da UF e 0,9% de CBS em 2026, e 0,05% de IBS
-da UF e do município em 2027 e 2028; a CBS de 2027 em diante depende da alíquota de referência que o Senado fixa, e
-fica vazia até ser publicada.
+da UF e do município em 2027 e 2028; a CBS de 2027 e 2028 é a alíquota de referência que o Senado fixa menos 0,1
+ponto percentual, e fica vazia até ser publicada. A tabela vai até 2028.
 `ferramentas/gerar_tabelas.R` baixa tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso
 quando alguma tabela muda. Os municípios ficam de fora do robô, porque o IBGE não aceita conexão dos
 servidores do GitHub.

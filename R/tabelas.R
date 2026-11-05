@@ -51,9 +51,13 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' `"meios_pagamento"`, `"bandeiras_cartao"`,
 #' `"municipios"`, `"codigos_dos_campos"` (o que quer dizer cada código dos
 #' campos dos documentos) ou `"fontes"` (de onde veio cada uma, com a data).
-#' Cada tabela de códigos traz o `codigo`, a descrição e a vigência:
+#' A maioria das tabelas de códigos traz o `codigo`, a descrição e a vigência:
 #' `inicio` (desde quando vale) e `fim` (até quando valeu, vazio quando ainda
-#' vale). Um código que mudou de descrição tem uma linha por período.
+#' vale). Um código que mudou de descrição tem uma linha por período. As que
+#' fogem disso estão na descrição de cada uma, abaixo: o CSOSN, o CST do IBS e
+#' da CBS e os municípios têm as colunas vazias (a fonte não data), o crédito
+#' presumido tem a vigência na CBS e no IBS, as mudanças têm a versão e o
+#' prazo, as alíquotas não têm código e o local da operação não tem datas.
 #'
 #' O que cada tabela tem:
 #' - `"cfop"`: os CFOP aceitos hoje na NF-e, com o `titulo` e a
@@ -83,7 +87,8 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   `grupo_credito_presumido_zfm` (`ind_gCredPresIBSZFM`),
 #'   `grupo_ajuste_competencia` (`ind_gAjusteCompet`) e `redutor_base_calculo`
 #'   (`ind_RedutorBC`). São os indicadores que as regras de validação da NT
-#'   2025.002 consultam.
+#'   2025.002 consultam. O `inicio` e o `fim` ficam vazios: a planilha não
+#'   data o CST (o que mudou de uma versão para outra está nas mudanças).
 #' - `"classificacao_ibs_cbs"`: a classificação tributária do IBS e da CBS
 #'   (`cClassTrib`), com o `cst` dela, o `nome`, a `descricao`, o artigo da LC
 #'   214/2025 (`artigo_lc_214`), o `tipo_aliquota`, os percentuais de redução
@@ -125,19 +130,23 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   nome da coluna na tabela, ou `"existe"` para o código que entrou ou saiu),
 #'   o valor de `antes` e o de `depois`, a `versao` do Informe Técnico
 #'   2025.002, a data em que foi `publicada_em` e o prazo em que ficou
-#'   `em_producao_ate` (o do controle de versões do IT; vazio quando a versão
-#'   não tem prazo lá, da 1.21 à 1.40: o da versão seguinte não serve, porque
-#'   a SEFAZ autorizou NF-e com a classificação 200001, que a 1.40 tirou da
-#'   NF-e, depois do prazo da 1.50). É o que o [ibs_cbs_conferir()]
-#'   consulta para uma nota emitida antes de uma mudança, que a SEFAZ conferiu
-#'   pela versão da época.
+#'   `em_producao_ate` (o do controle de versões do IT). Da 1.21 à 1.40 o IT
+#'   não dá prazo: vale o da versão mais nova que ainda traz o mesmo valor
+#'   (hoje, a 1.71: 30/10/2026), porque o da primeira com prazo não serviu (a
+#'   SEFAZ autorizou NF-e com a classificação 200001, que a 1.40 tirou da
+#'   NF-e, depois do prazo da 1.50); quando sai uma versão nova com prazo que
+#'   ainda traz o valor, o prazo passa a ser o dela. A mudança que outra
+#'   versão desfez vale até o prazo de quem a desfez. É o que o
+#'   [ibs_cbs_conferir()] consulta para uma nota emitida antes de uma mudança,
+#'   que a SEFAZ conferiu pela versão da época.
 #' - `"aliquotas_ibs_cbs"`: as alíquotas do IBS (da UF e do município) e da
 #'   CBS de cada período, em percentual, com a `base_legal` e a `observacao`:
 #'   0,1% de IBS da UF e 0,9% de CBS em 2026 (LC 214/2025, arts. 343 e 346; a
 #'   NT 2025.002 aceita as mesmas em 2025), 0,05% de IBS da UF e 0,05% do
-#'   município em 2027 e 2028 (art. 344). A CBS de 2027 em diante é a alíquota
+#'   município em 2027 e 2028 (art. 344). A CBS de 2027 e 2028 é a alíquota
 #'   de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
-#'   (art. 347) e fica vazia enquanto não for publicada. Sem `codigo`: uma
+#'   (art. 347) e fica vazia enquanto não for publicada. A tabela vai até 2028:
+#'   as alíquotas de 2029 em diante ainda serão publicadas. Sem `codigo`: uma
 #'   linha por período (`inicio` e `fim`).
 #' - `"local_operacao_ibs_cbs"`: o código indicador do local da operação
 #'   (`cIndOp`, art. 11 da LC 214/2025), do Anexo VII da documentação da NFS-e
@@ -201,9 +210,9 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   `"bandeiras_cartao"`, `"municipios"` (código IBGE, nome e UF),
 #'   `"codigos_dos_campos"` (o significado dos códigos dos documentos) ou
 #'   `"fontes"` (de onde veio cada tabela).
-#' @return Um `data.frame` com `codigo`, a descrição (`titulo` e
-#'   `nota_explicativa` no CFOP, `nome` nos municípios, `descricao` nas outras),
-#'   `inicio` e `fim`.
+#' @return Um `data.frame`. Na maioria, com `codigo`, a descrição (`titulo` e
+#'   `nota_explicativa` no CFOP, `nome` nos municípios, `descricao` nas
+#'   outras), `inicio` e `fim`; as colunas de cada uma estão acima.
 #' @source CFOP: a Tabela de CFOP do Portal Nacional da NF-e (Informe Técnico
 #'   2023.002, publicada em 04/09/2026). IBS e CBS: a Tabela de Classificação
 #'   Tributária do Portal da NF-e (Informe Técnico 2025.002, publicada em

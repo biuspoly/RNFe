@@ -198,6 +198,22 @@ test_that("o pagamento vinculado da Reforma (pgtoVinc)", {
   expect_true(all(is.na(lido$ctes$valor_icms_previsto)))
 })
 
+test_that("a multa e juros (NT 2026.004 v1.01) e o IBS e a CBS do Simples Nacional (NT 2026.005)", {
+  multa_e_juros = "<gMultaJuros><chCTeRef>35261011444777000161570020000000771135724689</chCTeRef></gMultaJuros>"
+  simples = paste0("<gTribSN><gIBSSN><pIBSSN>0.0500</pIBSSN><vIBSSN>0.10</vIBSSN></gIBSSN>",
+                   "<gCBSSN><pCBSSN>0.4500</pCBSSN><vCBSSN>0.90</vCBSSN></gCBSSN></gTribSN>")
+  texto = paste(readLines(CTE_SP, encoding = "UTF-8"), collapse = "\n")
+  texto = sub("</ide>", paste0(multa_e_juros, "</ide>"), texto, fixed = TRUE)
+  texto = sub("</IBSCBS>", paste0(simples, "</IBSCBS>"), texto, fixed = TRUE)
+  lido = cte_ler(texto)
+  expect_identical(lido$documentos$tipo[1], "chCTeRef")
+  expect_identical(lido$documentos$documento_chave[1], "35261011444777000161570020000000771135724689")
+  expect_equal(c(lido$ctes$aliquota_ibs_simples_nacional, lido$ctes$valor_ibs_simples_nacional,
+                 lido$ctes$aliquota_cbs_simples_nacional, lido$ctes$valor_cbs_simples_nacional), c(0.05, 0.1, 0.45, 0.9))
+  expect_true(all(c("gIBSSN", "gCBSSN") %in% lido$impostos$grupo[lido$impostos$tributo == "IBSCBS"]))
+  expect_true(all(is.na(cte_ler(CTE_SP)$ctes$valor_cbs_simples_nacional)))
+})
+
 test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
   lido = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
   ctes = lido$ctes

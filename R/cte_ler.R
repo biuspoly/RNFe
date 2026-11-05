@@ -1,6 +1,6 @@
 # Leitura do XML do CT-e (modelo 57) e do CT-e OS (modelo 67), leiautes 3.00 e 4.00, em tabelas. Os
-# caminhos seguem o schema oficial do Portal do CT-e (pacote de liberação PL_CTe_400 NT 2026.004 RTC 1.00,
-# que já traz a Reforma).
+# caminhos seguem o schema oficial do Portal do CT-e (pacote de liberação PL_CTe_400 NT 2026.005 RTC SN 1.00, de
+# 04/11/2026, que já traz a Reforma, o Simples Nacional e a NT 2026.004 v1.01).
 
 #' @include ler_xml.R
 NULL
@@ -116,6 +116,10 @@ valor_ibs_municipio             imp/IBSCBS/gIBSCBS/gIBSMun/vIBSMun              
 valor_ibs                       imp/IBSCBS/gIBSCBS/vIBS                           numero
 aliquota_cbs                    imp/IBSCBS/gIBSCBS/gCBS/pCBS                      numero
 valor_cbs                       imp/IBSCBS/gIBSCBS/gCBS/vCBS                      numero
+aliquota_ibs_simples_nacional   imp/IBSCBS/gTribSN/gIBSSN/pIBSSN                  numero
+valor_ibs_simples_nacional      imp/IBSCBS/gTribSN/gIBSSN/vIBSSN                  numero
+aliquota_cbs_simples_nacional   imp/IBSCBS/gTribSN/gCBSSN/pCBSSN                  numero
+valor_cbs_simples_nacional      imp/IBSCBS/gTribSN/gCBSSN/vCBSSN                  numero
 valor_total_documento           imp/vTotDFe                                       numero
 valor_carga                     infCTeNorm/infCarga/vCarga                        numero
 produto_predominante            infCTeNorm/infCarga/proPred                       texto
@@ -188,12 +192,13 @@ valor  vComp   numero
 ")
 
 # Os documentos que o CT-e cita, a partir do infCte, na ordem do XML: os da Reforma no ide (o do pagamento
-# antecipado e o anterior da compra governamental), os transportados (infNFe, infNF, infOutros, infDCe), os de
+# antecipado, o anterior da compra governamental e o CT-e de que este cobra multa e juros), os transportados (infNFe, infNF, infOutros, infDCe), os de
 # transporte anterior (idDocAntEle, idDocAntPap), o CT-e complementado, o substituído, o CT-e multimodal do serviço
 # vinculado e, no CT-e OS, os documentos referenciados e as GTV-e.
 CAMINHO_DOS_DOCUMENTOS = paste(
   "ide/gPagAntecipado/chDFePagAnt",
   "ide/gCompraGov/refDFeAnt",
+  "ide/gMultaJuros/chCTeRef",
   "infCTeNorm/infDoc/*",
   "infCTeNorm/docAnt/emiDocAnt/idDocAnt/*",
   "infCteComp",
@@ -208,7 +213,7 @@ CAMINHO_DOS_DOCUMENTOS = paste(
 CAMPOS_DO_DOCUMENTO = ler_campos("
 coluna              caminho                                            tipo
 tipo                self::*                                            elemento
-documento_chave     chave|chCTe|chCte|chBPe|chCTeMultimodal|self::chDFePagAnt|self::refDFeAnt  texto
+documento_chave     chave|chCTe|chCte|chBPe|chCTeMultimodal|self::chDFePagAnt|self::refDFeAnt|self::chCTeRef  texto
 modelo              mod                                                texto
 tipo_documento      tpDoc                                              texto
 descricao           descOutros                                         texto
@@ -319,6 +324,8 @@ texto  xTexto   texto
 #'   abate (grupo `gPagAntecipado`, da Reforma);
 #' * `refDFeAnt`: o documento fiscal anterior da compra governamental (grupo
 #'   `gCompraGov`, da Reforma);
+#' * `chCTeRef`: o CT-e de que este cobra multa e juros (grupo `gMultaJuros`,
+#'   da Reforma);
 #' * `infNFe`, `infNF`, `infOutros` e `infDCe`: os documentos transportados
 #'   (NF-e, nota fiscal em papel, outros documentos e DC-e);
 #' * `idDocAntEle` e `idDocAntPap`: os documentos de transporte anterior
@@ -374,9 +381,9 @@ texto  xTexto   texto
 #' @return Uma lista com os `data.frame`s `ctes`, `componentes`, `documentos`,
 #'   `cargas`, `impostos`, `parcelas`, `pagamentos_vinculados`, `observacoes`,
 #'   `campos` (só com `todos_os_campos = TRUE`) e `arquivos`.
-#' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.004
-#'   RTC 1.00, publicado no Portal Nacional do CT-e (republicado em
-#'   16/10/2026).
+#' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.005
+#'   RTC SN 1.00 (com a NT 2026.004 v1.01), publicado no Portal Nacional do
+#'   CT-e em 04/11/2026.
 #' @examples
 #' cte = system.file("exemplos", "cte_proc_sp.xml", package = "RNFe")
 #' lido = cte_ler(cte)

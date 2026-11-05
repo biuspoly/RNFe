@@ -1,7 +1,8 @@
 # Leitura do XML da GTV-e (Guia de Transporte de Valores Eletrônica, modelo 64), leiaute 4.00, em tabelas. A GTV-e é
 # um CT-e do tipo 4 (tpCTe): tem o infCte, a chave e o protocolo do CT-e, mas no lugar do valor da prestação e dos
 # impostos traz os valores levados (as espécies), os malotes e os veículos. Os caminhos seguem o tipo TGTVe do schema
-# oficial do Portal do CT-e (pacote de liberação PL_CTe_400 NT 2026.004 RTC 1.00).
+# oficial do Portal do CT-e (pacote de liberação PL_CTe_400 NT 2026.005 RTC SN 1.00, de 04/11/2026; o TGTVe é igual
+# ao do pacote anterior).
 
 #' @include ler_xml.R cte_ler.R
 NULL
@@ -196,9 +197,9 @@ rntrc  RNTRC   texto
 #'   campos de cada GTV-e.
 #' @return Uma lista com os `data.frame`s `gtves`, `especies`, `veiculos`,
 #'   `observacoes`, `campos` (só com `todos_os_campos = TRUE`) e `arquivos`.
-#' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.004
-#'   RTC 1.00 (tipo `TGTVe`, `GTVe_v4.00.xsd` e `procGTVe_v4.00.xsd`), publicado
-#'   no Portal Nacional do CT-e (republicado em 16/10/2026), e o Manual de
+#' @source Schema oficial do CT-e, pacote de liberação PL_CTe_400 NT 2026.005
+#'   RTC SN 1.00 (tipo `TGTVe`, `GTVe_v4.00.xsd` e `procGTVe_v4.00.xsd`),
+#'   publicado no Portal Nacional do CT-e em 04/11/2026, e o Manual de
 #'   Orientação do Contribuinte do CT-e, versão 4.00 (fevereiro/2023), item
 #'   2.1.2.
 #' @examples
