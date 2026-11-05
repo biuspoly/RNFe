@@ -22,6 +22,7 @@ CAMPOS_DA_NOTA_PARA_CONFERIR = ler_campos("
 coluna                        caminho                                         tipo
 numero                        ide/nNF                                         inteiro
 modelo                        ide/mod                                         texto
+tipo_impressao                ide/tpImp                                       texto
 data_emissao                  ide/dhEmi                                       texto
 autorizacao                   parent::NFe/parent::nfeProc/protNFe/infProt/dhRecbto texto
 finalidade                    ide/finNFe                                      texto
@@ -461,7 +462,9 @@ W59d-10  gMono/vCBSMonoRet           total_cbs_monofasica_retida   monofasico_cb
 #'   Presumido; a LC 214/2025 (as alíquotas de cada ano); o Anexo VII da
 #'   documentação da NFS-e Nacional (o local da operação); a Tabela de Índice
 #'   de Biocombustível (Informe Técnico 2025.004); e a tabela de combustíveis
-#'   do ICMS monofásico do Portal da NF-e. Veja [tabela_fiscal()].
+#'   do ICMS monofásico do Portal da NF-e. Veja [tabela_fiscal()]. Na VC02-04,
+#'   também a Nota Técnica 2026.002, versão 1.11 (a NF-e com DANFE Simplificado
+#'   Tipo 2).
 #' @seealso [nfe_ler()] para ler as notas; [tabela_fiscal()] para as tabelas
 #'   que a conferência consulta.
 #' @examples
@@ -487,8 +490,9 @@ ibs_cbs_conferir = function(arquivos, todas_as_regras = FALSE) {
 }
 
 # As colunas das tabelas de um arquivo: a conferência de cada nota e o resumo delas. Com xml_lido NULL, vêm vazias, com
-# os nomes e os tipos certos.
-colunas_da_conferencia = function(xml_lido, nome_do_arquivo, todos_os_campos) {
+# os nomes e os tipos certos. Com `agora` (o nfe_conferir), a nota sem o protocolo é conferida como recebida pela SEFAZ
+# nesse momento.
+colunas_da_conferencia = function(xml_lido, nome_do_arquivo, todos_os_campos, agora = NULL) {
   if (is.null(xml_lido)) {
     xml_lido = xml2::read_xml("<vazio/>")
   }
@@ -502,6 +506,11 @@ colunas_da_conferencia = function(xml_lido, nome_do_arquivo, todos_os_campos) {
       presenca_dos_grupos(elementos_das_notas, GRUPOS_DA_NOTA_PARA_CONFERIR))
   )
   notas$data_emissao = as.Date(substr(notas$data_emissao, 1, 10))
+  notas$recebimento_pelo_envio = rep(FALSE, nrow(notas))
+  if (!is.null(agora)) {
+    notas$recebimento_pelo_envio = is.na(notas$autorizacao)
+    notas$autorizacao[notas$recebimento_pelo_envio] = format(agora, "%Y-%m-%dT%H:%M:%S", tz = "America/Sao_Paulo")
+  }
   itens_lidos = data.frame(
     c(list(chave = chave_de_cada(elementos_dos_itens, "infNFe")),
       valores_dos_campos(elementos_dos_itens, CAMPOS_DO_ITEM_PARA_CONFERIR),
@@ -558,7 +567,8 @@ presenca_dos_grupos = function(elementos, grupos) {
 # alíquota que entra na conta (a efetiva, quando há redução).
 preparar_os_itens = function(itens, notas) {
   da_nota = match(itens$chave, notas$chave)
-  for (coluna in c("modelo", "data_emissao", "autorizacao", "finalidade", "tipo_nota_debito", "tipo_nota_credito",
+  for (coluna in c("modelo", "tipo_impressao", "data_emissao", "autorizacao", "recebimento_pelo_envio", "finalidade", "tipo_nota_debito",
+                   "tipo_nota_credito",
                    "redutor_compra_governamental", "municipio_emitente", "municipio_destinatario",
                    "inscricao_suframa_emitente", "tem_compra_governamental", "ambiente", "tipo_operacao",
                    "destino_operacao", "consumidor_final", "indicador_ie_destinatario", "uf_emitente", "uf_entrega",
@@ -809,8 +819,9 @@ conferir_as_notas_de_debito_e_credito = function(itens) {
     linhas_da_regra("UB132-10", itens, aplica = !is.na(itens$competencia_credito_zfm),
                     confere = ifelse(competencia_sem_saber, NA, itens$competencia_credito_zfm <= mes_atual),
                     campo = "gCredPresIBSZFM/competApur", no_documento = itens$competencia_credito_zfm,
-                    esperado = paste0("at\u00e9 ", mes_atual, ifelse(com_autorizacao, " (o m\u00eas da autoriza\u00e7\u00e3o)",
-                                                                   " (o m\u00eas da emiss\u00e3o)")),
+                    esperado = paste0("at\u00e9 ", mes_atual, ifelse(com_autorizacao, ifelse(
+                      itens$recebimento_pelo_envio, " (o m\u00eas do envio)", " (o m\u00eas da autoriza\u00e7\u00e3o)"),
+                      " (o m\u00eas da emiss\u00e3o)")),
                     observacao = ifelse(competencia_sem_saber, paste0(
                       "Sem o protocolo de autoriza\u00e7\u00e3o no arquivo, n\u00e3o d\u00e1 para saber o m\u00eas em que a SEFAZ ",
                       "recebeu a nota."), NA)),
@@ -1109,6 +1120,12 @@ regra_de_grupo = function(regra, itens, indicador, valor_do_indicador, presente,
 linhas_da_regra = function(regra, itens, aplica, confere, campo, no_documento, esperado, diferenca = NA_real_,
                            observacao = NA_character_, itens_da_regra = itens$item) {
   quantidade = length(itens$chave)
+  # Cada valor vem um só ou um por linha: um vetor de nota numa regra de item seria repetido sem aviso.
+  for (valor in list(aplica, confere, campo, no_documento, esperado, diferenca, observacao, itens_da_regra)) {
+    if (!(length(valor) %in% c(1L, quantidade))) {
+      stop("Regra ", regra, ": ", length(valor), " valores para ", quantidade, " linhas.", call. = FALSE)
+    }
+  }
   aplica = rep_len(aplica, quantidade)
   onde_aplica = which(!is.na(aplica) & aplica)
   list(

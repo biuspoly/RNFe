@@ -3,6 +3,11 @@
 \name{efd_icms_ipi_cruzar_nfe}
 \alias{efd_icms_ipi_cruzar_nfe}
 \title{Cruzar a EFD ICMS/IPI com as NF-e e NFC-e}
+\source{
+Guia Prático da EFD ICMS/IPI, versão 3.2.2 (fevereiro de 2026),
+registros C100 e C190; Manual de Orientação do Contribuinte 7.0 da NF-e
+(os tipos de evento).
+}
 \usage{
 efd_icms_ipi_cruzar_nfe(efd, notas, eventos = NULL)
 }
@@ -26,32 +31,39 @@ participante e a situação (a nota cancelada escriturada como regular, ou o
 contrário). Nada é enviado: os dois lados são lidos dos arquivos.
 }
 \details{
-O que se compara:
+O que se compara, pelo Guia Prático da EFD ICMS/IPI:
 \itemize{
 \item em toda nota: o modelo, a série, o número, a data de emissão, o valor do
 documento, o desconto, o valor das mercadorias, o frete, o seguro e as
 outras despesas, e o participante (o CNPJ ou CPF do 0150 do \code{COD_PART}
-contra o do outro lado da nota);
-\item na emissão própria, também a base e o valor do ICMS e do ICMS-ST e o IPI,
-o PIS e a COFINS. Na nota de terceiros, a EFD traz nesses campos só o
-crédito do declarante (o Guia Prático manda informar só o que dá direito a
-crédito), e eles não se comparam com o XML;
+contra o do outro lado da nota). Na nota de 2027 em diante, o valor do
+documento confere com o valor da nota com ou sem o IBS, a CBS e o IS
+(\code{vNFTot} ou \code{vNF});
+\item na saída, também a base e o valor do ICMS (com o FCP) e do ICMS-ST (com o
+FCP-ST), o IPI, o PIS e a COFINS. Na entrada, a EFD traz nesses campos só
+o crédito do declarante, e eles não se comparam. Na NFC-e, o C100 não traz
+o ICMS-ST, o IPI, o PIS e a COFINS; e o PIS e a COFINS vazios (de quem
+entrega a EFD-Contribuições) não se comparam;
 \item o indicador do emitente (\code{IND_EMIT}) contra o emitente do XML, e o da
 operação (\code{IND_OPER}) contra o tipo da nota, na emissão própria;
 \item a situação (\code{COD_SIT}): a nota com o cancelamento em \code{eventos} (o evento
-110111) tem de estar escriturada como cancelada (02 ou 03), e a que não
-tem, como não cancelada. Sem \code{eventos}, a situação não é conferida.
+110111, ou o 110112, de cancelamento por substituição) tem de estar
+escriturada como cancelada (02 ou 03), e a que não tem, como não
+cancelada. Sem \code{eventos}, a situação não é conferida.
 }
 
 A nota cancelada, denegada ou inutilizada na EFD só traz a identificação: os
-valores dela não se comparam. Os valores se comparam no centavo.
+valores dela não se comparam. Na complementar (\code{COD_SIT} 06 e 07) e na de
+regime especial (08), os valores são facultativos e só se comparam quando
+vêm. Os valores se comparam no centavo.
 
 As notas que faltam na EFD são as do XML em que o contribuinte do arquivo (o
 CNPJ ou o CPF do 0000) é o emitente ou o destinatário, emitidas no período
-do arquivo. A emissão própria tem de estar lá (a cancelada também, como
-cancelada); a nota de terceiros pode ter entrado em outro período (a data
-da entrada é a do recebimento) e vem com essa observação. A nota de
-terceiros cancelada não é escriturada e não aparece.
+do arquivo e autorizadas (a denegada não precisa ser escriturada). A emissão
+própria tem de estar lá (a cancelada também, como cancelada); a nota de
+terceiros pode ter entrado em outro período (a data da entrada é a do
+recebimento) e vem com essa observação. A nota de terceiros cancelada e a
+NFC-e recebida não são escrituradas e não aparecem.
 }
 \section{notas}{
 
@@ -64,8 +76,8 @@ Uma linha por nota: \code{chave}, \code{onde} (\code{"nas duas"}, \code{"só na 
 \section{diferencas}{
 
 Uma linha por campo que não confere: \code{chave}, \code{arquivo_efd}, \code{linha_efd},
-\code{campo_efd}, \code{coluna_xml}, \code{na_efd}, \code{no_xml} (em texto) e \code{diferenca} (nos
-valores, a EFD menos o XML).
+\code{campo_efd}, \code{coluna_xml} (com \code{+}, a soma das colunas), \code{na_efd}, \code{no_xml}
+(em texto) e \code{diferenca} (nos valores, a EFD menos o XML).
 }
 
 \examples{

@@ -12,7 +12,9 @@ Tributária do IBS e CBS (Informe Técnico 2025.002, v1.71) e a de Crédito
 Presumido; a LC 214/2025 (as alíquotas de cada ano); o Anexo VII da
 documentação da NFS-e Nacional (o local da operação); a Tabela de Índice
 de Biocombustível (Informe Técnico 2025.004); e a tabela de combustíveis
-do ICMS monofásico do Portal da NF-e. Veja \code{\link[=tabela_fiscal]{tabela_fiscal()}}.
+do ICMS monofásico do Portal da NF-e. Veja \code{\link[=tabela_fiscal]{tabela_fiscal()}}. Na VC02-04,
+também a Nota Técnica 2026.002, versão 1.11 (a NF-e com DANFE Simplificado
+Tipo 2).
 }
 \usage{
 ibs_cbs_conferir(arquivos, todas_as_regras = FALSE)

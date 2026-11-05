@@ -163,7 +163,7 @@
 "NA01-20","55","694","Não informado o grupo de ICMS para a UF de destino","2025-11-10",,,
 "Q01-20","55","745","NF-e sem grupo do PIS","2025-11-10",,,
 "S01-20","55","748","NF-e sem grupo da COFINS","2025-11-10",,,
-"VC02-04","65","708","NFC-e não pode referenciar documento fiscal","2025-11-10",,,
+"VC02-04","55/65","708","NFC-e ou NF-e com DANFE Simplificado Tipo 2 não pode referenciar documento fiscal","2025-11-10",,,
 "VC02-05","55","1010","NF-e com referenciamento de documento a nível de nota e a nível de item","2025-11-10",,,
 "VC02-07","55","1042","NF-e com referenciamento a nível de item informado indevidamente","2025-11-10",,,
 "VC02-10","55","1038","DFeReferenciado não informado","2025-11-10",,,

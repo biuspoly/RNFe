@@ -210,6 +210,8 @@ linhas_da_efd = function(arquivo, e_texto) {
     texto = iconv(texto, from = "CP1252", to = "UTF-8", sub = "?")
   }
   Encoding(texto) = "UTF-8"
+  # O arquivo em UTF-8 salvo com a marca de ordem dos bytes (BOM) no começo.
+  texto = sub("^\ufeff", "", texto)
   linhas = strsplit(texto, "\r?\n")[[1]]
   linhas = sub("\r$", "", linhas)
   # As linhas em branco no fim não contam.
@@ -308,10 +310,23 @@ juntar_com_as_colunas_de_todos = function(tabelas) {
     return(tabelas[[1]])
   }
   todas_as_colunas = unique(unlist(lapply(tabelas, names)))
-  for (posicao in seq_along(tabelas)) {
-    for (coluna in setdiff(todas_as_colunas, names(tabelas[[posicao]]))) {
-      tabelas[[posicao]][[coluna]] = rep(NA, nrow(tabelas[[posicao]]))
+  for (coluna in todas_as_colunas) {
+    # A coluna que falta vem vazia, com o tipo que tem nas outras tabelas: com NA lógico, o rbind tiraria a classe da
+    # data que viesse depois.
+    coluna_de_exemplo = NULL
+    for (tabela in tabelas) {
+      if (coluna %in% names(tabela)) {
+        coluna_de_exemplo = tabela[[coluna]]
+        break
+      }
     }
+    for (posicao in seq_along(tabelas)) {
+      if (!(coluna %in% names(tabelas[[posicao]]))) {
+        tabelas[[posicao]][[coluna]] = coluna_de_exemplo[rep(NA_integer_, nrow(tabelas[[posicao]]))]
+      }
+    }
+  }
+  for (posicao in seq_along(tabelas)) {
     tabelas[[posicao]] = tabelas[[posicao]][todas_as_colunas]
   }
   do.call(rbind, tabelas)

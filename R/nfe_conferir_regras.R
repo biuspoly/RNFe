@@ -13,6 +13,10 @@ SEGUNDOS_POR_DIA = 86400
 # O total da nota aceita R$ 0,50 a mais ou a menos (nota (*3) do Anexo I).
 TOLERANCIA_DO_TOTAL_DA_NOTA = 0.5
 LIMITE_DA_NFCE_SEM_DESTINATARIO = 10000
+# O valor máximo padrão da NFC-e e da NF-e com DANFE Simplificado Tipo 2 (W16-30); a UF pode definir outro.
+LIMITE_DA_NFCE = 200000
+# A origem da mercadoria importada (tabela de origem: 1, 2, 3 e 8), para a alíquota interestadual (NA09-10 e NA09-20).
+ORIGENS_DE_IMPORTADO = c("1", "2", "3", "8")
 LIMITE_DO_TROCO = 300000
 LITERAL_DO_DESTINATARIO_EM_HOMOLOGACAO = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL"
 LITERAL_DO_ITEM_EM_HOMOLOGACAO = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL"
@@ -257,6 +261,12 @@ conferir_a_chave_e_a_identificacao = function(notas, itens, referencias) {
     linhas_da_regra("B22-10", notas, aplica = notas$tipo_emissao %in% "9", confere = notas$tipo_impressao %in% "6",
                     campo = "ide/tpImp", no_documento = texto_ou_vazio(notas$tipo_impressao),
                     esperado = "6 (DANFE Simplificado Tipo 2)", itens_da_regra = SEM_ITEM),
+    # A NFC-e não usa o FS-DA (2) nem o FS-IA (5); a EPEC (4) a UF pode aceitar.
+    linhas_da_regra("B22-34", notas, aplica = !is.na(notas$tipo_emissao),
+                    confere = ifelse(notas$tipo_emissao %in% c("2", "5"), FALSE, ifelse(notas$tipo_emissao %in% "4", NA, TRUE)),
+                    campo = "ide/tpEmis", no_documento = notas$tipo_emissao, esperado = "diferente de 2, 4 e 5",
+                    observacao = ifelse(notas$tipo_emissao %in% "4", "A conting\u00eancia EPEC (tpEmis 4) pode ser aceita, a crit\u00e9rio da UF.", NA),
+                    itens_da_regra = SEM_ITEM),
     linhas_da_regra("B25-20", notas, aplica = notas$simplificada, confere = notas$finalidade %in% "1", campo = "ide/finNFe",
                     no_documento = texto_ou_vazio(notas$finalidade), esperado = "1 (normal)", itens_da_regra = SEM_ITEM),
     linhas_da_regra("B25-70", notas, aplica = notas$finalidade %in% "4" & !notas$tem_reforma &
@@ -534,6 +544,7 @@ conferir_o_destinatario = function(notas, itens) {
     linhas_da_regra("E04-10", notas, aplica = notas$tem_destinatario, confere = confere_o_nome, campo = "dest/xNome",
                     no_documento = texto_da_presenca(informado(notas$nome_destinatario)), esperado = "informado",
                     observacao = ifelse(is.na(confere_o_nome), OBSERVACAO_DO_SIMPLIFICADO, NA), itens_da_regra = SEM_ITEM),
+    # Na NFC-e o xNome é opcional: sem ele, não há o que comparar.
     linhas_da_regra("E04-20", notas, aplica = notas$ambiente %in% "2" & !(notas$tipo_emissao %in% "3") &
                       notas$tem_destinatario & (notas$modelo %in% "55" | informado(notas$nome_destinatario)),
                     confere = notas$nome_destinatario %in% LITERAL_DO_DESTINATARIO_EM_HOMOLOGACAO, campo = "dest/xNome",
@@ -860,6 +871,10 @@ conferir_o_icms_dos_itens = function(itens) {
   confere_o_cst_da_nfce = ifelse(cst %in% c("00", "20", "40", "41", "60", "61"), TRUE, ifelse(cst %in% "90", NA, FALSE))
   confere_o_csosn_da_nfce = ifelse(csosn %in% c("102", "103", "300", "400", "500"), TRUE, ifelse(csosn %in% "900", NA, FALSE))
   icms_calculado = arredondar_no_centavo(itens$base_icms * itens$aliquota_icms / 100)
+  # O MEI fora da exportação, na NFC-e e na NF-e com DANFE Simplificado Tipo 2 (N12a-81 e N12a-91).
+  mei_na_nfce = itens$regime_tributario %in% "4" & !(itens$destino_operacao %in% "3") & simplificada
+  texto_da_origem_e_da_aliquota = paste0("pICMSInter ", texto_do_numero(itens$aliquota_interestadual, 2), ", orig ",
+                                         texto_ou_vazio(itens$origem))
   sem_ie = !informado(itens$ie_emitente) & !(itens$finalidade %in% "4") & !(itens$tipo_nota_credito %in% "03")
 
   juntar_linhas(list(
@@ -905,7 +920,24 @@ conferir_o_icms_dos_itens = function(itens) {
                     esperado = texto_do_numero(icms_calculado, 2), diferenca = round(itens$valor_icms - icms_calculado, 2)),
     linhas_da_regra("N28-30", itens, aplica = !is.na(itens$motivo_desoneracao), confere = (itens$icms_desonerado > 0) %in% TRUE,
                     campo = "imposto/ICMS/vICMSDeson", no_documento = texto_do_numero(itens$icms_desonerado, 2),
-                    esperado = "maior que zero")
+                    esperado = "maior que zero"),
+    linhas_da_regra("N12-10", itens, aplica = substr(cfop, 1, 1) %in% "7" & !(itens$finalidade %in% "4"),
+                    confere = cst %in% "41" | csosn %in% "300", campo = "imposto/ICMS",
+                    no_documento = ifelse(is.na(cst), paste("CSOSN", texto_ou_vazio(csosn)), paste("CST", cst)),
+                    esperado = "CST 41 ou CSOSN 300"),
+    linhas_da_regra("N12a-81", itens, aplica = mei_na_nfce, confere = csosn %in% c("102", "300"),
+                    campo = "imposto/ICMS/CSOSN", no_documento = texto_ou_vazio(csosn), esperado = "102 ou 300"),
+    linhas_da_regra("N12a-91", itens, aplica = mei_na_nfce, confere = cfop %in% "5102", campo = "prod/CFOP",
+                    no_documento = texto_ou_vazio(cfop), esperado = "5102"),
+    linhas_da_regra("N28-12", itens, aplica = itens$motivo_desoneracao %in% "7", confere = itens$deduz_desonerado %in% "1",
+                    campo = "imposto/ICMS/indDeduzDeson", no_documento = texto_ou_vazio(itens$deduz_desonerado),
+                    esperado = "1"),
+    linhas_da_regra("NA09-10", itens, aplica = (itens$aliquota_interestadual == 4) %in% TRUE,
+                    confere = itens$origem %in% ORIGENS_DE_IMPORTADO, campo = "imposto/ICMSUFDest/pICMSInter",
+                    no_documento = texto_da_origem_e_da_aliquota, esperado = "origem de importado (1, 2, 3 ou 8)"),
+    linhas_da_regra("NA09-20", itens, aplica = (itens$aliquota_interestadual %in% c(7, 12)),
+                    confere = !(itens$origem %in% ORIGENS_DE_IMPORTADO), campo = "imposto/ICMSUFDest/pICMSInter",
+                    no_documento = texto_da_origem_e_da_aliquota, esperado = "origem diferente de 1, 2, 3 e 8")
   ))
 }
 
@@ -943,8 +975,8 @@ conferir_os_totais_da_nota = function(notas, itens) {
   importacao = chaves %in% itens$chave[substr(itens$cfop, 1, 1) %in% "3"]
 
   # W16-10: o valor da nota pela redação da NT 2023.004. O ICMS desonerado dos itens sem o indDeduzDeson 1 pode ficar
-  # fora da conta (exceção 4); no faturamento direto de veículos, a NT tirou o ICMS monofásico com retenção da conta,
-  # e as duas formas são aceitas.
+  # fora da conta (exceção 4). No faturamento direto de veículos, a NT tirou da conta o ICMS monofásico com retenção sem
+  # dizer desde quando: a conta antiga, com ele, também passa (a regra é facultativa).
   parte_comum = valor_ou_zero(notas$total_produtos) - valor_ou_zero(notas$total_desconto) +
     valor_ou_zero(notas$total_frete) + valor_ou_zero(notas$total_seguro) + valor_ou_zero(notas$total_outros) +
     valor_ou_zero(notas$total_ii) + valor_ou_zero(notas$total_ipi) + valor_ou_zero(notas$total_servicos) +
@@ -989,6 +1021,10 @@ conferir_os_totais_da_nota = function(notas, itens) {
                     campo = "total/ICMSTot/vNF", no_documento = texto_do_numero(notas$total_nota, 2),
                     esperado = texto_do_numero(pelo_total_desonerado, 2),
                     diferenca = round(valor_da_nota - pelo_total_desonerado, 2), itens_da_regra = SEM_ITEM),
+    linhas_da_regra("W16-30", notas, aplica = notas$simplificada & !is.na(notas$total_nota),
+                    confere = notas$total_nota <= LIMITE_DA_NFCE, campo = "total/ICMSTot/vNF",
+                    no_documento = texto_do_numero(notas$total_nota, 2), esperado = "at\u00e9 200000.00",
+                    itens_da_regra = SEM_ITEM),
     linhas_da_regra("W16-40", notas, aplica = acima_do_limite, confere = com_codigo_do_destinatario,
                     campo = "dest/CNPJ, dest/CPF ou dest/idEstrangeiro", no_documento = texto_da_presenca(com_codigo_do_destinatario),
                     esperado = "informado", itens_da_regra = SEM_ITEM),
@@ -1018,11 +1054,18 @@ conferir_o_transporte = function(notas) {
                     itens_da_regra = SEM_ITEM),
     linhas_do_cnpj("X04-20", notas, notas$cnpj_transportador, "transp/transporta/CNPJ"),
     linhas_do_cpf("X05-10", notas, notas$cpf_transportador, "transp/transporta/CPF"),
+    # A IE ISENTO não é inscrição: há NF-e autorizada com ela e sem a UF do transportador.
     linhas_da_regra("X07-10", notas, aplica = informado(notas$ie_transportador) & !(notas$ie_transportador %in% "ISENTO"),
                     confere = informado(notas$uf_transportador),
                     campo = "transp/transporta/UF", no_documento = texto_ou_vazio(notas$uf_transportador),
                     esperado = "informada", itens_da_regra = SEM_ITEM)
   ))
+}
+
+texto_da_data = function(datas) {
+  textos = format(datas, "%d/%m/%Y")
+  textos[is.na(datas)] = "(vazio)"
+  textos
 }
 
 # A data dez anos depois de cada uma (o 29 de fevereiro vira 1º de março, quando o ano não tem o dia).
@@ -1042,6 +1085,12 @@ conferir_a_cobranca = function(notas, parcelas) {
   soma_das_parcelas = somar_por_nota(parcelas$valor, parcelas$chave, notas$chave)
   desconto = valor_ou_zero(notas$desconto_fatura)
   liquido_calculado = round(valor_ou_zero(notas$valor_original_fatura) - desconto, 2)
+  # O vencimento da parcela anterior da mesma nota (a ordem do XML); a primeira não tem.
+  vencimento_anterior = rep(as.Date(NA), length(parcelas$vencimento))
+  if (length(parcelas$vencimento) > 1) {
+    vencimento_anterior[-1] = parcelas$vencimento[-length(parcelas$vencimento)]
+  }
+  vencimento_anterior[ordem == 1] = NA
   limite_do_vencimento = dez_anos_depois(as.Date(format(notas$recebimento[da_nota], "%Y-%m-%d", tz = "America/Sao_Paulo")))
 
   juntar_linhas(list(
@@ -1064,6 +1113,14 @@ conferir_a_cobranca = function(notas, parcelas) {
     linhas_da_regra("Y08-10", parcelas, aplica = TRUE, confere = (parcelas$numero == sprintf("%03d", ordem)) %in% TRUE,
                     campo = paste0(campo, "/nDup"), no_documento = texto_ou_vazio(parcelas$numero),
                     esperado = sprintf("%03d", ordem), itens_da_regra = SEM_ITEM),
+    linhas_da_regra("Y09-20", parcelas, aplica = TRUE,
+                    confere = (parcelas$vencimento >= notas$data_emissao[da_nota]) %in% TRUE,
+                    campo = paste0(campo, "/dVenc"), no_documento = texto_da_data(parcelas$vencimento),
+                    esperado = paste("a partir de", texto_da_data(notas$data_emissao[da_nota])), itens_da_regra = SEM_ITEM),
+    linhas_da_regra("Y09-30", parcelas, aplica = ordem > 1,
+                    confere = (parcelas$vencimento >= vencimento_anterior) %in% TRUE, campo = paste0(campo, "/dVenc"),
+                    no_documento = texto_da_data(parcelas$vencimento),
+                    esperado = paste("a partir de", texto_da_data(vencimento_anterior)), itens_da_regra = SEM_ITEM),
     linhas_da_regra("Y09-40", notas, aplica = quantas_parcelas == 1 & !is.na(vencimento_da_unica) & !is.na(notas$data_emissao),
                     confere = vencimento_da_unica != notas$data_emissao, campo = "cobr/dup/dVenc",
                     no_documento = format(vencimento_da_unica, "%d/%m/%Y"), esperado = "vencimento depois da emiss\u00e3o",
@@ -1094,6 +1151,9 @@ conferir_os_pagamentos = function(notas, pagamentos) {
   valor_da_nota = valor_ou_zero(notas$total_nota)
   troco_calculado = round(soma_dos_pagamentos - valor_da_nota, 2)
   confere_o_cartao = ifelse(meio %in% MEIOS_COM_CARTAO, TRUE, ifelse(meio %in% MEIOS_DEPOIS_DA_REGRA_DO_CARTAO, NA, FALSE))
+  # A data do pagamento contra a do recebimento pela SEFAZ, no horário de Brasília (YA03a-10).
+  data_do_pagamento = as.Date(pagamentos$data_pagamento)
+  data_do_recebimento = as.Date(format(notas$recebimento[da_nota], "%Y-%m-%d", tz = "America/Sao_Paulo"))
 
   juntar_linhas(list(
     linhas_da_regra("YA02-04", pagamentos, aplica = notas$finalidade[da_nota] %in% c("3", "4"), confere = meio %in% "90",
@@ -1122,7 +1182,14 @@ conferir_os_pagamentos = function(notas, pagamentos) {
     linhas_da_regra("YA03-30", pagamentos, aplica = meio %in% c("90", "91"), confere = (pagamentos$valor == 0) %in% TRUE,
                     campo = paste0(campo, "/vPag"), no_documento = texto_do_numero(pagamentos$valor, 2), esperado = "0.00",
                     itens_da_regra = SEM_ITEM),
+    linhas_da_regra("YA03a-10", pagamentos, aplica = !is.na(data_do_pagamento),
+                    confere = (data_do_pagamento <= data_do_recebimento) %in% TRUE, campo = paste0(campo, "/dPag"),
+                    no_documento = format(data_do_pagamento, "%d/%m/%Y"),
+                    esperado = paste("at\u00e9", format(data_do_recebimento, "%d/%m/%Y")), itens_da_regra = SEM_ITEM),
     linhas_do_cnpj("YA03c-10", pagamentos, pagamentos$cnpj_pagamento, paste0(campo, "/CNPJPag")),
+    linhas_da_regra("YA04-10", pagamentos, aplica = meio %in% c("03", "04", "17"), confere = pagamentos$tem_cartao,
+                    campo = paste0(campo, "/card"), no_documento = texto_da_presenca(pagamentos$tem_cartao),
+                    esperado = "informado", itens_da_regra = SEM_ITEM),
     linhas_da_regra("YA04-20", pagamentos, aplica = pagamentos$tem_cartao, confere = confere_o_cartao,
                     campo = paste0(campo, "/card"), no_documento = paste("tPag", texto_ou_vazio(meio)),
                     esperado = paste("tPag", paste(MEIOS_COM_CARTAO, collapse = ", ")),
@@ -1130,11 +1197,18 @@ conferir_os_pagamentos = function(notas, pagamentos) {
                       "O meio de pagamento entrou na tabela depois da reda\u00e7\u00e3o da regra, que n\u00e3o diz se ele aceita",
                       "o grupo de cart\u00f5es."
                     ), NA), itens_da_regra = SEM_ITEM),
+    linhas_da_regra("YA05-10", pagamentos, aplica = pagamentos$tem_cartao & pagamentos$tipo_integracao %in% "1",
+                    confere = informado(pagamentos$cnpj_credenciadora) & informado(pagamentos$autorizacao_cartao),
+                    campo = paste0(campo, "/card/CNPJ e card/cAut"),
+                    no_documento = paste0("CNPJ ", texto_da_presenca(informado(pagamentos$cnpj_credenciadora)), ", cAut ",
+                                          texto_da_presenca(informado(pagamentos$autorizacao_cartao))),
+                    esperado = "os dois informados (tpIntegra 1)", itens_da_regra = SEM_ITEM),
     linhas_do_cnpj("YA05-20", pagamentos, pagamentos$cnpj_credenciadora, paste0(campo, "/card/CNPJ")),
     linhas_da_regra("YA06-10", pagamentos, aplica = !is.na(pagamentos$bandeira), confere = bandeira_existe,
                     campo = paste0(campo, "/card/tBand"), no_documento = pagamentos$bandeira,
                     esperado = "bandeira da tabela", itens_da_regra = SEM_ITEM),
     linhas_do_cnpj("YA07a", pagamentos, pagamentos$cnpj_recebedor, paste0(campo, "/card/CNPJReceb")),
+    # Com os pagamentos abaixo do valor da nota (a YA03-10), o troco calculado é negativo, e o zero é o único possível.
     linhas_da_regra("YA09-10", notas, aplica = !is.na(notas$troco) & !(notas$troco == 0 & troco_calculado < 0),
                     confere = abs(valor_ou_zero(notas$troco) - troco_calculado) < TOLERANCIA_DO_CENTAVO, campo = "pag/vTroco",
                     no_documento = texto_do_numero(notas$troco, 2), esperado = texto_do_numero(troco_calculado, 2),
@@ -1156,6 +1230,8 @@ conferir_os_pagamentos = function(notas, pagamentos) {
 # A exportação (grupo ZA), o responsável técnico (ZD) e o QR-Code (ZX).
 conferir_as_informacoes_finais = function(notas) {
   exportacao = notas$tipo_operacao %in% "1" & notas$destino_operacao %in% "3"
+  chave_do_qrcode = parametro_do_qrcode(notas$qrcode, 1)
+  versao_do_qrcode = parametro_do_qrcode(notas$qrcode, 2)
   juntar_linhas(list(
     linhas_da_regra("ZA01-10", notas, aplica = exportacao, confere = notas$tem_exporta, campo = "exporta",
                     no_documento = texto_da_presenca(notas$tem_exporta), esperado = "informado", itens_da_regra = SEM_ITEM),
@@ -1172,6 +1248,39 @@ conferir_as_informacoes_finais = function(notas) {
     linhas_da_regra("ZX02-10", notas, aplica = notas$simplificada & !(notas$tipo_emissao %in% "3"),
                     confere = informado(notas$qrcode), campo = "infNFeSupl/qrCode",
                     no_documento = texto_da_presenca(informado(notas$qrcode)), esperado = "informado",
-                    itens_da_regra = SEM_ITEM)
+                    itens_da_regra = SEM_ITEM),
+    linhas_da_regra("ZX02-220", notas, aplica = informado(notas$qrcode), confere = versao_do_qrcode %in% "3",
+                    campo = "infNFeSupl/qrCode", no_documento = paste("vers\u00e3o", texto_ou_vazio(versao_do_qrcode)),
+                    esperado = "vers\u00e3o 3", itens_da_regra = SEM_ITEM),
+    linhas_da_regra("ZX02-228", notas, aplica = versao_do_qrcode %in% c("2", "3"),
+                    confere = (toupper(chave_do_qrcode) == toupper(notas$chave)) %in% TRUE, campo = "infNFeSupl/qrCode",
+                    no_documento = texto_ou_vazio(chave_do_qrcode), esperado = notas$chave, itens_da_regra = SEM_ITEM)
+  ))
+}
+
+# Um parâmetro do QR-Code (o 1º é a chave, o 2º a versão), depois do "p=" do endereço; NA sem ele.
+parametro_do_qrcode = function(qrcodes, posicao) {
+  com_parametros = !is.na(qrcodes) & grepl("[?&]p=", qrcodes)
+  partes = strsplit(sub("^.*[?&]p=", "", qrcodes), "|", fixed = TRUE)
+  valores = vapply(partes, "[", character(1), posicao)
+  valores[!com_parametros] = NA_character_
+  valores
+}
+
+# A importação por conta e ordem ou por encomenda (tpIntermedio 2 ou 3) com o adquirente ou o encomendante (grupo I,
+# DI).
+conferir_as_importacoes = function(importacoes) {
+  por_terceiro = importacoes$intermedio %in% c("2", "3")
+  campo = "prod/DI"
+  juntar_linhas(list(
+    linhas_da_regra("I23d-10", importacoes, aplica = por_terceiro,
+                    confere = informado(importacoes$cnpj) | informado(importacoes$cpf), campo = paste0(campo, "/CNPJ ou CPF"),
+                    no_documento = texto_da_presenca(informado(importacoes$cnpj) | informado(importacoes$cpf)),
+                    esperado = "informado", itens_da_regra = importacoes$item),
+    linhas_do_cnpj("I23d-20", importacoes, importacoes$cnpj, paste0(campo, "/CNPJ"), importacoes$item),
+    linhas_do_cpf("I23d1-10", importacoes, importacoes$cpf, paste0(campo, "/CPF"), importacoes$item),
+    linhas_da_regra("I23e-10", importacoes, aplica = por_terceiro, confere = informado(importacoes$uf_terceiro),
+                    campo = paste0(campo, "/UFTerceiro"), no_documento = texto_ou_vazio(importacoes$uf_terceiro),
+                    esperado = "informada", itens_da_regra = importacoes$item)
   ))
 }

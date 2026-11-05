@@ -467,8 +467,9 @@ conferir_os_itens_da_nota = function(itens, referencias) {
                     no_documento = texto_da_presenca(itens$tem_pis), esperado = "informado"),
     linhas_da_regra("S01-20", itens, aplica = !debito_ou_credito, confere = itens$tem_cofins, campo = "imposto/COFINS",
                     no_documento = texto_da_presenca(itens$tem_cofins), esperado = "informado"),
-    linhas_da_regra("VC02-04", itens, aplica = TRUE, confere = !com_dfe, campo = "DFeReferenciado",
-                    no_documento = texto_da_presenca(com_dfe), esperado = "n\u00e3o informado"),
+    # A NF-e com DANFE Simplificado Tipo 2 entrou na VC02-04 pela NT 2026.002 v1.11 (era a VC02-50).
+    linhas_da_regra("VC02-04", itens, aplica = itens$modelo %in% "65" | itens$tipo_impressao %in% "6", confere = !com_dfe,
+                    campo = "DFeReferenciado", no_documento = texto_da_presenca(com_dfe), esperado = "n\u00e3o informado"),
     linhas_da_regra("VC02-05", itens, aplica = com_dfe, confere = !itens$tem_referencia, campo = "ide/NFref",
                     no_documento = texto_da_presenca(itens$tem_referencia), esperado = "sem refer\u00eancia no cabe\u00e7alho"),
     linhas_da_regra("VC02-07", itens, aplica = finalidade %in% "5" & !(credito %in% "06"), confere = !com_dfe,

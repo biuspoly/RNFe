@@ -31,8 +31,12 @@ test_that("os valores, o n\u00famero e o participante diferentes", {
   # O ICMS do item e o do total.
   texto = gsub("<vICMS>6.00</vICMS>", "<vICMS>7.00</vICMS>", texto, fixed = TRUE)
   texto = sub("<CNPJ>11444777000161</CNPJ>", "<CNPJ>11222333000181</CNPJ>", texto, fixed = TRUE)
-  diferencas = efd_icms_ipi_cruzar_nfe(EFD_PARA_CRUZAR, texto)$diferencas
-  expect_identical(sort(diferencas$campo_efd), sort(c("VL_DOC", "VL_ICMS", "COD_PART (0150)")))
+  # O número escriturado errado.
+  linhas = readLines(EFD_PARA_CRUZAR, encoding = "latin1")
+  linhas[13] = sub("|1|1001|", "|1|1002|", linhas[13], fixed = TRUE)
+  diferencas = efd_icms_ipi_cruzar_nfe(paste(linhas, collapse = "\r\n"), texto)$diferencas
+  expect_identical(diferencas$campo_efd, c("NUM_DOC", "VL_DOC", "VL_ICMS", "COD_PART (0150)"))
+  expect_identical(diferencas$na_efd[1], "1002")
   valor = diferencas[diferencas$campo_efd == "VL_DOC", ]
   expect_identical(c(valor$na_efd, valor$no_xml), c("115.00", "116.00"))
   expect_equal(valor$diferenca, -1)
@@ -71,4 +75,67 @@ test_that("a nota que falta na EFD e a situa\u00e7\u00e3o pelos eventos", {
   expect_identical(nrow(como_cancelada$diferencas), 0L)
   expect_error(efd_icms_ipi_cruzar_nfe(efd_icms_ipi_ler(EFD_PARA_CRUZAR, registros = "C100"), NOTA_PARA_CRUZAR),
                "0000")
+})
+
+test_that("o PIS e a COFINS vazios, o ICMS com o FCP e a entrada de emiss\u00e3o pr\u00f3pria", {
+  linhas = readLines(EFD_PARA_CRUZAR, encoding = "latin1")
+  # Quem entrega a EFD-Contribuições deixa o PIS e a COFINS vazios.
+  sem_pis = linhas
+  sem_pis[13] = sub("|0,83|3,80|", "|||", sem_pis[13], fixed = TRUE)
+  expect_identical(nrow(efd_icms_ipi_cruzar_nfe(paste(sem_pis, collapse = "\r\n"), NOTA_PARA_CRUZAR)$diferencas), 0L)
+  # O VL_ICMS do C100 é a soma dos C190, que incluem o FCP.
+  com_fcp = sub("<vFCP>0.00</vFCP>", "<vFCP>1.00</vFCP>", texto_da_nota_para_cruzar(), fixed = TRUE)
+  sem_o_fcp = efd_icms_ipi_cruzar_nfe(EFD_PARA_CRUZAR, com_fcp)$diferencas
+  expect_identical(c(sem_o_fcp$campo_efd, sem_o_fcp$coluna_xml, sem_o_fcp$no_xml),
+                   c("VL_ICMS", "valor_icms+valor_fcp", "7.00"))
+  com_o_fcp = linhas
+  com_o_fcp[13] = sub("|50,00|6,00|", "|50,00|7,00|", com_o_fcp[13], fixed = TRUE)
+  expect_identical(nrow(efd_icms_ipi_cruzar_nfe(paste(com_o_fcp, collapse = "\r\n"), com_fcp)$diferencas), 0L)
+  # Na entrada, mesmo de emissão própria, os impostos são os do crédito: só a operação diferente do tpNF aparece.
+  entrada = linhas
+  entrada[13] = sub("|C100|1|0|P001|", "|C100|0|0|P001|", entrada[13], fixed = TRUE)
+  entrada[13] = sub("|50,00|6,00|", "|50,00|0,00|", entrada[13], fixed = TRUE)
+  expect_identical(efd_icms_ipi_cruzar_nfe(paste(entrada, collapse = "\r\n"), NOTA_PARA_CRUZAR)$diferencas$campo_efd,
+                   "IND_OPER")
+})
+
+test_that("a NFC-e: o C100 sem o ICMS-ST, o IPI, o PIS e a COFINS, e a recebida fora das entradas", {
+  linhas = readLines(EFD_PARA_CRUZAR, encoding = "latin1")
+  nfce = system.file("exemplos", "nfce_ce_contingencia.xml", package = "RNFe")
+  texto_da_nfce = paste(readLines(nfce, encoding = "UTF-8"), collapse = "\n")
+  texto_da_nfce = sub("<vIPI>0.00</vIPI>", "<vIPI>2.00</vIPI>", texto_da_nfce, fixed = TRUE)
+  campos = c("C100", "1", "0", "", "65", "00", "003", "77", "23261011444777000161650030000000779135724686", "21102026",
+             "21102026", "35,00", "0", "0,00", "0,00", "35,00", "9", "0,00", "0,00", "0,00", "0,00", "0,00",
+             "", "", "", "", "", "", "")
+  do_emitente = linhas
+  do_emitente[1] = sub("|11222333000181|", "|11444777000161|", do_emitente[1], fixed = TRUE)
+  do_emitente = c(do_emitente[1:12], paste0("|", paste(campos, collapse = "|"), "|"), do_emitente[19:length(do_emitente)])
+  cruzamento = efd_icms_ipi_cruzar_nfe(paste(do_emitente, collapse = "\r\n"), texto_da_nfce)
+  expect_identical(cruzamento$notas$onde, "nas duas")
+  expect_identical(nrow(cruzamento$diferencas), 0L)
+  # Recebida pelo contribuinte da EFD de exemplo: a NFC-e não se escritura nas entradas.
+  recebida = sub("</emit>", "</emit><dest><CNPJ>11222333000181</CNPJ></dest>", texto_da_nfce, fixed = TRUE)
+  notas = efd_icms_ipi_cruzar_nfe(EFD_PARA_CRUZAR, c(NOTA_PARA_CRUZAR, recebida))$notas
+  expect_false("23261011444777000161650030000000779135724686" %in% notas$chave)
+})
+
+test_that("a complementar sem os valores, a denegada que n\u00e3o falta e o cancelamento por substitui\u00e7\u00e3o", {
+  linhas = readLines(EFD_PARA_CRUZAR, encoding = "latin1")
+  # A complementar (COD_SIT 06) com os valores vazios: são facultativos.
+  complementar = linhas
+  complementar[13] = paste0("|C100|1|0|P001|55|06|1|1001|35261011222333000181550010000010011123456785|15102026|15102026|",
+                            strrep("|", 18))
+  expect_identical(nrow(efd_icms_ipi_cruzar_nfe(paste(complementar, collapse = "\r\n"), NOTA_PARA_CRUZAR)$diferencas), 0L)
+  # A emissão própria denegada não precisa estar na EFD; a sem protocolo aparece, com o aviso.
+  sem_a_venda = paste(linhas[-c(13:15)], collapse = "\r\n")
+  denegada = sub("<cStat>100</cStat>", "<cStat>110</cStat>", texto_da_nota_para_cruzar(), fixed = TRUE)
+  expect_false("35261011222333000181550010000010011123456785" %in% efd_icms_ipi_cruzar_nfe(sem_a_venda, denegada)$notas$chave)
+  sem_protocolo = sub("(?s)<protNFe.*</protNFe>", "", texto_da_nota_para_cruzar(), perl = TRUE)
+  falta = efd_icms_ipi_cruzar_nfe(sem_a_venda, sem_protocolo)$notas
+  expect_match(falta$observacao[falta$onde == "s\u00f3 nos XML"], "protocolo")
+  # O cancelamento por substituição (110112) também cancela a nota.
+  substituicao = paste(readLines(CANCELAMENTO_DA_NOTA, encoding = "UTF-8"), collapse = "\n")
+  substituicao = gsub("110111", "110112", substituicao, fixed = TRUE)
+  cancelada = efd_icms_ipi_cruzar_nfe(EFD_PARA_CRUZAR, NOTA_PARA_CRUZAR, eventos = substituicao)$diferencas
+  expect_identical(c(cancelada$campo_efd, cancelada$no_xml), c("COD_SIT", "cancelada"))
 })

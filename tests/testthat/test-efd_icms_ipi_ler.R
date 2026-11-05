@@ -141,3 +141,15 @@ test_that("o leiaute: os registros, as vers\u00f5es e a vig\u00eancia de cada ca
   expect_identical(leiaute$coluna[leiaute$registro == "C170" & leiaute$campo == "ALIQ_PIS"], c("ALIQ_PIS_27", "ALIQ_PIS_29"))
   expect_true(all(leiaute$tipo %in% c("C", "N")))
 })
+
+test_that("o arquivo em UTF-8 com a marca de ordem dos bytes (BOM) \u00e9 lido", {
+  linhas = readLines(system.file("exemplos", "efd_icms_ipi_sp.txt", package = "RNFe"), encoding = "latin1")
+  arquivo = tempfile(fileext = ".txt")
+  conexao = file(arquivo, "wb")
+  writeBin(as.raw(c(0xef, 0xbb, 0xbf)), conexao)
+  writeBin(charToRaw(enc2utf8(paste(linhas, collapse = "\r\n"))), conexao)
+  close(conexao)
+  lida = efd_icms_ipi_ler(arquivo, registros = c("0000", "0150"))
+  expect_true(is.na(lida$arquivos$problema))
+  expect_identical(lida$`0150`$NOME, "DESTINAT\u00c1RIO DE TESTE LTDA")
+})

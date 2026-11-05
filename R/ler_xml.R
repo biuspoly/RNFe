@@ -55,18 +55,20 @@ meio_pagamento   meio_pagamento_descricao meios_pagamento descricao
 # Lê cada arquivo e devolve, de cada um, as colunas das tabelas (o que `colunas_do_documento` monta), o
 # nome e o problema. `caminho_dos_documentos` acha cada documento no XML ("//NFe/infNFe") e
 # `nome_do_documento` vai na mensagem do arquivo que não é desse tipo ("uma NF-e", "um CT-e").
-# `todos_os_campos` diz se `colunas_do_documento` monta também a tabela campos.
-ler_arquivos_xml = function(arquivos, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos) {
+# `todos_os_campos` diz se `colunas_do_documento` monta também a tabela campos; o que vier depois vai para ela.
+ler_arquivos_xml = function(arquivos, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos,
+                            ...) {
   arquivos = as.character(arquivos)
   arquivos_lidos = list()
   for (posicao in seq_along(arquivos)) {
     arquivos_lidos[[posicao]] = ler_um_arquivo(arquivos[posicao], posicao, caminho_dos_documentos, nome_do_documento,
-                                               colunas_do_documento, todos_os_campos)
+                                               colunas_do_documento, todos_os_campos, ...)
   }
   arquivos_lidos
 }
 
-ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos) {
+ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos,
+                          ...) {
   e_texto_do_xml = !is.na(arquivo) && startsWith(trimws(arquivo), "<")
   if (e_texto_do_xml) {
     nome_do_arquivo = paste0("(texto ", posicao, ")")
@@ -96,7 +98,7 @@ ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_docu
     }
   }
 
-  arquivo_lido = colunas_do_documento(xml_lido, nome_do_arquivo, todos_os_campos)
+  arquivo_lido = colunas_do_documento(xml_lido, nome_do_arquivo, todos_os_campos, ...)
   arquivo_lido$nome_do_arquivo = nome_do_arquivo
   arquivo_lido$problema = problema
   arquivo_lido

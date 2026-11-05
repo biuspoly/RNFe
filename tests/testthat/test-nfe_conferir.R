@@ -16,7 +16,8 @@ linhas_da_regra_conferida = function(conferencias, regra) {
 test_that("os exemplos: a nota de SP acusa o cNF e o intermediador, e as outras passam", {
   exemplos = system.file("exemplos", c("nfe_proc_sp.xml", "nfce_ce_contingencia.xml", "nfe_ce_simples_cpf.xml"),
                          package = "RNFe")
-  resultado = nfe_conferir(exemplos)
+  # O momento do envio fixo: a nota do CE não tem protocolo, e a B09-20 depende de quanto ela atrasou.
+  resultado = nfe_conferir(exemplos, agora = as.POSIXct("2026-10-25 12:00:00", tz = "America/Sao_Paulo"))
   expect_equal(resultado$notas$regras_erradas, c(2L, 0L, 0L))
   expect_equal(resultado$notas$regras_sem_conferir, c(0L, 0L, 0L))
   expect_true(all(resultado$notas$regras_conferidas > 50))
@@ -29,6 +30,28 @@ test_that("os exemplos: a nota de SP acusa o cNF e o intermediador, e as outras 
   expect_equal(b03$codigo_sefaz, "897")
   expect_equal(b03$aplicacao, "obrigat\u00f3ria")
   expect_equal(resultado$arquivos$notas, c(1L, 1L, 1L))
+})
+
+test_that("a mesma nota em dois arquivos \u00e9 conferida uma vez, a do arquivo com o protocolo", {
+  texto = xml_do_exemplo("nfe_proc_sp.xml")
+  sem_protocolo = sub("(?s)<protNFe.*</protNFe>", "", texto, perl = TRUE)
+  sem_protocolo = trocar(sem_protocolo, "<CFOP>6102</CFOP>", "<CFOP>61020</CFOP>")
+  resultado = nfe_conferir(c(sem_protocolo, texto, texto))
+  expect_equal(nrow(resultado$notas), 1)
+  expect_equal(resultado$arquivos$notas, c(1L, 1L, 1L))
+  # A escolhida é a do segundo arquivo: o schema dela confere, e as regras não saem repetidas.
+  expect_true(resultado$notas$schema_valido)
+  expect_equal(nrow(resultado$schema), 0)
+  expect_setequal(resultado$conferencias$regra, c("B03-10", "B25c-10"))
+  expect_equal(nrow(resultado$conferencias), 2)
+})
+
+test_that("a B03-10 compara o cNF com o nNF como texto (h\u00e1 NF-e autorizada com o cNF 00000856 e o nNF 856)", {
+  texto = xml_do_exemplo("nfe_proc_sp.xml")
+  zeros_a_esquerda = nfe_conferir(trocar(texto, "<cNF>12345678</cNF>", "<cNF>00001001</cNF>"), todas_as_regras = TRUE)
+  expect_true(linhas_da_regra_conferida(zeros_a_esquerda$conferencias, "B03-10")$confere)
+  igual = trocar(trocar(texto, "<cNF>12345678</cNF>", "<cNF>23456781</cNF>"), "<nNF>1001</nNF>", "<nNF>23456781</nNF>")
+  expect_false(linhas_da_regra_conferida(nfe_conferir(igual)$conferencias, "B03-10")$confere)
 })
 
 test_that("o schema: o campo errado aparece, e a falta da assinatura n\u00e3o conta", {
@@ -158,8 +181,17 @@ test_that("o momento do envio vale para a nota sem protocolo", {
   expect_match(b09$observacao, "agora")
 })
 
-test_that("o GTIN, a posi\u00e7\u00e3o na nota e os argumentos", {
-  expect_equal(gtin_confere(c("4006381333931", "96385074", "4006381333932", "SEM GTIN", NA)),
+test_that("o vencimento das parcelas: nunca antes da emiss\u00e3o nem da parcela anterior", {
+  texto = xml_do_exemplo("nfe_proc_sp.xml")
+  antes_da_emissao = nfe_conferir(trocar(texto, "<dVenc>2026-11-14</dVenc>", "<dVenc>2026-10-01</dVenc>"))$conferencias
+  y09 = linhas_da_regra_conferida(antes_da_emissao, "Y09-20")
+  expect_identical(y09$campo, "cobr/dup[1]/dVenc")
+  expect_identical(y09$codigo_sefaz, "900")
+  fora_de_ordem = nfe_conferir(trocar(texto, "<dVenc>2026-12-14</dVenc>", "<dVenc>2026-11-01</dVenc>"))$conferencias
+  expect_identical(linhas_da_regra_conferida(fora_de_ordem, "Y09-30")$campo, "cobr/dup[2]/dVenc")
+})
+
+test_that("o GTIN, a posi\u00e7\u00e3o na nota e os argumentos", {  expect_equal(gtin_confere(c("4006381333931", "96385074", "4006381333932", "SEM GTIN", NA)),
                c(TRUE, TRUE, FALSE, FALSE, FALSE))
   expect_equal(ordem_na_nota(c("a", "b", "a", "a", "b")), c(1L, 1L, 2L, 3L, 2L))
   nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
@@ -177,4 +209,83 @@ test_that("cada regra da tabela tem a fonte, o c\u00f3digo e a aplica\u00e7\u00e
   expect_true(all(grepl("^[0-9]{3,4}$", regras$codigo_sefaz)))
   expect_true(all(regras$modelos %in% c("55", "65", "55/65")))
   expect_false(any(is.na(regras$fonte) | is.na(regras$mensagem)))
+})
+
+# A regra conferida de uma nota (ou do item), pelo resultado com todas as regras.
+confere_na_regra = function(texto, regra, item = NULL) {
+  conferencias = nfe_conferir(texto, todas_as_regras = TRUE)$conferencias
+  linhas = conferencias[conferencias$regra == regra, ]
+  if (!is.null(item)) {
+    linhas = linhas[linhas$item %in% item, ]
+  }
+  linhas$confere
+}
+
+test_that("os pagamentos da NFC-e: o cart\u00e3o, a integra\u00e7\u00e3o, a data do pagamento e o limite da nota", {
+  nfce = xml_do_exemplo("nfce_ce_contingencia.xml")
+  expect_false(confere_na_regra(trocar(nfce, "<tPag>01</tPag>", "<tPag>03</tPag>"), "YA04-10"))
+  integrado = trocar(nfce, "<vPag>50.00</vPag>", "<vPag>50.00</vPag><card><tpIntegra>1</tpIntegra></card>")
+  expect_false(confere_na_regra(trocar(integrado, "<tPag>01</tPag>", "<tPag>03</tPag>"), "YA05-10"))
+  # O pagamento dia 25, e a SEFAZ recebeu dia 21.
+  expect_false(confere_na_regra(trocar(nfce, "<vPag>50.00</vPag>", "<vPag>50.00</vPag><dPag>2026-10-25</dPag>"), "YA03a-10"))
+  expect_true(confere_na_regra(trocar(nfce, "<vPag>50.00</vPag>", "<vPag>50.00</vPag><dPag>2026-10-21</dPag>"), "YA03a-10"))
+  expect_false(confere_na_regra(trocar(nfce, "<vNF>35.00</vNF>", "<vNF>250000.00</vNF>"), "W16-30"))
+  expect_true(confere_na_regra(nfce, "W16-30"))
+})
+
+test_that("a NFC-e do MEI, a conting\u00eancia que ela n\u00e3o usa e a chave do QR-Code", {
+  nfce = xml_do_exemplo("nfce_ce_contingencia.xml")
+  mei = trocar(nfce, "<CRT>1</CRT>", "<CRT>4</CRT>")
+  expect_identical(confere_na_regra(mei, "N12a-81"), c(TRUE, TRUE))
+  expect_identical(confere_na_regra(trocar(mei, "<CSOSN>102</CSOSN>", "<CSOSN>103</CSOSN>"), "N12a-81"), c(FALSE, TRUE))
+  expect_identical(confere_na_regra(trocar(mei, "<CFOP>5102</CFOP>", "<CFOP>5101</CFOP>"), "N12a-91"), c(FALSE, TRUE))
+  expect_false(confere_na_regra(trocar(nfce, "<tpEmis>9</tpEmis>", "<tpEmis>5</tpEmis>"), "B22-34"))
+  expect_true(is.na(confere_na_regra(trocar(nfce, "<tpEmis>9</tpEmis>", "<tpEmis>4</tpEmis>"), "B22-34")))
+  expect_true(confere_na_regra(nfce, "ZX02-228"))
+  expect_false(confere_na_regra(trocar(nfce, "?p=2326", "?p=3526"), "ZX02-228"))
+})
+
+test_that("a NF-e com DANFE Simplificado Tipo 2 s\u00f3 aceita o QR-Code da vers\u00e3o 3", {
+  texto = trocar(xml_do_exemplo("nfe_proc_sp.xml"), "<tpImp>1</tpImp>", "<tpImp>6</tpImp>")
+  texto = trocar(texto, "</infNFe>", paste0("</infNFe><infNFeSupl><qrCode>https://nfce.exemplo.invalid/qrcode?p=",
+                                            "35261011222333000181550010000010011123456785|2|2|1|ABC</qrCode>",
+                                            "<urlChave>https://nfce.exemplo.invalid/consulta</urlChave></infNFeSupl>"))
+  expect_false(confere_na_regra(texto, "ZX02-220"))
+  expect_true(confere_na_regra(texto, "ZX02-228"))
+})
+
+# O item 1 com o grupo do ICMS para a UF de destino, a alíquota interestadual e a origem pedidas.
+nota_com_partilha = function(texto, aliquota, origem) {
+  com_grupo = trocar(texto, "</ICMS>\n          <IPI>", paste0(
+    "</ICMS><ICMSUFDest><vBCUFDest>50.00</vBCUFDest><pICMSUFDest>18.00</pICMSUFDest><pICMSInter>", aliquota,
+    "</pICMSInter><pICMSInterPart>100.00</pICMSInterPart><vICMSUFDest>3.00</vICMSUFDest><vICMSUFRemet>0.00</vICMSUFRemet>",
+    "</ICMSUFDest>\n          <IPI>"))
+  trocar(com_grupo, "<orig>0</orig>", paste0("<orig>", origem, "</orig>"))
+}
+
+test_that("o ICMS do item: a exporta\u00e7\u00e3o, a desonera\u00e7\u00e3o da ZFM e a al\u00edquota interestadual do importado", {
+  texto = xml_do_exemplo("nfe_proc_sp.xml")
+  expect_false(confere_na_regra(trocar(texto, "<CFOP>6102</CFOP>", "<CFOP>7101</CFOP>"), "N12-10"))
+  icms00 = regmatches(texto, regexpr("(?s)<ICMS00>.*?</ICMS00>", texto, perl = TRUE))
+  suframa = trocar(texto, icms00, paste0("<ICMS40><orig>0</orig><CST>40</CST><vICMSDeson>1.00</vICMSDeson>",
+                                         "<motDesICMS>7</motDesICMS><indDeduzDeson>0</indDeduzDeson></ICMS40>"))
+  expect_false(confere_na_regra(suframa, "N28-12"))
+  expect_false(confere_na_regra(nota_com_partilha(texto, "4.00", "0"), "NA09-10"))
+  expect_true(confere_na_regra(nota_com_partilha(texto, "4.00", "1"), "NA09-10"))
+  expect_false(confere_na_regra(nota_com_partilha(texto, "12.00", "1"), "NA09-20"))
+})
+
+test_that("a importa\u00e7\u00e3o por conta e ordem: o adquirente e a UF dele", {
+  texto = xml_do_exemplo("nfe_proc_sp.xml")
+  importacao = paste0("<DI><nDI>123</nDI><dDI>2026-10-01</dDI><xLocDesemb>SANTOS</xLocDesemb><UFDesemb>SP</UFDesemb>",
+                      "<dDesemb>2026-10-02</dDesemb><tpViaTransp>1</tpViaTransp><tpIntermedio>2</tpIntermedio>",
+                      "<cExportador>X</cExportador></DI><xPed>")
+  sem_adquirente = trocar(texto, "<xPed>", importacao)
+  expect_false(confere_na_regra(sem_adquirente, "I23d-10", 1))
+  expect_false(confere_na_regra(sem_adquirente, "I23e-10", 1))
+  com_cnpj_errado = trocar(sem_adquirente, "<tpIntermedio>2</tpIntermedio>",
+                           "<tpIntermedio>2</tpIntermedio><CNPJ>11222333000180</CNPJ><UFTerceiro>SP</UFTerceiro>")
+  expect_true(confere_na_regra(com_cnpj_errado, "I23d-10", 1))
+  expect_false(confere_na_regra(com_cnpj_errado, "I23d-20", 1))
+  expect_true(confere_na_regra(com_cnpj_errado, "I23e-10", 1))
 })

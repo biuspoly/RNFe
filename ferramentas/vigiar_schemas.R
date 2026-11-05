@@ -105,6 +105,13 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
     "`ferramentas/schemas_usados.csv`, validar com `ferramentas/validar_exemplos.R` e rodar ",
     "`Rscript ferramentas/vigiar_schemas.R --registrar`. Se a publicação não muda nada no RNFe, só o último passo."
   ))
+  # A pré-conferência (nfe_conferir) valida a NF-e contra os schemas que vão no pacote.
+  if (publicacao$documento == "nfe") {
+    linhas_do_aviso = c(linhas_do_aviso, "", paste0(
+      "Na NF-e, a pré-conferência valida contra os `.xsd` da pasta `NFe` do pacote de liberação, copiados em ",
+      "`inst/schemas/nfe`: se a publicação traz o `nfe_v4.00.xsd`, copie os cinco arquivos dela para lá."
+    ))
+  }
   linhas_do_aviso = cortar_texto(linhas_do_aviso)
   arquivo_do_aviso = file.path(pasta_dos_avisos, sprintf("%03d.md", numero_do_aviso))
   conexao_com_o_arquivo = file(arquivo_do_aviso, "w", encoding = "UTF-8")

@@ -285,6 +285,12 @@ test_that("o cr\u00e9dito presumido da ZFM: s\u00f3 na nota de cr\u00e9dito 02, 
   expect_match(sem_saber$observacao, "protocolo", fixed = TRUE)
   do_mes_da_emissao = sub("<competApur>2026-12</competApur>", "<competApur>2026-10</competApur>", sem_protocolo, fixed = TRUE)
   expect_true(linha_da_regra(ibs_cbs_conferir(do_mes_da_emissao, todas_as_regras = TRUE)$conferencias, "UB132-10")$confere)
+  # Na pré-conferência, o mês é o do envio.
+  no_envio = nfe_conferir(sem_protocolo, agora = as.POSIXct("2026-12-02 10:00:00", tz = "America/Sao_Paulo"),
+                          todas_as_regras = TRUE)$conferencias
+  no_envio = no_envio[no_envio$regra == "UB132-10", ]
+  expect_identical(no_envio$confere, c(TRUE, TRUE))
+  expect_identical(unique(no_envio$esperado), "at\u00e9 2026-12 (o m\u00eas do envio)")
   repetido = linha_da_regra(conferida, "UB133-10", 1:2)
   expect_identical(repetido$confere, c(TRUE, FALSE))
 })
@@ -437,6 +443,14 @@ test_that("os tributos, o CFOP e o documento referenciado de cada item", {
   com_os_dois = trocar_no_xml(com_os_dois, "<infAdProd>", paste0("<DFeReferenciado><chaveAcesso>", referenciada,
                                                                  "</chaveAcesso></DFeReferenciado><infAdProd>"))
   expect_false(linha_da_regra(ibs_cbs_conferir(com_os_dois)$conferencias, "VC02-05", 1)$confere)
+  # A NF-e com DANFE Simplificado Tipo 2 também não pode referenciar no item (NT 2026.002); a NF-e comum, sim.
+  no_item = trocar_no_xml(texto_do_exemplo(), "<infAdProd>", paste0("<DFeReferenciado><chaveAcesso>", referenciada,
+                                                                    "</chaveAcesso></DFeReferenciado><infAdProd>"))
+  expect_false("VC02-04" %in% ibs_cbs_conferir(no_item, todas_as_regras = TRUE)$conferencias$regra)
+  simplificada = trocar_no_xml(no_item, "<tpImp>1</tpImp>", "<tpImp>6</tpImp>")
+  vc02_04 = linha_da_regra(ibs_cbs_conferir(simplificada)$conferencias, "VC02-04", 1)
+  expect_false(vc02_04$confere)
+  expect_identical(vc02_04$codigo_sefaz, "708")
   # O total dos produtos que não é a soma dos itens, e o total do Imposto Seletivo sem item com ele.
   totais = trocar_no_xml(texto_do_exemplo(), "<vProd>110.00</vProd>", "<vProd>111.00</vProd>")
   totais = trocar_no_xml(totais, "<vNFTot>", "<ISTot><vIS>0.00</vIS></ISTot><vNFTot>")

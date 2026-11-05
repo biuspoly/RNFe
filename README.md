@@ -319,6 +319,67 @@ O certificado do servidor é sempre
 verificado: contra as raízes de sempre e a raiz v10 da ICP-Brasil, que vem no pacote (conferida com a do repositório
 do ITI). O PyNFe conecta sem isso porque desliga a verificação (`verify=False`).
 
+## Assinar, enviar e registrar eventos (homologação)
+
+```r
+assinada = xml_assinar("nota.xml", "empresa.pfx", senha)   # a NF-e, NFC-e, CT-e, MDF-e, DPS ou evento assinado
+nfe_conferir(assinada)                                      # confira antes de enviar
+resposta = sefaz_autorizar(assinada, "empresa.pfx", senha)  # a situação (100), o protocolo e o nfeProc
+writeLines(resposta$xml_autorizado, "nota_autorizada.xml", useBytes = TRUE)
+
+sefaz_carta_correcao(resposta$chave, "ONDE SE LE RUA 10, LEIA-SE RUA 100", 1, "empresa.pfx", senha)
+sefaz_cancelar(resposta$chave, resposta$protocolo, "PEDIDO CANCELADO PELO CLIENTE", "empresa.pfx", senha)
+sefaz_manifestar(chave_recebida, "ciencia", certificado = "empresa.pfx", senha = senha)   # o destinatário
+sefaz_cte_desacordo(chave_do_cte, "FRETE COBRADO EM DUPLICIDADE", "empresa.pfx", senha)   # o tomador do CT-e
+
+mdfe = sefaz_mdfe_autorizar(xml_assinar("mdfe.xml", "empresa.pfx", senha), "empresa.pfx", senha)   # o MDF-e
+sefaz_mdfe_incluir_condutor(mdfe$chave, "NOME DO MOTORISTA", cpf_do_motorista, certificado = "empresa.pfx", senha = senha)
+sefaz_mdfe_encerrar(mdfe$chave, mdfe$protocolo, "PE", "2611606", Sys.Date(), "empresa.pfx", senha)
+
+nfse = nfse_emitir("dps.xml", "empresa.pfx", senha)          # a NFS-e Nacional gerada a partir da DPS
+nfse_cancelar(nfse$chave, "erro_na_emissao", "VALOR DO SERVICO INFORMADO ERRADO", "empresa.pfx", senha)
+
+nfce = nfce_qrcode("nfce.xml", endereco_qrcode_da_uf, endereco_consulta_da_uf)   # o QR-Code da NFC-e (versão 3)
+nfce = nfce_qrcode("nfce.xml", endereco_qrcode_da_uf, endereco_consulta_da_uf, "empresa.pfx", senha)  # off-line
+```
+
+A assinatura segue o Manual de Orientação: o elemento que tem o `Id` (`infNFe`, `infCte`, `infMDFe`, `infDPS`,
+`infEvento`) é canonicalizado (C14N), o resumo SHA-1 dele vai na assinatura e o `SignedInfo` é assinado com a chave
+do certificado (RSA); a DPS da NFS-e Nacional usa o SHA-256. A canonicalização é feita pelo RNFe e foi conferida com
+1.000 NF-e reais autorizadas (o mesmo resumo e a assinatura verificada em todas) e com o PyNFe, que assina o mesmo XML
+igual, byte a byte (ele tira os acentos antes; o RNFe não). O XML assinado vem sem os espaços entre as tags, que a
+SEFAZ rejeita.
+
+A autorização manda cada nota num lote só dela, no modo síncrono (a NT 2023.002 acaba com o assíncrono em 2027); se a
+SEFAZ responde que vai processar depois (103), o RNFe consulta o recibo até a resposta chegar. A nota autorizada vem
+com o `nfeProc` (a nota e o protocolo), que o `nfe_ler()` lê. Os eventos (cancelamento, carta de correção e
+manifestação do destinatário, esta no Ambiente Nacional) são montados, assinados e enviados pelo RNFe, e voltam com o
+`procEventoNFe`, que o `eventos_ler()` lê. O tomador do CT-e registra a prestação do serviço em desacordo (e cancela
+o registro feito por engano) no autorizador do CT-e, com o `procEventoCTe` de volta.
+
+O MDF-e vai compactado e é autorizado na hora pela SVRS, que atende todas as UF; o QR-Code dele entra sozinho
+quando falta. Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta. A NFS-e Nacional é
+gerada pela Sefin a partir da DPS que você monta pelo leiaute; o RNFe assina, compacta, envia e devolve a NFS-e (que o
+`nfse_ler()` lê). O cancelamento também é montado e assinado aqui.
+
+O QR-Code da NFC-e sai na versão 3 (NT 2025.001), que não usa mais o CSC: na emissão normal, a chave, a versão e o
+ambiente; na contingência off-line, também o dia da emissão, o valor, o destinatário e a assinatura desses dados com o
+mesmo certificado que assina a nota. Os endereços da consulta são os da UF do emitente, publicados no Portal da NFC-e,
+e vão como argumento. O grupo sai no lugar certo para o schema, e a assinatura da nota não o cobre (pode ser antes ou
+depois de `xml_assinar()`).
+
+Testado na SVRS de homologação em 05/11/2026 com o certificado de uma empresa: uma NF-e montada a partir de uma nota
+real, com o tpAmb 2, foi assinada pelo RNFe e autorizada (100); a carta de correção e o cancelamento foram registrados
+(135) e a ciência da operação, no Ambiente Nacional (136). As rejeições que vieram antes foram de regras que a
+pré-conferência acusa: o indicador do intermediador (434) e o CPF do transportador zerado (543) ela já acusava; o
+vencimento da parcela antes da emissão (900, a Y09-20) entrou nela depois desse teste. O desacordo de um CT-e
+inventado voltou "CT-e não consta na base de dados" (217): o evento passou pelo schema, pela assinatura e pelo órgão
+de recepção. Um MDF-e de carga própria foi autorizado (100), ganhou um condutor e foi encerrado (135 nos dois). Na
+Produção Restrita da NFS-e Nacional, uma NFS-e foi gerada (201) a partir de uma DPS montada sobre uma nota real e
+cancelada (201). A Produção Restrita já usa o leiaute da NT 009 (o XSD de 20/10/2026, com o `finNFSe` e outra ordem
+no `cServ`), que o pacote de schemas que o `nfse_ler()` segue ainda não traz; a série da DPS enviada por sistema
+próprio é outra que a do Emissor Nacional (a 70000 voltou E0010, a 1 passou). Só a homologação: a nota com o tpAmb 1 nem é enviada.
+
 ## Antes de enviar: a pré-conferência da NF-e
 
 ```r
@@ -341,8 +402,11 @@ de cada chave; a NF modelo 1, a de produtor e o cupom fiscal, que a NT 2026.002 
 (o CNPJ e o CPF com o dígito, o município, a UF de cada tipo de operação, o estrangeiro, a inscrição estadual e a da
 Suframa), a retirada e a entrega, quem pode baixar o XML, o produto (o GTIN com o dígito, o NCM e o CFOP nas tabelas
 do pacote, o CFOP de cada operação e as contas do valor), o ICMS do item, os grupos que a NFC-e não pode ter, os totais,
-o transporte, a cobrança, os pagamentos e o QR-Code. A NF-e com o DANFE Simplificado Tipo 2 (NT 2026.002) segue as
-regras da NFC-e. As regras da Reforma vêm de `ibs_cbs_conferir()`, na mesma tabela, para a nota que tem o IBS e a CBS.
+o transporte, a cobrança (o vencimento de cada parcela), os pagamentos (o cartão, a integração, a data do pagamento,
+o troco) e o QR-Code (a versão e a chave). A NF-e com o DANFE Simplificado Tipo 2 (NT 2026.002) segue as regras da
+NFC-e, o MEI entre elas. As regras da Reforma vêm de `ibs_cbs_conferir()`, na mesma tabela, para a nota que tem o IBS e
+a CBS. A mesma nota em mais de um arquivo (o XML assinado e o `nfeProc`, por exemplo) é conferida uma vez, a do arquivo
+com o protocolo.
 
 Cada regra vale como a SEFAZ a aplicava no dia da emissão: a C17-10 (a IE do emitente) sai em 16/11/2026, quando a NT
 2026.007 deixa o contribuinte só do IBS e da CBS emitir sem ela, e a C17-42 entra; a BA02-35 (a NFC-e referenciada na
@@ -352,9 +416,10 @@ marcada assim, porque a SEFAZ pode não aplicá-la. Fica de fora o que depende d
 duplicidade, a nota referenciada que ela guarda), a inscrição estadual (o cálculo muda de UF para UF) e as tabelas de
 cada UF.
 
-Conferido em 4.200 NF-e reais autorizadas, de todas as UF, de 2021 a 2026: as regras que acusam erro em nota
-autorizada são as facultativas (contas que a SEFAZ não confere ao centavo) e as que nem toda SEFAZ aplica, que dizem
-isso na observação (o indicador do intermediador em SP, o CPF zerado do transportador no RN). O schema acusa as notas
+Conferido em quatro amostras de NF-e reais autorizadas (de 4.200 a 5.548 notas cada uma, de todas as UF, de 2021 a
+2026; a última depois da revisão da etapa): as regras que acusam erro em nota autorizada são as facultativas (contas
+que a SEFAZ não confere ao centavo) e as que nem toda SEFAZ aplica, que dizem isso na observação (o indicador do
+intermediador em SP, o CPF zerado do transportador no RN). O schema acusa as notas
 do monofásico de combustíveis da Reforma emitidas no leiaute anterior ao pacote 010g.
 
 ## IBS e CBS: a conferência da Reforma
@@ -458,11 +523,15 @@ arquivo: um arquivo de 2016 é lido sem os campos que entraram depois e com o E3
 casas decimais viram número, as datas viram `Date` e o resto fica texto, com os zeros à esquerda (CNPJ, CFOP, CST,
 chave). O arquivo pode estar em Latin-1, como pede o leiaute, ou em UTF-8, e a assinatura depois do 9999 é ignorada.
 
-O cruzamento confere cada nota do C100 (NF-e e NFC-e) com o XML dela, pela chave: o número, a data, os valores, o
-participante e, com os eventos, a situação (a cancelada tem de estar escriturada como cancelada). Na nota de
-terceiros, os impostos da EFD são os do crédito de quem escritura e não se comparam com os do XML. As notas do
-contribuinte que estão nos XML e não na EFD também aparecem: a emissão própria do período tem de estar lá; a de
-terceiros pode ter entrado em outro mês.
+O cruzamento confere cada nota do C100 (NF-e e NFC-e) com o XML dela, pela chave, como o Guia Prático manda
+escriturar: o número, a data, os valores, o participante e, com os eventos, a situação (a cancelada, inclusive por
+substituição, tem de estar escriturada como cancelada). O ICMS do C100 inclui o FCP. Na entrada, os impostos da EFD são
+os do crédito de quem escritura e não se comparam com os do XML; na NFC-e, o C100 não traz o ICMS-ST, o IPI, o PIS e a
+COFINS; o PIS e a COFINS vazios (de quem entrega a EFD-Contribuições) e os valores da complementar e da nota de regime
+especial, que são facultativos, só se comparam quando vêm. A partir de 2027, o valor do documento pode ser o da nota
+com o IBS, a CBS e o IS. As notas do contribuinte que estão nos XML e não na EFD também aparecem: a emissão própria
+autorizada do período tem de estar lá (a denegada não precisa); a de terceiros pode ter entrado em outro mês; a NFC-e
+recebida não se escritura. Vinte mil notas se cruzam em um segundo.
 
 O leiaute está em `tabela_fiscal("leiaute_efd_icms_ipi")`: os 270 registros e os 2.225 campos, com a descrição e a
 vigência de cada um. Ele sai do Guia Prático da EFD ICMS/IPI (versão 3.2.2) e da Nota Técnica do leiaute 020, do

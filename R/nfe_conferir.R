@@ -6,7 +6,6 @@
 #' @include ler_xml.R tabelas.R chave.R ibs_cbs_conferir.R ibs_cbs_regras_da_nota.R
 NULL
 
-NAMESPACE_DA_NFE = "http://www.portalfiscal.inf.br/nfe"
 # A falta da assinatura no fim do NFe: a nota que ainda vai ser assinada não é um erro de schema.
 ERRO_DE_SCHEMA_SEM_ASSINATURA = "^Element '\\{http://www.portalfiscal.inf.br/nfe\\}NFe': Missing child element\\(s\\)\\. Expected is .*xmldsig#\\}Signature"
 
@@ -154,6 +153,7 @@ outros                        prod/vOutro                                 numero
 entra_no_total                prod/indTot                                 texto
 uf_consumo                    prod/comb/UFCons                            texto
 tipo_operacao_veiculo         prod/veicProd/tpOp                          texto
+origem                        imposto/ICMS/*/orig                         texto
 cst                           imposto/ICMS/*/CST                          texto
 csosn                         imposto/ICMS/*/CSOSN                        texto
 base_icms                     imposto/ICMS/*/vBC                          numero
@@ -172,6 +172,7 @@ icms_st_retido                imposto/ICMS/*/vICMSSTRet                   numero
 fcp_uf_destino                imposto/ICMSUFDest/vFCPUFDest               numero
 icms_uf_destino               imposto/ICMSUFDest/vICMSUFDest              numero
 icms_uf_remetente             imposto/ICMSUFDest/vICMSUFRemet             numero
+aliquota_interestadual        imposto/ICMSUFDest/pICMSInter               numero
 valor_ipi                     imposto/IPI/IPITrib/vIPI                    numero
 valor_ii                      imposto/II/vII                              numero
 valor_pis                     imposto/PIS/*/vPIS                          numero
@@ -215,6 +216,9 @@ cnpj_pagamento                CNPJPag                                     texto
 cnpj_credenciadora            card/CNPJ                                   texto
 bandeira                      card/tBand                                  texto
 cnpj_recebedor                card/CNPJReceb                              texto
+tipo_integracao               card/tpIntegra                              texto
+autorizacao_cartao            card/cAut                                   texto
+data_pagamento                dPag                                        texto
 ")
 
 #' Conferir a NF-e antes de enviar
@@ -312,7 +316,11 @@ nfe_conferir = function(arquivos, agora = Sys.time(), todas_as_regras = FALSE) {
     stop("Informe agora como um momento (POSIXct), por exemplo Sys.time().", call. = FALSE)
   }
   arquivos = as.character(arquivos)
-  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS_PARA_CONFERIR, "uma NF-e", colunas_da_preconferencia, FALSE)
+  arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_NOTAS_PARA_CONFERIR, "uma NF-e", colunas_da_preconferencia, FALSE,
+                                    agora)
+  arquivos_conferidos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas")
+  notas_lidas = arquivo_de_cada_nota(arquivos_lidos)
+  arquivos_lidos = ficar_com_uma_de_cada_nota(arquivos_lidos, notas_lidas)
   colunas_vazias = colunas_da_preconferencia(NULL, NA_character_, FALSE)
   notas = juntar_tabela(arquivos_lidos, "notas", colunas_vazias$notas)
   itens = juntar_tabela(arquivos_lidos, "itens", colunas_vazias$itens)
@@ -321,6 +329,8 @@ nfe_conferir = function(arquivos, agora = Sys.time(), todas_as_regras = FALSE) {
   parcelas = juntar_tabela(arquivos_lidos, "parcelas", colunas_vazias$parcelas)
   pagamentos = juntar_tabela(arquivos_lidos, "pagamentos", colunas_vazias$pagamentos)
   exportacoes = juntar_tabela(arquivos_lidos, "exportacoes", colunas_vazias$exportacoes)
+  importacoes = juntar_tabela(arquivos_lidos, "importacoes", colunas_vazias$importacoes)
+  da_reforma = juntar_tabela(arquivos_lidos, "reforma", colunas_vazias$reforma)
 
   notas = preparar_as_notas_da_preconferencia(notas, itens, agora)
   itens = preparar_os_itens_da_preconferencia(itens, notas)
@@ -332,6 +342,7 @@ nfe_conferir = function(arquivos, agora = Sys.time(), todas_as_regras = FALSE) {
     conferir_a_retirada_e_a_entrega(notas),
     conferir_os_autorizados(notas, autorizados),
     conferir_os_produtos(notas, itens, referencias, exportacoes),
+    conferir_as_importacoes(importacoes),
     conferir_o_icms_dos_itens(itens),
     conferir_os_grupos_da_nfce(notas, itens),
     conferir_os_totais_da_nota(notas, itens),
@@ -341,8 +352,8 @@ nfe_conferir = function(arquivos, agora = Sys.time(), todas_as_regras = FALSE) {
     conferir_as_informacoes_finais(notas)
   ))
   conferencias = completar_com_as_regras_da_nfe(data.frame(conferencias), notas)
-  conferencias = juntar_com_as_regras_da_reforma(conferencias, arquivos, notas)
-  schema = conferir_os_schemas(arquivos)
+  conferencias = juntar_com_as_regras_da_reforma(conferencias, da_reforma, notas)
+  schema = conferir_os_schemas(arquivos, notas_lidas)
   resumo = resumo_da_preconferencia(notas, conferencias, schema)
   if (!todas_as_regras) {
     conferencias = conferencias[!(conferencias$confere %in% TRUE), ]
@@ -350,12 +361,56 @@ nfe_conferir = function(arquivos, agora = Sys.time(), todas_as_regras = FALSE) {
   }
   erros_de_schema = schema[!is.na(schema$mensagem), c("chave", "mensagem")]
   rownames(erros_de_schema) = NULL
-  list(notas = resumo, conferencias = conferencias, schema = erros_de_schema,
-       arquivos = resumo_dos_arquivos(arquivos_lidos, "notas", "notas"))
+  list(notas = resumo, conferencias = conferencias, schema = erros_de_schema, arquivos = arquivos_conferidos)
 }
 
-# As colunas das tabelas de um arquivo. Com xml_lido NULL, vêm vazias, com os nomes e os tipos certos.
-colunas_da_preconferencia = function(xml_lido, nome_do_arquivo, todos_os_campos) {
+TABELAS_DA_PRECONFERENCIA = c("notas", "itens", "referencias", "autorizados", "parcelas", "pagamentos", "exportacoes",
+                              "importacoes", "reforma")
+
+# Cada nota lida e o número do arquivo dela. A mesma nota em mais de um arquivo (o XML assinado e o nfeProc, por
+# exemplo) é conferida uma vez (`escolhida`): a do primeiro arquivo com o protocolo ou, sem protocolo em nenhum, a do
+# primeiro arquivo.
+arquivo_de_cada_nota = function(arquivos_lidos) {
+  chaves = list()
+  posicoes = list()
+  com_protocolo = list()
+  for (posicao in seq_along(arquivos_lidos)) {
+    notas_do_arquivo = arquivos_lidos[[posicao]]$notas
+    chaves[[posicao]] = notas_do_arquivo$chave
+    posicoes[[posicao]] = rep(posicao, length(notas_do_arquivo$chave))
+    com_protocolo[[posicao]] = !is.na(notas_do_arquivo$autorizacao_texto)
+  }
+  notas_lidas = data.frame(chave = as.character(unlist(chaves)), posicao = as.integer(unlist(posicoes)),
+                           com_protocolo = as.logical(unlist(com_protocolo)))
+  ordem = order(notas_lidas$chave, !notas_lidas$com_protocolo, notas_lidas$posicao, method = "radix")
+  notas_lidas$escolhida = rep(FALSE, nrow(notas_lidas))
+  notas_lidas$escolhida[ordem[!duplicated(notas_lidas$chave[ordem])]] = TRUE
+  notas_lidas
+}
+
+# Tira de cada arquivo as notas que vêm de outro (as tabelas de cada arquivo são listas de colunas, todas com a chave).
+ficar_com_uma_de_cada_nota = function(arquivos_lidos, notas_lidas) {
+  if (all(notas_lidas$escolhida)) {
+    return(arquivos_lidos)
+  }
+  escolhidas = notas_lidas[notas_lidas$escolhida, ]
+  chaves_de_cada_arquivo = split(escolhidas$chave, factor(escolhidas$posicao, levels = seq_along(arquivos_lidos)))
+  for (posicao in seq_along(arquivos_lidos)) {
+    for (nome_da_tabela in TABELAS_DA_PRECONFERENCIA) {
+      tabela = arquivos_lidos[[posicao]][[nome_da_tabela]]
+      manter = tabela$chave %in% chaves_de_cada_arquivo[[posicao]]
+      for (nome_da_coluna in names(tabela)) {
+        tabela[[nome_da_coluna]] = tabela[[nome_da_coluna]][manter]
+      }
+      arquivos_lidos[[posicao]][[nome_da_tabela]] = tabela
+    }
+  }
+  arquivos_lidos
+}
+
+# As colunas das tabelas de um arquivo. Com xml_lido NULL, vêm vazias, com os nomes e os tipos certos. A conferência
+# das regras da Reforma (a de ibs_cbs_conferir) sai da mesma leitura.
+colunas_da_preconferencia = function(xml_lido, nome_do_arquivo, todos_os_campos, agora = NULL) {
   if (is.null(xml_lido)) {
     xml_lido = xml2::read_xml("<vazio/>")
   }
@@ -391,8 +446,17 @@ colunas_da_preconferencia = function(xml_lido, nome_do_arquivo, todos_os_campos)
   exportacoes = list(chave = chave_de_cada(elementos_das_exportacoes, "infNFe"),
                      item = as.integer(xml2::xml_attr(item_de_cada_exportacao, "nItem")),
                      chave_exportacao = xml2::xml_text(elementos_das_exportacoes))
+  elementos_das_importacoes = buscar_todos(elementos_dos_itens, "prod/DI")
+  item_de_cada_importacao = xml2::xml_find_first(elementos_das_importacoes, "ancestor::det", ns = SEM_NAMESPACE)
+  importacoes = list(chave = chave_de_cada(elementos_das_importacoes, "infNFe"),
+                     item = as.integer(xml2::xml_attr(item_de_cada_importacao, "nItem")),
+                     intermedio = texto_de_cada(elementos_das_importacoes, "tpIntermedio"),
+                     cnpj = texto_de_cada(elementos_das_importacoes, "CNPJ"),
+                     cpf = texto_de_cada(elementos_das_importacoes, "CPF"),
+                     uf_terceiro = texto_de_cada(elementos_das_importacoes, "UFTerceiro"))
   list(notas = notas, itens = itens, referencias = as.list(referencias_das_notas(elementos_das_notas)),
-       autorizados = autorizados, parcelas = parcelas, pagamentos = pagamentos, exportacoes = exportacoes)
+       autorizados = autorizados, parcelas = parcelas, pagamentos = pagamentos, exportacoes = exportacoes,
+       importacoes = importacoes, reforma = colunas_da_conferencia(xml_lido, nome_do_arquivo, FALSE, agora)$conferencias)
 }
 
 # As colunas que as regras usam e o XML não traz pronto: as datas, a hora do recebimento (a do protocolo ou a do
@@ -424,9 +488,12 @@ preparar_os_itens_da_preconferencia = function(itens, notas) {
 }
 
 # O schema de cada nota: cada NFe do arquivo vira um documento só dela (com o namespace) e é validado contra o
-# nfe_v4.00.xsd. Os arquivos que não dão para ler ficam de fora: a tabela arquivos diz o motivo.
-conferir_os_schemas = function(arquivos) {
+# nfe_v4.00.xsd. Os arquivos que não dão para ler ficam de fora: a tabela arquivos diz o motivo. A leitura é outra (a
+# das regras tira o namespace, que o schema exige), e só a nota escolhida de cada arquivo é validada.
+conferir_os_schemas = function(arquivos, notas_lidas) {
   schema_da_nfe = schema_da_nfe_do_pacote()
+  escolhidas = notas_lidas[notas_lidas$escolhida, ]
+  chaves_de_cada_arquivo = split(escolhidas$chave, factor(escolhidas$posicao, levels = seq_along(arquivos)))
   chaves = list()
   mensagens = list()
   for (posicao in seq_along(arquivos)) {
@@ -443,6 +510,9 @@ conferir_os_schemas = function(arquivos) {
     elementos_nfe = elementos_nfe[!duplicated(chaves_do_arquivo)]
     chaves_do_arquivo = chaves_do_arquivo[!duplicated(chaves_do_arquivo)]
     for (numero in seq_along(elementos_nfe)) {
+      if (!(chaves_do_arquivo[numero] %in% chaves_de_cada_arquivo[[posicao]])) {
+        next
+      }
       erros = erros_do_schema(elementos_nfe[[numero]], schema_da_nfe)
       # A nota sem erro fica com uma linha de mensagem vazia, para se saber que o schema dela foi conferido.
       if (length(erros) == 0) {
@@ -530,8 +600,7 @@ COLUNAS_DA_PRECONFERENCIA = c("chave", "item", "regra", "campo", "no_documento",
 
 # As regras da Reforma, de ibs_cbs_conferir(), na mesma tabela, depois das da nota. A regra que as duas conferem (a
 # B25b-20) fica com a redação da NT 2026.002, que vale também para a NF-e com DANFE Simplificado Tipo 2.
-juntar_com_as_regras_da_reforma = function(conferencias, arquivos, notas) {
-  da_reforma = ibs_cbs_conferir(arquivos, todas_as_regras = TRUE)$conferencias
+juntar_com_as_regras_da_reforma = function(conferencias, da_reforma, notas) {
   da_reforma = da_reforma[!(da_reforma$regra %in% regras_da_nfe()$regra), ]
   da_reforma$aplicacao = rep(NA_character_, nrow(da_reforma))
   juntas = rbind(conferencias, da_reforma[, COLUNAS_DA_PRECONFERENCIA])

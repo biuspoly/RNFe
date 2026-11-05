@@ -1,6 +1,6 @@
 "regra","modelos","aplicacao","codigo_sefaz","mensagem","fonte","em_producao_desde","em_producao_ate","mudou_em_producao_em","observacao"
 "A03-10","55/65","obrigatória","502","Erro na Chave de Acesso - Campo Id não corresponde à concatenação dos campos correspondentes","NT 2018.001 v1.10",,,,
-"B03-10","55","obrigatória","897","Código numérico em formato inválido","NT 2019.001 v1.70",,,,
+"B03-10","55","obrigatória","897","Código numérico em formato inválido","NT 2019.001 v1.70","2019-09-02",,,
 "B07-10","65","obrigatória","450","Modelo da NF-e diferente de 55","NT 2026.001 v1.02b","2026-10-05",,,
 "B09-10","55/65","obrigatória","703","Data-Hora de Emissão posterior ao horário de recebimento","MOC 7.0, Anexo I",,,,"Aceita até 5 minutos de diferença entre o relógio da empresa e o da SEFAZ."
 "B09-20","55","obrigatória","228","Data de Emissão muito atrasada","NT 2026.002 v1.11",,,,"Depois de 30 dias de atraso (ou outro limite da SEFAZ), a UF pode rejeitar a NF-e fora da contingência (tpEmis 2, 4, 5 ou 9): fica sem conferir. Até 7 dias de atraso a SEFAZ autoriza (cStat 100); mais de 7, autoriza fora de prazo (cStat 150)."
@@ -16,6 +16,7 @@
 "B21-10","65","obrigatória","709","NFC-e com formato de DANFE inválido","MOC 7.0, Anexo I",,,,
 "B21-20","55","obrigatória","710","NF-e com formato de DANFE inválido","MOC 7.0, Anexo I",,,,
 "B22-10","55","obrigatória","711","NF-e com contingência off-line em operação não permitida","NT 2026.002 v1.11",,,,
+"B22-34","65","facultativa","714","NFC-e com contingência inválida (tpEmis=2, 4 (a critério da UF) ou 5)","MOC 7.0, Anexo I",,,,
 "B23-10","55/65","obrigatória","253","Digito Verificador da chave de acesso composta inválida","MOC 7.0, Anexo I",,,,
 "B25-20","55/65","obrigatória","715","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com finalidade inválida","NT 2026.002 v1.11",,,,
 "B25-70","55","obrigatória","321","NF-e de devolução de mercadoria não possui documento fiscal referenciado","MOC 7.0, Anexo I",,,,"Conferida só na nota sem o IBS e a CBS: na que tem, vale a VC02-14 da NT 2025.002."
@@ -64,7 +65,7 @@
 "C10-20","55/65","obrigatória","273","Código Município do Emitente: difere da UF do emitente","MOC 7.0, Anexo I",,,,
 "C17-10","55/65","obrigatória","229","IE do emitente não informada","MOC 7.0, Anexo I",,"2026-11-15",,"Excluída pela NT 2026.007 a partir de 16/11/2026."
 "C17-30","55/65","obrigatória","554","IE do Emitente informada como ISENTO indevidamente","NT 2018.001 v1.10",,,,
-"C17-42","65","obrigatória","156","NFC-e não pode ser emitida por contribuinte exclusivo do IBS/CBS","NT 2026.007 v1.11","2026-11-16",,,
+"C17-42","65","obrigatória","156","NFC-e não pode ser emitida por contribuinte exclusivo do IBS/CBS","NT 2026.007 v1.11","2026-11-16","2032-12-31",,
 "C17-43","55","obrigatória","157","Obrigatório informar CNPJ do emitente para contribuinte exclusivo do IBS/CBS","NT 2026.007 v1.11","2026-11-16",,,"Validação só da SVRS."
 "C18-10","55/65","obrigatória","718","NFC-e ou NF-e com DANFE Simplificado Tipo 2 não deve informar IE de Substituto Tributário","NT 2026.002 v1.11",,,,
 "C18-14","55","obrigatória","347","Informada IE do substituto tributário em operação que não é interestadual","MOC 7.0, Anexo I",,,,"A critério da UF, pode ser aceita a IE do substituto na operação interna."
@@ -79,7 +80,7 @@
 "E03-10","55/65","obrigatória","237","CPF do destinatário inválido","MOC 7.0, Anexo I",,,,
 "E03a-10","55","obrigatória","720","Na operação com Exterior deve ser informada tag idEstrangeiro","NT 2022.002 v1.30a",,,,
 "E03a-20","55","obrigatória","721","Informado idEstrangeiro e Operação não é com consumidor final","MOC 7.0, Anexo I",,,,
-"E03a-30","55/65","obrigatória","925","NF-e com identificação de estrangeiro e inscrição estadual informada para destinatário","NT 2019.001 v1.70",,,,
+"E03a-30","55/65","obrigatória","925","NF-e com identificação de estrangeiro e inscrição estadual informada para destinatário","NT 2019.001 v1.70","2019-09-02",,,
 "E03a-60","55/65","obrigatória","372","Destinatário com identificação de estrangeiro com caracteres inválidos","MOC 7.0, Anexo I",,,,
 "E04-10","55","obrigatória","724","NF-e sem o nome do destinatário","MOC 7.0, Anexo I",,,,
 "E04-20","55/65","obrigatória","598","NF-e emitida em ambiente de homologação com Razão Social do destinatário diferente de NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL","NT 2021.002 v1.12",,,,
@@ -95,11 +96,11 @@
 "E12-60","55","obrigatória","773","Operação Interna e UF de destino difere da UF de origem","MOC 7.0, Anexo I",,,,
 "E14-10","55","facultativa","510","Operação com Exterior e Código País destinatário é 1058 (Brasil) ou não informado","NT 2022.002 v1.30a",,,,
 "E14-20","55/65","facultativa","511","Não é de Operação com Exterior e Código País destinatário difere de 1058 (Brasil)","MOC 7.0, Anexo I",,,,
-"E14-30","55/65","obrigatória","926","Operação com Exterior e país de destino igual a Brasil","NT 2019.001 v1.70",,,,
+"E14-30","55/65","obrigatória","926","Operação com Exterior e país de destino igual a Brasil","NT 2019.001 v1.70","2019-09-02",,,
 "E16a-10","65","obrigatória","789","NFC-e para destinatário contribuinte de ICMS","MOC 7.0, Anexo I",,,,
 "E16a-20","55","obrigatória","790","Operação com Exterior para destinatário Contribuinte de ICMS","NT 2022.002 v1.30a",,,,
-"E16a-30","55","obrigatória","805","A SEFAZ do destinatário não permite Contribuinte Isento de Inscrição Estadual","NT 2025.001 v1.03","2025-11-03",,,"Para o destinatário de AL, AM, BA, CE, DF, ES, GO, MG, MS, MT, PB, PE, RJ, RN, RS, SE e SP, conforme a configuração da UF dele. Na operação interna fica sem conferir: há NF-e autorizada assim (PE, 2025)."
-"E16a-40","55","obrigatória","696","Operação com não contribuinte deve indicar operação com consumidor final","NT 2019.001 v1.70",,,,
+"E16a-30","55","obrigatória","805","A SEFAZ do destinatário não permite Contribuinte Isento de Inscrição Estadual","NT 2025.001 v1.03","2025-11-03",,,"Para o destinatário de AL, AM, BA, CE, DF, ES, GO, MG, MS, MT, PB, PE, RJ, RN, RS, SE e SP, conforme a configuração da UF dele. Na operação interna fica sem conferir: há NF-e autorizada assim (PE, 2025). Nem toda SEFAZ aplica: há NF-e autorizada do PR para AL (2026)."
+"E16a-40","55","obrigatória","696","Operação com não contribuinte deve indicar operação com consumidor final","NT 2019.001 v1.70","2019-09-02",,,"Nem toda SEFAZ aplica: há NF-e autorizada com o indIEDest 9 e o indFinal 0 (RN, 2023)."
 "E17-10","65","obrigatória","729","NFC-e com informação da IE do destinatário","MOC 7.0, Anexo I",,,,
 "E17-20","55","obrigatória","728","NF-e sem informação da IE do destinatário","MOC 7.0, Anexo I",,,,
 "E17-30","55","obrigatória","791","NF-e com indicação de destinatário isento de IE, com a informação da IE do destinatário","MOC 7.0, Anexo I",,,,
@@ -121,7 +122,7 @@
 "GA02-20","55/65","obrigatória","324","CNPJ do destinatário já autorizado para download","MOC 7.0, Anexo I",,,,
 "GA03-10","55/65","obrigatória","325","CPF autorizado para download inválido","MOC 7.0, Anexo I",,,,
 "GA03-20","55/65","obrigatória","326","CPF do destinatário já autorizado para download","MOC 7.0, Anexo I",,,,
-"H02-10","55/65","obrigatória","927","Número do item fora da ordem sequencial","NT 2019.001 v1.70",,,,"Regra opcional, a critério da UF."
+"H02-10","55/65","obrigatória","927","Número do item fora da ordem sequencial","NT 2019.001 v1.70","2019-09-02",,,"Regra opcional, a critério da UF."
 "I03-10","55/65","obrigatória","611","GTIN (cEAN) inválido","NT 2021.003 v1.50",,,,
 "I03-30","55/65","obrigatória","883","GTIN (cEAN) sem informação","NT 2024.001 v1.20","2022-09-12",,,"Nem toda SEFAZ aplica: há NF-e autorizada com o cEAN em branco (SP, 2023)."
 "I04-10","55/65","obrigatória","373","Descrição do primeiro item diferente de NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL","NT 2026.002 v1.11",,,,
@@ -150,25 +151,35 @@
 "I50-10","55/65","obrigatória","336","Informado o grupo de exportação no item em operação que não é com exterior","MOC 7.0, Anexo I",,,,
 "I54-10","55","facultativa","342","Chave de Acesso informada na Exportação Indireta com DV inválido","MOC 7.0, Anexo I",,,,
 "I54-20","55","facultativa","343","Modelo da NF-e informada na Exportação Indireta diferente de 55","MOC 7.0, Anexo I",,,,
+"I23d-10","55","obrigatória","331","Informar o CNPJ ou CPF do adquirente ou do encomendante nesta forma de importação","NT 2023.004 v1.20",,,"2024-07-01",
+"I23d-20","55","obrigatória","332","CNPJ/CPF do adquirente ou do encomendante da importação inválido","NT 2023.004 v1.20",,,,
+"I23d1-10","55","obrigatória","332","CNPJ/CPF do adquirente ou do encomendante da importação inválido","NT 2023.004 v1.20","2024-07-01",,,
+"I23e-10","55","obrigatória","333","Informar a UF do adquirente ou do encomendante nesta forma de importação","MOC 7.0, Anexo I",,,,
 "J01-10","55/65","obrigatória","736","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo de Veículos novos","NT 2026.002 v1.11",,,,
 "L01-10","55/65","obrigatória","738","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo de Armamentos","NT 2026.002 v1.11",,,,
 "LB01-10","55/65","obrigatória","348","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo RECOPI","NT 2026.002 v1.11",,,,
 "N01-10","55","obrigatória","161","Proibido informar ICMS para contribuinte exclusivo do IBS/CBS","NT 2026.007 v1.11","2026-11-16",,,"Validação só da SVRS."
+"N12-10","55","facultativa","527","Operação de Exportação com informação de ICMS incompatível","MOC 7.0, Anexo I",,,,
 "N12-20","55/65","facultativa","590","Informado CST para emissor do Simples Nacional (CRT=1 ou 4)","NT 2024.001 v1.20",,,,
-"N12-30","55/65","obrigatória","766","Item com CST indevido","NT 2026.002 v1.11",,,,"A critério da UF, o CST 90 pode ser aceito."
+"N12-30","55/65","obrigatória","766","Item com CST indevido","NT 2026.002 v1.11","2016-04-01",,,"A critério da UF, o CST 90 pode ser aceito."
 "N12-34","55/65","obrigatória","381","Grupo de tributação ICMS90, informando dados do ICMS-ST","NT 2026.002 v1.11",,,,
 "N12-40","55/65","obrigatória","382","CFOP não permitido para o CST informado","NT 2026.002 v1.11 e NT 2023.003 v1.40",,,,"A critério da UF: o CST 90 com o CFOP 5.949 (RS e ES), o CST 90 com o CFOP 5.403 ou 5.405 (CE) e o CST 40 com o CFOP 5.949 (SP e AM)."
 "N12-44","55/65","obrigatória","382","CFOP não permitido para o CST informado","NT 2026.002 v1.11",,,,
 "N12-50","55/65","obrigatória","741","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com Partilha de ICMS entre UF","NT 2026.002 v1.11",,,,
 "N12-60","55/65","obrigatória","740","Item com Repasse de ICMS retido por Substituto Tributário","NT 2026.002 v1.11",,,,
 "N12a-10","55/65","facultativa","591","Informado CSOSN para emissor que não é do Simples Nacional (CRT diferente de 1 ou 4)","NT 2024.001 v1.20",,,,
-"N12a-20","55/65","obrigatória","383","Item com CSOSN indevido","NT 2026.002 v1.11",,,,"A critério da UF, o CSOSN 900 pode ser aceito."
+"N12a-20","55/65","obrigatória","383","Item com CSOSN indevido","NT 2026.002 v1.11","2016-04-01",,,"A critério da UF, o CSOSN 900 pode ser aceito."
 "N12a-34","55/65","obrigatória","385","Grupo de tributação ICMSSN900, informando dados do ICMS-ST","NT 2026.002 v1.11",,,,
 "N12a-40","55/65","obrigatória","386","CFOP não permitido para o CSOSN informado","NT 2026.002 v1.11 e NT 2023.003 v1.40",,,,"A critério da UF: o CSOSN 900 com o CFOP 5.949 (RS, ES, SP e AM) e com o CFOP 5.403 ou 5.405 (CE)."
 "N12a-44","55/65","obrigatória","386","CFOP não permitido para o CSOSN informado","NT 2026.002 v1.11",,,,
+"N12a-81","55/65","obrigatória","782","CSOSN inválido para emitente MEI (CRT=4)","NT 2026.002 v1.11",,,,
+"N12a-91","55/65","obrigatória","337","CFOP inválido para emitente MEI (CRT=4)","NT 2026.002 v1.11",,,,
 "N17-20","55/65","facultativa","528","Valor do ICMS difere do produto BC e Alíquota","MOC 7.0, Anexo I",,,,"O produto vai a 2 casas, com 0,01 de tolerância."
+"N28-12","55","obrigatória","652","Informado indicador de desoneração inválido para a ZFM","NT 2023.004 v1.20","2024-07-01",,,
 "N28-30","55/65","facultativa","627","O valor do ICMS desonerado deve ser informado","MOC 7.0, Anexo I",,,,
 "NA01-10","55/65","obrigatória","807","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo de ICMS para a UF do destinatário","NT 2026.002 v1.11",,,,
+"NA09-10","55","obrigatória","697","Alíquota interestadual do ICMS com origem diferente do previsto","MOC 7.0, Anexo I","2016-07-01",,,
+"NA09-20","55","obrigatória","697","Alíquota interestadual do ICMS com origem diferente do previsto","MOC 7.0, Anexo I","2016-07-01",,,
 "O01-10","55/65","obrigatória","742","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo do IPI","NT 2026.002 v1.11",,,,
 "P01-10","55/65","obrigatória","743","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo do II","NT 2026.002 v1.11",,,,
 "R01-10","55/65","obrigatória","746","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com grupo do PIS-ST","NT 2026.002 v1.11",,,,
@@ -195,6 +206,7 @@
 "W14-10","55/65","facultativa","603","Total da COFINS difere do somatório dos itens sujeitos ao ICMS","MOC 7.0, Anexo I",,,,
 "W15-10","55/65","facultativa","604","Total do vOutro difere do somatório dos itens","MOC 7.0, Anexo I",,,,
 "W16-10","55/65","facultativa","610","Total da NF difere do somatório dos Valores compõe o valor Total da NF","NT 2023.004 v1.20",,,,"Com R$ 0,50 de tolerância. Não vale na importação (CFOP começando por 3). O ICMS desonerado dos itens sem o indDeduzDeson 1 pode ficar fora da conta."
+"W16-30","55/65","obrigatória","780","Total da NFC-e ou NF-e com DANFE Simplificado Tipo 2 superior ao valor limite estabelecido pela SEFAZ","NT 2026.002 v1.11",,,,"O limite padrão é de R$ 200.000,00; a UF pode definir outro."
 "W16-40","65","obrigatória","750","NFC-e com valor total superior ao permitido para destinatário não identificado (Código)","NT 2026.002 v1.11",,,,"O limite é de R$ 10.000,00, ou outro valor definido pela UF."
 "W16-50","65","facultativa","751","NFC-e com valor total superior ao permitido para destinatário não identificado (Nome)","NT 2026.002 v1.11",,,,"Regra opcional, a critério da UF."
 "W16-60","65","obrigatória","752","NFC-e com valor total superior ao permitido para destinatário não identificado (Endereço)","NT 2026.002 v1.11",,,,"Regra opcional, a critério da UF."
@@ -206,7 +218,7 @@
 "X02-10","55/65","obrigatória","753","NFC-e ou NF-e com DANFE Simplificado Tipo 2 (tag:tpImp=6) com Frete","NT 2026.002 v1.11",,,,
 "X04-20","55/65","obrigatória","542","CNPJ do Transportador inválido","MOC 7.0, Anexo I",,,,
 "X05-10","55/65","obrigatória","543","CPF do Transportador inválido","MOC 7.0, Anexo I",,,,"Nem toda SEFAZ aplica: há NF-e autorizada com o CPF do transportador zerado (RN, 2021 e 2022)."
-"X07-10","55/65","obrigatória","559","UF do Transportador não informada","MOC 7.0, Anexo I",,,,
+"X07-10","55/65","obrigatória","559","UF do Transportador não informada","MOC 7.0, Anexo I",,,,"A IE ISENTO não conta como inscrição informada: há NF-e autorizada com ela e sem a UF do transportador."
 "X11-10","55/65","obrigatória","755","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com dados de Retenção do ICMS no Transporte","NT 2026.002 v1.11",,,,
 "X18-10","55/65","obrigatória","756","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com dados do veículo de Transporte","NT 2026.002 v1.11",,,,
 "X22-10","55/65","obrigatória","757","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com dados de Reboque do veículo de Transporte","NT 2026.002 v1.11",,,,
@@ -217,6 +229,8 @@
 "Y05-10","55","obrigatória","901","Valor do Desconto da Fatura maior que Valor Original da Fatura","MOC 7.0, Anexo I",,,,
 "Y06-10","55","obrigatória","902","Valor Liquido da Fatura difere do Valor Original menos o Valor do Desconto","MOC 7.0, Anexo I",,,,"Nem toda SEFAZ aplica: há NF-e autorizada com o vLiq sem descontar o vDesc (PI, 2026)."
 "Y08-10","55","obrigatória","852","Número da parcela inválido ou não informado","MOC 7.0, Anexo I",,,,"Nem toda SEFAZ aplica: há NF-e autorizada com a parcela 1 em vez de 001 (AM, 2022)."
+"Y09-20","55","obrigatória","900","Data de vencimento da parcela não informada ou menor que Data de Emissão","MOC 7.0, Anexo I",,,,
+"Y09-30","55","obrigatória","850","Data de vencimento da parcela não informada ou menor que a Data de vencimento da parcela anterior","MOC 7.0, Anexo I",,,,
 "Y09-40","55","obrigatória","853","Dados de cobrança não devem ser informados para pagamento à vista","NT 2025.001 v1.03","2025-09-01",,,
 "Y09-50","55","obrigatória","797","Data de vencimento da parcela superior a 10 anos da data atual","NT 2025.001 v1.03","2025-09-01",,,
 "Y10-10","55","obrigatória","851","Soma do valor das parcelas difere do Valor Líquido da Fatura","MOC 7.0, Anexo I",,,,
@@ -228,12 +242,15 @@
 "YA03-10","65","obrigatória","865","Total dos pagamentos menor que o total da nota","NT 2025.001 v1.03",,,,"Implementação futura para a NF-e (modelo 55)."
 "YA03-20","55/65","obrigatória","866","Ausência de troco quando o valor dos pagamentos informados for maior que o total da nota","NT 2025.001 v1.03",,,,
 "YA03-30","55/65","obrigatória","904","Informado indevidamente campo valor de pagamento","NT 2025.001 v1.03",,,"2025-11-03",
+"YA03a-10","55/65","obrigatória","657","Data de Pagamento inválida","NT 2023.004 v1.20","2024-07-01",,,
 "YA03c-10","55/65","obrigatória","961","CNPJ transacional do pagamento inválido","NT 2023.004 v1.20","2024-07-01",,,
+"YA04-10","65","obrigatória","391","Não informados os dados do cartão de crédito / débito nas Formas de Pagamento da Nota Fiscal","NT 2025.001 v1.03","2016-04-01",,"2025-09-01","Implementação futura para a NF-e (modelo 55)."
 "YA04-20","55/65","obrigatória","963","Tipo de pagamento não aceita o grupo de cartões ou boletos","NT 2023.004 v1.20","2024-07-01",,,
+"YA05-10","55/65","obrigatória","392","Não informados os dados da operação de pagamento por cartão de crédito / débito","NT 2025.001 v1.03","2016-04-01",,"2025-09-01",
 "YA05-20","55/65","obrigatória","437","CNPJ da instituição de pagamento inválido","NT 2025.001 v1.03",,,,
 "YA06-10","55/65","obrigatória","443","Código da bandeira de cartão de crédito e/ou débito inexistente","NT 2020.006 v1.31","2021-09-01",,,
 "YA07a","55/65","obrigatória","796","CNPJ recebedor do pagamento inválido","NT 2023.004 v1.20","2024-07-01",,,
-"YA09-10","55/65","obrigatória","869","Valor do troco incorreto","MOC 7.0, Anexo I",,,,
+"YA09-10","55/65","obrigatória","869","Valor do troco incorreto","MOC 7.0, Anexo I",,,,"Com os pagamentos abaixo do valor da nota (o que a YA03-10 confere), o troco calculado fica negativo e o zero é o único valor possível: há NF-e autorizada assim."
 "YA09-20","55/65","obrigatória","965","Valor do troco acima do permitido","NT 2023.004 v1.20","2024-10-01",,,
 "YB01-10","55/65","obrigatória","438","Obrigatória as informações do intermediador da transação para operação por site de terceiros","NT 2020.006 v1.31",,,,
 "YB01-20","55/65","obrigatória","439","Informações do intermediador da transação para operação por site de terceiros preenchido indevidamente","NT 2020.006 v1.31",,,,
@@ -245,4 +262,6 @@
 "ZC01-10","55/65","obrigatória","763","NFC-e ou NF-e com DANFE Simplificado Tipo 2 com dados de aquisição de Cana","NT 2026.002 v1.11",,,,
 "ZD02-10","55/65","facultativa","973","CNPJ do responsável técnico inválido","NT 2022.003 v1.11",,,,
 "ZX01-10","55","obrigatória","393","NF-e com o grupo de Informações Suplementares","MOC 7.0, Anexo I",,,,"Fora da NF-e com DANFE Simplificado Tipo 2, que tem o QR-Code (ZX02-10)."
-"ZX02-10","55/65","obrigatória","394","Nota Fiscal sem a informação do QR-Code","NT 2026.002 v1.11",,,,
+"ZX02-10","55/65","obrigatória","394","Nota Fiscal sem a informação do QR-Code","NT 2026.002 v1.11","2016-04-01",,,
+"ZX02-220","55","obrigatória","672","NF-e com DANFE Simplificado Tipo 2 com versão de qrCode não permitida","NT 2026.002 v1.11",,,,
+"ZX02-228","55/65","obrigatória","397","Parâmetro do QR-Code divergente da Nota Fiscal","NT 2026.002 v1.11",,,,

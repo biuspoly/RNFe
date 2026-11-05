@@ -9,7 +9,10 @@ decisão do usuário. Etapa 3:
 certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados, Distribuição da NF-e e do
 CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
 deixou em aberto está no fim dela. Etapa 4 (a Reforma): as tabelas, a conferência e o cálculo prontos, e
-revisados em 05/11/2026 (seção "Revisão da etapa 4", no fim da etapa 4). Próxima: a etapa 5.
+revisados em 05/11/2026 (seção "Revisão da etapa 4", no fim da etapa 4). Etapa 5: a leitura da EFD ICMS/IPI, o
+cruzamento com as NF-e e a pré-conferência da NF-e, prontos e revisados (05/11/2026). Em andamento: a última etapa
+(assinatura, autorização da NF-e e da NFC-e, eventos, QR-Code da NFC-e, desacordo do CT-e, MDF-e e a emissão e o
+cancelamento da NFS-e Nacional prontos, em homologação; faltam os PDFs).
 Repositório público no GitHub. **Nada vai ao CRAN até o usuário pedir** (decisão de 29/10/2026).
 
 Decisões do usuário (29/10/2026): o nome é RNfe; só em R, porque no Python já existe o PyNFe e o que falta lá
@@ -33,8 +36,8 @@ Cada etapa já é útil sozinha.
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026) e revisada (05/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano) |
-| 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | em andamento: a leitura da EFD ICMS/IPI pronta (05/11/2026) |
-| por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | |
+| 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | pronta e revisada (05/11/2026): a EFD ICMS/IPI em tabelas, o cruzamento com as NF-e e a pré-conferência da NF-e e da NFC-e (`nfe_conferir`) |
+| por último | Assinatura, emissão e eventos (manifestação, desacordo do CT-e) | Sim | em andamento, só em homologação: assinatura, autorização da NF-e e da NFC-e, cancelamento, carta de correção, manifestação, QR-Code da NFC-e, desacordo do CT-e, MDF-e (autorização, condutor e encerramento) e a NFS-e Nacional (emissão e cancelamento) prontos; faltam os PDFs |
 
 A assinatura é a peça mais delicada: vai ser comparada com a que o PyNFe faz.
 
@@ -54,18 +57,18 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Tabelas fiscais com vigência (CFOP, NCM, CST, Reforma) e municípios | não | não | não | pronto (etapa 1) |
 | Status da SEFAZ, consulta por chave e de protocolo | NF-e, MDF-e | NFS-e | não | status e consulta pela chave da NF-e, da NFC-e, do CT-e e do MDF-e, e os MDF-e não encerrados, prontos em homologação; a NFS-e Nacional pela chave, com os eventos, pronta na Produção Restrita |
 | Distribuição (baixar o que foi emitido contra o CNPJ) | NF-e, CT-e | NFS-e | não | NF-e, CT-e e NFS-e Nacional prontos em homologação (a da NFS-e na Produção Restrita) |
-| Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | etapa 3 e última |
-| Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | última |
-| Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | última |
-| Manifestação do destinatário | sim | não | não | última |
-| MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | última (entrou agora no plano) |
-| CT-e: consultar e registrar desacordo | não | não | não | consultar: pronto em homologação (etapa 3); desacordo: última |
-| NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | consultar e ler os eventos: pronto na Produção Restrita (etapa 3); emitir e cancelar: última |
+| Certificado A1, assinatura e conexão segura (mTLS) | sim | sim | não | pronto: a assinatura conferida com 1.000 NF-e reais e com o PyNFe |
+| Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | pronto em homologação (o QR-Code da NFC-e na versão 3, também off-line) |
+| Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | cancelamento e carta de correção prontos em homologação; a inutilização não (o serviço acaba em 11/11/2026, NT 2023.002) |
+| Manifestação do destinatário | sim | não | não | pronto em homologação |
+| MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | emitir, incluir condutor e encerrar: prontos em homologação; a inclusão de DF-e não |
+| CT-e: consultar e registrar desacordo | não | não | não | consultar: pronto em homologação (etapa 3); desacordo e o cancelamento dele: prontos em homologação |
+| NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | consultar e ler os eventos (etapa 3), emitir e cancelar: prontos na Produção Restrita |
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | última (entraram agora no plano) |
 | Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão) e calcular ou simular outro ano, prontos |
-| Ler o SPED e pré-conferência | não | não | não | etapa 5: a leitura da EFD ICMS/IPI pronta |
+| Ler o SPED e pré-conferência | não | não | não | etapa 5, pronta: a EFD ICMS/IPI, o cruzamento com as NF-e e a pré-conferência da NF-e e da NFC-e |
 
 ## Tabelas que se atualizam sozinhas
 
@@ -1432,6 +1435,103 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   `ibs_cbs_conferir()` tem a da NT 2025.002.
 - **Tempo:** perto de 10 ms por nota na leitura e nas regras, 30 ms no schema e 30 ms nas regras da Reforma (que
   monta um `data.frame` por arquivo); a primeira leitura de muitos arquivos pequenos no Windows é mais lenta.
+
+## Revisão da etapa 5 (05/11/2026)
+
+- **Como:** uma revisão independente (um agente para a NF-e e outro para a EFD), que leu o código, o CSV das regras e
+  as fontes e rodou cada achado com XML e EFD inventados. Cada achado foi conferido de novo na fonte antes de mudar
+  alguma coisa; o texto riscado, na imagem da página.
+- **O que mudou na pré-conferência:**
+  - a mesma nota em dois arquivos (o XML assinado e o `nfeProc`) derrubava o `nfe_conferir` (o fator com a chave
+    repetida): cada chave é conferida uma vez, a do primeiro arquivo com o protocolo, também no schema;
+  - as regras da Reforma saem da mesma leitura do arquivo (eram três leituras; são duas, porque o schema precisa do
+    namespace que a leitura das regras tira) e recebem o momento do envio: a UB132-10 da nota sem protocolo usa o mês
+    do envio;
+  - a VC02-04 vale também para a NF-e com DANFE Simplificado Tipo 2 (NT 2026.002 v1.11, pág. 18, que tirou a VC02-50);
+  - as datas que faltavam: as regras criadas pela NT 2019.001 (B03-10, E03a-30, E14-30, E16a-40 e H02-10) valem
+    desde 02/09/2019 (a produção da v1.00); a N12-30, a N12a-20 e a ZX02-10, desde 01/04/2016 (a exceção delas); a
+    C17-42 vale até 2032 ("não se aplica a partir de 2033", NT 2026.007);
+  - 17 regras que dá para conferir só com o XML e faltavam: B22-34, I23d-10, I23d-20, I23d1-10, I23e-10, N12-10,
+    N12a-81, N12a-91, N28-12, NA09-10, NA09-20, W16-30, YA03a-10, YA04-10, YA05-10, ZX02-220 e ZX02-228 (266 regras
+    no CSV). A YA04-10 e a YA05-10 passaram a obrigatórias na NT 2025.001 v1.00 (01/09/2025): a nota de antes que não
+    confere fica sem conferir, com o motivo;
+  - cada valor passado a uma regra vem um só ou um por linha (`linhas_da_regra` para com erro): pega o vetor da nota
+    passado a uma regra do item, a mesma família do erro do `%in%`;
+  - o primeiro teste usava a hora do relógio e falharia a partir de 20/11/2026.
+- **O que a revisão apontou e ficou como estava, com o motivo:**
+  - a W16-40 a W16-60 para a NF-e com DANFE Simplificado: na imagem da pág. 19 da NT 2026.002 v1.11, o "55/" e o
+    "ou NF-e com DANFE Simplificado Tipo 2" estão riscados (o texto copiado do PDF não mostra o risco);
+  - o B03-10 comparando o cNF e o nNF como número: há NF-e autorizada com o cNF 00000856 e o nNF 856 (agora com teste);
+  - a IE ISENTO do transportador (X07-10) e o troco zero com o pagamento abaixo do total (YA09-10): ganharam a
+    observação no CSV e o comentário no código;
+  - a W16-10 aceita a conta antiga do faturamento direto de veículos: a NT 2023.004 tirou o monofásico com retenção
+    sem dizer desde quando, e a regra é facultativa (o comentário, que dizia "as duas formas são aceitas", foi
+    corrigido).
+- **Ainda de fora**, com muitas exceções por CFOP, código ANP e região: N12-70, N12-80, N16-20, NA01-30 e NA09-30 (do
+  Anexo I). A UB12-11 (NT 2026.007) e a BA02a-50 não foram olhadas.
+- **No cruzamento da EFD** (Guia Prático 3.2.2, registros C100 e C190):
+  - o PIS e a COFINS vazios (de quem entrega a EFD-Contribuições) não se comparam;
+  - na NFC-e, o C100 não traz o ICMS-ST, o IPI, o PIS e a COFINS (exceção 9);
+  - o ICMS do C100 é comparado com o vICMS mais o vFCP, e o ICMS-ST com o vST mais o vFCPST (o C190 inclui o FCP);
+  - os impostos não se comparam em toda entrada (`IND_OPER` 0), não só na de terceiros;
+  - na complementar (06, 07) e na de regime especial (08), os valores vazios não se comparam (exceções 3 e 4);
+  - a emissão própria denegada não é cobrada (deixou de ser obrigatória em 01/12/2021), nem a NFC-e recebida ("as
+    NFC-e não devem ser escrituradas nas entradas"); o XML sem protocolo é cobrado, com o aviso;
+  - o cancelamento por substituição (110112, MOC 7.0) também cancela;
+  - de 2027 em diante, o valor do documento confere com o `vNF` ou com o `vNFTot` (o campo 12 do C100: em 2026, sem o
+    IBS, a CBS e o IS);
+  - o cruzamento ficou vetorizado: 20.000 notas em 1 s (o laço nota a nota levava uns 8 ms por nota);
+  - a leitura aceita o UTF-8 com BOM, e a coluna que um arquivo antigo não tem vem com o tipo das outras (uma data
+    vazia não vira número no `rbind`).
+- **No acervo depois da revisão:** outra amostra de 4.200 NF-e autorizadas. As regras novas não acusaram nenhuma; a
+  E16a-30 (do PR para AL, 2026) e a E16a-40 (RN, 2023) acusaram uma nota cada, e ganharam a observação de que nem toda
+  SEFAZ aplica.
+- **Testes:** 2.828 no GitHub, sem falha, e o R CMD check sem nota.
+
+## Última etapa, primeiro passo: assinatura, autorização e eventos (05/11/2026)
+
+- **Tudo em homologação** (decisão do usuário: "fique à vontade para usar os certificados desde que use em ambiente de
+  homologação e nada em produção ainda"). A produção é recusada antes de montar qualquer coisa.
+- **`xml_assinar()`:** a canonicalização C14N 1.0 é feita pelo RNFe (o `xml2` não tem); conferida com 1.000 NF-e reais
+  (o mesmo resumo e a assinatura verificada em todas) e com o PyNFe 0.6.5, que assina o mesmo XML igual, byte a byte.
+  O `xml2` devolve as declarações de namespace como atributos: elas saem da forma canônica (o erro que fazia 299 de
+  1.000 resumos não baterem). A DPS da NFS-e Nacional usa o SHA-256; o resto, o SHA-1.
+- **`sefaz_autorizar()`:** uma nota por lote, síncrono; se a SEFAZ responde 103, o recibo é consultado até a resposta.
+  A nota autorizada volta no `nfeProc`.
+- **Eventos da NF-e:** cancelamento, carta de correção e manifestação (no Ambiente Nacional, órgão 91), com o
+  `procEventoNFe` de volta. O evento sai sem quebra de linha no fim (a SEFAZ rejeitou com o 588).
+- **Testado na SVRS em 05/11/2026** com o certificado de uma empresa do RJ: NF-e autorizada (100), carta de correção e
+  cancelamento (135), ciência (136). As rejeições do caminho: 434 (o intermediador, que a pré-conferência já
+  acusava), 203 (a empresa do CE não está habilitada na homologação do CE), 543 (o CPF zerado do transportador, que a
+  pré-conferência acusava), 900 (o vencimento antes da emissão: entraram a Y09-20 e a Y09-30) e 575 na manifestação
+  (o autor tem de ser o destinatário: a nota foi emitida para a própria empresa).
+- **`nfce_qrcode()`:** o QR-Code da versão 3 (NT 2025.001 e o Manual do DANFE NFC-e 6.0), sem o CSC; na contingência
+  off-line, o dia, o valor, o destinatário e a assinatura RSA-SHA1 deles com o certificado. Os endereços da UF vêm de
+  quem usa (a página do Portal da NFC-e não tem uma lista que dê para ler sem erro). O resultado valida no schema.
+- **`sefaz_cte_desacordo()` e `sefaz_cte_cancelar_desacordo()`:** os eventos 610110 e 610111 do tomador, pelo MOC
+  do CT-e 4.00 on-line (o evento vai sozinho, sem lote e sem compactação; o `nSeqEvento` com 3 algarismos no Id). O
+  órgão é a UF da chave: testado na SVRS em 05/11/2026 com um CT-e inventado, voltou 217 ("CT-e não consta na base
+  de dados"), depois da regra do órgão de recepção (677).
+- **A inutilização não entrou:** a NT 2023.002 v1.02 acaba com o serviço em 11/11/2026.
+- **MDF-e (`sefaz_mdfe_autorizar`, `sefaz_mdfe_encerrar`, `sefaz_mdfe_incluir_condutor`):** pelo MOC do MDF-e 3.00b
+  (Anexo XII, no Confaz): a recepção é síncrona, sem lote, com o MDF-e em gzip dentro do base64; os eventos vão em XML
+  sem compactação; o cabeçalho SOAP foi descontinuado e não vai; o Id do evento leva o `nSeqEvento` com 2 algarismos.
+  O QR-Code (`infMDFeSupl`) entra sozinho quando falta, com o endereço da SVRS. Testado na SVRS em 05/11/2026 com o
+  certificado da empresa do RJ: um MDF-e de carga própria dentro da UF, levando a NF-e autorizada no teste, foi
+  autorizado (100; antes, o cavalo mecânico sem reboque voltou 523), ganhou um condutor e foi encerrado (135 nos dois).
+- **NFS-e Nacional (`nfse_emitir`, `nfse_cancelar`):** pela especificação OpenAPI da Sefin (`POST /nfse` com o
+  `dpsXmlGZipB64`; `POST /nfse/{chave}/eventos` com o `pedidoRegistroEventoXmlGZipB64`). A DPS e o pedido vão
+  assinados com o SHA-256 (no acervo, a Sefin aceitou os dois algoritmos) e com a declaração do XML: sem ela, a Sefin
+  rejeita com o E1229. As mensagens de erro vieram com a inicial maiúscula (`Codigo`, `Descricao`), não como na
+  especificação; o RNFe lê as duas formas. Testado na Produção Restrita em 05/11/2026: uma DPS montada sobre uma nota
+  real da empresa (só localmente) gerou a NFS-e (201) e o cancelamento foi registrado (201). No caminho: a Produção
+  Restrita já valida pelo leiaute da NT 009 (o XSD de 20/10/2026: o `finNFSe` no `infDPS`, o `cNBS` antes da
+  descrição do serviço), que o vigia não pegou (a página da RTC devolve "Conteúdo Restrito"); a cópia do XSD veio do
+  repositório t3wv/nfse. A série 70000 (a do Emissor Nacional) voltou E0010 para a DPS de sistema próprio, e a 1 passou.
+  O `nfse_ler()` segue o pacote 1.01 de 09/02/2026 e leu a NFS-e gerada; a NT 009 fica para a etapa da NFS-e.
+- **O vigia das notas técnicas** (`ferramentas/vigiar_notas_tecnicas.R`, no mesmo robô dos schemas): abre um aviso
+  para cada nota técnica nova no Portal da NF-e, que pode mudar as regras da pré-conferência. As 326 que o portal
+  listava em 05/11/2026 estão em `ferramentas/notas_tecnicas_vistas.csv`.
 
 ## O robô das tabelas
 
