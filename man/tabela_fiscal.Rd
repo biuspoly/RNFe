@@ -23,11 +23,12 @@ leitores seguem, conferida por \code{ferramentas/conferir_codigos_dos_campos.R};
 o tipo de transportador do MDF-e, pela Lei 11.442/2007 (art. 2º), e a
 tributação do ISSQN da NFS-e (\code{tribISSQN}), pelo Anexo I do leiaute da
 NFS-e Nacional, que corrige a ordem errada da documentação do schema 1.00.
-Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
-Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
+Origem, CSTs do ICMS, do IPI, do PIS e da COFINS e o CEST: as tabelas
+externas do SPED Fiscal (Receita Federal), cada uma na versão que o SPED
+publica (a do CEST é a 18, de 03/10/2024), com a origem 8 e os CST de
 combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
-porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma
-está em \code{tabela_fiscal("fontes")}.
+porque as tabelas A e B do SPED não foram atualizadas. A versão e a data de
+cada uma estão em \code{tabela_fiscal("fontes")}.
 }
 \usage{
 tabela_fiscal(nome_da_tabela)
@@ -36,6 +37,7 @@ tabela_fiscal(nome_da_tabela)
 \item{nome_da_tabela}{Qual tabela: \code{"cfop"} (CFOP), \code{"ncm"} (NCM),
 \code{"origem"} (origem da mercadoria), \code{"cst_icms"} (CST do ICMS), \code{"csosn"}
 (CSOSN, do Simples Nacional), \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"},
+\code{"cest"} (CEST),
 \code{"cst_ibs_cbs"} (CST do IBS e da CBS), \code{"classificacao_ibs_cbs"}
 (cClassTrib da Reforma), \code{"credito_presumido_ibs_cbs"} (cCredPres),
 \code{"mudancas_ibs_cbs"} (o que mudou nessas três de uma versão para a
@@ -56,7 +58,7 @@ outras), \code{inicio} e \code{fim}; as colunas de cada uma estão acima.
 \description{
 Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
-\code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cst_ibs_cbs"},
+\code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cest"}, \code{"cst_ibs_cbs"},
 \code{"classificacao_ibs_cbs"}, \code{"credito_presumido_ibs_cbs"}, \code{"mudancas_ibs_cbs"}, \code{"aliquotas_ibs_cbs"},
 \code{"local_operacao_ibs_cbs"}, \code{"biocombustivel_ibs_cbs"}, \code{"combustiveis_monofasicos"},
 \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
@@ -91,6 +93,12 @@ códigos 0 a 2 mudaram de descrição em 2013, quando vieram os de 3 a 8.
 \item \code{"cst_icms"}: o CST do ICMS, de dois dígitos, como vai na NF-e.
 \item \code{"csosn"}: o código do Simples Nacional, sem datas (veja abaixo).
 \item \code{"cst_ipi"}, \code{"cst_pis"} e \code{"cst_cofins"}: o CST de cada um.
+\item \code{"cest"}: o Código Especificador da Substituição Tributária, da
+tabela externa 996 do SPED, com a vigência de cada código. As descrições
+vão até 31/08/2023; desde 01/09/2023 o SPED só diz para conferir a
+descrição vigente no Convênio ICMS 142/18, e essa é a descrição que a
+tabela traz para esse período (o texto do Convênio no Confaz tem códigos
+com mais de uma redação atual, e não entrou).
 \item \code{"cst_ibs_cbs"}: o CST do IBS e da CBS (Reforma Tributária), com os
 indicadores dos grupos que cada CST exige (1) ou não permite (0) no
 documento, com o nome oficial entre parênteses: \code{grupo_ibs_cbs}

@@ -2,7 +2,7 @@
 
 Situação em 06/11/2026: **etapas 1 a 5 e a última feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
 das da etapa 3). Etapa 1: chave de acesso, leitura do XML da NF-e/NFC-e e tabelas fiscais, conferidas com
-notas reais; o CEST foi adiado por decisão do usuário. Etapa 2: a leitura do CT-e e do CT-e OS (14.370 CT-e
+notas reais; o CEST entrou em 06/11/2026, pela tabela do SPED (veja a seção dele). Etapa 2: a leitura do CT-e e do CT-e OS (14.370 CT-e
 reais), da GTV-e, do CT-e simplificado e do MDF-e (os dois pelo schema oficial, sem documentos reais para
 comparar), da NFS-e Nacional (11.207 reais) e dos eventos de todos; a NFS-e de prefeitura (São Paulo e ABRASF, 1.921
 reais) entrou em 06/11/2026, depois da última etapa. Etapa 3:
@@ -33,7 +33,7 @@ Cada etapa já é útil sozinha.
 |---|---|---|---|
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
-| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
+| 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas (o CEST pelo SPED, em 06/11/2026: as descrições até 08/2023, veja abaixo) |
 | 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura (São Paulo e ABRASF 1.00 e 2.0x) pronta em 06/11/2026 |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026) e revisada (05/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano) |
@@ -1603,19 +1603,41 @@ fonte antes de corrigir:
 - **As fontes:** os schemas da Prefeitura de São Paulo (o pacote da Reforma, TiposNFe_v02, baixado do portal da Nota
   Fiscal Paulistana) e o Manual de Utilização do Web Service 3.3.4; o schema e o Modelo Conceitual da ABRASF 1.00
   (29/12/2008) e o schema e o Manual de Orientação do Contribuinte da 2.04 (setembro de 2018), da biblioteca pública da
-  ABRASF. Os significados dos códigos saem desses manuais; o que eles não descrevem (o regime 0 do Ginfes, a opção 6 de
-  São Paulo, que aparecem no acervo) fica sem descrição.
+  ABRASF. Os significados dos códigos saem desses manuais; a opção pelo Simples de São Paulo sai do schema v02, que tem
+  o 6 (DAMSP) que o manual 3.3.4 ainda junta ao 0. O que nenhum descreve (o regime 0 do Ginfes, que aparece no acervo)
+  fica sem descrição.
 - **`nfse_prefeitura_ler()`:** as mesmas colunas nos três leiautes; os caminhos buscam pelo nome local, por causa do
   prefixo do Ginfes. A identificação da nota é o documento do prestador, o número e o código de verificação (não há
   chave); a data e hora ficam como no XML, sem fuso (os padrões municipais não trazem, e a hora é a do município). A
   situação vem do status de São Paulo e, na ABRASF, do `CompNfse` (cancelamento e substituição); a nota da ABRASF
   sozinha fica com a situação `NA`. A alíquota fica como no XML: São Paulo manda a fração (o manual: 5% é 0,05), a
-  ABRASF 2.04 o percentual (5% é 5), e a 1.00 não diz; no acervo da 1.00 há 0,02 e 2,00. `aliquota_percentual` só onde o
-  manual diz a escala.
+  ABRASF 2 o percentual (5% é 5; os manuais da 2.02, da 2.03 e da 2.04), e a 1.00 não diz; no acervo da 1.00 há 0,02 e
+  2,00. `aliquota_percentual` só onde o manual diz a escala.
 - **Conferido** com o cache do Fiscal (outro leitor, independente), pelo arquivo, nas 1.682 que os dois leram: o número,
   o tomador, o valor dos serviços, o valor líquido e o cancelamento bateram em todas; o prestador, em todas menos uma, que
   o Fiscal deixou vazio. As 19 identificações repetidas são a mesma nota guardada duas vezes (os valores iguais). A
   leitura das 2.248 levou 22 segundos.
+- **Revisão independente (06/11/2026)**, conferida achado por achado nos schemas e manuais, e corrigida:
+  - o cancelamento da ABRASF vale pela presença do `NfseCancelamento` no `CompNfse`, e a data é a que estiver nele
+    (`DataHoraCancelamento` na 1.00, `DataHora` na 2.04, outro grupo em algum provedor); antes, só um caminho fixo;
+  - com o cancelamento e a substituição no mesmo `CompNfse`, a nota é substituída (a substituta cancela a nota);
+  - as datas só no formato ISO, e a competência em AAAAMM, que o Modelo Conceitual da 1.00 descreve, vira o dia 1º do
+    mês; outro formato fica `NA` (antes, um formato estranho no primeiro arquivo parava a leitura);
+  - o `CodigoServico` de São Paulo (a tabela de serviços do município) foi para `codigo_tributacao_municipio`, como o
+    da ABRASF, e o item da LC 116 da ABRASF ganhou coluna própria, `item_lista_servico` (antes, os dois juntos em
+    `codigo_servico`);
+  - o `IncentivoFiscal` da ABRASF 2 ("prestador possui incentivo fiscal") saiu da coluna do incentivador cultural da
+    1.00: `incentivador_cultural` e `incentivo_fiscal`;
+  - o ISS retido de São Paulo aceita o `0` e o `1` do boolean do XML Schema;
+  - o município da prestação de São Paulo também vem do `cLocPrestacao` (a Reforma);
+  - a `Assinatura` de São Paulo ("assinatura digital da NFS-e", diz o schema) saiu dos `campos`, como o `Signature`;
+  - `aliquota_percentual` só nas versões da ABRASF 2 cujo manual diz a escala: a 2.04 (Manual de Orientação) e,
+    baixados para conferir, os Manuais de Integração da 2.02 (11/2012) e da 2.03 (02/2016), que dizem o mesmo
+    ("Valor percentual. Formato: 00.00"); de outra versão, `NA`;
+  - a mensagem de quem lê uma NF-e com outro leitor não diz mais "sem o infNFe".
+  Depois das correções, o acervo de novo (23,5 s): nenhuma cancelada sem data, nenhum campo de assinatura nos `campos`,
+  e contra o Fiscal tudo igual como antes, menos uma nota da ABRASF 1.00 com o cancelamento e a substituição, que o
+  Fiscal dá como cancelada e o RNFe como substituída (com a data do cancelamento).
 
 ## O robô das tabelas
 
@@ -1720,7 +1742,15 @@ fonte antes de corrigir:
   em 30/10/2026. O que a v7 muda (recusar o checkout de pull request de fork em `pull_request_target` e
   `workflow_run`) não afeta robôs que rodam por agenda ou à mão.
 
-## CEST: adiado (decisão do usuário, 29/10/2026)
+## CEST: pelo SPED (06/11/2026; adiado em 29/10/2026)
+
+Entrou a primeira das duas opções abaixo, a única que se faz com certeza: a tabela externa 996 do SPED (versão 18,
+de 03/10/2024), baixada pelo `gerar_tabelas.R` como as outras do SPED (`tabela_fiscal("cest")`, 2.185 linhas, 1.049
+códigos), e a descrição ao lado do CEST de cada item do `nfe_ler()`, pela data da nota. Para as notas de 01/09/2023 em
+diante, a descrição é o aviso do próprio SPED ("Verificar, para o CEST, a descrição vigente para cada período no
+Convênio ICMS 142/18"). A segunda opção (o texto do Confaz, revisado caso a caso com o usuário) segue em aberto.
+
+O que se viu em 29/10/2026, quando foi adiado:
 
 Nenhuma fonte oficial dá a descrição atual do CEST sem ambiguidade, e o Portal da NF-e não publica tabela de
 CEST (conferidas 495 publicações em cinco seções).

@@ -38,7 +38,8 @@ TABELAS_DO_SPED = c(
   cst_icms_tres_digitos = "SIT_TRIB_ICMS",
   cst_ipi = "SIT_TRIB_IPI",
   cst_pis = "SIT_TRIB_PIS",
-  cst_cofins = "SIT_TRIB_COFINS"
+  cst_cofins = "SIT_TRIB_COFINS",
+  cest = "COD_CEST"
 )
 
 # ---- SPED ----
@@ -1188,6 +1189,7 @@ gravar_tabela(csosn_do_sped(tabelas_do_sped$cst_icms_tres_digitos), "csosn")
 gravar_tabela(tabelas_do_sped$cst_ipi, "cst_ipi")
 gravar_tabela(tabelas_do_sped$cst_pis, "cst_pis")
 gravar_tabela(tabelas_do_sped$cst_cofins, "cst_cofins")
+gravar_tabela(tabelas_do_sped$cest, "cest")
 gravar_tabela(fontes, "fontes")
 
 # A lista de conferência que o tabelas_atualizar() usa: as linhas e o md5 de cada tabela, e a versão do conjunto.

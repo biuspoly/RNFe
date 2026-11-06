@@ -80,7 +80,7 @@ como a tabela fiscal registrava na data de emissão da nota (veja
 \code{\link[=tabela_fiscal]{tabela_fiscal()}}): \code{ncm_descricao} (a descrição completa, da posição até o
 código), \code{cfop_titulo}, \code{origem_descricao}, \code{cst_icms_descricao},
 \code{csosn_descricao}, \code{cst_ipi_descricao}, \code{cst_pis_descricao},
-\code{cst_cofins_descricao}, \code{cst_ibs_cbs_descricao} e
+\code{cst_cofins_descricao}, \code{cest_descricao}, \code{cst_ibs_cbs_descricao} e
 \code{classificacao_ibs_cbs_nome}. \code{valor_total_ibs_monofasico} e
 \code{valor_total_cbs_monofasica} são os totais do monofásico do item
 (combustíveis: \code{vTotIBSMonoItem} e \code{vTotCBSMonoItem}; em \code{notas},

@@ -152,6 +152,18 @@ test_that("os valores l\u00edquidos (sem tributos) do pacote 010g", {
   expect_true(all(is.na(lida$itens$valor_icms_previsto)))
 })
 
+test_that("o CEST do item, com a descri\u00e7\u00e3o da tabela do SPED na data da nota", {
+  nota = paste(readLines(NOTA_SP, encoding = "UTF-8"), collapse = "\n")
+  com_cest = sub("<NCM>22011000</NCM>", "<NCM>22011000</NCM><CEST>0100100</CEST>", nota, fixed = TRUE)
+  com_cest = sub("<NCM>22021000</NCM>", "<NCM>22021000</NCM><CEST>0300100</CEST>", com_cest, fixed = TRUE)
+  itens = nfe_ler(com_cest)$itens
+  expect_identical(itens$cest, c("0100100", "0300100"))
+  expect_identical(match("cest_descricao", names(itens)), match("cest", names(itens)) + 1L)
+  # A nota de 2026: o SPED só diz para conferir o Convênio ICMS 142/18; o 0300100 acabou em 31/05/2021.
+  expect_match(itens$cest_descricao[1], "Conv\u00eanio ICMS 142/18", fixed = TRUE)
+  expect_true(is.na(itens$cest_descricao[2]))
+})
+
 test_that("o pagamento vinculado da Reforma (gPgtoVinc)", {
   lida = nfe_ler(c(NOTA_SP, NOTA_CE))
   vinculados = lida$pagamentos_vinculados

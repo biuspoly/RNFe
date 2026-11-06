@@ -8,7 +8,9 @@ Prefeitura de São Paulo: os schemas TiposNFe_v02 (o pacote da
 Reforma Tributária, versão 2) e o Manual de Utilização do Web Service,
 versão 3.3.4; ABRASF: o schema nfse.xsd e o Modelo Conceitual da versão
 1.00 (29/12/2008) e o schema e o Manual de Orientação do Contribuinte da
-versão 2.04 (setembro de 2018), da biblioteca pública da ABRASF.
+versão 2.04 (setembro de 2018), da biblioteca pública da ABRASF, e os
+Manuais de Integração das versões 2.02 (novembro de 2012) e 2.03
+(fevereiro de 2016), para a escala da alíquota.
 }
 \usage{
 nfse_prefeitura_ler(arquivos, todos_os_campos = TRUE)
@@ -49,14 +51,20 @@ leiaute fica em \code{arquivos}, com o motivo. A NFS-e Nacional é lida por
 
 A situação vem do próprio XML: a de São Paulo traz o status (normal,
 cancelada, extraviada); na ABRASF, a nota cancelada ou substituída vem
-dentro do \code{CompNfse}, com o pedido de cancelamento ou a substituição, e a
-nota sozinha (sem o \code{CompNfse}) fica com a situação \code{NA}: o XML não diz.
+dentro do \code{CompNfse}, com o cancelamento ou a substituição (com os dois, é
+substituída: a substituta cancela a nota), e a nota sozinha (sem o
+\code{CompNfse}) fica com a situação \code{NA}: o XML não diz.
+
+O código do serviço muda de sentido de um leiaute para o outro: o
+\code{CodigoServico} de São Paulo é o da tabela de serviços do município e vai
+para \code{codigo_tributacao_municipio}, como o da ABRASF; \code{item_lista_servico}
+é o item da lista da Lei Complementar 116, que só a ABRASF traz.
 
 A alíquota vem como está no XML, e a escala muda de um leiaute para o
-outro: São Paulo manda a fração (0,05 é 5\%) e a ABRASF 2.04, o percentual
+outro: São Paulo manda a fração (0,05 é 5\%) e a ABRASF 2, o percentual
 (5 é 5\%); o Modelo Conceitual da ABRASF 1.00 não diz qual, e cada município
-escolhe. \code{aliquota_percentual} traz o percentual nos dois leiautes que dizem
-a escala e \code{NA} na ABRASF 1.00.
+escolhe. \code{aliquota_percentual} traz o percentual onde o manual diz a escala
+(São Paulo e as versões 2.02, 2.03 e 2.04 da ABRASF) e \code{NA} nas outras.
 }
 \section{nfses}{
 
@@ -64,22 +72,26 @@ Uma linha por NFS-e: \code{identificacao} (o documento do prestador, o número e
 o código de verificação, juntos: liga a NFS-e aos \code{campos}), \code{leiaute}
 (\code{"São Paulo"}, \code{"ABRASF 1"} ou \code{"ABRASF 2"}), \code{versao} (a do \code{Nfse} da
 ABRASF, quando vem), as colunas
-\code{numero}, \code{codigo_verificacao}, \code{chave_nacional}, \code{emissao}, \code{data_emissao}, \code{competencia}, \code{situacao_codigo}, \code{cancelamento}, \code{nfse_substituida}, \code{nfse_substituidora}, \code{municipio_gerador}, \code{uf_gerador}, \code{rps_numero}, \code{rps_serie}, \code{rps_tipo}, \code{rps_emissao}, \code{prestador_documento}, \code{prestador_inscricao_municipal}, \code{prestador_nome}, \code{prestador_nome_fantasia}, \code{prestador_codigo_municipio}, \code{prestador_uf}, \code{prestador_cep}, \code{prestador_email}, \code{tomador_documento}, \code{tomador_inscricao_municipal}, \code{tomador_inscricao_estadual}, \code{tomador_nome}, \code{tomador_codigo_municipio}, \code{tomador_uf}, \code{tomador_cep}, \code{tomador_email}, \code{intermediario_documento}, \code{intermediario_inscricao_municipal}, \code{intermediario_nome}, \code{codigo_servico}, \code{codigo_tributacao_municipio}, \code{cnae}, \code{nbs}, \code{discriminacao}, \code{municipio_prestacao}, \code{municipio_incidencia}, \code{natureza_operacao}, \code{exigibilidade_iss}, \code{tributacao}, \code{regime_especial}, \code{optante_simples}, \code{incentivo_cultural}, \code{valor_servicos}, \code{valor_deducoes}, \code{desconto_incondicionado}, \code{desconto_condicionado}, \code{base_calculo}, \code{aliquota}, \code{valor_iss}, \code{iss_retido_codigo}, \code{valor_iss_retido}, \code{valor_pis}, \code{valor_cofins}, \code{valor_inss}, \code{valor_ir}, \code{valor_csll}, \code{outras_retencoes}, \code{valor_liquido}, \code{valor_credito}, \code{valor_total_tributos}, \code{outras_informacoes},
+\code{numero}, \code{codigo_verificacao}, \code{chave_nacional}, \code{emissao}, \code{data_emissao}, \code{competencia}, \code{situacao_codigo}, \code{cancelamento}, \code{nfse_substituida}, \code{nfse_substituidora}, \code{municipio_gerador}, \code{uf_gerador}, \code{rps_numero}, \code{rps_serie}, \code{rps_tipo}, \code{rps_emissao}, \code{prestador_documento}, \code{prestador_inscricao_municipal}, \code{prestador_nome}, \code{prestador_nome_fantasia}, \code{prestador_codigo_municipio}, \code{prestador_uf}, \code{prestador_cep}, \code{prestador_email}, \code{tomador_documento}, \code{tomador_inscricao_municipal}, \code{tomador_inscricao_estadual}, \code{tomador_nome}, \code{tomador_codigo_municipio}, \code{tomador_uf}, \code{tomador_cep}, \code{tomador_email}, \code{intermediario_documento}, \code{intermediario_inscricao_municipal}, \code{intermediario_nome}, \code{item_lista_servico}, \code{codigo_tributacao_municipio}, \code{cnae}, \code{nbs}, \code{discriminacao}, \code{municipio_prestacao}, \code{municipio_incidencia}, \code{natureza_operacao}, \code{exigibilidade_iss}, \code{tributacao}, \code{regime_especial}, \code{optante_simples}, \code{incentivador_cultural}, \code{incentivo_fiscal}, \code{valor_servicos}, \code{valor_deducoes}, \code{desconto_incondicionado}, \code{desconto_condicionado}, \code{base_calculo}, \code{aliquota}, \code{valor_iss}, \code{iss_retido_codigo}, \code{valor_iss_retido}, \code{valor_pis}, \code{valor_cofins}, \code{valor_inss}, \code{valor_ir}, \code{valor_csll}, \code{outras_retencoes}, \code{valor_liquido}, \code{valor_credito}, \code{valor_total_tributos}, \code{outras_informacoes},
 e ainda \code{situacao} (Normal, Cancelada, Substituída ou Extraviada),
 \code{iss_retido} (\code{TRUE} ou \code{FALSE}), \code{aliquota_percentual}, o significado de
 cada código numa coluna \verb{*_descricao} ao lado dele (o tipo do RPS, a
 natureza da operação, a exigibilidade do ISS, a tributação, o regime
-especial, a opção pelo Simples e o incentivo cultural) e \code{arquivo}.
+especial, a opção pelo Simples, o incentivador cultural da ABRASF 1.00 e o
+incentivo fiscal da ABRASF 2) e \code{arquivo}.
 \code{emissao} e \code{cancelamento} ficam como estão no XML (texto): os padrões
 municipais não trazem o fuso, e a hora é a do município; \code{data_emissao},
-\code{competencia} e \code{rps_emissao} são datas. Os municípios vêm pelo código do
-IBGE.
+\code{competencia} e \code{rps_emissao} são datas (a competência em AAAAMM, como o
+Modelo Conceitual da ABRASF 1.00 descreve, vira o dia 1º do mês; outro
+formato fica \code{NA}, com o texto nos \code{campos}). Os municípios vêm pelo código
+do IBGE.
 }
 
 \section{campos}{
 
 Com \code{todos_os_campos = TRUE}, o padrão. Todos os campos de cada NFS-e,
-menos os da assinatura digital, um por linha: \code{identificacao}, \code{caminho}
+menos os da assinatura digital (o \code{Signature} e, em São Paulo, a
+\code{Assinatura}), um por linha: \code{identificacao}, \code{caminho}
 (a partir do \code{NFe} de São Paulo ou do \code{InfNfse} da ABRASF, sem os
 prefixos), \code{grupo}, \code{campo} e \code{valor}.
 }

@@ -2,7 +2,7 @@
 # geradas por ferramentas/gerar_tabelas.R.
 
 NOMES_DAS_TABELAS = c(
-  "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs",
+  "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cest", "cst_ibs_cbs",
   "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs",
   "local_operacao_ibs_cbs", "biocombustivel_ibs_cbs", "combustiveis_monofasicos", "meios_pagamento", "bandeiras_cartao",
   "municipios", "codigos_dos_campos", "leiaute_efd_icms_ipi", "fontes"
@@ -45,7 +45,7 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'
 #' Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 #' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
-#' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cst_ibs_cbs"`,
+#' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cest"`, `"cst_ibs_cbs"`,
 #' `"classificacao_ibs_cbs"`, `"credito_presumido_ibs_cbs"`, `"mudancas_ibs_cbs"`, `"aliquotas_ibs_cbs"`,
 #' `"local_operacao_ibs_cbs"`, `"biocombustivel_ibs_cbs"`, `"combustiveis_monofasicos"`,
 #' `"meios_pagamento"`, `"bandeiras_cartao"`,
@@ -78,6 +78,12 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' - `"cst_icms"`: o CST do ICMS, de dois dígitos, como vai na NF-e.
 #' - `"csosn"`: o código do Simples Nacional, sem datas (veja abaixo).
 #' - `"cst_ipi"`, `"cst_pis"` e `"cst_cofins"`: o CST de cada um.
+#' - `"cest"`: o Código Especificador da Substituição Tributária, da
+#'   tabela externa 996 do SPED, com a vigência de cada código. As descrições
+#'   vão até 31/08/2023; desde 01/09/2023 o SPED só diz para conferir a
+#'   descrição vigente no Convênio ICMS 142/18, e essa é a descrição que a
+#'   tabela traz para esse período (o texto do Convênio no Confaz tem códigos
+#'   com mais de uma redação atual, e não entrou).
 #' - `"cst_ibs_cbs"`: o CST do IBS e da CBS (Reforma Tributária), com os
 #'   indicadores dos grupos que cada CST exige (1) ou não permite (0) no
 #'   documento, com o nome oficial entre parênteses: `grupo_ibs_cbs`
@@ -210,6 +216,7 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' @param nome_da_tabela Qual tabela: `"cfop"` (CFOP), `"ncm"` (NCM),
 #'   `"origem"` (origem da mercadoria), `"cst_icms"` (CST do ICMS), `"csosn"`
 #'   (CSOSN, do Simples Nacional), `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`,
+#'   `"cest"` (CEST),
 #'   `"cst_ibs_cbs"` (CST do IBS e da CBS), `"classificacao_ibs_cbs"`
 #'   (cClassTrib da Reforma), `"credito_presumido_ibs_cbs"` (cCredPres),
 #'   `"mudancas_ibs_cbs"` (o que mudou nessas três de uma versão para a
@@ -243,11 +250,12 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   o tipo de transportador do MDF-e, pela Lei 11.442/2007 (art. 2º), e a
 #'   tributação do ISSQN da NFS-e (`tribISSQN`), pelo Anexo I do leiaute da
 #'   NFS-e Nacional, que corrige a ordem errada da documentação do schema 1.00.
-#'   Origem e CSTs do ICMS, do IPI, do PIS e da COFINS: as tabelas externas do SPED
-#'   Fiscal (Receita Federal), versão de 28/10/2026, com a origem 8 e os CST de
+#'   Origem, CSTs do ICMS, do IPI, do PIS e da COFINS e o CEST: as tabelas
+#'   externas do SPED Fiscal (Receita Federal), cada uma na versão que o SPED
+#'   publica (a do CEST é a 18, de 03/10/2024), com a origem 8 e os CST de
 #'   combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
-#'   porque as tabelas A e B do SPED não foram atualizadas. A data de cada uma
-#'   está em `tabela_fiscal("fontes")`.
+#'   porque as tabelas A e B do SPED não foram atualizadas. A versão e a data de
+#'   cada uma estão em `tabela_fiscal("fontes")`.
 #' @examples
 #' tabela_fiscal("cst_icms")
 #' cfop = tabela_fiscal("cfop")

@@ -16,7 +16,9 @@ DECLARACAO_DA_ABRASF_2 = "DeclaracaoPrestacaoServico/InfDeclaracaoPrestacaoServi
 # Coluna e caminho em cada leiaute (a partir do NFe de São Paulo e do InfNfse da ABRASF), e tipo. "a|b" pega o que
 # existir; "-" é o campo que o leiaute não tem. Os nomes dos caminhos seguem os schemas: TiposNFe_v02 de São Paulo, o
 # nfse.xsd da ABRASF 1.00 e o da 2.04 (a 2.02, ainda comum, chama o tomador de Tomador e põe a identificação do
-# prestador no PrestadorServico).
+# prestador no PrestadorServico). O CodigoServico de São Paulo é o código do serviço na tabela do município, como o
+# CodigoTributacaoMunicipio da ABRASF; o ItemListaServico da ABRASF é o item da lista da LC 116. O cancelamento da
+# ABRASF vem do CompNfse, à parte (colunas_da_nfse_de_prefeitura).
 CAMPOS_DA_NFSE_DE_PREFEITURA = ler_campos("
 coluna                         sao_paulo                                           abrasf_1                                                                          abrasf_2                                                                                                      tipo
 numero                         ChaveNFe/NumeroNFe                                  Numero                                                                            Numero                                                                                                        texto
@@ -26,7 +28,7 @@ emissao                        DataEmissaoNFe                                   
 data_emissao                   DataEmissaoNFe                                      DataEmissao                                                                       DataEmissao                                                                                                   data
 competencia                    DataFatoGeradorNFe                                  Competencia                                                                       Declaracao/Competencia                                                                                        data
 situacao_codigo                StatusNFe                                           -                                                                                 -                                                                                                             texto
-cancelamento                   DataCancelamento                                    ../../NfseCancelamento/Confirmacao/DataHoraCancelamento|../../NfseCancelamento/Confirmacao/DataHora ../../NfseCancelamento/Confirmacao/DataHora|../../NfseCancelamento/Confirmacao/DataHoraCancelamento                 texto
+cancelamento                   DataCancelamento                                    -                                                                                 -                                                                                                             texto
 nfse_substituida               -                                                   NfseSubstituida                                                                   NfseSubstituida                                                                                               texto
 nfse_substituidora             -                                                   ../../NfseSubstituicao/SubstituicaoNfse/NfseSubstituidora                         ../../NfseSubstituicao/SubstituicaoNfse/NfseSubstituidora                                                     texto
 municipio_gerador              -                                                   OrgaoGerador/CodigoMunicipio                                                      OrgaoGerador/CodigoMunicipio                                                                                  texto
@@ -54,19 +56,20 @@ tomador_email                  EmailTomador                                     
 intermediario_documento        CPFCNPJIntermediario/CNPJ|CPFCNPJIntermediario/CPF  IntermediarioServico/CpfCnpj/Cnpj|IntermediarioServico/CpfCnpj/Cpf              Declaracao/Intermediario/IdentificacaoIntermediario/CpfCnpj/Cnpj|Declaracao/Intermediario/IdentificacaoIntermediario/CpfCnpj/Cpf texto
 intermediario_inscricao_municipal InscricaoMunicipalIntermediario                  IntermediarioServico/InscricaoMunicipal                                           Declaracao/Intermediario/IdentificacaoIntermediario/InscricaoMunicipal                                         texto
 intermediario_nome             -                                                   IntermediarioServico/RazaoSocial                                                  Declaracao/Intermediario/RazaoSocial                                                                          texto
-codigo_servico                 CodigoServico                                       Servico/ItemListaServico                                                          Declaracao/Servico/ItemListaServico                                                                           texto
-codigo_tributacao_municipio    -                                                   Servico/CodigoTributacaoMunicipio                                                 Declaracao/Servico/CodigoTributacaoMunicipio                                                                  texto
+item_lista_servico             -                                                   Servico/ItemListaServico                                                          Declaracao/Servico/ItemListaServico                                                                           texto
+codigo_tributacao_municipio    CodigoServico                                       Servico/CodigoTributacaoMunicipio                                                 Declaracao/Servico/CodigoTributacaoMunicipio                                                                  texto
 cnae                           -                                                   Servico/CodigoCnae                                                                Declaracao/Servico/CodigoCnae                                                                                 texto
 nbs                            NBS                                                 -                                                                                 Declaracao/Servico/CodigoNbs                                                                                  texto
 discriminacao                  Discriminacao                                       Servico/Discriminacao                                                             Declaracao/Servico/Discriminacao                                                                              texto
-municipio_prestacao            MunicipioPrestacao                                  Servico/CodigoMunicipio                                                           Declaracao/Servico/CodigoMunicipio                                                                            texto
+municipio_prestacao            MunicipioPrestacao|cLocPrestacao                    Servico/CodigoMunicipio                                                          Declaracao/Servico/CodigoMunicipio                                                                            texto
 municipio_incidencia           -                                                   -                                                                                 Declaracao/Servico/MunicipioIncidencia                                                                        texto
 natureza_operacao              -                                                   NaturezaOperacao                                                                  -                                                                                                             texto
 exigibilidade_iss              -                                                   -                                                                                 Declaracao/Servico/ExigibilidadeISS                                                                           texto
 tributacao                     TributacaoNFe                                       -                                                                                 -                                                                                                             texto
 regime_especial                -                                                   RegimeEspecialTributacao                                                          Declaracao/RegimeEspecialTributacao                                                                           texto
 optante_simples                OpcaoSimples                                        OptanteSimplesNacional                                                            Declaracao/OptanteSimplesNacional                                                                             texto
-incentivo_cultural             -                                                   IncentivadorCultural                                                              Declaracao/IncentivoFiscal                                                                                    texto
+incentivador_cultural          -                                                   IncentivadorCultural                                                              -                                                                                                             texto
+incentivo_fiscal               -                                                   -                                                                                 Declaracao/IncentivoFiscal                                                                                    texto
 valor_servicos                 ValorServicos                                       Servico/Valores/ValorServicos                                                     Declaracao/Servico/Valores/ValorServicos                                                                      numero
 valor_deducoes                 ValorDeducoes                                       Servico/Valores/ValorDeducoes                                                     Declaracao/Servico/Valores/ValorDeducoes                                                                      numero
 desconto_incondicionado        -                                                   Servico/Valores/DescontoIncondicionado                                            Declaracao/Servico/Valores/DescontoIncondicionado                                                             numero
@@ -88,10 +91,14 @@ valor_total_tributos           ValorCargaTributaria                             
 outras_informacoes             -                                                   OutrasInformacoes                                                                 OutrasInformacoes                                                                                             texto
 ")
 
-LEIAUTES_DA_NFSE_DE_PREFEITURA = c(sao_paulo = "S\u00e3o Paulo", abrasf_1 = "ABRASF 1", abrasf_2 = "ABRASF 2")
+# As versões da ABRASF 2 cujo manual diz que a alíquota vem em percentual ("Valor percentual. Formato: 00.00").
+VERSOES_DA_ABRASF_COM_ALIQUOTA_EM_PERCENTUAL = c("2.02", "2.03", "2.04")
+
+LEIAUTES_DA_NFSE_DE_PREFEITURA = c(sao_paulo ="S\u00e3o Paulo", abrasf_1 = "ABRASF 1", abrasf_2 = "ABRASF 2")
 
 # O que quer dizer cada código, por leiaute, pelos manuais: o Manual de Utilização do Web Service de São Paulo (3.3.4),
-# o Modelo Conceitual da ABRASF 1.00 e o Manual de Orientação do Contribuinte da ABRASF 2.04.
+# o Modelo Conceitual da ABRASF 1.00 e o Manual de Orientação do Contribuinte da ABRASF 2.04. A opção pelo Simples de
+# São Paulo segue o schema TiposNFe_v02, que tem o 6 (o DAMSP); o manual ainda junta o DAMSP ao 0.
 SIGNIFICADOS_DA_NFSE_DE_PREFEITURA = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE,
                                                        colClasses = "character", text = "
 leiaute   ; coluna            ; codigo ; descricao
@@ -115,11 +122,12 @@ sao_paulo ; tributacao        ; V      ; Tributado Fora de S\u00e3o Paulo, por\u
 sao_paulo ; tributacao        ; P      ; Exporta\u00e7\u00e3o de Servi\u00e7os
 sao_paulo ; tributacao        ; I      ; Isento/Imune (NFS-e at\u00e9 22/02/2015)
 sao_paulo ; tributacao        ; J      ; ISS Suspenso por Decis\u00e3o Judicial (NFS-e at\u00e9 22/02/2015)
-sao_paulo ; optante_simples   ; 0      ; Normal ou Simples Nacional (DAMSP)
+sao_paulo ; optante_simples   ; 0      ; N\u00e3o-optante pelo Simples Federal nem Municipal
 sao_paulo ; optante_simples   ; 1      ; Optante pelo Simples Federal (Al\u00edquota de 1,0%)
 sao_paulo ; optante_simples   ; 2      ; Optante pelo Simples Federal (Al\u00edquota de 0,5%)
 sao_paulo ; optante_simples   ; 3      ; Optante pelo Simples Municipal
-sao_paulo ; optante_simples   ; 4      ; Optante pelo Simples Nacional (DAS)
+sao_paulo ; optante_simples   ; 4      ; Optante pelo Simples Nacional - DAS
+sao_paulo ; optante_simples   ; 6      ; Optante pelo Simples Nacional - DAMSP
 abrasf_1  ; rps_tipo          ; 1      ; Recibo Provis\u00f3rio de Servi\u00e7os
 abrasf_1  ; rps_tipo          ; 2      ; RPS Nota Fiscal Conjugada (Mista)
 abrasf_1  ; rps_tipo          ; 3      ; Cupom
@@ -135,8 +143,8 @@ abrasf_1  ; regime_especial   ; 3      ; Sociedade de Profissionais
 abrasf_1  ; regime_especial   ; 4      ; Cooperativa
 abrasf_1  ; optante_simples   ; 1      ; Sim
 abrasf_1  ; optante_simples   ; 2      ; N\u00e3o
-abrasf_1  ; incentivo_cultural ; 1     ; Sim
-abrasf_1  ; incentivo_cultural ; 2     ; N\u00e3o
+abrasf_1  ; incentivador_cultural ; 1  ; Sim
+abrasf_1  ; incentivador_cultural ; 2  ; N\u00e3o
 abrasf_2  ; rps_tipo          ; 1      ; RPS
 abrasf_2  ; rps_tipo          ; 2      ; Nota Fiscal Conjugada (Mista)
 abrasf_2  ; rps_tipo          ; 3      ; Cupom
@@ -155,8 +163,8 @@ abrasf_2  ; regime_especial   ; 5      ; Microempres\u00e1rio Individual (MEI)
 abrasf_2  ; regime_especial   ; 6      ; Microempresa ou Empresa de Pequeno Porte (ME EPP)
 abrasf_2  ; optante_simples   ; 1      ; Sim
 abrasf_2  ; optante_simples   ; 2      ; N\u00e3o
-abrasf_2  ; incentivo_cultural ; 1     ; Sim
-abrasf_2  ; incentivo_cultural ; 2     ; N\u00e3o
+abrasf_2  ; incentivo_fiscal  ; 1      ; Sim
+abrasf_2  ; incentivo_fiscal  ; 2      ; N\u00e3o
 ")
 
 #' Ler o XML da NFS-e de prefeitura
@@ -180,14 +188,20 @@ abrasf_2  ; incentivo_cultural ; 2     ; N\u00e3o
 #'
 #' A situação vem do próprio XML: a de São Paulo traz o status (normal,
 #' cancelada, extraviada); na ABRASF, a nota cancelada ou substituída vem
-#' dentro do `CompNfse`, com o pedido de cancelamento ou a substituição, e a
-#' nota sozinha (sem o `CompNfse`) fica com a situação `NA`: o XML não diz.
+#' dentro do `CompNfse`, com o cancelamento ou a substituição (com os dois, é
+#' substituída: a substituta cancela a nota), e a nota sozinha (sem o
+#' `CompNfse`) fica com a situação `NA`: o XML não diz.
+#'
+#' O código do serviço muda de sentido de um leiaute para o outro: o
+#' `CodigoServico` de São Paulo é o da tabela de serviços do município e vai
+#' para `codigo_tributacao_municipio`, como o da ABRASF; `item_lista_servico`
+#' é o item da lista da Lei Complementar 116, que só a ABRASF traz.
 #'
 #' A alíquota vem como está no XML, e a escala muda de um leiaute para o
-#' outro: São Paulo manda a fração (0,05 é 5%) e a ABRASF 2.04, o percentual
+#' outro: São Paulo manda a fração (0,05 é 5%) e a ABRASF 2, o percentual
 #' (5 é 5%); o Modelo Conceitual da ABRASF 1.00 não diz qual, e cada município
-#' escolhe. `aliquota_percentual` traz o percentual nos dois leiautes que dizem
-#' a escala e `NA` na ABRASF 1.00.
+#' escolhe. `aliquota_percentual` traz o percentual onde o manual diz a escala
+#' (São Paulo e as versões 2.02, 2.03 e 2.04 da ABRASF) e `NA` nas outras.
 #'
 #' @section nfses:
 #' Uma linha por NFS-e: `identificacao` (o documento do prestador, o número e
@@ -199,15 +213,19 @@ abrasf_2  ; incentivo_cultural ; 2     ; N\u00e3o
 #' `iss_retido` (`TRUE` ou `FALSE`), `aliquota_percentual`, o significado de
 #' cada código numa coluna `*_descricao` ao lado dele (o tipo do RPS, a
 #' natureza da operação, a exigibilidade do ISS, a tributação, o regime
-#' especial, a opção pelo Simples e o incentivo cultural) e `arquivo`.
+#' especial, a opção pelo Simples, o incentivador cultural da ABRASF 1.00 e o
+#' incentivo fiscal da ABRASF 2) e `arquivo`.
 #' `emissao` e `cancelamento` ficam como estão no XML (texto): os padrões
 #' municipais não trazem o fuso, e a hora é a do município; `data_emissao`,
-#' `competencia` e `rps_emissao` são datas. Os municípios vêm pelo código do
-#' IBGE.
+#' `competencia` e `rps_emissao` são datas (a competência em AAAAMM, como o
+#' Modelo Conceitual da ABRASF 1.00 descreve, vira o dia 1º do mês; outro
+#' formato fica `NA`, com o texto nos `campos`). Os municípios vêm pelo código
+#' do IBGE.
 #'
 #' @section campos:
 #' Com `todos_os_campos = TRUE`, o padrão. Todos os campos de cada NFS-e,
-#' menos os da assinatura digital, um por linha: `identificacao`, `caminho`
+#' menos os da assinatura digital (o `Signature` e, em São Paulo, a
+#' `Assinatura`), um por linha: `identificacao`, `caminho`
 #' (a partir do `NFe` de São Paulo ou do `InfNfse` da ABRASF, sem os
 #' prefixos), `grupo`, `campo` e `valor`.
 #'
@@ -223,7 +241,9 @@ abrasf_2  ; incentivo_cultural ; 2     ; N\u00e3o
 #'   Reforma Tributária, versão 2) e o Manual de Utilização do Web Service,
 #'   versão 3.3.4; ABRASF: o schema nfse.xsd e o Modelo Conceitual da versão
 #'   1.00 (29/12/2008) e o schema e o Manual de Orientação do Contribuinte da
-#'   versão 2.04 (setembro de 2018), da biblioteca pública da ABRASF.
+#'   versão 2.04 (setembro de 2018), da biblioteca pública da ABRASF, e os
+#'   Manuais de Integração das versões 2.02 (novembro de 2012) e 2.03
+#'   (fevereiro de 2016), para a escala da alíquota.
 #' @examples
 #' nfse = system.file("exemplos", "nfse_prefeitura_sp.xml", package = "RNFe")
 #' lida = nfse_prefeitura_ler(nfse)
@@ -266,11 +286,22 @@ colunas_da_nfse_de_prefeitura = function(xml_lido, nome_do_arquivo, todos_os_cam
     identificacao = paste(valores$prestador_documento, valores$numero, valores$codigo_verificacao, sep = "-")
     versao = if (leiaute == "sao_paulo") rep(NA_character_, length(notas)) else
       xml2::xml_attr(xml2::xml_find_first(notas, "parent::*[local-name()='Nfse']"), "versao")
-    # Na ABRASF, a nota dentro do CompNfse vem com o cancelamento ou a substituição, quando houve.
+    # Na ABRASF, a nota dentro do CompNfse vem com o cancelamento ou a substituição, quando houve. A data do cancelamento
+    # muda de nome e de lugar (DataHoraCancelamento na 1.00, DataHora na 2.04): vale a que estiver no NfseCancelamento.
     comp_nfse_de_cada = xml2::xml_find_first(notas, "parent::*/parent::*[local-name()='CompNfse']")
+    cancelamento_de_cada = xml2::xml_find_first(comp_nfse_de_cada, "./*[local-name()='NfseCancelamento']")
+    substituicao_de_cada = xml2::xml_find_first(comp_nfse_de_cada, "./*[local-name()='NfseSubstituicao']")
+    if (leiaute != "sao_paulo") {
+      data_do_cancelamento = xml2::xml_find_first(
+        cancelamento_de_cada, ".//*[local-name()='DataHoraCancelamento' or local-name()='DataHora']"
+      )
+      valores$cancelamento = xml2::xml_text(data_do_cancelamento)
+    }
     nfses[[leiaute]] = c(list(identificacao = identificacao, leiaute = rep(LEIAUTES_DA_NFSE_DE_PREFEITURA[[leiaute]], length(notas)),
                               versao = versao),
                          valores, list(dentro_do_comp_nfse = !is.na(xml2::xml_name(comp_nfse_de_cada)),
+                                       com_cancelamento = !is.na(xml2::xml_name(cancelamento_de_cada)),
+                                       com_substituicao = !is.na(xml2::xml_name(substituicao_de_cada)),
                                        arquivo = rep(nome_do_arquivo, length(notas))))
     if (todos_os_campos) {
       campos[[leiaute]] = campos_da_nfse_de_prefeitura(notas, identificacao)
@@ -328,13 +359,16 @@ caminho_pelo_nome_local = function(caminho) {
   paste(alternativas, collapse = " | ")
 }
 
-# Todos os campos (os elementos sem filhos) de cada NFS-e, menos os da assinatura, com o caminho a partir da nota e
-# sem os prefixos do namespace.
+# Todos os campos (os elementos sem filhos) de cada NFS-e, menos os da assinatura digital (o Signature e, em São Paulo,
+# a Assinatura da NFS-e), com o caminho a partir da nota e sem os prefixos do namespace.
+CAMINHO_DOS_CAMPOS_DA_NFSE_DE_PREFEITURA = paste0(".//*[not(*)][not(ancestor::*[local-name()='Signature'])]",
+                                                  "[not(local-name()='Assinatura')]")
+
 campos_da_nfse_de_prefeitura = function(notas, identificacao) {
   colunas = list(identificacao = character(), caminho = character(), grupo = character(), campo = character(),
                  valor = character())
   for (posicao in seq_along(notas)) {
-    folhas = xml2::xml_find_all(notas[[posicao]], ".//*[not(*)][not(ancestor::*[local-name()='Signature'])]")
+    folhas = xml2::xml_find_all(notas[[posicao]], CAMINHO_DOS_CAMPOS_DA_NFSE_DE_PREFEITURA)
     # O caminho de cada campo começa no da nota: o resto dele é o caminho a partir dela.
     caminhos = substring(xml2::xml_path(folhas), nchar(xml2::xml_path(notas[[posicao]])) + 2)
     grupos = xml2::xml_name(xml2::xml_find_first(folhas, "parent::*"))
@@ -358,33 +392,53 @@ resumo_dos_arquivos_da_prefeitura = function(arquivos_lidos) {
 # As datas, a situação, o ISS retido, a alíquota em percentual e o significado de cada código.
 completar_as_nfses_de_prefeitura = function(nfses) {
   # A data e hora ficam como no XML: os padrões municipais não trazem o fuso, e a hora é a do município.
-  nfses$data_emissao = as.Date(substr(nfses$data_emissao, 1, 10))
-  nfses$competencia = as.Date(substr(nfses$competencia, 1, 10))
-  nfses$rps_emissao = as.Date(substr(nfses$rps_emissao, 1, 10))
+  nfses$data_emissao = data_da_nfse_de_prefeitura(nfses$data_emissao)
+  nfses$competencia = data_da_nfse_de_prefeitura(nfses$competencia)
+  nfses$rps_emissao = data_da_nfse_de_prefeitura(nfses$rps_emissao)
   situacao = rep(NA_character_, nrow(nfses))
   de_sao_paulo = nfses$leiaute == LEIAUTES_DA_NFSE_DE_PREFEITURA[["sao_paulo"]]
   situacao[de_sao_paulo] = c(N = "Normal", C = "Cancelada", E = "Extraviada")[nfses$situacao_codigo[de_sao_paulo]]
-  # Na ABRASF, o CompNfse diz: com o cancelamento, cancelada; com a substituição, substituída; sem os dois, normal.
-  # Sem o CompNfse (só a nota), o XML não diz a situação.
+  # Na ABRASF, o CompNfse diz: com o cancelamento, cancelada; com a substituição, substituída (a substituta cancela a
+  # nota, e o CompNfse pode trazer os dois); sem os dois, normal. Sem o CompNfse (só a nota), o XML não diz a situação.
   da_abrasf = !de_sao_paulo
   situacao[da_abrasf & nfses$dentro_do_comp_nfse] = "Normal"
-  situacao[da_abrasf & !is.na(nfses$nfse_substituidora)] = "Substitu\u00edda"
-  situacao[da_abrasf & !is.na(nfses$cancelamento)] = "Cancelada"
+  situacao[da_abrasf & nfses$com_cancelamento] = "Cancelada"
+  situacao[da_abrasf & nfses$com_substituicao] = "Substitu\u00edda"
   nfses = inserir_coluna_depois(nfses, "situacao", situacao, "situacao_codigo")
   nfses$dentro_do_comp_nfse = NULL
+  nfses$com_cancelamento = NULL
+  nfses$com_substituicao = NULL
+  # São Paulo usa o boolean do XML Schema (true, false, 1 ou 0); a ABRASF, 1 (sim) e 2 (não).
   iss_retido = rep(NA, nrow(nfses))
-  iss_retido[nfses$iss_retido_codigo %in% c("true", "1")] = TRUE
-  iss_retido[nfses$iss_retido_codigo %in% c("false", "2")] = FALSE
+  iss_retido[de_sao_paulo & nfses$iss_retido_codigo %in% c("true", "1")] = TRUE
+  iss_retido[de_sao_paulo & nfses$iss_retido_codigo %in% c("false", "0")] = FALSE
+  iss_retido[da_abrasf & nfses$iss_retido_codigo %in% "1"] = TRUE
+  iss_retido[da_abrasf & nfses$iss_retido_codigo %in% "2"] = FALSE
   nfses = inserir_coluna_depois(nfses, "iss_retido", iss_retido, "iss_retido_codigo")
+  # O percentual só onde o manual diz a escala: São Paulo (a fração) e as ABRASF 2.02, 2.03 e 2.04 (o percentual, nos
+  # Manuais de Integração 2.02 e 2.03 e no Manual de Orientação do Contribuinte 2.04).
   percentual = rep(NA_real_, nrow(nfses))
   percentual[de_sao_paulo] = round(nfses$aliquota[de_sao_paulo] * 100, 4)
-  da_abrasf_2 = nfses$leiaute == LEIAUTES_DA_NFSE_DE_PREFEITURA[["abrasf_2"]]
-  percentual[da_abrasf_2] = nfses$aliquota[da_abrasf_2]
+  em_percentual = nfses$leiaute == LEIAUTES_DA_NFSE_DE_PREFEITURA[["abrasf_2"]] &
+    nfses$versao %in% VERSOES_DA_ABRASF_COM_ALIQUOTA_EM_PERCENTUAL
+  percentual[em_percentual] = nfses$aliquota[em_percentual]
   nfses = inserir_coluna_depois(nfses, "aliquota_percentual", percentual, "aliquota")
   for (coluna in unique(SIGNIFICADOS_DA_NFSE_DE_PREFEITURA$coluna)) {
     nfses = inserir_coluna_depois(nfses, paste0(coluna, "_descricao"), significados_da_coluna(nfses, coluna), coluna)
   }
   nfses
+}
+
+# A data do texto do XML: a data ISO (AAAA-MM-DD, com ou sem a hora) e a competência em AAAAMM do Modelo Conceitual
+# da ABRASF 1.00, que vira o dia 1º do mês; outro formato fica NA (o texto continua nos campos).
+data_da_nfse_de_prefeitura = function(textos) {
+  datas = as.Date(rep(NA_character_, length(textos)))
+  no_formato_iso = grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", textos)
+  datas[no_formato_iso] = as.Date(substr(textos[no_formato_iso], 1, 10), format = "%Y-%m-%d")
+  so_mes_e_ano = grepl("^[0-9]{6}$", textos)
+  datas[so_mes_e_ano] = as.Date(paste0(substr(textos[so_mes_e_ano], 1, 4), "-", substr(textos[so_mes_e_ano], 5, 6), "-01"),
+                                format = "%Y-%m-%d")
+  datas
 }
 
 # O significado do código de cada linha, pela tabela do leiaute dela.

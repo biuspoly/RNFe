@@ -194,9 +194,11 @@ lida$arquivos   # o que foi lido, e o motivo de cada arquivo que não deu
 Lê a NFS-e dos padrões municipais, anteriores à NFS-e Nacional: o leiaute da Prefeitura de São Paulo (também o da
 Reforma, com a chave da nota no ambiente nacional) e o padrão ABRASF, nas versões 1.00 (também a do Ginfes, com
 prefixo no namespace) e 2.0x. As regras vêm dos schemas e dos manuais oficiais (o da Prefeitura de São Paulo, 3.3.4, e
-os da ABRASF, 1.00 e 2.04), com o significado de cada código ao lado dele. A alíquota vem como está no XML, e a escala
-muda: São Paulo manda a fração (0,05), a ABRASF 2.04 o percentual (5), e a ABRASF 1.00 não diz (no acervo, há
-municípios dos dois jeitos); `aliquota_percentual` traz o percentual onde o manual diz a escala. Os municípios com
+os da ABRASF, 1.00, 2.02, 2.03 e 2.04), com o significado de cada código ao lado dele. A alíquota vem como está no XML, e a escala
+muda: São Paulo manda a fração (0,05), a ABRASF 2 o percentual (5), e a ABRASF 1.00 não diz (no acervo, há
+municípios dos dois jeitos); `aliquota_percentual` traz o percentual onde o manual diz a escala. O código do serviço
+de São Paulo é o da tabela do município e fica em `codigo_tributacao_municipio`, como o da ABRASF; o item da lista da
+LC 116, que só a ABRASF traz, fica em `item_lista_servico`. Os municípios com
 leiaute próprio, fora desses três, ficam em `arquivos` com o motivo. Conferido com as 1.921 NFS-e de prefeitura do
 acervo (que não estão no repositório) contra outro sistema: o número, o prestador, o tomador, o valor dos serviços, o
 valor líquido e o cancelamento bateram em todas as que os dois leram (num prestador, o outro sistema ficou vazio).
@@ -605,6 +607,7 @@ tabela_fiscal("local_operacao_ibs_cbs")  # o cIndOp (local da operação), do An
 tabela_fiscal("biocombustivel_ibs_cbs")  # o etanol anidro obrigatório em cada gasolina C, com a vigência
 tabela_fiscal("combustiveis_monofasicos") # os combustíveis do ICMS monofásico e a alíquota ad rem de cada período
 tabela_fiscal("cst_icms")                # e "origem", "csosn", "cst_ipi", "cst_pis", "cst_cofins"
+tabela_fiscal("cest")                    # o CEST da tabela do SPED, com a vigência de cada código
 tabela_fiscal("municipios")              # os municípios do IBGE: código de 7 dígitos, nome e UF
 tabela_fiscal("meios_pagamento")         # o tPag da NF-e e da NFC-e (PIX, boleto...), e "bandeiras_cartao"
 tabela_fiscal("codigos_dos_campos")      # o significado dos códigos do leiaute (tpEmis, modFrete, toma...)
@@ -616,7 +619,9 @@ A maioria tem o `inicio` e o `fim` da vigência (vazios no CSOSN, no CST do IBS 
 fonte não data; a ajuda de `tabela_fiscal()` diz as colunas de cada uma). As
 fontes são oficiais: o Portal da NF-e (CFOP, Reforma, combustíveis, meios de pagamento e bandeiras), o Portal da
 NFS-e Nacional (o local da operação da Reforma), o Portal Único
-Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs), e a API de localidades do IBGE (municípios).
+Siscomex (NCM), as tabelas do SPED Fiscal, da Receita (CSTs e CEST), e a API de localidades do IBGE (municípios).
+O CEST traz as descrições até 31/08/2023; desde então o SPED só manda conferir o Convênio ICMS 142/18, e é esse o
+texto que vem para as notas desse período (o do Confaz tem códigos com mais de uma redação em vigor, e não entrou).
 O CST e a classificação do IBS e da CBS trazem os indicadores da planilha oficial (os grupos que cada um exige ou
 não permite no documento e os documentos em que a classificação vale), que as regras de validação da NT 2025.002
 consultam. As alíquotas do IBS e da CBS vêm da LC 214/2025: 0,1% de IBS da UF e 0,9% de CBS em 2026, e 0,05% de IBS

@@ -169,6 +169,10 @@ test_that("arquivo que n\u00e3o d\u00e1 para ler n\u00e3o atrapalha os outros, e
   nfse_com_nome_de_nfe = "<NFe><ChaveNFe><InscricaoPrestador>1</InscricaoPrestador></ChaveNFe></NFe>"
   expect_identical(nfe_ler(nfse_com_nome_de_nfe)$arquivos$problema,
                    "\u00e9 uma NFS-e de prefeitura (o XML come\u00e7a por <NFe>), lida por nfse_prefeitura_ler()")
+  # A NF-e (o NFe com o infNFe) lida por outro leitor não é dada como "sem o infNFe".
+  problema_da_nfe = cte_ler("<NFe><infNFe Id=\"NFe1\"><ide/></infNFe></NFe>")$arquivos$problema
+  expect_match(problema_da_nfe, "(o XML come\u00e7a por <NFe>)", fixed = TRUE)
+  expect_false(grepl("sem o infNFe", problema_da_nfe, fixed = TRUE))
   # O leiaute próprio de um município (nem ABRASF nem São Paulo) não é lido.
   expect_match(nfse_prefeitura_ler("<CompNfe><Nfe><InfNFe><NumeroNfe>1</NumeroNfe></InfNFe></Nfe></CompNfe>")$arquivos$problema,
                "num leiaute que o RNFe n\u00e3o l\u00ea")

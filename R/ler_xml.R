@@ -146,7 +146,7 @@ problema_sem_documento = function(xml_lido, nome_do_documento) {
     return(paste0("parece uma NFS-e de prefeitura (o XML come\u00e7a por <", raiz_do_xml, ">) num leiaute que o RNFe n\u00e3o l\u00ea ",
                   "(nem o da ABRASF nem o de S\u00e3o Paulo)"))
   }
-  if (raiz_do_xml == "NFe") {
+  if (raiz_do_xml == "NFe" && length(buscar_todos(xml_lido, "/NFe/infNFe")) == 0) {
     return(paste0("n\u00e3o \u00e9 ", nome_do_documento, ": o XML come\u00e7a por <NFe>, mas sem o infNFe da NF-e"))
   }
   paste0("n\u00e3o \u00e9 ", nome_do_documento, " (o XML come\u00e7a por <", raiz_do_xml, ">)")

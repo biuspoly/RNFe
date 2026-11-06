@@ -197,6 +197,7 @@ csosn                 csosn_descricao            csosn                 descricao
 cst_ipi               cst_ipi_descricao          cst_ipi               descricao
 cst_pis               cst_pis_descricao          cst_pis               descricao
 cst_cofins            cst_cofins_descricao       cst_cofins            descricao
+cest                  cest_descricao             cest                  descricao
 cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
 classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 ")
@@ -334,7 +335,7 @@ autorizacao      card/cAut  texto
 #' [tabela_fiscal()]): `ncm_descricao` (a descrição completa, da posição até o
 #' código), `cfop_titulo`, `origem_descricao`, `cst_icms_descricao`,
 #' `csosn_descricao`, `cst_ipi_descricao`, `cst_pis_descricao`,
-#' `cst_cofins_descricao`, `cst_ibs_cbs_descricao` e
+#' `cst_cofins_descricao`, `cest_descricao`, `cst_ibs_cbs_descricao` e
 #' `classificacao_ibs_cbs_nome`. `valor_total_ibs_monofasico` e
 #' `valor_total_cbs_monofasica` são os totais do monofásico do item
 #' (combustíveis: `vTotIBSMonoItem` e `vTotCBSMonoItem`; em `notas`,

@@ -2,7 +2,7 @@
 # Portal da NF-e e as tabelas do SPED), não das cópias que vão no pacote.
 
 test_that("cada tabela tem as colunas e os tipos certos", {
-  for (nome in c("origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cst_ibs_cbs")) {
+  for (nome in c("origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cest", "cst_ibs_cbs")) {
     tabela = tabela_fiscal(nome)
     expect_identical(names(tabela)[1:4], c("codigo", "descricao", "inicio", "fim"))
     expect_s3_class(tabela$inicio, "Date")
@@ -246,6 +246,20 @@ test_that("a descri\u00e7\u00e3o muda com a data da nota", {
   # O PIX dinâmico (17) só entrou na tabela de meios de pagamento em 01/07/2024.
   expect_identical(descricao_na_data("meios_pagamento", c("17", "17"), as.Date(c("2024-06-30", "2024-07-01"))),
                    c(NA, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico"))
+})
+
+test_that("o CEST como na tabela 996 do SPED: a descri\u00e7\u00e3o at\u00e9 08/2023, e depois o aviso do Conv\u00eanio ICMS 142/18", {
+  # Lidos do arquivo baixado do SPED (tabela externa 996, versão 18, de 03/10/2024).
+  cest = tabela_fiscal("cest")
+  expect_true(all(grepl("^[0-9]{7}$", cest$codigo)))
+  expect_identical(length(unique(cest$codigo)), 1049L)
+  expect_identical(
+    descricao_na_data("cest", c("0100100", "0100100"), as.Date(c("2023-08-31", "2023-09-01"))),
+    c(paste("Catalisadores em colmeia cer\u00e2mica ou met\u00e1lica para convers\u00e3o catal\u00edtica de gases de escape de",
+            "ve\u00edculos e outros catalisadores"),
+      "Verificar, para o CEST, a descri\u00e7\u00e3o vigente para cada per\u00edodo no Conv\u00eanio ICMS 142/18")
+  )
+  expect_identical(descricao_na_data("cest", "0100100", as.Date("2017-12-31")), NA_character_)
 })
 
 # O repositório de mentira: cada tabela do pacote como está, menos as trocadas, e a lista de conferência delas com a
