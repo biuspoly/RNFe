@@ -135,14 +135,19 @@ problema_sem_documento = function(xml_lido, nome_do_documento) {
     }
     return(leitor_do_documento)
   }
-  # A NFS-e de prefeitura (o padrão Abrasf, o Ginfes e os formatos próprios) usa estes nomes; algumas, o NFe da NF-e,
-  # mas sem o infNFe dela.
-  if (raiz_do_xml %in% c("CompNfse", "Nfse", "CompNfe")) {
-    return(paste0("parece uma NFS-e de prefeitura (o XML come\u00e7a por <", raiz_do_xml, ">), que o RNFe ainda n\u00e3o l\u00ea"))
+  # A NFS-e de prefeitura que o nfse_prefeitura_ler() lê: a da ABRASF (o InfNfse, também no Ginfes) e a de São Paulo (o
+  # NFe com o ChaveNFe, sem o infNFe da NF-e). Os outros nomes de NFS-e de prefeitura são de leiautes próprios.
+  da_abrasf = length(xml2::xml_find_all(xml_lido, "//*[local-name()='InfNfse']")) > 0
+  de_sao_paulo = length(xml2::xml_find_all(xml_lido, "//*[local-name()='NFe'][*[local-name()='ChaveNFe']]")) > 0
+  if ((da_abrasf || de_sao_paulo) && nome_do_documento != "uma NFS-e de prefeitura") {
+    return(paste0("\u00e9 uma NFS-e de prefeitura (o XML come\u00e7a por <", raiz_do_xml, ">), lida por nfse_prefeitura_ler()"))
   }
-  if (raiz_do_xml %in% c("NFe", "nfe")) {
-    return(paste0("n\u00e3o \u00e9 ", nome_do_documento, ": o XML come\u00e7a por <", raiz_do_xml, ">, mas sem o infNFe da NF-e ",
-                  "(algumas prefeituras usam esse nome na NFS-e, que o RNFe ainda n\u00e3o l\u00ea)"))
+  if (raiz_do_xml %in% c("CompNfse", "Nfse", "CompNfe", "nfe")) {
+    return(paste0("parece uma NFS-e de prefeitura (o XML come\u00e7a por <", raiz_do_xml, ">) num leiaute que o RNFe n\u00e3o l\u00ea ",
+                  "(nem o da ABRASF nem o de S\u00e3o Paulo)"))
+  }
+  if (raiz_do_xml == "NFe") {
+    return(paste0("n\u00e3o \u00e9 ", nome_do_documento, ": o XML come\u00e7a por <NFe>, mas sem o infNFe da NF-e"))
   }
   paste0("n\u00e3o \u00e9 ", nome_do_documento, " (o XML come\u00e7a por <", raiz_do_xml, ">)")
 }

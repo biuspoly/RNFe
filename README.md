@@ -175,12 +175,31 @@ lida$arquivos   # o que foi lido, e o motivo de cada arquivo que não deu
 
 Lê a NFS-e do padrão nacional (leiautes 1.00 e 1.01) pelo schema oficial mais recente
 (NFSe-ESQUEMAS_XSD-v1.01, de 09/02/2026), com a chave de acesso de 50 posições. Junta o que quem emitiu
-declarou (a DPS) e o que o sistema nacional calculou (ISSQN, valor líquido, IBS e CBS). A NFS-e de prefeitura,
-no padrão próprio de cada município, não é lida. Conferido com 11 mil NFS-e reais (que não estão no
-repositório), contra outro sistema e contra um segundo leitor do XML: os campos comparados bateram em todas.
+declarou (a DPS) e o que o sistema nacional calculou (ISSQN, valor líquido, IBS e CBS). Conferido com 11 mil NFS-e
+reais (que não estão no repositório), contra outro sistema e contra um segundo leitor do XML: os campos comparados
+bateram em todas.
 
 No MDF-e e na NFS-e a tabela `campos` vem por padrão (`todos_os_campos = FALSE` a deixa de fora); na NF-e e
 no CT-e, que já têm tabelas para quase tudo, só com `todos_os_campos = TRUE`.
+
+## Ler o XML da NFS-e de prefeitura
+
+```r
+lida = nfse_prefeitura_ler(list.files("nfse", pattern = "xml$", full.names = TRUE))
+lida$nfses      # uma linha por NFS-e, com as mesmas colunas nos três leiautes
+lida$campos     # todos os campos, um por linha
+lida$arquivos   # o que foi lido, e o motivo de cada arquivo que não deu
+```
+
+Lê a NFS-e dos padrões municipais, anteriores à NFS-e Nacional: o leiaute da Prefeitura de São Paulo (também o da
+Reforma, com a chave da nota no ambiente nacional) e o padrão ABRASF, nas versões 1.00 (também a do Ginfes, com
+prefixo no namespace) e 2.0x. As regras vêm dos schemas e dos manuais oficiais (o da Prefeitura de São Paulo, 3.3.4, e
+os da ABRASF, 1.00 e 2.04), com o significado de cada código ao lado dele. A alíquota vem como está no XML, e a escala
+muda: São Paulo manda a fração (0,05), a ABRASF 2.04 o percentual (5), e a ABRASF 1.00 não diz (no acervo, há
+municípios dos dois jeitos); `aliquota_percentual` traz o percentual onde o manual diz a escala. Os municípios com
+leiaute próprio, fora desses três, ficam em `arquivos` com o motivo. Conferido com as 1.921 NFS-e de prefeitura do
+acervo (que não estão no repositório) contra outro sistema: o número, o prestador, o tomador, o valor dos serviços, o
+valor líquido e o cancelamento bateram em todas as que os dois leram (num prestador, o outro sistema ficou vazio).
 
 ## Ler o XML dos eventos
 

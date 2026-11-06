@@ -13,8 +13,9 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     documentos), o da GTV-e (com os
     valores levados de cada espécie), o do MDF-e (com o
     percurso, os documentos de cada descarregamento, os veículos, os
-    condutores e os seguros) e o da NFS-e Nacional (com a DPS declarada e o
-    ISSQN, as retenções e o valor líquido calculados pelo sistema nacional),
+    condutores e os seguros), o da NFS-e Nacional (com a DPS declarada e o
+    ISSQN, as retenções e o valor líquido calculados pelo sistema nacional) e
+    o da NFS-e de prefeitura (o leiaute de São Paulo e o padrão ABRASF),
     já com os campos da Reforma Tributária (IBS e CBS) e o nome de cada CFOP
     e CST como a tabela oficial registrava na data do documento. Lê também os
     eventos de todos eles (cancelamento, carta de correção, manifestação do
@@ -117,6 +118,7 @@ Collate:
     'nfe_conferir.R'
     'nfe_conferir_regras.R'
     'nfse_emitir.R'
+    'nfse_prefeitura_ler.R'
     'sefaz_autorizar.R'
     'sefaz_evento.R'
     'sefaz_evento_cte.R'

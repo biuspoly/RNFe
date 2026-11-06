@@ -8,7 +8,8 @@
 #'   chave achada num PDF ou numa foto, pelo texto, QR-Code ou OCR);
 #' - a leitura do XML em tabelas: [nfe_ler()] (também o resumo que a
 #'   Distribuição de DF-e entrega), [cte_ler()], [cte_simplificado_ler()],
-#'   [gtve_ler()], [mdfe_ler()], [nfse_ler()] e, para os eventos de todos eles
+#'   [gtve_ler()], [mdfe_ler()], [nfse_ler()], [nfse_prefeitura_ler()] (a
+#'   NFS-e de São Paulo e a do padrão ABRASF) e, para os eventos de todos eles
 #'   (cancelamento, carta de correção, manifestação, encerramento...),
 #'   [eventos_ler()];
 #' - as tabelas fiscais, com a vigência de cada código, e os municípios do

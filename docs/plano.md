@@ -1,11 +1,11 @@
 # Plano do RNFe
 
-Situação em 05/11/2026: **etapas 1 a 4 feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
+Situação em 06/11/2026: **etapas 1 a 5 e a última feitas, e revisadas** (seção "Revisão das etapas 1 a 3", no fim
 das da etapa 3). Etapa 1: chave de acesso, leitura do XML da NF-e/NFC-e e tabelas fiscais, conferidas com
 notas reais; o CEST foi adiado por decisão do usuário. Etapa 2: a leitura do CT-e e do CT-e OS (14.370 CT-e
 reais), da GTV-e, do CT-e simplificado e do MDF-e (os dois pelo schema oficial, sem documentos reais para
-comparar), da NFS-e Nacional (11.207 reais) e dos eventos de todos; a NFS-e de prefeitura fica para depois, por
-decisão do usuário. Etapa 3:
+comparar), da NFS-e Nacional (11.207 reais) e dos eventos de todos; a NFS-e de prefeitura (São Paulo e ABRASF, 1.921
+reais) entrou em 06/11/2026, depois da última etapa. Etapa 3:
 certificado, SEFAZ (status, consulta pela chave, cadastro, MDF-e não encerrados, Distribuição da NF-e e do
 CT-e) e a NFS-e Nacional, em homologação, e a situação do CNPJ na Receita. O que a revisão de 04/11/2026
 deixou em aberto está no fim dela. Etapa 4 (a Reforma): as tabelas, a conferência e o cálculo prontos, e
@@ -34,7 +34,7 @@ Cada etapa já é útil sozinha.
 | 1 | Chave de acesso: conferir e desmontar, com o CNPJ alfanumérico | Não | pronta |
 | 1 | Ler a nota de produto: o XML vira tabelas (cabeçalho, itens, impostos, parcelas) | Não | pronta |
 | 1 | Tabelas fiscais (CFOP, CST, CSOSN; depois NCM, CEST, as da Reforma e os municípios), com a data em que cada linha valeu | Não | prontas, menos o CEST (adiado, veja abaixo) |
-| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura fica para depois |
+| 2 | Ler CT-e, MDF-e e a NFS-e nacional, e os eventos de todos | Não | prontos (CT-e, CT-e OS, CT-e simplificado, GTV-e, MDF-e, NFS-e Nacional, eventos e o resumo da NF-e); a NFS-e de prefeitura (São Paulo e ABRASF 1.00 e 2.0x) pronta em 06/11/2026 |
 | 3 | Certificado digital, SEFAZ no ar, baixar as notas recebidas | Sim | pronta, em homologação: certificado, status do serviço e consulta pela chave nas 27 UFs (NF-e, NFC-e, CT-e, CT-e OS, GTV-e e MDF-e), MDF-e não encerrados, consulta de cadastro nas 26 que têm o serviço e a Distribuição de DF-e da NF-e e do CT-e, em homologação; da NFS-e Nacional, a consulta pela chave (com os eventos) e a distribuição, na Produção Restrita; a chave num PDF ou numa foto; a situação do CNPJ na Receita (sem certificado) |
 | 4 | Calculadora da Reforma (CBS e IBS): conferir e simular | Não | pronta (04/11/2026) e revisada (05/11/2026): as tabelas, a conferência (`ibs_cbs_conferir`) e o cálculo (`ibs_cbs_calcular`, também para simular outro ano) |
 | 5 | Ler o SPED; pré-conferência do que a SEFAZ rejeitaria | Não | pronta e revisada (05/11/2026): a EFD ICMS/IPI em tabelas, o cruzamento com as NF-e e a pré-conferência da NF-e e da NFC-e (`nfe_conferir`) |
@@ -65,7 +65,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | emitir, incluir condutor e encerrar: prontos em homologação; a inclusão de DF-e não |
 | CT-e: consultar e registrar desacordo | não | não | não | consultar: pronto em homologação (etapa 3); desacordo e o cancelamento dele: prontos em homologação |
 | NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | consultar e ler os eventos (etapa 3), emitir e cancelar: prontos na Produção Restrita |
-| NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: depois (decisão do usuário, 03/11/2026), pelos formatos que mais aparecem no acervo; emitir: não previsto, o padrão nacional substitui |
+| NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: pronto (06/11/2026), a ABRASF 1.00 e 2.0x e o leiaute de São Paulo; emitir: não previsto, o padrão nacional substitui |
 | Baixar o DANFSe oficial | não | sim | não | não existe mais: a API do DANFSe foi desativada em 03/08/2026 (NT 008/2026, veja a etapa 3); o DANFSe vai para os PDFs, no leiaute da NT 008 |
 | PDFs: DANFE, DANFCe, DACTE, DAMDFE, DANFSe, DACCe e etiqueta | não (usa o BrazilFiscalReport) | só o DANFSe não oficial | sim | prontos (05/11/2026): DANFE, DANFE Simplificado e Etiqueta, DANFE NFC-e, DACTE e DACTE OS, DAMDFE, DANFSe v2.0 e a carta de correção (NF-e e CT-e) |
 | Calculadora da Reforma: conferir e simular | não | não | não | etapa 4: conferir (NF-e e NFC-e, como a SEFAZ conferia no dia da emissão) e calcular ou simular outro ano, prontos |
@@ -1591,6 +1591,31 @@ fonte antes de corrigir:
 - **Números acima de 2.147.483.647** saíam "NA" no formato brasileiro.
 - **Testes:** o do QR-Code da NFC-e normal usava uma nota impossível (o `tpEmis` 1 com a chave de contingência); o do
   DANFE longo confere as três folhas.
+
+## A NFS-e de prefeitura (06/11/2026)
+
+- **O acervo** (as NFS-e de prefeitura do Fiscal, fora as 11 mil nacionais): o leiaute de São Paulo (raiz `NFe` com o
+  `ChaveNFe`, 1.559), a ABRASF 1.00 (o `InfNfse` com o `Servico`: 173 sem namespace dentro do `CompNfse` e 147 do Ginfes,
+  com o prefixo `ns4`) e a ABRASF 2.0x (o `InfNfse` com a `DeclaracaoPrestacaoServico`, 42, nas versões 2.02 e 2.04).
+  Ficaram de fora dois leiautes próprios de município: o `nfe/NotaFiscal/NfeCabecario` (222) e o `CompNfe/Nfe/InfNFe`
+  (105, parecido com a ABRASF 2, com outros nomes). Para eles não achei schema nem manual público; o arquivo fica em
+  `arquivos`, com o motivo.
+- **As fontes:** os schemas da Prefeitura de São Paulo (o pacote da Reforma, TiposNFe_v02, baixado do portal da Nota
+  Fiscal Paulistana) e o Manual de Utilização do Web Service 3.3.4; o schema e o Modelo Conceitual da ABRASF 1.00
+  (29/12/2008) e o schema e o Manual de Orientação do Contribuinte da 2.04 (setembro de 2018), da biblioteca pública da
+  ABRASF. Os significados dos códigos saem desses manuais; o que eles não descrevem (o regime 0 do Ginfes, a opção 6 de
+  São Paulo, que aparecem no acervo) fica sem descrição.
+- **`nfse_prefeitura_ler()`:** as mesmas colunas nos três leiautes; os caminhos buscam pelo nome local, por causa do
+  prefixo do Ginfes. A identificação da nota é o documento do prestador, o número e o código de verificação (não há
+  chave); a data e hora ficam como no XML, sem fuso (os padrões municipais não trazem, e a hora é a do município). A
+  situação vem do status de São Paulo e, na ABRASF, do `CompNfse` (cancelamento e substituição); a nota da ABRASF
+  sozinha fica com a situação `NA`. A alíquota fica como no XML: São Paulo manda a fração (o manual: 5% é 0,05), a
+  ABRASF 2.04 o percentual (5% é 5), e a 1.00 não diz; no acervo da 1.00 há 0,02 e 2,00. `aliquota_percentual` só onde o
+  manual diz a escala.
+- **Conferido** com o cache do Fiscal (outro leitor, independente), pelo arquivo, nas 1.682 que os dois leram: o número,
+  o tomador, o valor dos serviços, o valor líquido e o cancelamento bateram em todas; o prestador, em todas menos uma, que
+  o Fiscal deixou vazio. As 19 identificações repetidas são a mesma nota guardada duas vezes (os valores iguais). A
+  leitura das 2.248 levou 22 segundos.
 
 ## O robô das tabelas
 

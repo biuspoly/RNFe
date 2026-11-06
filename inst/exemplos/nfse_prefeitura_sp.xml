@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NFS-e fictícia para os testes do RNFe: o leiaute da Prefeitura de São Paulo (o tpNFe dos schemas TiposNFe_v02),
+     com os campos da Reforma. Dados inventados; a assinatura é de mentira. -->
+<NFe>
+  <Assinatura>QVNTSU5BVFVSQSBERSBURVNURQ==</Assinatura>
+  <ChaveNFe>
+    <InscricaoPrestador>12345678</InscricaoPrestador>
+    <NumeroNFe>4321</NumeroNFe>
+    <CodigoVerificacao>ABCD1234</CodigoVerificacao>
+    <ChaveNotaNacional>35503082211222333000181000000000432126101234567893</ChaveNotaNacional>
+  </ChaveNFe>
+  <DataEmissaoNFe>2026-10-15T10:30:00</DataEmissaoNFe>
+  <NumeroLote>77</NumeroLote>
+  <ChaveRPS>
+    <InscricaoPrestador>12345678</InscricaoPrestador>
+    <SerieRPS>A</SerieRPS>
+    <NumeroRPS>99</NumeroRPS>
+  </ChaveRPS>
+  <TipoRPS>RPS</TipoRPS>
+  <DataEmissaoRPS>2026-10-15</DataEmissaoRPS>
+  <DataFatoGeradorNFe>2026-10-15T00:00:00</DataFatoGeradorNFe>
+  <CPFCNPJPrestador>
+    <CNPJ>11222333000181</CNPJ>
+  </CPFCNPJPrestador>
+  <RazaoSocialPrestador>EMPRESA DE TESTE LTDA</RazaoSocialPrestador>
+  <EnderecoPrestador>
+    <TipoLogradouro>R</TipoLogradouro>
+    <Logradouro>DE TESTE</Logradouro>
+    <NumeroEndereco>100</NumeroEndereco>
+    <Bairro>CENTRO</Bairro>
+    <Cidade>3550308</Cidade>
+    <UF>SP</UF>
+    <CEP>1001000</CEP>
+  </EnderecoPrestador>
+  <EmailPrestador>teste@exemplo.invalid</EmailPrestador>
+  <StatusNFe>C</StatusNFe>
+  <DataCancelamento>2026-10-16T09:00:00</DataCancelamento>
+  <TributacaoNFe>T</TributacaoNFe>
+  <OpcaoSimples>4</OpcaoSimples>
+  <ValorServicos>1000.00</ValorServicos>
+  <ValorDeducoes>100.00</ValorDeducoes>
+  <ValorPIS>6.50</ValorPIS>
+  <ValorCOFINS>30.00</ValorCOFINS>
+  <ValorINSS>0.00</ValorINSS>
+  <ValorIR>15.00</ValorIR>
+  <ValorCSLL>10.00</ValorCSLL>
+  <CodigoServico>2658</CodigoServico>
+  <AliquotaServicos>0.05</AliquotaServicos>
+  <ValorISS>45.00</ValorISS>
+  <ValorCredito>0.00</ValorCredito>
+  <ISSRetido>true</ISSRetido>
+  <CPFCNPJTomador>
+    <CNPJ>11444777000161</CNPJ>
+  </CPFCNPJTomador>
+  <RazaoSocialTomador>TOMADOR DE TESTE LTDA</RazaoSocialTomador>
+  <EnderecoTomador>
+    <Logradouro>AVENIDA DE TESTE</Logradouro>
+    <NumeroEndereco>200</NumeroEndereco>
+    <Bairro>CENTRO</Bairro>
+    <Cidade>3304557</Cidade>
+    <UF>RJ</UF>
+    <CEP>20010000</CEP>
+  </EnderecoTomador>
+  <Discriminacao>SERVICO DE TESTE DO PACOTE RNFE - SEM VALOR FISCAL</Discriminacao>
+  <ValorCargaTributaria>150.00</ValorCargaTributaria>
+  <MunicipioPrestacao>3550308</MunicipioPrestacao>
+  <ValorInicialCobrado>1000.00</ValorInicialCobrado>
+  <ValorFinalCobrado>1000.00</ValorFinalCobrado>
+  <ExigibilidadeSuspensa>0</ExigibilidadeSuspensa>
+  <PagamentoParceladoAntecipado>0</PagamentoParceladoAntecipado>
+  <NBS>101010100</NBS>
+</NFe>

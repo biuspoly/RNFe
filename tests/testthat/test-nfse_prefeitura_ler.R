@@ -1,0 +1,97 @@
+NFSE_DE_SAO_PAULO = system.file("exemplos", "nfse_prefeitura_sp.xml", package = "RNFe")
+NFSE_DA_ABRASF_1 = system.file("exemplos", "nfse_prefeitura_abrasf1.xml", package = "RNFe")
+NFSE_DA_ABRASF_2 = system.file("exemplos", "nfse_prefeitura_abrasf2.xml", package = "RNFe")
+
+test_that("o leiaute de S\u00e3o Paulo: a nota, o status, a fra\u00e7\u00e3o da al\u00edquota e os c\u00f3digos", {
+  lida = nfse_prefeitura_ler(NFSE_DE_SAO_PAULO)
+  nota = lida$nfses
+  expect_identical(nrow(nota), 1L)
+  expect_identical(nota$leiaute, "S\u00e3o Paulo")
+  expect_identical(nota$numero, "4321")
+  expect_identical(nota$codigo_verificacao, "ABCD1234")
+  expect_identical(nota$chave_nacional, "35503082211222333000181000000000432126101234567893")
+  expect_identical(nota$identificacao, "11222333000181-4321-ABCD1234")
+  expect_identical(nota$prestador_documento, "11222333000181")
+  expect_identical(nota$prestador_inscricao_municipal, "12345678")
+  expect_identical(nota$tomador_documento, "11444777000161")
+  expect_identical(nota$tomador_codigo_municipio, "3304557")
+  # A hora como está no XML (sem o fuso); a data, como data.
+  expect_identical(nota$emissao, "2026-10-15T10:30:00")
+  expect_identical(nota$data_emissao, as.Date("2026-10-15"))
+  expect_identical(nota$competencia, as.Date("2026-10-15"))
+  expect_identical(nota$situacao, "Cancelada")
+  expect_identical(nota$cancelamento, "2026-10-16T09:00:00")
+  expect_identical(nota$tributacao_descricao, "Tributado em S\u00e3o Paulo")
+  expect_identical(nota$optante_simples_descricao, "Optante pelo Simples Nacional (DAS)")
+  expect_identical(nota$rps_tipo_descricao, "Recibo Provis\u00f3rio de Servi\u00e7os")
+  expect_identical(nota$valor_servicos, 1000)
+  expect_identical(nota$valor_iss, 45)
+  expect_true(nota$iss_retido)
+  # São Paulo manda a fração: 0,05 é 5%.
+  expect_identical(nota$aliquota, 0.05)
+  expect_identical(nota$aliquota_percentual, 5)
+  expect_identical(nota$nbs, "101010100")
+  expect_true(is.na(nota$valor_liquido))
+  expect_true(any(lida$campos$campo == "ValorFinalCobrado"))
+  expect_true(all(lida$campos$identificacao == nota$identificacao))
+  expect_false(any(lida$campos$campo == "Assinatura" & lida$campos$grupo == "Signature"))
+})
+
+test_that("a ABRASF 1.00 do Ginfes, com prefixo no namespace", {
+  nota = nfse_prefeitura_ler(NFSE_DA_ABRASF_1)$nfses
+  expect_identical(nota$leiaute, "ABRASF 1")
+  expect_identical(nota$numero, "202600000000123")
+  expect_identical(nota$prestador_documento, "11444777000161")
+  expect_identical(nota$tomador_documento, "11222333000181")
+  expect_identical(nota$municipio_gerador, "2304400")
+  expect_identical(nota$natureza_operacao_descricao, "Tributa\u00e7\u00e3o no munic\u00edpio")
+  expect_identical(nota$regime_especial_descricao, "Sociedade de Profissionais")
+  expect_identical(nota$optante_simples_descricao, "N\u00e3o")
+  expect_identical(nota$competencia, as.Date("2026-10-01"))
+  expect_identical(nota$valor_liquido, 500)
+  expect_false(nota$iss_retido)
+  # A ABRASF 1.00 não diz a escala da alíquota: fica como veio, e o percentual, NA.
+  expect_identical(nota$aliquota, 0.02)
+  expect_true(is.na(nota$aliquota_percentual))
+  # Sem o CompNfse, o XML não diz se a nota foi cancelada.
+  expect_true(is.na(nota$situacao))
+  campos = nfse_prefeitura_ler(NFSE_DA_ABRASF_1)$campos
+  expect_true("Servico/Valores/ValorServicos" %in% campos$caminho)
+  expect_false(any(grepl(":", campos$caminho, fixed = TRUE)))
+})
+
+test_that("a ABRASF 2.04 dentro do CompNfse, cancelada", {
+  nota = nfse_prefeitura_ler(NFSE_DA_ABRASF_2)$nfses
+  expect_identical(nota$leiaute, "ABRASF 2")
+  expect_identical(nota$versao, "2.04")
+  expect_identical(nota$prestador_documento, "11444777000161")
+  expect_identical(nota$prestador_inscricao_municipal, "55555")
+  expect_identical(nota$tomador_documento, "12345678909")
+  expect_identical(nota$exigibilidade_iss_descricao, "Exig\u00edvel")
+  expect_identical(nota$regime_especial_descricao, "Microempresa ou Empresa de Pequeno Porte (ME EPP)")
+  expect_identical(nota$cnae, "7020400")
+  expect_identical(nota$base_calculo, 2000)
+  expect_identical(nota$valor_liquido, 1950)
+  expect_identical(nota$valor_ir, 30)
+  expect_true(nota$iss_retido)
+  # A ABRASF 2.04 manda o percentual: 5 é 5%.
+  expect_identical(nota$aliquota_percentual, 5)
+  expect_identical(nota$situacao, "Cancelada")
+  expect_identical(nota$cancelamento, "2026-10-26T11:00:00")
+})
+
+test_that("v\u00e1rios arquivos de uma vez, o texto do XML e o que n\u00e3o \u00e9 NFS-e de prefeitura", {
+  nacional = system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe")
+  lida = nfse_prefeitura_ler(c(NFSE_DE_SAO_PAULO, NFSE_DA_ABRASF_1, NFSE_DA_ABRASF_2, nacional, "nao_existe.xml"),
+                             todos_os_campos = FALSE)
+  expect_identical(lida$nfses$leiaute, c("S\u00e3o Paulo", "ABRASF 1", "ABRASF 2"))
+  expect_identical(lida$arquivos$nfses, c(1L, 1L, 1L, 0L, 0L))
+  expect_match(lida$arquivos$problema[4], "NFS-e de prefeitura")
+  expect_match(lida$arquivos$problema[5], "n\u00e3o encontrado")
+  expect_null(lida$campos)
+  texto = paste(readLines(NFSE_DA_ABRASF_2, encoding = "UTF-8"), collapse = "\n")
+  expect_identical(nfse_prefeitura_ler(texto)$nfses$numero, "789")
+  vazia = nfse_prefeitura_ler(character())
+  expect_identical(nrow(vazia$nfses), 0L)
+  expect_true("aliquota_percentual" %in% names(vazia$nfses))
+})

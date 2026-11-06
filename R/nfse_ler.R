@@ -154,8 +154,8 @@ destinatario_indicador             indDest        -
 #' o motivo do que não deu).
 #'
 #' Lê os leiautes 1.00 e 1.01 (raiz `NFSe`), de um arquivo, de vários de uma
-#' vez ou do próprio texto do XML. A NFS-e de prefeitura, no padrão próprio de
-#' cada município, não é lida. Um arquivo que não dá para ler não interrompe os
+#' vez ou do próprio texto do XML. A NFS-e de prefeitura (os padrões
+#' municipais) é lida por [nfse_prefeitura_ler()]. Um arquivo que não dá para ler não interrompe os
 #' outros: fica em `arquivos`, com o motivo. Para saber se a NFS-e foi
 #' cancelada ou substituída, leia os eventos dela com [eventos_ler()].
 #'

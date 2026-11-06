@@ -33,8 +33,8 @@ o motivo do que não deu).
 }
 \details{
 Lê os leiautes 1.00 e 1.01 (raiz \code{NFSe}), de um arquivo, de vários de uma
-vez ou do próprio texto do XML. A NFS-e de prefeitura, no padrão próprio de
-cada município, não é lida. Um arquivo que não dá para ler não interrompe os
+vez ou do próprio texto do XML. A NFS-e de prefeitura (os padrões
+municipais) é lida por \code{\link[=nfse_prefeitura_ler]{nfse_prefeitura_ler()}}. Um arquivo que não dá para ler não interrompe os
 outros: fica em \code{arquivos}, com o motivo. Para saber se a NFS-e foi
 cancelada ou substituída, leia os eventos dela com \code{\link[=eventos_ler]{eventos_ler()}}.
 
