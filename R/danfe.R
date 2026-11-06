@@ -28,6 +28,7 @@ aliquota_ipi    ; AL\u00cdQ. IPI           ; 1.00    ; right
 ")
 TAMANHO_DOS_PRODUTOS = 6
 ALTURA_DA_LINHA_DOS_PRODUTOS = 0.27
+FORMAS_DE_CONTINGENCIA_DO_DANFE = c("2" = "FS-IA", "4" = "EPEC", "5" = "FS-DA")
 
 #' DANFE da NF-e em PDF
 #'
@@ -43,11 +44,20 @@ ALTURA_DA_LINHA_DOS_PRODUTOS = 0.27
 #' os tem, e o espaço vai para os produtos. A nota de homologação leva "SEM
 #' VALOR FISCAL" em marca d'água.
 #'
+#' Na nota emitida em contingência com formulário de segurança (FS ou FS-DA,
+#' `tpEmis` 2 ou 5), vão o segundo código de barras "Dados da NF-e" e a
+#' representação numérica dele (o item 3.9.2 do manual); na do EPEC (`tpEmis`
+#' 4) ainda sem a autorização, o protocolo do EPEC (3.9.3). As duas levam
+#' "EMITIDA EM CONTINGÊNCIA" no começo das informações complementares.
+#'
 #' O DANFE só traz o que está no XML. Para a NFC-e, use [danfce_pdf()].
 #'
 #' @param xml A NF-e: o caminho do arquivo ou o texto do XML (o `nfeProc`, com
 #'   o protocolo; sem ele, o campo do protocolo fica vazio).
 #' @param arquivo O PDF a gravar.
+#' @param protocolo_epec Na nota emitida em contingência EPEC e ainda não
+#'   autorizada, o protocolo do evento EPEC e a data e a hora dele, como vão no
+#'   campo (por exemplo, `"891260000001234 21/10/2026 10:00:00"`).
 #' @return O caminho do PDF, invisível.
 #' @seealso [danfce_pdf()], [dacce_pdf()], [nfe_ler()]
 #' @source Manual de Orientação do Contribuinte 7.0, Anexo II: Manual de
@@ -59,7 +69,7 @@ ALTURA_DA_LINHA_DOS_PRODUTOS = 0.27
 #' nota = system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe")
 #' danfe_pdf(nota, file.path(tempdir(), "danfe.pdf"))
 #' @export
-danfe_pdf = function(xml, arquivo) {
+danfe_pdf = function(xml, arquivo, protocolo_epec = NULL) {
   documento = ler_o_xml_para_assinar(xml)
   informacao = xml2::xml_find_first(documento, "//*[local-name()='NFe']/*[local-name()='infNFe']")
   if (inherits(informacao, "xml_missing")) {
@@ -69,10 +79,12 @@ danfe_pdf = function(xml, arquivo) {
     stop("A NFC-e (modelo 65) tem o DANFE NFC-e: use danfce_pdf().", call. = FALSE)
   }
   nota = dados_do_danfe(documento, informacao)
+  nota$protocolo_epec = if (is.null(protocolo_epec)) NA_character_ else as.character(protocolo_epec)
   abrir_o_pdf(arquivo, LARGURA_DO_A4, ALTURA_DO_A4)
   on.exit(grDevices::dev.off(), add = TRUE)
   # A primeira folha abre antes de dividir os itens: a medida dos textos precisa da folha aberta.
   grid::grid.newpage()
+  nota$quadro_da_fatura = linhas_da_fatura(nota)
   paginas = paginar_o_danfe(nota)
   for (numero in seq_along(paginas)) {
     if (numero > 1) {
@@ -108,8 +120,8 @@ dados_do_danfe = function(documento, informacao) {
     transportador_documento = "transp/transporta/CNPJ|transp/transporta/CPF", transportador_ie = "transp/transporta/IE",
     transportador_endereco = "transp/transporta/xEnder", transportador_municipio = "transp/transporta/xMun",
     transportador_uf = "transp/transporta/UF", placa = "transp/veicTransp/placa", placa_uf = "transp/veicTransp/UF",
-    antt = "transp/veicTransp/RNTC", volumes = "transp/vol/qVol", especie = "transp/vol/esp", marca = "transp/vol/marca",
-    numeracao = "transp/vol/nVol", peso_liquido = "transp/vol/pesoL", peso_bruto = "transp/vol/pesoB",
+    antt = "transp/veicTransp/RNTC", fatura_valor_original = "cobr/fat/vOrig", fatura_desconto = "cobr/fat/vDesc",
+    fatura_valor_liquido = "cobr/fat/vLiq", destinatario_uf_do_endereco = "dest/enderDest/UF",
     informacoes_fisco = "infAdic/infAdFisco", informacoes_complementares = "infAdic/infCpl"
   )
   for (nome in names(caminhos)) {
@@ -125,7 +137,36 @@ dados_do_danfe = function(documento, informacao) {
   campo$duplicatas = duplicatas_do_danfe(informacao)
   campo$fatura = texto_pelo_caminho(informacao, "cobr/fat/nFat")
   campo$itens = itens_do_danfe(informacao)
+  campo$volumes = soma_dos_volumes(informacao, "qVol", 0)
+  campo$peso_liquido = soma_dos_volumes(informacao, "pesoL", 3)
+  campo$peso_bruto = soma_dos_volumes(informacao, "pesoB", 3)
+  campo$especie = textos_dos_volumes(informacao, "esp")
+  campo$marca = textos_dos_volumes(informacao, "marca")
+  campo$numeracao = textos_dos_volumes(informacao, "nVol")
   campo
+}
+
+# Os volumes transportados: a nota pode trazer mais de um grupo vol. As quantidades e os pesos somam (o quadro tem um
+# campo de cada); a espécie, a marca e a numeração juntam os textos diferentes, separados por " / ".
+valores_dos_volumes = function(informacao, campo) {
+  caminho = paste0("*[local-name()='transp']/*[local-name()='vol']/*[local-name()='", campo, "']")
+  xml2::xml_text(xml2::xml_find_all(informacao, caminho))
+}
+
+soma_dos_volumes = function(informacao, campo, casas) {
+  valores = valores_dos_volumes(informacao, campo)
+  if (length(valores) == 0) {
+    return(NA_character_)
+  }
+  formatC(sum(as.numeric(valores)), format = "f", digits = casas)
+}
+
+textos_dos_volumes = function(informacao, campo) {
+  valores = unique(valores_dos_volumes(informacao, campo))
+  if (length(valores) == 0) {
+    return(NA_character_)
+  }
+  paste(valores, collapse = " / ")
 }
 
 # As duplicatas, em texto curto (número, vencimento e valor), para o quadro da fatura.
@@ -148,11 +189,8 @@ itens_do_danfe = function(informacao) {
     cst = texto_pelo_caminho(detalhe, "imposto/ICMS/*/CST")
     csosn = texto_pelo_caminho(detalhe, "imposto/ICMS/*/CSOSN")
     origem = texto_pelo_caminho(detalhe, "imposto/ICMS/*/orig")
-    adicionais = texto_pelo_caminho(detalhe, "infAdProd")
-    fcp = texto_pelo_caminho(detalhe, "imposto/ICMS/*/vFCP")
-    if (!is.na(fcp)) {
-      adicionais = paste(c(adicionais[!is.na(adicionais)], paste0("vFCP: ", numero_brasileiro(as.numeric(fcp)))), collapse = " ")
-    }
+    adicionais = c(texto_pelo_caminho(detalhe, "infAdProd"), texto_do_fcp(detalhe), texto_da_unidade_tributavel(detalhe))
+    adicionais = if (all(is.na(adicionais))) NA_character_ else paste(adicionais[!is.na(adicionais)], collapse = " ")
     linhas[[length(linhas) + 1]] = data.frame(
       codigo = texto_pelo_caminho(detalhe, "prod/cProd"), descricao = texto_pelo_caminho(detalhe, "prod/xProd"),
       ncm = texto_pelo_caminho(detalhe, "prod/NCM"),
@@ -164,9 +202,9 @@ itens_do_danfe = function(informacao) {
       base_icms = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/ICMS/*/vBC"))),
       valor_icms = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/ICMS/*/vICMS"))),
       valor_ipi = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/IPI/IPITrib/vIPI"))),
-      aliquota_icms = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/ICMS/*/pICMS"))),
-      aliquota_ipi = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/IPI/IPITrib/pIPI"))),
-      adicionais = if (length(adicionais) == 0) NA_character_ else adicionais
+      aliquota_icms = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/ICMS/*/pICMS")), 2, 4),
+      aliquota_ipi = numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "imposto/IPI/IPITrib/pIPI")), 2, 4),
+      adicionais = adicionais
     )
   }
   if (length(linhas) == 0) {
@@ -175,10 +213,91 @@ itens_do_danfe = function(informacao) {
   do.call(rbind, linhas)
 }
 
+# O FCP do item, com os campos que o item 3.1.7 do manual manda imprimir nas informações adicionais do produto.
+texto_do_fcp = function(detalhe) {
+  campos = c("vBCFCP", "pFCP", "vFCP", "vBCFCPST", "pFCPST", "vFCPST")
+  partes = character()
+  for (campo in campos) {
+    valor = texto_pelo_caminho(detalhe, paste0("imposto/ICMS/*/", campo))
+    if (!is.na(valor)) {
+      casas_maximas = if (startsWith(campo, "p")) 4 else 2
+      partes = c(partes, paste0(campo, ": ", numero_brasileiro(as.numeric(valor), 2, casas_maximas)))
+    }
+  }
+  if (length(partes) == 0) NA_character_ else paste(partes, collapse = " ")
+}
+
+# Quando o valor unitário tributável é diferente do comercial, as duas informações vão no DANFE (o item 3.1.7): a
+# comercial nas colunas, a tributável nas informações adicionais do produto.
+texto_da_unidade_tributavel = function(detalhe) {
+  comercial = as.numeric(texto_pelo_caminho(detalhe, "prod/vUnCom"))
+  tributavel = as.numeric(texto_pelo_caminho(detalhe, "prod/vUnTrib"))
+  if (is.na(tributavel) || is.na(comercial) || tributavel == comercial) {
+    return(NA_character_)
+  }
+  paste0("Unid. trib.: ", texto_pelo_caminho(detalhe, "prod/uTrib"), " Qtde. trib.: ",
+         numero_brasileiro(as.numeric(texto_pelo_caminho(detalhe, "prod/qTrib")), 2, 4), " Valor unit. trib.: ",
+         numero_brasileiro(tributavel, 2, 10))
+}
+
+# O quadro da fatura (o item 3.3.2: ele pode ser reduzido, desde que traga todos os dados das tags): a fatura (número
+# e valores) e as duplicatas, em duas linhas de 9 pontos; o que não cabe vai para as informações complementares.
+linhas_da_fatura = function(nota) {
+  fatura = c(rotulo_da_fatura("FATURA", nota$fatura), rotulo_da_fatura("VALOR ORIGINAL", nota$fatura_valor_original, TRUE),
+             rotulo_da_fatura("DESCONTO", nota$fatura_desconto, TRUE),
+             rotulo_da_fatura("VALOR L\u00cdQUIDO", nota$fatura_valor_liquido, TRUE))
+  pedacos = c(if (all(is.na(fatura))) character() else paste(fatura[!is.na(fatura)], collapse = "  "), nota$duplicatas)
+  linhas = character()
+  atual = ""
+  posicao = 1
+  while (posicao <= length(pedacos) && length(linhas) < 2) {
+    candidata = if (atual == "") pedacos[posicao] else paste(atual, pedacos[posicao], sep = "   |   ")
+    if (atual == "" || largura_do_texto(candidata, 9) <= 20.37) {
+      atual = candidata
+      posicao = posicao + 1
+    } else {
+      linhas = c(linhas, atual)
+      atual = ""
+    }
+  }
+  if (atual != "" && length(linhas) < 2) {
+    linhas = c(linhas, atual)
+  }
+  sobra = if (posicao <= length(pedacos)) pedacos[posicao:length(pedacos)] else character()
+  list(linhas = linhas, sobra = sobra)
+}
+
+rotulo_da_fatura = function(rotulo, valor, dinheiro = FALSE) {
+  if (is.na(valor)) {
+    return(NA_character_)
+  }
+  paste(rotulo, if (dinheiro) numero_brasileiro(as.numeric(valor)) else valor)
+}
+
+# O código de barras adicional "Dados da NF-e" da contingência em formulário de segurança (o item 3.9.2): a UF do
+# destinatário (99 no exterior), a forma de emissão, o CNPJ ou CPF dele (zeros no exterior), o valor da nota em
+# centavos, se há ICMS próprio e ICMS ST destacados (1 sim, 2 não), o dia da emissão e o dígito, calculado como o da
+# chave.
+dados_da_nfe_em_contingencia = function(nota) {
+  uf = nota$destinatario_uf_do_endereco
+  codigo_da_uf = if (is.na(uf) || uf == "EX") "99" else names(UF_PELO_CODIGO)[match(uf, UF_PELO_CODIGO)]
+  documento = if (is.na(uf) || uf == "EX" || is.na(nota$destinatario_documento)) strrep("0", 14) else
+    paste0(strrep("0", 14 - nchar(nota$destinatario_documento)), nota$destinatario_documento)
+  centavos = formatC(round(as.numeric(nota$valor_nota) * 100), format = "f", digits = 0, width = 14, flag = "0")
+  icms_proprio = if (!is.na(nota$valor_icms) && as.numeric(nota$valor_icms) > 0) "1" else "2"
+  icms_st = if (!is.na(nota$valor_st) && as.numeric(nota$valor_st) > 0) "1" else "2"
+  dia = substr(nota$emissao, 9, 10)
+  sem_digito = paste0(codigo_da_uf, nota$tipo_emissao, documento, centavos, icms_proprio, icms_st, dia)
+  algarismos = as.integer(strsplit(sem_digito, "")[[1]])
+  pesos = rev(rep(2:9, length.out = length(algarismos)))
+  paste0(sem_digito, digito_modulo_11(sum(algarismos * pesos)))
+}
+
 # A altura do quadro dos produtos na primeira folha (o 3.8.1: 6,77 cm), com o espaço da fatura e do ISSQN quando a nota
 # não os tem (o 3.3.2 e o 3.3.3), e o deslocamento dos quadros de baixo.
 geometria_da_primeira_folha = function(nota) {
-  sem_fatura = is.na(nota$fatura) && length(nota$duplicatas) == 0
+  sem_fatura = all(is.na(c(nota$fatura, nota$fatura_valor_original, nota$fatura_desconto, nota$fatura_valor_liquido))) &&
+    length(nota$duplicatas) == 0
   sem_issqn = is.na(nota$servicos)
   subida = if (sem_fatura) 1.27 else 0
   altura_dos_produtos = 6.77 + subida + if (sem_issqn) 1.27 else 0
@@ -244,22 +363,33 @@ paginar_o_danfe = function(nota) {
     }
   }
   paginas[[1]]$informacoes = linhas_das_informacoes
-  if (length(sobra_das_informacoes) > 0) {
-    ultima = paginas[[length(paginas)]]
-    usadas = if (length(paginas) == 1) cabe_nas_outras else nrow(ultima$linhas) + 2
-    if (length(paginas) == 1 || usadas + length(sobra_das_informacoes) > cabe_nas_outras) {
-      paginas[[length(paginas) + 1]] = list(linhas = linhas[0, , drop = FALSE], informacoes = character(),
-                                            continuacao = sobra_das_informacoes)
-    } else {
-      paginas[[length(paginas)]]$continuacao = sobra_das_informacoes
+  # A continuação vai no fim da última folha dos itens (a primeira tem o campo próprio) e, o que não couber, em folhas
+  # só dela; cada uma perde duas linhas para o título.
+  if (length(sobra_das_informacoes) > 0 && length(paginas) > 1) {
+    livres = cabe_nas_outras - nrow(paginas[[length(paginas)]]$linhas) - 2
+    if (livres > 0) {
+      paginas[[length(paginas)]]$continuacao = utils::head(sobra_das_informacoes, livres)
+      sobra_das_informacoes = sobra_das_informacoes[-seq_len(min(livres, length(sobra_das_informacoes)))]
     }
+  }
+  while (length(sobra_das_informacoes) > 0) {
+    cabe = cabe_nas_outras - 2
+    paginas[[length(paginas) + 1]] = list(linhas = linhas[0, , drop = FALSE], informacoes = character(),
+                                          continuacao = utils::head(sobra_das_informacoes, cabe))
+    sobra_das_informacoes = sobra_das_informacoes[-seq_len(min(cabe, length(sobra_das_informacoes)))]
   }
   paginas
 }
 
 # O conteúdo do campo das informações complementares: as de interesse do Fisco e as do contribuinte.
 texto_das_informacoes_complementares = function(nota) {
-  partes = c(nota$informacoes_fisco, nota$informacoes_complementares)
+  contingencia = NA_character_
+  if (nota$tipo_emissao %in% c("2", "5") || (identical(nota$tipo_emissao, "4") && is.na(nota$protocolo))) {
+    contingencia = paste0("EMITIDA EM CONTING\u00caNCIA (", FORMAS_DE_CONTINGENCIA_DO_DANFE[[nota$tipo_emissao]], ")")
+  }
+  duplicatas = if (length(nota$quadro_da_fatura$sobra) == 0) NA_character_ else
+    paste0("DUPLICATAS (CONTINUA\u00c7\u00c3O DO QUADRO DA FATURA): ", paste(nota$quadro_da_fatura$sobra, collapse = " | "))
+  partes = c(contingencia, nota$informacoes_fisco, nota$informacoes_complementares, duplicatas)
   paste(partes[!is.na(partes)], collapse = "; ")
 }
 
@@ -283,10 +413,9 @@ desenhar_pagina_do_danfe = function(nota, pagina, numero, total) {
 }
 
 desenhar_canhoto_do_danfe = function(nota) {
-  desenhar_caixa(0.25, 0.42, 16.10, 0.85,
-                 conteudo = paste0("RECEBEMOS DE ", toupper(nota$emitente_nome),
-                                   " OS PRODUTOS E/OU SERVI\u00c7OS CONSTANTES DA NOTA FISCAL ELETR\u00d4NICA INDICADA AO LADO"),
-                 tamanho_do_conteudo = 6)
+  recebemos = paste0("RECEBEMOS DE ", toupper(nota$emitente_nome),
+                     " OS PRODUTOS E/OU SERVI\u00c7OS CONSTANTES DA NOTA FISCAL ELETR\u00d4NICA INDICADA AO LADO")
+  desenhar_caixa(0.25, 0.42, 16.10, 0.85, conteudo = utils::head(quebrar_texto(recebemos, 15.9, 6), 3), tamanho_do_conteudo = 6)
   desenhar_caixa(16.35, 0.42, 4.50, 1.70, conteudo = c("NF-e", paste0("N\u00ba ", numero_da_nota_formatado(nota$numero)),
                                                        paste0("S\u00c9RIE ", sprintf("%03d", as.integer(nota$serie)))),
                  tamanho_do_conteudo = 10, negrito = TRUE, alinhamento = "centre")
@@ -336,14 +465,34 @@ desenhar_cabecalho_do_danfe = function(nota, numero, total) {
   desenhar_codigo_de_barras(nota$chave, 12.99, 2.78, 7.60, 1.00)
   desenhar_caixa(12.79, 4.02, 8.00, 0.85, titulo = "CHAVE DE ACESSO", conteudo = chave_em_blocos(nota$chave),
                  tamanho_do_conteudo = 8, negrito = TRUE, alinhamento = "centre")
-  desenhar_caixa(12.79, 4.87, 8.00, 1.59, conteudo = c(
-    "Consulta de autenticidade no portal nacional da NF-e", "www.nfe.fazenda.gov.br/portal ou no site da Sefaz Autorizadora"
-  ), tamanho_do_conteudo = 8, alinhamento = "centre")
+  formulario_de_seguranca = nota$tipo_emissao %in% c("2", "5")
+  epec_sem_autorizacao = identical(nota$tipo_emissao, "4") && is.na(nota$protocolo)
+  if (formulario_de_seguranca) {
+    dados_da_nfe = dados_da_nfe_em_contingencia(nota)
+    desenhar_caixa(12.79, 4.87, 8.00, 1.59)
+    desenhar_codigo_de_barras(dados_da_nfe, 12.99, 5.10, 7.60, 1.00)
+  } else if (epec_sem_autorizacao) {
+    desenhar_caixa(12.79, 4.87, 8.00, 1.59, conteudo = c("Consulta de autenticidade no portal da NF-e",
+                                                         "www.nfe.fazenda.gov.br/portal"),
+                   tamanho_do_conteudo = 8, alinhamento = "centre")
+  } else {
+    desenhar_caixa(12.79, 4.87, 8.00, 1.59, conteudo = c(
+      "Consulta de autenticidade no portal nacional da NF-e", "www.nfe.fazenda.gov.br/portal ou no site da Sefaz Autorizadora"
+    ), tamanho_do_conteudo = 8, alinhamento = "centre")
+  }
   desenhar_caixa(0.25, 6.46, 12.54, 0.85, titulo = "NATUREZA DA OPERA\u00c7\u00c3O", conteudo = nota$natureza,
                  tamanho_do_conteudo = 9)
+  titulo_do_campo_2 = "PROTOCOLO DE AUTORIZA\u00c7\u00c3O DE USO"
   protocolo = if (is.na(nota$protocolo)) NA_character_ else
     paste(nota$protocolo, data_do_xml(nota$autorizacao), hora_do_xml(nota$autorizacao))
-  desenhar_caixa(12.79, 6.46, 8.00, 0.85, titulo = "PROTOCOLO DE AUTORIZA\u00c7\u00c3O DE USO", conteudo = protocolo,
+  if (formulario_de_seguranca) {
+    titulo_do_campo_2 = "DADOS DA NF-E"
+    protocolo = chave_em_blocos(dados_da_nfe)
+  } else if (epec_sem_autorizacao) {
+    titulo_do_campo_2 = "PROTOCOLO DE AUTORIZA\u00c7\u00c3O DO EPEC"
+    protocolo = nota$protocolo_epec
+  }
+  desenhar_caixa(12.79, 6.46, 8.00, 0.85, titulo = titulo_do_campo_2, conteudo = protocolo,
                  tamanho_do_conteudo = 9, negrito = TRUE, alinhamento = "centre")
   desenhar_caixa(0.25, 7.31, 6.86, 0.85, titulo = "INSCRI\u00c7\u00c3O ESTADUAL", conteudo = nota$emitente_ie, tamanho_do_conteudo = 9)
   desenhar_caixa(7.11, 7.31, 6.86, 0.85, titulo = "INSCRI\u00c7\u00c3O ESTADUAL DO SUBST. TRIBUT\u00c1RIO",
@@ -379,8 +528,7 @@ desenhar_destinatario_do_danfe = function(nota) {
 desenhar_impostos_e_transporte_do_danfe = function(nota, geometria) {
   if (!geometria$sem_fatura) {
     desenhar_texto("FATURA/DUPLICATAS", 0.25, 11.13, tamanho = 6, negrito = TRUE)
-    fatura = c(if (is.na(nota$fatura)) NULL else paste("FATURA", nota$fatura), nota$duplicatas)
-    desenhar_caixa(0.25, 11.51, 20.57, 0.85, conteudo = paste(fatura, collapse = "   |   "), tamanho_do_conteudo = 7)
+    desenhar_caixa(0.25, 11.51, 20.57, 0.85, conteudo = nota$quadro_da_fatura$linhas, tamanho_do_conteudo = 9)
   }
   topo = 12.36 - geometria$subida
   desenhar_texto("C\u00c1LCULO DO IMPOSTO", 0.25, topo + 0.04, tamanho = 6, negrito = TRUE)

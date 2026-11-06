@@ -40,7 +40,21 @@ fontes públicas);
 NFC-e, com o monofásico dos combustíveis e o resto da nota que a mesma
 nota técnica valida, pelas regras de validação da SEFAZ, como valiam no
 dia da emissão) e \code{\link[=ibs_cbs_calcular]{ibs_cbs_calcular()}} (o IBS e a CBS de cada item, na
-data da nota ou em outra, para simular outro ano).
+data da nota ou em outra, para simular outro ano);
+\item o SPED e a conferência antes do envio: \code{\link[=efd_icms_ipi_ler]{efd_icms_ipi_ler()}} (a EFD
+ICMS/IPI em tabelas), \code{\link[=efd_icms_ipi_cruzar_nfe]{efd_icms_ipi_cruzar_nfe()}} (a EFD contra os XML
+das NF-e) e \code{\link[=nfe_conferir]{nfe_conferir()}} (o schema e as regras de validação da NF-e
+e da NFC-e);
+\item a emissão, por enquanto só em homologação: \code{\link[=xml_assinar]{xml_assinar()}},
+\code{\link[=sefaz_autorizar]{sefaz_autorizar()}} (a NF-e e a NFC-e, com o QR-Code de \code{\link[=nfce_qrcode]{nfce_qrcode()}}),
+\code{\link[=sefaz_cancelar]{sefaz_cancelar()}}, \code{\link[=sefaz_carta_correcao]{sefaz_carta_correcao()}}, \code{\link[=sefaz_manifestar]{sefaz_manifestar()}},
+\code{\link[=sefaz_cte_desacordo]{sefaz_cte_desacordo()}} e \code{\link[=sefaz_cte_cancelar_desacordo]{sefaz_cte_cancelar_desacordo()}},
+\code{\link[=sefaz_mdfe_autorizar]{sefaz_mdfe_autorizar()}}, \code{\link[=sefaz_mdfe_incluir_condutor]{sefaz_mdfe_incluir_condutor()}} e
+\code{\link[=sefaz_mdfe_encerrar]{sefaz_mdfe_encerrar()}}, e a NFS-e Nacional na Produção Restrita:
+\code{\link[=nfse_emitir]{nfse_emitir()}} e \code{\link[=nfse_cancelar]{nfse_cancelar()}};
+\item os documentos auxiliares em PDF: \code{\link[=danfe_pdf]{danfe_pdf()}},
+\code{\link[=danfe_simplificado_pdf]{danfe_simplificado_pdf()}}, \code{\link[=danfce_pdf]{danfce_pdf()}}, \code{\link[=dacte_pdf]{dacte_pdf()}},
+\code{\link[=damdfe_pdf]{damdfe_pdf()}}, \code{\link[=danfse_pdf]{danfse_pdf()}} e \code{\link[=dacce_pdf]{dacce_pdf()}}.
 }
 }
 \section{De onde vêm as regras}{
@@ -48,8 +62,9 @@ data da nota ou em outra, para simular outro ano).
 Das especificações públicas dos portais da NF-e, do CT-e, do MDF-e e da
 NFS-e Nacional: os manuais, as notas técnicas e os schemas, citados com a
 versão em cada função (\verb{@source}). Só as funções \code{sefaz_} falam com a
-SEFAZ, e as \code{nfse_situacao()} e \code{nfse_distribuicao()} com o Sistema
-Nacional NFS-e, todas só no ambiente de homologação.
+SEFAZ, e as \code{nfse_situacao()}, \code{nfse_distribuicao()}, \code{nfse_emitir()} e
+\code{nfse_cancelar()} com o Sistema Nacional NFS-e, todas só no ambiente de
+homologação (a Produção Restrita, na NFS-e).
 }
 
 \seealso{

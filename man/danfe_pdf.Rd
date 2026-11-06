@@ -11,13 +11,17 @@ Conjunta 2025.001, item 6 (o código de barras da chave com o CNPJ
 alfanumérico, em CODE-128 C e A).
 }
 \usage{
-danfe_pdf(xml, arquivo)
+danfe_pdf(xml, arquivo, protocolo_epec = NULL)
 }
 \arguments{
 \item{xml}{A NF-e: o caminho do arquivo ou o texto do XML (o \code{nfeProc}, com
 o protocolo; sem ele, o campo do protocolo fica vazio).}
 
 \item{arquivo}{O PDF a gravar.}
+
+\item{protocolo_epec}{Na nota emitida em contingência EPEC e ainda não
+autorizada, o protocolo do evento EPEC e a data e a hora dele, como vão no
+campo (por exemplo, \code{"891260000001234 21/10/2026 10:00:00"}).}
 }
 \value{
 O caminho do PDF, invisível.
@@ -36,6 +40,12 @@ os tem, e o espaço vai para os produtos. A nota de homologação leva "SEM
 VALOR FISCAL" em marca d'água.
 }
 \details{
+Na nota emitida em contingência com formulário de segurança (FS ou FS-DA,
+\code{tpEmis} 2 ou 5), vão o segundo código de barras "Dados da NF-e" e a
+representação numérica dele (o item 3.9.2 do manual); na do EPEC (\code{tpEmis}
+4) ainda sem a autorização, o protocolo do EPEC (3.9.3). As duas levam
+"EMITIDA EM CONTINGÊNCIA" no começo das informações complementares.
+
 O DANFE só traz o que está no XML. Para a NFC-e, use \code{\link[=danfce_pdf]{danfce_pdf()}}.
 }
 \examples{

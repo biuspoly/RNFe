@@ -49,9 +49,40 @@ test_that("o DANFE da NF-e: uma folha com o que o XML traz, e as folhas adiciona
   arquivo_longo = tempfile(fileext = ".pdf")
   danfe_pdf(longa, arquivo_longo)
   paginas = pdftools::pdf_text(arquivo_longo)
-  expect_gt(length(paginas), 1)
-  expect_match(paginas[length(paginas)], sprintf("FOLHA %d/%d", length(paginas), length(paginas)), fixed = TRUE)
+  expect_identical(length(paginas), 3L)
+  expect_match(paginas[3], "FOLHA 3/3", fixed = TRUE)
   expect_error(danfe_pdf(system.file("exemplos", "nfce_ce_contingencia.xml", package = "RNFe"), tempfile(fileext = ".pdf")),
                "danfce_pdf")
   expect_error(danfe_pdf(system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe"), "sem_extensao"), "\\.pdf")
+})
+
+test_that("o DANFE da conting\u00eancia FS-DA, os volumes somados, a fatura inteira, a unidade tribut\u00e1vel e o FCP", {
+  skip_if_not_installed("pdftools")
+  nota = paste(readLines(system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe"), encoding = "UTF-8"), collapse = "\n")
+  nota = sub("(?s)<protNFe.*</protNFe>", "", nota, perl = TRUE)
+  nota = sub("<tpEmis>1</tpEmis>", "<tpEmis>5</tpEmis>", nota, fixed = TRUE)
+  nota = sub("</vol>", "</vol><vol><qVol>10</qVol><esp>PALETE</esp><pesoL>800.000</pesoL><pesoB>900.000</pesoB></vol>", nota,
+             fixed = TRUE)
+  duplicatas = paste0("<dup><nDup>", sprintf("%03d", 1:30), "</nDup><dVenc>2026-11-15</dVenc><vDup>1234.56</vDup></dup>",
+                      collapse = "")
+  nota = sub("(?s)<cobr>.*</cobr>", paste0("<cobr><fat><nFat>FAT-1</nFat><vOrig>37036.80</vOrig><vDesc>0.00</vDesc>",
+                                           "<vLiq>37036.80</vLiq></fat>", duplicatas, "</cobr>"), nota, perl = TRUE)
+  nota = sub("<uTrib>UN</uTrib>", "<uTrib>CX</uTrib>", nota, fixed = TRUE)
+  nota = sub("<vUnTrib>5.0000000000</vUnTrib>", "<vUnTrib>60.0000000000</vUnTrib>", nota, fixed = TRUE)
+  arquivo = tempfile(fileext = ".pdf")
+  danfe_pdf(nota, arquivo)
+  texto = gsub("\\s+", " ", gsub("\u00ad", "-", pdftools::pdf_text(arquivo), fixed = TRUE))
+  # O campo 2 com o código "Dados da NF-e" em blocos (o item 3.9.2): a UF, a forma, o CNPJ, o valor, o ICMS e o dia.
+  expect_match(texto, "DADOS DA NF-E", fixed = TRUE)
+  expect_match(texto, "3351 1444 7770 0016 1000 0000 0011 5001 2158", fixed = TRUE)
+  expect_match(texto, "EMITIDA EM CONTING\u00caNCIA (FS-DA)", fixed = TRUE)
+  expect_match(texto, "CAIXA / PALETE", fixed = TRUE)
+  expect_match(texto, "1.020,500", fixed = TRUE)
+  expect_match(texto, "VALOR L\u00cdQUIDO 37.036,80", fixed = TRUE)
+  expect_match(texto, "030 15/11/2026 1.234,56", fixed = TRUE)
+  expect_match(texto, "Unid. trib.: CX", fixed = TRUE)
+  # O comércio exterior: a UF 99 e o documento com zeros; o dígito, calculado à parte (módulo 11, pesos 2 a 9).
+  exterior = list(destinatario_uf_do_endereco = "EX", destinatario_documento = "AB123", valor_nota = "10.00",
+                  valor_icms = "0.00", valor_st = NA, emissao = "2026-10-15T10:00:00-03:00", tipo_emissao = "2")
+  expect_identical(dados_da_nfe_em_contingencia(exterior), "992000000000000000000000000100022153")
 })

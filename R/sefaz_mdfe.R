@@ -42,8 +42,8 @@ SITUACOES_DO_MDFE_AUTORIZADO = c(100L)
 sefaz_mdfe_autorizar = function(xml, certificado, senha, ambiente = "homologacao") {
   conferir_ambiente(ambiente)
   exigir_pacotes(c("httr2", "curl", "openssl"))
-  lido = ler_o_mdfe_para_autorizar(xml, ambiente)
   conferir_certificado(certificado, senha)
+  lido = ler_o_mdfe_para_autorizar(xml, ambiente, certificado, senha)
   linha = data.frame(
     chave = lido$chave, ambiente = ambiente, situacao_envio = NA_integer_, motivo_envio = NA_character_,
     situacao = NA_integer_, motivo = NA_character_, protocolo = NA_character_, autorizacao = as.POSIXct(NA),
@@ -68,7 +68,7 @@ sefaz_mdfe_autorizar = function(xml, certificado, senha, ambiente = "homologacao
 
 # O MDFe de um XML, conferido: um só, assinado, de homologação e com a chave do modelo 58. Sai o texto dele, sem a
 # declaração, com o namespace.
-ler_o_mdfe_para_autorizar = function(xml, ambiente) {
+ler_o_mdfe_para_autorizar = function(xml, ambiente, certificado, senha) {
   documento = ler_o_xml_para_assinar(xml)
   manifestos = xml2::xml_find_all(documento, "//*[local-name()='MDFe' and *[local-name()='infMDFe']]")
   if (length(manifestos) != 1) {
@@ -87,18 +87,29 @@ ler_o_mdfe_para_autorizar = function(xml, ambiente) {
   if (!partes$valida || !identical(partes$modelo, "58")) {
     stop("O Id do infMDFe n\u00e3o traz uma chave de MDF-e v\u00e1lida.", call. = FALSE)
   }
-  # O QR-Code (infMDFeSupl), quando falta: o endereço da SVRS com a chave e o ambiente. Fica fora do que a assinatura
-  # cobre, entre o infMDFe e a assinatura.
+  # O QR-Code (infMDFeSupl), quando falta: o endereço da SVRS com a chave e o ambiente e, na contingência (tpEmis 2),
+  # a assinatura da chave (o item 9.2.2 do MOC). Fica fora do que a assinatura cobre, entre o infMDFe e a assinatura.
   if (inherits(xml2::xml_find_first(manifesto, "*[local-name()='infMDFeSupl']"), "xml_missing")) {
     servicos = tabela_interna("servicos_sefaz")
     endereco_do_qrcode = servicos$endereco[servicos$documento == "MDF-e" & servicos$ambiente == ambiente &
                                              servicos$servico == "QR Code"][1]
-    grupo = paste0('<infMDFeSupl xmlns="', NAMESPACE_DO_MDFE, '"><qrCodMDFe>', endereco_do_qrcode, "?chMDFe=", chave,
-                   "&amp;tpAmb=", AMBIENTES_LIBERADOS[[ambiente]], "</qrCodMDFe></infMDFeSupl>")
+    qrcode = paste0(endereco_do_qrcode, "?chMDFe=", chave, "&tpAmb=", AMBIENTES_LIBERADOS[[ambiente]])
+    if (identical(texto_pelo_caminho(informacao, "ide/tpEmis"), "2")) {
+      qrcode = paste0(qrcode, "&sign=", assinatura_da_chave_do_mdfe(chave, certificado, senha))
+    }
+    grupo = paste0('<infMDFeSupl xmlns="', NAMESPACE_DO_MDFE, '"><qrCodMDFe>', escapar_texto_canonico(qrcode),
+                   "</qrCodMDFe></infMDFeSupl>")
     xml2::xml_add_sibling(informacao, xml2::xml_root(xml2::read_xml(grupo)), .where = "after")
   }
   texto = trimws(as.character(xml2::xml_new_root(manifesto), options = "no_declaration"))
   list(chave = chave, texto = texto)
+}
+
+# O parâmetro sign do QR-Code do MDF-e em contingência: a chave assinada em RSA-SHA1 com o certificado que assina o
+# MDF-e, em base64 (o item 9.2.2 do MOC do MDF-e 3.00b).
+assinatura_da_chave_do_mdfe = function(chave, certificado, senha) {
+  conteudo = openssl::read_p12(certificado, password = senha)
+  openssl::base64_encode(openssl::signature_create(charToRaw(chave), hash = openssl::sha1, key = conteudo$key))
 }
 
 # O retorno da recepção (retMDFe): a situação do envio e o protocolo; o autorizado ganha o mdfeProc.
@@ -143,8 +154,9 @@ completar_autorizacao_do_mdfe = function(linha, resposta_lida, texto_do_manifest
 #' `sefaz_mdfe_incluir_condutor()` acrescenta um condutor ao MDF-e rodoviário
 #' (o evento 110114).
 #'
-#' O evento é assinado com o certificado, que tem de ser o do emitente do
-#' MDF-e. Por enquanto só o ambiente de **homologação**.
+#' O autor do evento é o emitente da chave (o CNPJ ou, nas séries 920 a 969, o
+#' CPF), e o certificado pode ser o dele ou o de outro estabelecimento da
+#' empresa (o mesmo CNPJ-base). Por enquanto só o ambiente de **homologação**.
 #'
 #' @param chave A chave de acesso do MDF-e.
 #' @param protocolo O número do protocolo de autorização do MDF-e.
@@ -217,7 +229,7 @@ registrar_evento_do_mdfe = function(chave, codigo_do_evento, sequencia, detalhe,
     stop("Informe a chave de um MDF-e (44 posi\u00e7\u00f5es, com o d\u00edgito certo).", call. = FALSE)
   }
   conferir_certificado(certificado, senha)
-  autor = certificado_ler(certificado, senha)
+  autor = autor_do_emitente(partes, SERIES_DO_CPF_NO_MDFE, certificado, senha)
   linha = data.frame(
     chave = chave_limpa, evento = codigo_do_evento, sequencia = sequencia, ambiente = ambiente,
     situacao_lote = NA_integer_, motivo_lote = NA_character_, situacao = NA_integer_, motivo = NA_character_,
@@ -230,7 +242,7 @@ registrar_evento_do_mdfe = function(chave, codigo_do_evento, sequencia, detalhe,
     return(linha)
   }
   linha$endereco = servico$endereco
-  campo_do_autor = if (autor$tipo_documento %in% "CPF") "CPF" else "CNPJ"
+  campo_do_autor = if (autor$tipo_documento == "CPF") "CPF" else "CNPJ"
   identificador = paste0("ID", codigo_do_evento, chave_limpa, sprintf("%02d", sequencia))
   evento = paste0(
     '<eventoMDFe xmlns="', NAMESPACE_DO_MDFE, '" versao="3.00"><infEvento Id="', identificador, '"><cOrgao>',

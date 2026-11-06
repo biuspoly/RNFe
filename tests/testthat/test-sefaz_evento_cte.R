@@ -59,6 +59,17 @@ test_that("o cancelamento do desacordo leva o protocolo dele", {
                "<nProtEvPrestDes>135260000077777</nProtEvPrestDes></evCancPrestDesacordo>", fixed = TRUE)
 })
 
+test_that("o autor do desacordo \u00e9 o tomador: o informado (uma filial) ou o do certificado", {
+  skip_if_not_installed("openssl")
+  da_filial = montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste", "homologacao",
+                                     tomador = "11222333000262")
+  expect_match(da_filial$evento_assinado, "<CNPJ>11222333000262</CNPJ>", fixed = TRUE)
+  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
+                                      "homologacao", tomador = "11444777000161"), "CNPJ-base")
+  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
+                                      "homologacao", tomador = "11222333000100"), "d\u00edgitos")
+})
+
 test_that("os erros antes de qualquer conex\u00e3o", {
   expect_error(sefaz_cte_desacordo(CHAVE_DO_CTE_DE_SP, "CURTA", CERTIFICADO_DO_EVENTO_DO_CTE, "teste"), "15 a 255")
   expect_error(sefaz_cte_desacordo("35261011222333000181550010000010011123456785", "FRETE COBRADO EM DUPLICIDADE",

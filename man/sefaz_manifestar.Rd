@@ -15,7 +15,8 @@ sefaz_manifestar(
   justificativa = NULL,
   certificado,
   senha,
-  ambiente = "homologacao"
+  ambiente = "homologacao",
+  destinatario = NULL
 )
 }
 \arguments{
@@ -33,6 +34,9 @@ caracteres.}
 variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 
 \item{ambiente}{\code{"homologacao"}, o único liberado por enquanto.}
+
+\item{destinatario}{Opcional: o CNPJ (ou o CPF) do destinatário da nota,
+quando não é o do certificado (o mesmo CNPJ-base).}
 }
 \value{
 Um \code{data.frame} com uma linha: \code{chave}, \code{evento} (o código),
@@ -50,8 +54,11 @@ desconhecimento (\code{"desconhecimento"}) ou a operação não realizada
 (\code{"nao_realizada"}, que pede a justificativa).
 }
 \details{
-O evento é assinado com o certificado, que tem de ser o do destinatário da
-nota. Por enquanto só o ambiente de \strong{homologação}.
+O autor do evento é o destinatário da nota, e o certificado tem de ter o
+CNPJ-base (ou o CPF) dele. Sem \code{destinatario}, o autor é o CNPJ do
+certificado; quando a nota foi emitida para uma filial e o certificado é o
+da matriz, informe o CNPJ da filial. Por enquanto só o ambiente de
+\strong{homologação}.
 }
 \examples{
 \dontrun{

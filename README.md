@@ -351,14 +351,19 @@ igual, byte a byte (ele tira os acentos antes; o RNFe não). O XML assinado vem 
 SEFAZ rejeita.
 
 A autorização manda cada nota num lote só dela, no modo síncrono (a NT 2023.002 acaba com o assíncrono em 2027); se a
-SEFAZ responde que vai processar depois (103), o RNFe consulta o recibo até a resposta chegar. A nota autorizada vem
+SEFAZ responde que vai processar depois (103), o RNFe consulta o recibo enquanto ele estiver em processamento (105). A
+nota denegada também volta com o `nfeProc` (a SEFAZ guarda a nota com o protocolo da denegação). O autor do
+cancelamento, da carta de correção e dos eventos do MDF-e é o emitente da chave, e o certificado pode ser o de outro
+estabelecimento da empresa (o mesmo CNPJ-base): a nota de uma filial pode ser cancelada com o certificado da matriz. Na
+manifestação e no desacordo do CT-e, o autor é o destinatário ou o tomador; quando é uma filial e o certificado é o da
+matriz, ele vai em `destinatario` ou em `tomador`. A nota autorizada vem
 com o `nfeProc` (a nota e o protocolo), que o `nfe_ler()` lê. Os eventos (cancelamento, carta de correção e
 manifestação do destinatário, esta no Ambiente Nacional) são montados, assinados e enviados pelo RNFe, e voltam com o
 `procEventoNFe`, que o `eventos_ler()` lê. O tomador do CT-e registra a prestação do serviço em desacordo (e cancela
 o registro feito por engano) no autorizador do CT-e, com o `procEventoCTe` de volta.
 
 O MDF-e vai compactado e é autorizado na hora pela SVRS, que atende todas as UF; o QR-Code dele entra sozinho
-quando falta. Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta. A NFS-e Nacional é
+quando falta (no MDF-e em contingência, com a chave assinada pelo certificado, o parâmetro `sign`). Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta. A NFS-e Nacional é
 gerada pela Sefin a partir da DPS que você monta pelo leiaute; o RNFe assina, compacta, envia e devolve a NFS-e (que o
 `nfse_ler()` lê). O cancelamento também é montado e assinado aqui.
 
@@ -405,8 +410,9 @@ do CT-e 4.00 (também o DACTE OS); o DAMDFE, o Anexo II do Manual do MDF-e; e o 
 destinatário, intermediário ou ISSQN). A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e". A carta de
 correção não tem modelo oficial: o desenho é o do RNFe, com a chave em código de barras, o registro na SEFAZ, a
 correção e as condições de uso. Os documentos de homologação saem com a marca de sem valor fiscal (no DANFSe, "NFS-e
-SEM VALIDADE JURÍDICA"). Os códigos de barras e os QR-Code dos exemplos foram lidos de volta por um leitor (o zxing),
-com a chave e o endereço certos. Tudo é desenhado com o `grid` do próprio R; o QR-Code precisa do pacote `qrcode`.
+SEM VALIDADE JURÍDICA"). Na contingência, o DANFE com formulário de segurança leva o segundo código de barras "Dados da
+NF-e", o do EPEC leva o protocolo do evento, e o DAMDFE leva as chaves dos documentos e o QR-Code assinado. Os códigos
+de barras e os QR-Code dos exemplos foram lidos de volta por um leitor (o zxing), com a chave e o endereço certos. Tudo é desenhado com o `grid` do próprio R; o QR-Code precisa do pacote `qrcode`.
 
 ## Antes de enviar: a pré-conferência da NF-e
 

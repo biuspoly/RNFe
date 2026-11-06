@@ -2,6 +2,8 @@
 # RNFe autorizou um MDF-e de teste, incluiu um condutor e o encerrou por lá), com os dados fictícios dos exemplos.
 CERTIFICADO_DO_MDFE = test_path("certificados", "pessoa_juridica.pfx")
 CHAVE_DO_MDFE_DO_CE = "23261011444777000161580020000000121556677880"
+# Nos eventos, o autor é o emitente da chave, que tem de ter o CNPJ-base do certificado de teste.
+CHAVE_DO_MDFE_DO_CERTIFICADO = "23261011222333000181580020000000121556677880"
 
 mdfe_assinado_do_ce = function() {
   xml_assinar(system.file("exemplos", "mdfe_ce_carga_propria.xml", package = "RNFe"), CERTIFICADO_DO_MDFE, "teste")
@@ -17,7 +19,7 @@ resposta_da_svrs = function(servico, retorno) {
 retorno_do_evento_do_mdfe = function(evento) {
   paste0('<retEventoMDFe versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe"><infEvento><tpAmb>2</tpAmb>',
          "<verAplic>RS20261105</verAplic><cOrgao>23</cOrgao><cStat>135</cStat><xMotivo>Evento registrado e vinculado ao ",
-         "MDF-e</xMotivo><chMDFe>", CHAVE_DO_MDFE_DO_CE, "</chMDFe><tpEvento>", evento, "</tpEvento><xEvento>Evento</xEvento>",
+         "MDF-e</xMotivo><chMDFe>", CHAVE_DO_MDFE_DO_CERTIFICADO, "</chMDFe><tpEvento>", evento, "</tpEvento><xEvento>Evento</xEvento>",
          "<nSeqEvento>1</nSeqEvento><dhRegEvento>2026-11-05T16:30:00-03:00</dhRegEvento><nProt>923260000077777</nProt>",
          "</infEvento></retEventoMDFe>")
 }
@@ -65,18 +67,18 @@ test_that("o encerramento e a inclus\u00e3o de condutor: o evento sozinho e o pr
     evento = if (length(pedidos) == 1) "110112" else "110114"
     resposta_da_svrs("MDFeRecepcaoEvento", retorno_do_evento_do_mdfe(evento))
   })
-  encerrado = sefaz_mdfe_encerrar(CHAVE_DO_MDFE_DO_CE, "923260000012345", "PE", "2611606", as.Date("2026-11-05"),
+  encerrado = sefaz_mdfe_encerrar(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "PE", "2611606", as.Date("2026-11-05"),
                                   CERTIFICADO_DO_MDFE, "teste")
   expect_identical(encerrado$situacao, 135L)
   expect_identical(eventos_ler(encerrado$xml_evento)$eventos$tipo, "110112")
   corpo = rawToChar(pedidos[[1]]$body$data)
   expect_match(corpo, paste0('<eventoMDFe xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><infEvento Id="ID110112',
-                             CHAVE_DO_MDFE_DO_CE, '01"><cOrgao>23</cOrgao><tpAmb>2</tpAmb><CNPJ>11222333000181</CNPJ>'),
+                             CHAVE_DO_MDFE_DO_CERTIFICADO, '01"><cOrgao>23</cOrgao><tpAmb>2</tpAmb><CNPJ>11222333000181</CNPJ>'),
                fixed = TRUE)
   expect_match(corpo, paste0("<evEncMDFe><descEvento>Encerramento</descEvento><nProt>923260000012345</nProt>",
                              "<dtEnc>2026-11-05</dtEnc><cUF>26</cUF><cMun>2611606</cMun></evEncMDFe>"), fixed = TRUE)
   expect_match(pedidos[[1]]$body$content_type, "MDFeRecepcaoEvento/mdfeRecepcaoEvento", fixed = TRUE)
-  condutor = sefaz_mdfe_incluir_condutor(CHAVE_DO_MDFE_DO_CE, "SEGUNDO MOTORISTA DE TESTE", "98765432100",
+  condutor = sefaz_mdfe_incluir_condutor(CHAVE_DO_MDFE_DO_CERTIFICADO, "SEGUNDO MOTORISTA DE TESTE", "98765432100",
                                          certificado = CERTIFICADO_DO_MDFE, senha = "teste")
   expect_identical(condutor$situacao, 135L)
   expect_match(rawToChar(pedidos[[2]]$body$data), paste0("<condutor><xNome>SEGUNDO MOTORISTA DE TESTE</xNome><CPF>98765432100",
@@ -99,4 +101,7 @@ test_that("os erros antes de qualquer conex\u00e3o", {
                                            senha = "teste"), "CPF")
   expect_error(sefaz_mdfe_encerrar("35261011222333000181550010000010011123456785", "923260000012345", "PE", "2611606",
                                    Sys.Date(), CERTIFICADO_DO_MDFE, "teste"), "MDF-e")
+  # O MDF-e de outra empresa (o emitente da chave com outro CNPJ-base): o certificado não é do autor.
+  expect_error(sefaz_mdfe_encerrar(CHAVE_DO_MDFE_DO_CE, "923260000012345", "PE", "2611606", Sys.Date(), CERTIFICADO_DO_MDFE,
+                                   "teste"), "CNPJ-base")
 })

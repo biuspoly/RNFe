@@ -70,6 +70,32 @@ test_that("a carta de corre\u00e7\u00e3o leva o texto fixo da condi\u00e7\u00e3o
   expect_match(rawToChar(pedidos[[2]]$body$data), "<descEvento>Ciencia da Operacao</descEvento></detEvento>", fixed = TRUE)
 })
 
+test_that("o autor do evento \u00e9 o emitente da chave, e o certificado pode ser o da matriz", {
+  skip_if_not_installed("openssl")
+  # A nota da filial (0002) com o certificado da matriz (0001): o autor é a filial (a regra P12-44 do MOC 7.0).
+  nota_da_filial = "35261011222333000262550010000010011123456788"
+  montado = montar_o_evento(nota_da_filial, "110111", 1L, "<descEvento>Cancelamento</descEvento>", CERTIFICADO_DO_EVENTO,
+                            "teste", "homologacao", no_ambiente_nacional = FALSE)
+  expect_match(montado$evento_assinado, "<CNPJ>11222333000262</CNPJ>", fixed = TRUE)
+  # Na série do emitente pessoa física, o autor é o CPF, que o certificado da empresa não tem.
+  nota_de_cpf = "35261000012345678909559200000010011123456784"
+  expect_error(montar_o_evento(nota_de_cpf, "110111", 1L, "", CERTIFICADO_DO_EVENTO, "teste", "homologacao", FALSE),
+               "12345678909")
+  # Outra empresa (outro CNPJ-base): nada é montado.
+  nota_de_outra_empresa = "35261011444777000161550010000010011123456785"
+  expect_error(montar_o_evento(nota_de_outra_empresa, "110111", 1L, "", CERTIFICADO_DO_EVENTO, "teste", "homologacao",
+                               FALSE), "CNPJ-base")
+  # Na manifestação, o destinatário informado (uma filial) é o autor; sem ele, o CNPJ do certificado.
+  manifestacao = montar_o_evento(nota_de_outra_empresa, "210210", 1L, "<descEvento>Ciencia da Operacao</descEvento>",
+                                 CERTIFICADO_DO_EVENTO, "teste", "homologacao", TRUE, destinatario = "11.222.333/0002-62")
+  expect_match(manifestacao$evento_assinado, "<CNPJ>11222333000262</CNPJ>", fixed = TRUE)
+  sem_destinatario = montar_o_evento(nota_de_outra_empresa, "210210", 1L, "", CERTIFICADO_DO_EVENTO, "teste", "homologacao",
+                                     TRUE)
+  expect_match(sem_destinatario$evento_assinado, "<CNPJ>11222333000181</CNPJ>", fixed = TRUE)
+  expect_error(montar_o_evento(nota_de_outra_empresa, "210210", 1L, "", CERTIFICADO_DO_EVENTO, "teste", "homologacao", TRUE,
+                               destinatario = "11444777000161"), "CNPJ-base")
+})
+
 test_that("os erros antes de qualquer conex\u00e3o", {
   expect_error(sefaz_cancelar(CHAVE_DA_NOTA_DE_SP, "135260000012345", "CURTA", CERTIFICADO_DO_EVENTO, "teste"), "15 a 255")
   expect_error(sefaz_cancelar(CHAVE_DA_NOTA_DE_SP, "123", "PEDIDO CANCELADO PELO CLIENTE", CERTIFICADO_DO_EVENTO, "teste"),

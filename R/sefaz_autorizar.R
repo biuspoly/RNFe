@@ -10,6 +10,11 @@ TENTATIVAS_DO_RECIBO = 5
 ESPERA_ENTRE_AS_TENTATIVAS = 3
 # As situações do protocolo que autorizam o uso: 100 (autorizado), 150 (fora de prazo) e 120 (com alerta, NT 2026.002).
 SITUACOES_AUTORIZADAS = c(100L, 120L, 150L)
+# As da denegação (110, 301, 302 e 303): a nota fica guardada na SEFAZ com o protocolo da denegação (o item 5.1.6 do
+# MOC 7.0), e o emitente guarda o nfeProc dela também.
+SITUACOES_DENEGADAS = c(110L, 301L, 302L, 303L)
+# A situação do recibo cujo lote ainda está em processamento: só ela é consultada de novo.
+RECIBO_EM_PROCESSAMENTO = 105L
 
 #' Enviar a NF-e para autorização
 #'
@@ -36,8 +41,9 @@ SITUACOES_AUTORIZADAS = c(100L, 120L, 150L)
 #'   `situacao` e `motivo` (o protocolo da nota: 100 autorizada, 150 autorizada
 #'   fora de prazo, 120 autorizada com alerta, as outras são rejeição ou
 #'   denegação), `protocolo`, `autorizacao` (data e hora), `xml_autorizado` (o
-#'   `nfeProc`, só na nota autorizada), `endereco` e `problema` (por que não
-#'   deu para enviar ou entender a resposta).
+#'   `nfeProc`, na nota autorizada e na denegada, que a SEFAZ guarda com o
+#'   protocolo da denegação), `endereco` e `problema` (por que não deu para
+#'   enviar ou entender a resposta).
 #' @seealso [xml_assinar()], [nfe_conferir()], [sefaz_situacao()] para
 #'   consultar depois.
 #' @source Manual de Orientação do Contribuinte da NF-e (o serviço de
@@ -194,8 +200,8 @@ completar_autorizacao = function(linha, resposta_lida, texto_da_nota, ambiente) 
   completar_com_o_protocolo(linha, protocolo, texto_da_nota)
 }
 
-# O protocolo da nota (protNFe): a situação, o motivo, o número e a hora; na nota autorizada, o nfeProc com a nota e o
-# protocolo como a SEFAZ mandou.
+# O protocolo da nota (protNFe): a situação, o motivo, o número e a hora; na nota autorizada ou denegada, o nfeProc com
+# a nota e o protocolo como a SEFAZ mandou.
 completar_com_o_protocolo = function(linha, protocolo, texto_da_nota) {
   if (inherits(protocolo, "xml_missing")) {
     return(linha)
@@ -210,7 +216,7 @@ completar_com_o_protocolo = function(linha, protocolo, texto_da_nota) {
   linha$motivo = texto_do_retorno(informacao, "xMotivo")
   linha$protocolo = texto_do_retorno(informacao, "nProt")
   linha$autorizacao = data_hora_da_consulta(texto_do_retorno(informacao, "dhRecbto"))
-  if (linha$situacao %in% SITUACOES_AUTORIZADAS) {
+  if (linha$situacao %in% c(SITUACOES_AUTORIZADAS, SITUACOES_DENEGADAS)) {
     linha$xml_autorizado = montar_o_processo_da_nota(texto_da_nota, protocolo)
   }
   linha
@@ -263,6 +269,12 @@ consultar_os_recibos = function(linhas, textos, conexao, ambiente) {
       linhas$motivo_lote[posicao] = texto_do_retorno(resposta_lida$retorno, "xMotivo")
       protocolo = xml2::xml_find_first(resposta_lida$retorno, "./*[local-name()='protNFe']")
       linhas[posicao, ] = completar_com_o_protocolo(linhas[posicao, ], protocolo, textos[posicao])
+      # Sem o protocolo, só o lote em processamento (105) é consultado de novo; o resto (106, lote não localizado, e as
+      # rejeições do pedido, como o 656) é a resposta final.
+      if (inherits(protocolo, "xml_missing") && !identical(situacao_do_recibo, RECIBO_EM_PROCESSAMENTO)) {
+        linhas$problema[posicao] = paste0("a consulta do recibo voltou ", situacao_do_recibo, " sem o protocolo da nota (",
+                                          linhas$motivo_lote[posicao], ")")
+      }
     }
   }
   ainda_pendentes = !is.na(linhas$recibo) & is.na(linhas$situacao) & is.na(linhas$problema)

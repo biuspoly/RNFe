@@ -108,8 +108,8 @@ nfse_cancelar = function(chave, motivo, justificativa, certificado, senha, ambie
   }
   exigir_pacotes(c("httr2", "curl", "openssl", "jsonlite"))
   conferir_certificado(certificado, senha)
-  autor = certificado_ler(certificado, senha)
-  campo_do_autor = if (autor$tipo_documento %in% "CPF") "CPFAutor" else "CNPJAutor"
+  autor = autor_informado_ou_do_certificado(NULL, certificado, senha, "autor")
+  campo_do_autor = if (autor$tipo_documento == "CPF") "CPFAutor" else "CNPJAutor"
   pedido = paste0(
     '<pedRegEvento xmlns="', NAMESPACE_DA_NFSE, '" versao="1.01"><infPedReg Id="PRE', chave_limpa, '101101"><tpAmb>',
     AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><verAplic>RNFe</verAplic><dhEvento>", data_hora_do_evento(Sys.time()),

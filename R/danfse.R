@@ -21,8 +21,9 @@ TIPOS_DE_IMUNIDADE_DO_ISSQN = c(
 )
 SUSPENSOES_DO_ISSQN = c("1" = "Exigibilidade Suspensa por Decis\u00e3o Judicial",
                         "2" = "Exigibilidade Suspensa por Processo Administrativo")
-BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da BC em percentual",
-                          "3" = "Redu\u00e7\u00e3o da BC em valor", "4" = "Al\u00edquota diferenciada")
+# As descrições do tipo de benefício municipal (o TBMISSQN do leiaute), sem os nomes dos campos que o leiaute cita.
+BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da BC em %",
+                          "3" = "Redu\u00e7\u00e3o da BC em R$", "4" = "Al\u00edquota Diferenciada")
 
 #' DANFSe em PDF
 #'
@@ -69,13 +70,14 @@ danfse_pdf = function(xml, arquivo) {
                   height = grid::unit(ALTURA_DO_A4 - 0.60, "cm"), just = c("left", "top"), gp = grid::gpar(fill = NA, lwd = 1))
   desenhar_cabecalho_do_danfse(nota)
   y = desenhar_dados_da_nfse(nota)
+  tomador = pessoa_do_danfse(dps, "toma")
+  destinatario = pessoa_do_danfse(dps, "IBSCBS/dest")
   y = desenhar_pessoa_do_danfse("PRESTADOR / FORNECEDOR", pessoa_do_danfse(dps, "prest", nota, informacao), y,
                                 "PRESTADOR / FORNECEDOR N\u00c3O IDENTIFICADO NA NFS-e", com_simples = TRUE, nota = nota)
-  y = desenhar_pessoa_do_danfse("TOMADOR / ADQUIRENTE", pessoa_do_danfse(dps, "toma"), y,
+  y = desenhar_pessoa_do_danfse("TOMADOR / ADQUIRENTE", tomador, y,
                                 "TOMADOR/ADQUIRENTE DA OPERA\u00c7\u00c3O N\u00c3O IDENTIFICADO NA NFS-e")
-  destinatario = pessoa_do_danfse(dps, "IBSCBS/dest")
-  tomador = pessoa_do_danfse(dps, "toma")
-  if (!is.null(destinatario) && !is.null(tomador) && identical(destinatario$documento, tomador$documento)) {
+  # A nota 3: o indDest 0 diz que o destinatário é o próprio tomador (o leiaute não repete os dados dele).
+  if (identical(texto_pelo_caminho(dps, "IBSCBS/indDest"), "0")) {
     y = desenhar_linha_unica_do_danfse("O DESTINAT\u00c1RIO \u00c9 O PR\u00d3PRIO TOMADOR/ADQUIRENTE DA OPERA\u00c7\u00c3O", y)
   } else {
     y = desenhar_pessoa_do_danfse("DESTINAT\u00c1RIO DA OPERA\u00c7\u00c3O", destinatario, y,
@@ -84,7 +86,7 @@ danfse_pdf = function(xml, arquivo) {
   y = desenhar_pessoa_do_danfse("INTERMEDI\u00c1RIO DA OPERA\u00c7\u00c3O", pessoa_do_danfse(dps, "interm"), y,
                                 "INTERMEDI\u00c1RIO DA OPERA\u00c7\u00c3O N\u00c3O IDENTIFICADO NA NFS-e")
   y = desenhar_servico_do_danfse(nota, y)
-  y = desenhar_tributacao_municipal_do_danfse(nota, dps, y)
+  y = desenhar_tributacao_municipal_do_danfse(nota, dps, informacao, y)
   y = desenhar_tributacao_federal_do_danfse(nota, y)
   y = desenhar_ibs_cbs_do_danfse(nota, dps, informacao, y)
   y = desenhar_totais_do_danfse(nota, y)
@@ -156,8 +158,10 @@ desenhar_cabecalho_do_danfse = function(nota) {
     grid::grid.text(texto_para_o_pdf("NFS-e SEM VALIDADE JUR\u00cdDICA"), x = grid::unit(10.50, "cm"), y = grid::unit(ALTURA_DO_A4 - 1.10, "cm"),
                     just = c("centre", "top"), gp = grid::gpar(fontsize = 9, fontface = "bold", col = "red"))
   }
-  desenhar_texto(paste0("Munic\u00edpio: ", conteudo_do_danfse(nota$local_emissao_municipio), " - ",
-                        conteudo_do_danfse(nota$emitente_uf)), 15.72, 0.40, tamanho = 8)
+  if (!identical(substr(nota$codigo_tributacao_nacional, 1, 2), "99")) {
+    desenhar_texto(paste0("Munic\u00edpio: ", conteudo_do_danfse(nota$local_emissao_municipio), " / ",
+                          conteudo_do_danfse(nota$emitente_uf)), 15.72, 0.40, tamanho = 8)
+  }
   desenhar_texto(paste("Ambiente Gerador:", conteudo_do_danfse(nota$ambiente_gerador_descricao)), 15.72, 0.97, tamanho = 6)
   desenhar_texto(paste("Tipo de Ambiente:", conteudo_do_danfse(nota$ambiente_descricao)), 15.72, 1.22, tamanho = 6)
 }
@@ -203,13 +207,19 @@ pessoa_do_danfse = function(dps, grupo, nota = NULL, informacao = NULL) {
   codigo = texto_pelo_caminho(no, "end/endNac/cMun|enderNac/cMun")
   nome_do_municipio = if (is.na(codigo)) texto_pelo_caminho(no, "end/endExt/xCidade") else municipio_com_a_uf(codigo)
   cep = texto_pelo_caminho(no, "end/endNac/CEP|enderNac/CEP")
+  codigo_postal_do_exterior = texto_pelo_caminho(no, "end/endExt/cEndPost")
   partes_do_endereco = c(texto_pelo_caminho(no, "end/xLgr|enderNac/xLgr"), texto_pelo_caminho(no, "end/nro|enderNac/nro"),
                          texto_pelo_caminho(no, "end/xCpl|enderNac/xCpl"), texto_pelo_caminho(no, "end/xBairro|enderNac/xBairro"))
   list(documento = texto_pelo_caminho(no, "CNPJ|CPF|NIF"), inscricao = texto_pelo_caminho(no, "IM"),
        telefone = texto_pelo_caminho(no, "fone"), nome = texto_pelo_caminho(no, "xNome"), municipio = nome_do_municipio,
-       codigo_e_cep = if (is.na(codigo)) NA_character_ else paste(codigo, "/", cep_formatado(cep)),
+       codigo_e_cep = if (is.na(codigo)) codigo_postal_do_exterior else paste(codigo, "/", cep_do_danfse(cep)),
        endereco = if (all(is.na(partes_do_endereco))) NA_character_ else paste(partes_do_endereco[!is.na(partes_do_endereco)], collapse = ", "),
        email = texto_pelo_caminho(no, "email"))
+}
+
+# O CEP na máscara da NT 008 (nn.nnn-nnn).
+cep_do_danfse = function(cep) {
+  if (is.na(cep)) NA_character_ else sub("^([0-9]{2})([0-9]{3})([0-9]{3})$", "\\1.\\2-\\3", cep)
 }
 
 # O município pelo código do IBGE, com a UF ("Fortaleza / CE"); NA quando o código não está na tabela.
@@ -249,20 +259,25 @@ desenhar_pessoa_do_danfse = function(titulo, pessoa, y, frase_sem_pessoa, com_in
 
 desenhar_servico_do_danfse = function(nota, y) {
   titulo_do_bloco_do_danfse("SERVI\u00c7O PRESTADO", y)
-  codigos = paste(c(nota$codigo_tributacao_nacional, nota$codigo_tributacao_municipal)[!is.na(c(nota$codigo_tributacao_nacional,
-                                                                                                 nota$codigo_tributacao_municipal))],
-                  collapse = " / ")
-  campo_do_danfse(5.41, y, 5.09, 0.63, "C\u00f3digo de Tributa\u00e7\u00e3o Nacional / Municipal", conteudo_do_danfse(codigos))
-  campo_do_danfse(10.51, y, 5.09, 0.63, "C\u00f3digo da NBS", conteudo_do_danfse(nota$nbs))
-  # A prestação no Brasil sai com o município e a UF; a do exterior, com o país (o código do leiaute).
+  nacional = if (is.na(nota$codigo_tributacao_nacional)) NA_character_ else
+    sub("^([0-9]{2})([0-9]{2})([0-9]{2})$", "\\1.\\2.\\3", nota$codigo_tributacao_nacional)
+  codigos = c(nacional, nota$codigo_tributacao_municipal)
+  campo_do_danfse(5.41, y, 5.09, 0.63, "C\u00f3digo de Tributa\u00e7\u00e3o Nacional / Municipal",
+                  conteudo_do_danfse(if (all(is.na(codigos))) NA else paste(codigos[!is.na(codigos)], collapse = " / ")))
+  nbs = if (is.na(nota$nbs)) NA_character_ else sub("^([0-9])([0-9]{4})([0-9]{2})([0-9]{2})$", "\\1.\\2.\\3.\\4", nota$nbs)
+  campo_do_danfse(10.51, y, 5.09, 0.63, "C\u00f3digo da NBS", conteudo_do_danfse(nbs))
+  # O município e a UF (pelo código do IBGE) e, na prestação no exterior, o país (o código ISO de 2 letras).
   local = municipio_com_a_uf(nota$prestacao_codigo_municipio)
   if (is.na(local)) {
-    local = if (is.na(nota$prestacao_pais)) nota$prestacao_local else nota$prestacao_pais
+    local = nota$prestacao_local
+  }
+  if (!is.na(nota$prestacao_pais)) {
+    local = paste(c(local[!is.na(local)], nota$prestacao_pais), collapse = " / ")
   }
   campo_do_danfse(15.62, y, 5.09, 0.63, "Local da Presta\u00e7\u00e3o / Sigla UF / Pa\u00eds", conteudo_do_danfse(local, 42))
   descricao_do_codigo = if (!is.na(nota$tributacao_municipal)) nota$tributacao_municipal else nota$tributacao_nacional
   desenhar_texto(conteudo_do_danfse(descricao_do_codigo, 170), 0.40, y + 0.70, tamanho = 6)
-  linhas = quebrar_texto(conteudo_do_danfse(nota$descricao_servico, 1300), 20.2, 7, separadores = "\r?\n")
+  linhas = quebrar_texto(conteudo_do_danfse(nota$descricao_servico, 1300), 20.2, 7)
   desenhar_texto("Descri\u00e7\u00e3o do Servi\u00e7o", 0.40, y + 1.05, tamanho = 6, negrito = TRUE)
   for (posicao in seq_along(utils::head(linhas, 12))) {
     desenhar_texto(linhas[posicao], 0.40, y + 1.30 + (posicao - 1) * 0.29, tamanho = 7)
@@ -270,7 +285,7 @@ desenhar_servico_do_danfse = function(nota, y) {
   y + 1.35 + max(1, min(12, length(linhas))) * 0.29 + 0.1
 }
 
-desenhar_tributacao_municipal_do_danfse = function(nota, dps, y) {
+desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
   # A nota 4: a operação sem incidência do ISSQN (sem o grupo, ou tribISSQN 4, de não incidência) vira uma linha.
   if (is.na(nota$tributacao_issqn) || nota$tributacao_issqn == 4) {
     return(desenhar_linha_unica_do_danfse("TRIBUTA\u00c7\u00c3O MUNICIPAL (ISSQN) - OPERA\u00c7\u00c3O N\u00c3O SUJEITA AO ISSQN", y))
@@ -280,6 +295,10 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, y) {
   incidencia = municipio_com_a_uf(nota$incidencia_codigo_municipio)
   if (is.na(incidencia)) {
     incidencia = nota$incidencia_municipio
+  }
+  pais_do_resultado = texto_pelo_caminho(dps, "valores/trib/tribMun/cPaisResult")
+  if (!is.na(pais_do_resultado)) {
+    incidencia = paste(c(incidencia[!is.na(incidencia)], pais_do_resultado), collapse = " / ")
   }
   campo_do_danfse(10.51, y, 10.19, 0.63, "Munic\u00edpio / Sigla UF / Pa\u00eds de Incid\u00eancia do ISSQN", conteudo_do_danfse(incidencia, 42))
   y = y + 0.64
@@ -296,11 +315,19 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, y) {
     campo_do_danfse(15.62, y, 5.09, 0.63, "N\u00famero Processo Suspens\u00e3o", conteudo_do_danfse(processo))
     y = y + 0.64
   }
-  beneficio = texto_pelo_caminho(dps, "valores/trib/tribMun/BM/tpBM")
-  if (!all(is.na(c(beneficio, nota$beneficio_municipal_calculado, nota$deducao_calculada, nota$desconto_incondicionado)))) {
+  beneficio = texto_pelo_caminho(informacao, "valores/tpBM")
+  calculo_do_beneficio = c(nota$beneficio_municipal_calculado,
+                           as.numeric(texto_pelo_caminho(dps, "valores/trib/tribMun/BM/vRedBCBM")))
+  calculo_do_beneficio = calculo_do_beneficio[!is.na(calculo_do_beneficio)][1]
+  deducoes = c(as.numeric(texto_pelo_caminho(dps, "valores/vDedRed/vDR")), nota$deducao_calculada,
+               as.numeric(texto_pelo_caminho(informacao, "valores/vCalcAjusteBCISSQN")))
+  reembolso = as.numeric(texto_pelo_caminho(informacao, "IBSCBS/valores/vCalcReeRepRes"))
+  deducoes = c(deducoes[!is.na(deducoes)][1], reembolso)
+  total_das_deducoes = if (all(is.na(deducoes))) NA else sum(deducoes, na.rm = TRUE)
+  if (!all(is.na(c(beneficio, calculo_do_beneficio, total_das_deducoes, nota$desconto_incondicionado)))) {
     campo_do_danfse(0.30, y, 5.09, 0.63, "Benef\u00edcio Municipal", conteudo_do_danfse(if (is.na(beneficio)) NA else BENEFICIOS_MUNICIPAIS[[beneficio]]))
-    campo_do_danfse(5.41, y, 5.09, 0.63, "C\u00e1lculo do BM", reais_do_danfse(nota$beneficio_municipal_calculado))
-    campo_do_danfse(10.51, y, 5.09, 0.63, "Total Dedu\u00e7\u00f5es/Redu\u00e7\u00f5es", reais_do_danfse(nota$deducao_calculada))
+    campo_do_danfse(5.41, y, 5.09, 0.63, "C\u00e1lculo do BM", reais_do_danfse(calculo_do_beneficio))
+    campo_do_danfse(10.51, y, 5.09, 0.63, "Total Dedu\u00e7\u00f5es/Redu\u00e7\u00f5es", reais_do_danfse(total_das_deducoes))
     campo_do_danfse(15.62, y, 5.09, 0.63, "Desconto Incondicionado", reais_do_danfse(nota$desconto_incondicionado))
     y = y + 0.64
   }
@@ -332,8 +359,11 @@ desenhar_ibs_cbs_do_danfse = function(nota, dps, informacao, y) {
   titulo_do_bloco_do_danfse("TRIBUTA\u00c7\u00c3O IBS / CBS", y)
   cst = if (is.na(nota$cst_ibs_cbs)) NA else paste(nota$cst_ibs_cbs, "/", conteudo_do_danfse(nota$classificacao_ibs_cbs))
   campo_do_danfse(5.41, y, 5.09, 0.63, "CST / cClassTrib", conteudo_do_danfse(cst))
-  partes = c(nota$indicador_operacao, nota$incidencia_ibs_cbs_codigo_municipio, nota$incidencia_ibs_cbs_municipio)
-  campo_do_danfse(10.51, y, 10.19, 0.63, "Indicador de Opera\u00e7\u00e3o / C\u00f3digo IBGE Incid\u00eancia / Munic\u00edpio Incid\u00eancia",
+  uf_da_incidencia = municipio_com_a_uf(nota$incidencia_ibs_cbs_codigo_municipio)
+  uf_da_incidencia = if (is.na(uf_da_incidencia)) NA_character_ else sub("^.* / ", "", uf_da_incidencia)
+  partes = c(nota$indicador_operacao, nota$incidencia_ibs_cbs_codigo_municipio, nota$incidencia_ibs_cbs_municipio, uf_da_incidencia)
+  campo_do_danfse(10.51, y, 10.19, 0.63,
+                  "Indicador de Opera\u00e7\u00e3o / C\u00f3digo IBGE Incid\u00eancia / Munic\u00edpio Incid\u00eancia / Sigla UF",
                   conteudo_do_danfse(if (all(is.na(partes))) NA else paste(partes[!is.na(partes)], collapse = " / "), 56))
   y = y + 0.64
   # O reembolso, repasse ou ressarcimento (vCalcReeRepRes, do leiaute 1.01) virou, no leiaute da NT 009, os dois ajustes
@@ -396,7 +426,7 @@ desenhar_informacoes_do_danfse = function(nota, dps, y) {
     rotulo_do_danfse("Inf. A. T. Mun.:", nota$outras_informacoes)
   )
   texto = paste(partes[!is.na(partes)], collapse = " | ")
-  linhas = quebrar_texto(texto, 20.2, 7, separadores = "\r?\n")
+  linhas = quebrar_texto(texto, 20.2, 7)
   limite = floor((28.10 - 0.1 - (y + 0.45) - 0.35) / 0.29)
   for (posicao in seq_along(utils::head(linhas, max(0, limite)))) {
     desenhar_texto(linhas[posicao], 0.40, y + 0.45 + (posicao - 1) * 0.29, tamanho = 7)

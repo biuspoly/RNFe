@@ -56,6 +56,10 @@ danfe_simplificado_pdf = function(xml, arquivo, etiqueta = FALSE, protocolo_epec
   if (!isTRUE(etiqueta) && !isFALSE(etiqueta)) {
     stop("O etiqueta \u00e9 TRUE ou FALSE.", call. = FALSE)
   }
+  # O item 3.11 não admite o EPEC no DANFE Simplificado; só a Etiqueta (3.12, f) traz o protocolo dele.
+  if (!is.null(protocolo_epec) && !etiqueta) {
+    stop("O protocolo do EPEC s\u00f3 vai no DANFE Simplificado - Etiqueta (etiqueta = TRUE).", call. = FALSE)
+  }
   nota = dados_do_danfe(documento, informacao)
   # A medida dos textos precisa de um PDF aberto: um sem arquivo, só para montar as linhas e saber a altura.
   grDevices::pdf(NULL, width = LARGURA_DO_DANFE_SIMPLIFICADO / 2.54, height = 10, family = "Times", encoding = "WinAnsi.enc")
@@ -131,7 +135,7 @@ linhas_do_danfe_simplificado = function(nota, etiqueta, protocolo_epec) {
 textos_do_simplificado = function(texto, tamanho, negrito, alinhamento) {
   linhas = list()
   largura = LARGURA_DO_DANFE_SIMPLIFICADO - 2 * MARGEM_DO_DANFE_SIMPLIFICADO
-  for (pedaco in quebrar_texto(texto, largura, tamanho, negrito, separadores = "\r?\n")) {
+  for (pedaco in quebrar_texto(texto, largura, tamanho, negrito)) {
     linhas[[length(linhas) + 1]] = list(tipo = "texto", texto = pedaco, tamanho = tamanho, negrito = negrito,
                                         alinhamento = alinhamento)
   }

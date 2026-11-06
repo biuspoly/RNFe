@@ -43,10 +43,14 @@ test_that("o destinat\u00e1rio entra no QR-Code da conting\u00eancia: 1 e o CNPJ
 
 test_that("na emiss\u00e3o normal, s\u00f3 a chave, a vers\u00e3o e o ambiente, sem certificado", {
   texto = paste(readLines(NFCE_DE_CONTINGENCIA, encoding = "UTF-8"), collapse = "\n")
+  # A mesma nota em emissão normal: a forma de emissão muda também na chave (a posição 35) e no dígito.
   normal = sub("<tpEmis>9</tpEmis>", "<tpEmis>1</tpEmis>", texto, fixed = TRUE)
+  normal = gsub("23261011444777000161650030000000779135724686", "23261011444777000161650030000000771135724680", normal,
+                fixed = TRUE)
+  normal = sub("<cDV>6</cDV>", "<cDV>0</cDV>", normal, fixed = TRUE)
   com_qrcode = nfce_qrcode(normal, paste0(ENDERECO_DO_QRCODE, "?"), ENDERECO_DA_CONSULTA)
   expect_identical(texto_do_grupo(com_qrcode, "qrCode"),
-                   paste0(ENDERECO_DO_QRCODE, "?p=23261011444777000161650030000000779135724686|3|2"))
+                   paste0(ENDERECO_DO_QRCODE, "?p=23261011444777000161650030000000771135724680|3|2"))
 })
 
 test_that("os erros: sem certificado na conting\u00eancia, a NF-e e o endere\u00e7o sem http", {

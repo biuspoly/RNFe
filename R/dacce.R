@@ -93,7 +93,7 @@ desenhar_correcao_da_carta = function(pedido) {
   desenhar_texto("CORRE\u00c7\u00c3O", 1.0, 8.45, tamanho = 7, negrito = TRUE)
   texto = texto_pelo_caminho(pedido, "detEvento/*/xCorrecao|detEvento/xCorrecao")
   if (!is.na(texto)) {
-    linhas = quebrar_texto(texto, 18.6, 9, separadores = "\r?\n")
+    linhas = quebrar_texto(texto, 18.6, 9)
     altura = 0.3 + length(linhas) * 0.42
     desenhar_caixa(1.0, 8.8, 19.0, altura, NULL, NULL)
     for (posicao in seq_along(linhas)) {
@@ -113,7 +113,7 @@ desenhar_correcao_da_carta = function(pedido) {
   for (correcao in correcoes) {
     valores = c(texto_pelo_caminho(correcao, "grupoAlterado"), texto_pelo_caminho(correcao, "campoAlterado"),
                 texto_pelo_caminho(correcao, "valorAlterado"), texto_pelo_caminho(correcao, "nroItemAlterado"))
-    linhas_do_valor = quebrar_texto(valores[3], larguras[3] - 0.2, 8, separadores = "\r?\n")
+    linhas_do_valor = quebrar_texto(valores[3], larguras[3] - 0.2, 8)
     altura = max(0.5, 0.25 + length(linhas_do_valor) * 0.36)
     for (posicao in seq_along(colunas)) {
       desenhar_caixa(colunas[posicao], y, larguras[posicao], altura, NULL, NULL)
@@ -132,7 +132,7 @@ desenhar_correcao_da_carta = function(pedido) {
 desenhar_condicoes_de_uso_da_carta = function(pedido, y) {
   texto = texto_pelo_caminho(pedido, "detEvento/*/xCondUso|detEvento/xCondUso")
   desenhar_texto("CONDI\u00c7\u00d5ES DE USO", 1.0, y + 0.35, tamanho = 7, negrito = TRUE)
-  linhas = quebrar_texto(if (is.na(texto)) "-" else texto, 18.6, 7, separadores = "\r?\n")
+  linhas = quebrar_texto(if (is.na(texto)) "-" else texto, 18.6, 7)
   altura = 0.3 + length(linhas) * 0.32
   desenhar_caixa(1.0, y + 0.7, 19.0, altura, NULL, NULL)
   for (posicao in seq_along(linhas)) {

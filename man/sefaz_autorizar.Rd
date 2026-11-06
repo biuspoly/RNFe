@@ -32,8 +32,9 @@ disse do lote: 104 é processado), \code{recibo} (quando ela processou depois),
 \code{situacao} e \code{motivo} (o protocolo da nota: 100 autorizada, 150 autorizada
 fora de prazo, 120 autorizada com alerta, as outras são rejeição ou
 denegação), \code{protocolo}, \code{autorizacao} (data e hora), \code{xml_autorizado} (o
-\code{nfeProc}, só na nota autorizada), \code{endereco} e \code{problema} (por que não
-deu para enviar ou entender a resposta).
+\code{nfeProc}, na nota autorizada e na denegada, que a SEFAZ guarda com o
+protocolo da denegação), \code{endereco} e \code{problema} (por que não deu para
+enviar ou entender a resposta).
 }
 \description{
 Manda cada NF-e ou NFC-e assinada para a SEFAZ autorizar e devolve, de cada

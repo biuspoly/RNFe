@@ -29,4 +29,7 @@ test_that("o DANFE Simplificado - Etiqueta: sem os itens, com o protocolo do EPE
                                       tempfile(fileext = ".pdf")), "danfce_pdf")
   expect_error(danfe_simplificado_pdf(system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe"), tempfile(fileext = ".pdf"),
                                       etiqueta = NA), "TRUE ou FALSE")
+  # O DANFE Simplificado (sem ser a Etiqueta) não admite o EPEC (o item 3.11 do manual).
+  expect_error(danfe_simplificado_pdf(system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe"), tempfile(fileext = ".pdf"),
+                                      protocolo_epec = "891260000001234"), "Etiqueta")
 })

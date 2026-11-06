@@ -99,6 +99,11 @@ desenhar_codigo_de_barras = function(texto, esquerda, superior, largura, altura)
 desenhar_qrcode = function(texto, esquerda, superior, lado) {
   exigir_pacotes("qrcode")
   matriz = as.matrix(qrcode::qr_code(texto, ecl = "M"))
+  # A matriz do qrcode já vem com uma borda em branco; ela sai, e o `lado` é o do símbolo: a margem segura fica por
+  # conta de quem desenha (o espaço em branco em volta).
+  linhas_com_preto = which(rowSums(matriz) > 0)
+  colunas_com_preto = which(colSums(matriz) > 0)
+  matriz = matriz[min(linhas_com_preto):max(linhas_com_preto), min(colunas_com_preto):max(colunas_com_preto)]
   modulos = nrow(matriz)
   tamanho_do_modulo = lado / modulos
   pretos = which(matriz, arr.ind = TRUE)
@@ -171,14 +176,14 @@ largura_do_texto = function(textos, tamanho, negrito = FALSE) {
 }
 
 # O texto quebrado em linhas que cabem na largura (em centímetros), pela medida de cada palavra na fonte aberta. A
-# palavra maior que a linha é cortada. A linha nova começa também em cada `separadores` (o ";" das informações
-# complementares, por padrão).
-quebrar_texto = function(texto, largura, tamanho, negrito = FALSE, separadores = "(\r?\n)|;") {
+# palavra maior que a linha é cortada. A linha nova começa também em cada quebra de linha do texto (nenhum manual manda
+# quebrar no ";", que fica no texto).
+quebrar_texto = function(texto, largura, tamanho, negrito = FALSE) {
   if (is.na(texto) || texto == "") {
     return(character())
   }
   linhas = character()
-  for (paragrafo in strsplit(texto, separadores, perl = TRUE)[[1]]) {
+  for (paragrafo in strsplit(texto, "\r?\n")[[1]]) {
     palavras = strsplit(trimws(paragrafo), "\\s+")[[1]]
     atual = ""
     for (palavra in palavras) {
@@ -231,7 +236,8 @@ numero_brasileiro = function(valores, casas = 2, casas_maximas = casas) {
     decimal = if (grepl("\\.", texto)) sub("^[^.]*\\.", "", texto) else ""
     negativo = startsWith(inteiro, "-")
     inteiro = sub("^-", "", inteiro)
-    inteiro = formatC(as.numeric(inteiro), format = "d", big.mark = ".", decimal.mark = ",")
+    # O "f" sem casas, não o "d": o "d" passa por inteiro do R e vira NA acima de 2.147.483.647.
+    inteiro = formatC(as.numeric(inteiro), format = "f", digits = 0, big.mark = ".", decimal.mark = ",")
     textos[posicao] = paste0(if (negativo) "-" else "", inteiro, if (nchar(decimal) > 0) paste0(",", decimal) else "")
   }
   textos

@@ -115,3 +115,38 @@ test_that("a rejei\u00e7\u00e3o n\u00e3o tem nfeProc, e o protocolo de outra cha
   expect_match(de_outra$problema, "outra chave")
   expect_true(is.na(de_outra$situacao))
 })
+
+test_that("a nota denegada tem o nfeProc com o protocolo da denega\u00e7\u00e3o (o item 5.1.6 do MOC)", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  httr2::local_mocked_responses(function(req) {
+    resposta_da_sefaz("NFeAutorizacao4", retorno_do_lote(104, "Lote processado",
+                                                         protocolo_da_nota(302, "Uso Denegado: Irregularidade fiscal do destinatario")))
+  })
+  denegada = sefaz_autorizar(nota_assinada_do_ce(), CERTIFICADO_DA_AUTORIZACAO, "teste")
+  expect_identical(denegada$situacao, 302L)
+  expect_match(denegada$xml_autorizado, "<cStat>302</cStat>", fixed = TRUE)
+  expect_identical(nfe_ler(denegada$xml_autorizado)$notas$situacao, 302L)
+})
+
+test_that("o recibo que volta sem o lote (106) n\u00e3o \u00e9 consultado de novo", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE, esperar_antes_do_recibo = function() NULL)
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    if (length(pedidos) == 1) {
+      return(resposta_da_sefaz("NFeAutorizacao4", retorno_do_lote(103, "Lote recebido com sucesso",
+                                                                  "<infRec><nRec>231000000012345</nRec><tMed>1</tMed></infRec>")))
+    }
+    resposta_da_sefaz("NFeRetAutorizacao4", paste0(
+      '<retConsReciNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>2</tpAmb><verAplic>SVRS</verAplic>',
+      "<nRec>231000000012345</nRec><cStat>106</cStat><xMotivo>Lote nao localizado</xMotivo><cUF>23</cUF></retConsReciNFe>"))
+  })
+  resposta = sefaz_autorizar(nota_assinada_do_ce(), CERTIFICADO_DA_AUTORIZACAO, "teste")
+  expect_length(pedidos, 2)
+  expect_identical(resposta$situacao_lote, 106L)
+  expect_match(resposta$problema, "106")
+})

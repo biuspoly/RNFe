@@ -17,7 +17,8 @@ sefaz_cte_desacordo(
   certificado,
   senha,
   sequencia = 1,
-  ambiente = "homologacao"
+  ambiente = "homologacao",
+  tomador = NULL
 )
 
 sefaz_cte_cancelar_desacordo(
@@ -26,7 +27,8 @@ sefaz_cte_cancelar_desacordo(
   certificado,
   senha,
   sequencia = 1,
-  ambiente = "homologacao"
+  ambiente = "homologacao",
+  tomador = NULL
 )
 }
 \arguments{
@@ -43,6 +45,9 @@ variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 
 \item{ambiente}{\code{"homologacao"}, o único liberado por enquanto.}
 
+\item{tomador}{Opcional: o CNPJ (ou o CPF) do tomador do serviço, quando
+não é o do certificado (o mesmo CNPJ-base).}
+
 \item{protocolo_do_desacordo}{O protocolo do evento de desacordo que vai ser
 cancelado (15 algarismos).}
 }
@@ -58,8 +63,11 @@ dias da autorização do CT-e. \code{sefaz_cte_cancelar_desacordo()} cancela o
 evento registrado por engano (o 610111).
 }
 \details{
-O evento é assinado com o certificado, que tem de ser o do tomador do
-serviço do CT-e. Por enquanto só o ambiente de \strong{homologação}.
+O autor do evento é o tomador do serviço (a regra N19 do MOC do CT-e
+rejeita outro), e o certificado tem de ter o CNPJ-base (ou o CPF) dele. Sem
+\code{tomador}, o autor é o CNPJ do certificado; quando o tomador é uma filial e
+o certificado é o da matriz, informe o CNPJ da filial. Por enquanto só o
+ambiente de \strong{homologação}.
 }
 \examples{
 \dontrun{

@@ -22,14 +22,23 @@ NOMES_DOS_MODAIS_DO_MDFE = c("1" = "Rodovi\u00e1rio", "2" = "A\u00e9reo", "3" = 
 #'
 #' Precisa do pacote `qrcode`.
 #'
+#' O MDF-e emitido em contingência (`tpEmis` 2) leva "EMISSÃO EM CONTINGÊNCIA",
+#' as chaves dos documentos que ele relaciona e o QR-Code com a assinatura da
+#' chave (o parâmetro `sign`, que só sai com o certificado, quando o XML ainda
+#' não traz o QR-Code). As observações que não cabem seguem em folhas
+#' adicionais.
+#'
 #' @param xml O MDF-e: o caminho do arquivo ou o texto do XML (o `mdfeProc`,
 #'   com o protocolo).
 #' @param arquivo O PDF a gravar.
+#' @param certificado,senha Só para o MDF-e em contingência sem o QR-Code no
+#'   XML: o certificado que assinou o MDF-e e a senha, para assinar a chave.
 #' @return O caminho do PDF, invisível.
 #' @seealso [sefaz_mdfe_autorizar()], [mdfe_ler()]
 #' @source Manual de Orientação do Contribuinte do MDF-e 3.00b, Anexo II:
 #'   Manual de Especificações Técnicas do DAMDFE (agosto de 2022), itens 2.3 a
-#'   2.8; e a Visão Geral, item 10.1 (o endereço da consulta).
+#'   2.8; e a Visão Geral, itens 9.2 (o QR-Code, também o da contingência), 10.1
+#'   (o endereço da consulta) e 11.1 (o DAMDFE da contingência).
 #' @examples
 #' \donttest{
 #' if (requireNamespace("qrcode", quietly = TRUE)) {
@@ -38,7 +47,7 @@ NOMES_DOS_MODAIS_DO_MDFE = c("1" = "Rodovi\u00e1rio", "2" = "A\u00e9reo", "3" = 
 #' }
 #' }
 #' @export
-damdfe_pdf = function(xml, arquivo) {
+damdfe_pdf = function(xml, arquivo, certificado = NULL, senha = NULL) {
   exigir_pacotes("qrcode")
   documento = ler_o_xml_para_assinar(xml)
   manifesto = xml2::xml_find_first(documento, "//*[local-name()='MDFe']")
@@ -48,31 +57,88 @@ damdfe_pdf = function(xml, arquivo) {
   }
   chave = sub("^MDFe", "", xml2::xml_attr(informacao, "Id"))
   ambiente = texto_pelo_caminho(informacao, "ide/tpAmb")
+  em_contingencia = identical(texto_pelo_caminho(informacao, "ide/tpEmis"), "2")
   qrcode_do_xml = texto_pelo_caminho(manifesto, "infMDFeSupl/qrCodMDFe")
   if (is.na(qrcode_do_xml)) {
     qrcode_do_xml = paste0("https://dfe-portal.svrs.rs.gov.br/mdfe/qrCode?chMDFe=", chave, "&tpAmb=", ambiente)
+    if (em_contingencia) {
+      if (is.null(certificado) || is.null(senha)) {
+        stop("O MDF-e em conting\u00eancia sem o QR-Code no XML precisa do certificado e da senha (para o sign).",
+             call. = FALSE)
+      }
+      qrcode_do_xml = paste0(qrcode_do_xml, "&sign=", assinatura_da_chave_do_mdfe(chave, certificado, senha))
+    }
   }
   protocolo = xml2::xml_find_first(documento, "//*[local-name()='protMDFe']/*[local-name()='infProt']")
   abrir_o_pdf(arquivo, LARGURA_DO_A4, ALTURA_DO_A4)
   on.exit(grDevices::dev.off(), add = TRUE)
   grid::grid.newpage()
-  desenhar_cabecalho_do_damdfe(informacao, chave, qrcode_do_xml)
-  desenhar_quantidades_e_protocolo_do_damdfe(informacao, chave, protocolo, ambiente)
+  # O rodoviário vem antes do cabeçalho: a altura dele diz quantas linhas do fim (as chaves dos documentos, na
+  # contingência, e as observações) cabem na primeira folha, e o cabeçalho mostra o total de folhas.
   y = 11.2
   if (identical(texto_pelo_caminho(informacao, "ide/modal"), "1")) {
     y = desenhar_rodoviario_do_damdfe(informacao, y)
   }
-  observacoes = c(texto_pelo_caminho(informacao, "infAdic/infAdFisco"), texto_pelo_caminho(informacao, "infAdic/infCpl"))
-  desenhar_texto("Observa\u00e7\u00f5es", 1.0, y + 0.3, tamanho = 8, negrito = TRUE)
-  desenhar_linha(1.0, y + 0.75, 20.0, y + 0.75)
-  linhas = quebrar_texto(paste(observacoes[!is.na(observacoes)], collapse = "; "), 19, 8)
-  for (posicao in seq_along(linhas)) {
-    desenhar_texto(linhas[posicao], 1.0, y + 0.85 + (posicao - 1) * 0.36, tamanho = 8)
+  linhas_do_fim = linhas_do_fim_do_damdfe(informacao, em_contingencia)
+  # Duas linhas a menos em cada folha: os títulos são mais altos que as linhas.
+  cabem_na_primeira = max(0, floor((ALTURA_DO_A4 - 1.0 - (y + 0.3)) / 0.36) - 2)
+  cabem_nas_outras = floor((ALTURA_DO_A4 - 1.0 - 2.45) / 0.36) - 2
+  sobra = max(0, length(linhas_do_fim) - cabem_na_primeira)
+  total = 1 + ceiling(sobra / cabem_nas_outras)
+  desenhar_cabecalho_do_damdfe(informacao, chave, qrcode_do_xml, total)
+  desenhar_quantidades_e_protocolo_do_damdfe(informacao, chave, protocolo, ambiente)
+  desenhar_linhas_do_fim_do_damdfe(utils::head(linhas_do_fim, cabem_na_primeira), y)
+  restantes = linhas_do_fim[-seq_len(min(cabem_na_primeira, length(linhas_do_fim)))]
+  folha = 1
+  while (length(restantes) > 0) {
+    folha = folha + 1
+    grid::grid.newpage()
+    desenhar_texto(paste0("DAMDFE - continua\u00e7\u00e3o (FL. ", folha, "/", total, ")"), 1.0, 1.0, tamanho = 9, negrito = TRUE)
+    desenhar_texto(chave_em_blocos(chave), 1.0, 1.45, tamanho = 8)
+    desenhar_linhas_do_fim_do_damdfe(utils::head(restantes, cabem_nas_outras), 2.15)
+    restantes = restantes[-seq_len(min(cabem_nas_outras, length(restantes)))]
   }
   invisible(arquivo)
 }
 
-desenhar_cabecalho_do_damdfe = function(informacao, chave, qrcode) {
+# As linhas do fim do DAMDFE: na contingência, as chaves dos documentos que o MDF-e relaciona (o item 11.1 do MOC);
+# depois, as observações (do Fisco e do contribuinte). Cada linha é um texto e se é título.
+linhas_do_fim_do_damdfe = function(informacao, em_contingencia) {
+  linhas = list()
+  if (em_contingencia) {
+    linhas[[1]] = list(texto = "Documentos do manifesto", titulo = TRUE)
+    grupos = c(infCTe = "CT-e", infNFe = "NF-e", infMDFeTransp = "MDF-e")
+    campos = c(infCTe = "chCTe", infNFe = "chNFe", infMDFeTransp = "chMDFe")
+    for (grupo in names(grupos)) {
+      caminho = paste0(".//*[local-name()='infMunDescarga']/*[local-name()='", grupo, "']/*[local-name()='", campos[[grupo]], "']")
+      for (chave in xml2::xml_text(xml2::xml_find_all(informacao, caminho))) {
+        linhas[[length(linhas) + 1]] = list(texto = paste0(grupos[[grupo]], ": ", chave_em_blocos(chave)), titulo = FALSE)
+      }
+    }
+  }
+  observacoes = c(texto_pelo_caminho(informacao, "infAdic/infAdFisco"), texto_pelo_caminho(informacao, "infAdic/infCpl"))
+  linhas[[length(linhas) + 1]] = list(texto = "Observa\u00e7\u00f5es", titulo = TRUE)
+  for (linha in quebrar_texto(paste(observacoes[!is.na(observacoes)], collapse = "; "), 19, 8)) {
+    linhas[[length(linhas) + 1]] = list(texto = linha, titulo = FALSE)
+  }
+  linhas
+}
+
+desenhar_linhas_do_fim_do_damdfe = function(linhas, y) {
+  posicao_vertical = y + 0.3
+  for (linha in linhas) {
+    if (linha$titulo) {
+      desenhar_texto(linha$texto, 1.0, posicao_vertical + 0.1, tamanho = 8, negrito = TRUE)
+      desenhar_linha(1.0, posicao_vertical + 0.5, 20.0, posicao_vertical + 0.5)
+      posicao_vertical = posicao_vertical + 0.6
+    } else {
+      desenhar_texto(linha$texto, 1.0, posicao_vertical, tamanho = 8)
+      posicao_vertical = posicao_vertical + 0.36
+    }
+  }
+}
+
+desenhar_cabecalho_do_damdfe = function(informacao, chave, qrcode, total_de_folhas = 1) {
   nome = texto_pelo_caminho(informacao, "emit/xNome")
   endereco = paste0(texto_pelo_caminho(informacao, "emit/enderEmit/xLgr"), ", ", texto_pelo_caminho(informacao, "emit/enderEmit/nro"))
   cep = texto_pelo_caminho(informacao, "emit/enderEmit/CEP")
@@ -94,7 +160,7 @@ desenhar_cabecalho_do_damdfe = function(informacao, chave, qrcode) {
     list(1.0, 1.4, "Modelo", texto_pelo_caminho(informacao, "ide/mod")),
     list(2.4, 1.4, "S\u00e9rie", texto_pelo_caminho(informacao, "ide/serie")),
     list(3.8, 2.0, "N\u00famero", texto_pelo_caminho(informacao, "ide/nMDF")),
-    list(5.8, 1.0, "FL.", "1/1"),
+    list(5.8, 1.0, "FL.", paste0("1/", total_de_folhas)),
     list(6.8, 3.6, "Data e hora de emiss\u00e3o", paste(data_do_xml(emissao), hora_do_xml(emissao))),
     list(10.4, 2.2, "UF carreg.", texto_pelo_caminho(informacao, "ide/UFIni")),
     list(12.6, 2.2, "UF descarreg.", texto_pelo_caminho(informacao, "ide/UFFim"))

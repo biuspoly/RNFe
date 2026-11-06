@@ -48,8 +48,9 @@ data. Cada carta nova substitui a anterior e leva o número seguinte
 (\code{sequencia}, de 1 a 20). Só a NF-e (modelo 55) tem carta de correção.
 }
 \details{
-O evento é assinado com o certificado, que tem de ser o do emitente da nota.
-Por enquanto só o ambiente de \strong{homologação}.
+Como no cancelamento, o autor é o emitente da chave e o certificado pode ser
+o de outro estabelecimento da empresa (o mesmo CNPJ-base). Por enquanto só o
+ambiente de \strong{homologação}.
 }
 \examples{
 \dontrun{

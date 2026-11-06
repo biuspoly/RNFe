@@ -9,7 +9,7 @@ test_that("a carta de corre\u00e7\u00e3o da NF-e: a chave, o protocolo, a corre\
   expect_match(texto, "323260000006789", fixed = TRUE)
   expect_match(texto, "135 - Evento registrado e vinculado a NF-e", fixed = TRUE)
   expect_match(texto, "LEIA-SE RUA DO CLIENTE, 100", fixed = TRUE)
-  # O ";" das condições de uso fica no texto (não quebra a linha, como nas informações complementares do DANFE).
+  # O ";" das condições de uso fica no texto: nenhum manual manda quebrar a linha nele.
   expect_match(texto, "prestacao; II", fixed = TRUE)
   expect_match(texto, "Homologa\u00e7\u00e3o", fixed = TRUE)
 })

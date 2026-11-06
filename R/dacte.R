@@ -10,7 +10,10 @@ NOMES_DOS_MODAIS_DO_CTE = c("01" = "RODOVI\u00c1RIO", "02" = "A\u00c9REO", "03" 
                             "05" = "DUTOVI\u00c1RIO", "06" = "MULTIMODAL")
 TIPOS_DO_CTE = c("0" = "NORMAL", "1" = "COMPLEMENTO DE VALORES", "2" = "ANULA\u00c7\u00c3O", "3" = "SUBSTITUTO")
 TIPOS_DO_SERVICO_DO_CTE = c("0" = "NORMAL", "1" = "SUBCONTRATA\u00c7\u00c3O", "2" = "REDESPACHO",
-                            "3" = "REDESPACHO INTERMEDI\u00c1RIO", "4" = "SERVI\u00c7O VINCULADO A MULTIMODAL")
+                            "3" = "REDESPACHO INTERMEDI\u00c1RIO", "4" = "SERVI\u00c7O VINCULADO A MULTIMODAL",
+                            "6" = "TRANSPORTE DE PESSOAS", "7" = "TRANSPORTE DE VALORES", "8" = "EXCESSO DE BAGAGEM")
+# O responsável pelo seguro que o DACTE OS mostra (o respSeg do CT-e OS).
+RESPONSAVEIS_PELO_SEGURO_DO_CTE_OS = c("4" = "EMITENTE DO CT-E OS", "5" = "TOMADOR DO SERVI\u00c7O")
 ENDERECO_DA_CONSULTA_DO_CTE = "http://www.cte.fazenda.gov.br/portal"
 DOCUMENTOS_NA_PRIMEIRA_FOLHA_DO_DACTE = 6
 
@@ -48,6 +51,9 @@ DOCUMENTOS_NA_PRIMEIRA_FOLHA_DO_DACTE = 6
 dacte_pdf = function(xml, arquivo) {
   exigir_pacotes("qrcode")
   documento = ler_o_xml_para_assinar(xml)
+  if (!inherits(xml2::xml_find_first(documento, "//*[local-name()='CTeSimp']"), "xml_missing")) {
+    stop("O CT-e simplificado (CTeSimp) ainda n\u00e3o tem DACTE no RNFe.", call. = FALSE)
+  }
   conhecimento = xml2::xml_find_first(documento, "//*[(local-name()='CTe' or local-name()='CTeOS')]")
   informacao = xml2::xml_find_first(conhecimento, "*[local-name()='infCte']")
   if (inherits(informacao, "xml_missing")) {
@@ -169,7 +175,8 @@ desenhar_cabecalho_do_dacte = function(cte, folha, total, com_canhoto) {
   desenhar_caixa(8.0, topo + 4.3, 9.2, 0.75, titulo = "PROTOCOLO DE AUTORIZA\u00c7\u00c3O DE USO", conteudo = protocolo,
                  tamanho_do_conteudo = 8, negrito = TRUE, alinhamento = "centre")
   if (!is.na(cte$qrcode)) {
-    desenhar_qrcode(cte$qrcode, 17.5, topo + 0.3, 3.0)
+    # O símbolo de 2,7 cm, com a margem em branco em volta (o quadro ao lado acaba em 17,2 cm).
+    desenhar_qrcode(cte$qrcode, 17.65, topo + 0.45, 2.7)
   }
   tipo = texto_pelo_caminho(informacao, "ide/tpCTe")
   servico = texto_pelo_caminho(informacao, "ide/tpServ")
@@ -211,19 +218,33 @@ desenhar_corpo_do_dacte = function(cte) {
       y = y + 1.75
     }
   }
+  do_cte_os = identical(texto_pelo_caminho(informacao, "ide/mod"), "67")
   tomador = pessoa_do_tomador(informacao)
   if (!is.null(tomador)) {
-    desenhar_caixa(0.4, y, 20.2, 0.75, titulo = "TOMADOR DO SERVI\u00c7O", tamanho_do_conteudo = 7, conteudo = paste0(
-      tomador$nome, "  -  CNPJ/CPF: ", documento_formatado(tomador$documento), "  -  ", tomador$municipio, " - ", tomador$uf))
+    linha_do_endereco = paste0("ENDERE\u00c7O: ", tomador$endereco, "  -  ", tomador$municipio, " - ", tomador$uf,
+                               if (is.na(tomador$fone)) "" else paste0("  -  FONE: ", tomador$fone))
+    desenhar_caixa(0.4, y, 20.2, 1.0, titulo = if (do_cte_os) "TOMADOR/USU\u00c1RIO DO SERVI\u00c7O" else "TOMADOR DO SERVI\u00c7O",
+                   tamanho_do_conteudo = 7, conteudo = c(
+                     paste0(tomador$nome, "  -  CNPJ/CPF: ", documento_formatado(tomador$documento),
+                            if (is.na(tomador$ie)) "" else paste0("  -  IE: ", tomador$ie)),
+                     linha_do_endereco))
+    y = y + 1.0
+  }
+  if (do_cte_os) {
+    desenhar_caixa(0.4, y, 15.2, 0.75, titulo = "DESCRI\u00c7\u00c3O DO SERVI\u00c7O PRESTADO",
+                   conteudo = texto_pelo_caminho(informacao, "infCTeNorm/infServico/xDescServ"), tamanho_do_conteudo = 8)
+    desenhar_caixa(15.6, y, 5.0, 0.75, titulo = "QUANTIDADE", alinhamento = "right", tamanho_do_conteudo = 8,
+                   conteudo = numero_brasileiro(as.numeric(texto_pelo_caminho(informacao, "infCTeNorm/infServico/infQ/qCarga")), 2, 4))
+    y = y + 0.75
+  } else {
+    desenhar_caixa(0.4, y, 8.0, 0.75, titulo = "PRODUTO PREDOMINANTE",
+                   conteudo = texto_pelo_caminho(informacao, "infCTeNorm/infCarga/proPred"), tamanho_do_conteudo = 8)
+    desenhar_caixa(8.4, y, 7.2, 0.75, titulo = "OUTRAS CARACTER\u00cdSTICAS DA CARGA",
+                   conteudo = texto_pelo_caminho(informacao, "infCTeNorm/infCarga/xOutCat"), tamanho_do_conteudo = 8)
+    desenhar_caixa(15.6, y, 5.0, 0.75, titulo = "VALOR TOTAL DA CARGA", alinhamento = "right", tamanho_do_conteudo = 8,
+                   conteudo = numero_brasileiro(as.numeric(texto_pelo_caminho(informacao, "infCTeNorm/infCarga/vCarga"))))
     y = y + 0.75
   }
-  desenhar_caixa(0.4, y, 8.0, 0.75, titulo = "PRODUTO PREDOMINANTE", conteudo = texto_pelo_caminho(informacao, "infCTeNorm/infCarga/proPred"),
-                 tamanho_do_conteudo = 8)
-  desenhar_caixa(8.4, y, 7.2, 0.75, titulo = "OUTRAS CARACTER\u00cdSTICAS DA CARGA",
-                 conteudo = texto_pelo_caminho(informacao, "infCTeNorm/infCarga/xOutCat"), tamanho_do_conteudo = 8)
-  desenhar_caixa(15.6, y, 5.0, 0.75, titulo = "VALOR TOTAL DA CARGA", alinhamento = "right", tamanho_do_conteudo = 8,
-                 conteudo = numero_brasileiro(as.numeric(texto_pelo_caminho(informacao, "infCTeNorm/infCarga/vCarga"))))
-  y = y + 0.75
   medidas = xml2::xml_find_all(informacao, ".//*[local-name()='infCarga']/*[local-name()='infQ']")
   if (length(medidas) > 0) {
     textos = character()
@@ -248,13 +269,63 @@ desenhar_corpo_do_dacte = function(cte) {
   desenhar_caixa(0.4, y, 20.2, max(1.0, 0.45 + 0.3 * length(linhas_das_observacoes)), titulo = "OBSERVA\u00c7\u00d5ES GERAIS",
                  conteudo = linhas_das_observacoes, tamanho_do_conteudo = 7)
   y = y + max(1.0, 0.45 + 0.3 * length(linhas_das_observacoes))
-  if (identical(texto_pelo_caminho(informacao, "ide/modal"), "01")) {
+  seguro = xml2::xml_find_first(informacao, "*[local-name()='infCTeNorm']/*[local-name()='seg']")
+  if (do_cte_os && !inherits(seguro, "xml_missing")) {
+    responsavel = texto_pelo_caminho(seguro, "respSeg")
+    desenhar_caixa(0.4, y, 6.0, 0.75, titulo = "SEGURO DA VIAGEM - RESPONS\u00c1VEL", tamanho_do_conteudo = 8,
+                   conteudo = if (!is.na(responsavel) && responsavel %in% names(RESPONSAVEIS_PELO_SEGURO_DO_CTE_OS))
+                     RESPONSAVEIS_PELO_SEGURO_DO_CTE_OS[[responsavel]] else responsavel)
+    desenhar_caixa(6.4, y, 8.2, 0.75, titulo = "NOME DA SEGURADORA", conteudo = texto_pelo_caminho(seguro, "xSeg"),
+                   tamanho_do_conteudo = 8)
+    desenhar_caixa(14.6, y, 6.0, 0.75, titulo = "N\u00daMERO DA AP\u00d3LICE", conteudo = texto_pelo_caminho(seguro, "nApol"),
+                   tamanho_do_conteudo = 8)
+    y = y + 0.75
+  }
+  rodoviario_do_os = xml2::xml_find_first(informacao, "*[local-name()='infCTeNorm']/*[local-name()='infModal']/*[local-name()='rodoOS']")
+  if (!inherits(rodoviario_do_os, "xml_missing")) {
+    y = desenhar_rodoviario_do_dacte_os(rodoviario_do_os, y)
+  } else if (identical(texto_pelo_caminho(informacao, "ide/modal"), "01")) {
     desenhar_caixa(0.4, y, 20.2, 0.75, titulo = "INFORMA\u00c7\u00d5ES ESPEC\u00cdFICAS DO MODAL RODOVI\u00c1RIO - RNTRC DA EMPRESA",
                    conteudo = texto_pelo_caminho(informacao, "infCTeNorm/infModal/rodo/RNTRC"), tamanho_do_conteudo = 8)
     y = y + 0.75
   }
-  desenhar_caixa(0.4, y, 13.0, min(2.0, ALTURA_DO_A4 - 0.4 - y), titulo = "USO EXCLUSIVO DO EMISSOR DO CT-E")
-  desenhar_caixa(13.4, y, 7.2, min(2.0, ALTURA_DO_A4 - 0.4 - y), titulo = "RESERVADO AO FISCO")
+  altura = min(2.0, ALTURA_DO_A4 - 0.4 - y)
+  desenhar_caixa(0.4, y, 13.0, altura, titulo = "USO EXCLUSIVO DO EMISSOR DO CT-E", tamanho_do_conteudo = 7,
+                 conteudo = textos_das_observacoes_do_dacte(informacao, "ObsCont", 12.8))
+  desenhar_caixa(13.4, y, 7.2, altura, titulo = "RESERVADO AO FISCO", tamanho_do_conteudo = 7,
+                 conteudo = textos_das_observacoes_do_dacte(informacao, "ObsFisco", 7.0))
+}
+
+# Os textos das observações do contribuinte (ObsCont) ou do Fisco (ObsFisco), com o campo de cada um, quebrados na
+# largura do quadro.
+textos_das_observacoes_do_dacte = function(informacao, grupo, largura) {
+  observacoes = xml2::xml_find_all(informacao, paste0("*[local-name()='compl']/*[local-name()='", grupo, "']"))
+  linhas = character()
+  for (observacao in observacoes) {
+    linhas = c(linhas, quebrar_texto(paste0(xml2::xml_attr(observacao, "xCampo"), ": ", texto_pelo_caminho(observacao, "xTexto")),
+                                     largura, 7))
+  }
+  if (length(linhas) == 0) NULL else utils::head(linhas, 5)
+}
+
+# O quadro do modal rodoviário do DACTE OS: o TAF, o registro estadual, o veículo e o proprietário.
+desenhar_rodoviario_do_dacte_os = function(rodoviario, y) {
+  desenhar_texto("INFORMA\u00c7\u00d5ES ESPEC\u00cdFICAS DO MODAL RODOVI\u00c1RIO", 10.5, y + 0.05, tamanho = 6, negrito = TRUE,
+                 alinhamento = "centre")
+  proprietario = texto_pelo_caminho(rodoviario, "veic/prop/CNPJ|veic/prop/CPF")
+  caixas = list(
+    list(0.4, 4.6, "TERMO DE AUTORIZA\u00c7\u00c3O DE FRETAMENTO - TAF", texto_pelo_caminho(rodoviario, "TAF")),
+    list(5.0, 3.2, "N\u00daMERO DO REGISTRO ESTADUAL", texto_pelo_caminho(rodoviario, "NroRegEstadual")),
+    list(8.2, 2.2, "PLACA DO VE\u00cdCULO", texto_pelo_caminho(rodoviario, "veic/placa")),
+    list(10.4, 2.6, "RENAVAM DO VE\u00cdCULO", texto_pelo_caminho(rodoviario, "veic/RENAVAM")),
+    list(13.0, 3.2, "CNPJ/CPF DO PROPRIET\u00c1RIO", if (is.na(proprietario)) NA else documento_formatado(proprietario)),
+    list(16.2, 2.2, "TAF DO PROPRIET\u00c1RIO", texto_pelo_caminho(rodoviario, "veic/prop/TAF")),
+    list(18.4, 2.2, "REGISTRO ESTADUAL", texto_pelo_caminho(rodoviario, "veic/prop/NroRegEstadual"))
+  )
+  for (caixa in caixas) {
+    desenhar_caixa(caixa[[1]], y + 0.3, caixa[[2]], 0.75, titulo = caixa[[3]], conteudo = caixa[[4]], tamanho_do_conteudo = 8)
+  }
+  y + 1.05
 }
 
 desenhar_pessoa_do_dacte = function(informacao, titulo, grupo, endereco, esquerda, y) {
@@ -276,23 +347,37 @@ desenhar_pessoa_do_dacte = function(informacao, titulo, grupo, endereco, esquerd
   desenhar_caixa(esquerda, y, 10.1, 1.75, conteudo = utils::head(quebradas, 5), tamanho_do_conteudo = 7)
 }
 
-# O tomador: o toma4 (outro) ou a pessoa que o toma3 indica (0 remetente, 1 expedidor, 2 recebedor, 3 destinatário).
+# O tomador: o do CT-e OS (o grupo toma), o toma4 (outro) ou a pessoa que o toma3 indica (0 remetente, 1 expedidor,
+# 2 recebedor, 3 destinatário).
 pessoa_do_tomador = function(informacao) {
+  do_cte_os = xml2::xml_find_first(informacao, "*[local-name()='toma']")
+  if (!inherits(do_cte_os, "xml_missing")) {
+    return(dados_da_pessoa_do_dacte(do_cte_os, "enderToma"))
+  }
   outro = xml2::xml_find_first(informacao, ".//*[local-name()='toma4']")
   if (!inherits(outro, "xml_missing")) {
-    return(list(nome = texto_pelo_caminho(outro, "xNome"), documento = texto_pelo_caminho(outro, "CNPJ|CPF"),
-                municipio = texto_pelo_caminho(outro, "enderToma/xMun"), uf = texto_pelo_caminho(outro, "enderToma/UF")))
+    return(dados_da_pessoa_do_dacte(outro, "enderToma"))
   }
   indicado = texto_pelo_caminho(informacao, "ide/toma3/toma")
-  grupos = c("0" = "rem/enderReme", "1" = "exped/enderExped", "2" = "receb/enderReceb", "3" = "dest/enderDest")
+  grupos = c("0" = "rem", "1" = "exped", "2" = "receb", "3" = "dest")
+  enderecos = c("0" = "enderReme", "1" = "enderExped", "2" = "enderReceb", "3" = "enderDest")
   if (is.na(indicado) || !(indicado %in% names(grupos))) {
     return(NULL)
   }
-  grupo = sub("/.*$", "", grupos[[indicado]])
-  list(nome = texto_pelo_caminho(informacao, paste0(grupo, "/xNome")),
-       documento = texto_pelo_caminho(informacao, paste0(grupo, "/CNPJ|", grupo, "/CPF")),
-       municipio = texto_pelo_caminho(informacao, paste0(grupos[[indicado]], "/xMun")),
-       uf = texto_pelo_caminho(informacao, paste0(grupos[[indicado]], "/UF")))
+  pessoa = xml2::xml_find_first(informacao, paste0("*[local-name()='", grupos[[indicado]], "']"))
+  if (inherits(pessoa, "xml_missing")) {
+    return(NULL)
+  }
+  dados_da_pessoa_do_dacte(pessoa, enderecos[[indicado]])
+}
+
+dados_da_pessoa_do_dacte = function(pessoa, endereco) {
+  partes_do_endereco = c(texto_pelo_caminho(pessoa, paste0(endereco, "/xLgr")), texto_pelo_caminho(pessoa, paste0(endereco, "/nro")),
+                         texto_pelo_caminho(pessoa, paste0(endereco, "/xCpl")), texto_pelo_caminho(pessoa, paste0(endereco, "/xBairro")))
+  list(nome = texto_pelo_caminho(pessoa, "xNome"), documento = texto_pelo_caminho(pessoa, "CNPJ|CPF"),
+       ie = texto_pelo_caminho(pessoa, "IE"), fone = texto_pelo_caminho(pessoa, "fone"),
+       endereco = paste(partes_do_endereco[!is.na(partes_do_endereco)], collapse = ", "),
+       municipio = texto_pelo_caminho(pessoa, paste0(endereco, "/xMun")), uf = texto_pelo_caminho(pessoa, paste0(endereco, "/UF")))
 }
 
 desenhar_componentes_do_dacte = function(informacao, y) {
@@ -326,10 +411,14 @@ desenhar_imposto_do_dacte = function(informacao, y) {
     cst = xml2::xml_name(icms)
   }
   caixas = list(list(0.4, 7.0, "CLASSIFICA\u00c7\u00c3O TRIBUT\u00c1RIA DO SERVI\u00c7O", cst, "left"),
-                list(7.4, 3.3, "BASE DE C\u00c1LCULO", numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "vBC"))), "right"),
-                list(10.7, 3.3, "AL\u00cdQ. DO ICMS", numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "pICMS"))), "right"),
-                list(14.0, 3.3, "VALOR DO ICMS", numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "vICMS"))), "right"),
-                list(17.3, 3.3, "% RED. BC CALC.", numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "pRedBC"))), "right"))
+                list(7.4, 3.3, "BASE DE C\u00c1LCULO",
+                     numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "vBC|vBCSTRet|vBCOutraUF"))), "right"),
+                list(10.7, 3.3, "AL\u00cdQ. DO ICMS",
+                     numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "pICMS|pICMSSTRet|pICMSOutraUF"))), "right"),
+                list(14.0, 3.3, "VALOR DO ICMS",
+                     numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "vICMS|vICMSSTRet|vICMSOutraUF"))), "right"),
+                list(17.3, 3.3, "% RED. BC CALC.",
+                     numero_brasileiro(as.numeric(texto_pelo_caminho(icms, "pRedBC|pRedBCOutraUF"))), "right"))
   for (caixa in caixas) {
     desenhar_caixa(caixa[[1]], y + 0.3, caixa[[2]], 0.75, titulo = caixa[[3]], conteudo = caixa[[4]], tamanho_do_conteudo = 8,
                    alinhamento = caixa[[5]])

@@ -52,6 +52,7 @@ danfce_pdf = function(xml, arquivo) {
   }
   nota$pagamentos = pagamentos_da_nfce(informacao)
   nota$troco = texto_pelo_caminho(informacao, "pag/vTroco")
+  nota$endereco_de_entrega = endereco_de_entrega_da_nfce(informacao)
   # A medida dos textos precisa de um PDF aberto: um sem arquivo, só para montar as linhas e saber a altura.
   grDevices::pdf(NULL, width = LARGURA_DA_BOBINA / 2.54, height = 10, family = "Times", encoding = "WinAnsi.enc")
   grid::grid.newpage()
@@ -83,6 +84,15 @@ pagamentos_da_nfce = function(informacao) {
                                       valor = numero_brasileiro(as.numeric(texto_pelo_caminho(pagamento, "vPag")))))
   }
   linhas
+}
+
+# O endereço de entrega (o grupo entrega) ou, sem ele, o do consumidor; NA quando a nota não traz nenhum.
+endereco_de_entrega_da_nfce = function(informacao) {
+  grupo = if (inherits(xml2::xml_find_first(informacao, "*[local-name()='entrega']"), "xml_missing")) "dest/enderDest" else "entrega"
+  partes = c(texto_pelo_caminho(informacao, paste0(grupo, "/xLgr")), texto_pelo_caminho(informacao, paste0(grupo, "/nro")),
+             texto_pelo_caminho(informacao, paste0(grupo, "/xCpl")), texto_pelo_caminho(informacao, paste0(grupo, "/xBairro")),
+             texto_pelo_caminho(informacao, paste0(grupo, "/xMun")), texto_pelo_caminho(informacao, paste0(grupo, "/UF")))
+  if (all(is.na(partes))) NA_character_ else paste(partes[!is.na(partes)], collapse = ", ")
 }
 
 # As linhas do DANFE NFC-e, de cima para baixo: cada uma, um texto (com o tamanho, o negrito e o alinhamento), um par
@@ -143,6 +153,10 @@ linhas_do_danfce = function(nota) {
   linhas = c(linhas, list(list(tipo = "traco")), textos_da_bobina(texto_do_consumidor(nota), 7, TRUE, "centre"))
   if (!is.na(nota$destinatario_nome)) {
     linhas = c(linhas, textos_da_bobina(nota$destinatario_nome, 7, FALSE, "centre"))
+  }
+  # O endereço de entrega, que o item 3.1.6 do manual exige na entrega em domicílio (e permite nas outras).
+  if (!is.na(nota$endereco_de_entrega)) {
+    linhas = c(linhas, textos_da_bobina(nota$endereco_de_entrega, 7, FALSE, "centre"))
   }
   linhas = c(linhas, list(list(tipo = "qrcode", texto = nota$qrcode)))
   identificacao = paste0("NFC-e n\u00ba ", nota$numero, " S\u00e9rie ", nota$serie, " ", data_do_xml(nota$emissao), " ",
@@ -222,7 +236,8 @@ desenhar_linha_do_danfce = function(linha, y) {
   if (linha$tipo == "traco") {
     desenhar_linha(esquerda, y + 0.1, direita, y + 0.1, tracejada = TRUE)
   } else if (linha$tipo == "qrcode") {
-    # O QR-Code de 3 cm, com a margem segura de 10% dentro dele (o manual pede no mínimo 25 mm, com 3 mm de margem).
+    # O QR-Code numa área de 3 cm: o símbolo com 2,4 cm e a margem segura de 10% de cada lado (o manual pede no mínimo
+    # 25 mm, sendo 22 mm de conteúdo e 3 mm de margem).
     lado_do_conteudo = LADO_DO_QRCODE_DA_NFCE * 0.8
     desenhar_qrcode(linha$texto, (LARGURA_DA_BOBINA - lado_do_conteudo) / 2, y + 0.1 + LADO_DO_QRCODE_DA_NFCE * 0.1,
                     lado_do_conteudo)

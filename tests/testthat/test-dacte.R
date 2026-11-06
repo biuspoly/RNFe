@@ -14,7 +14,25 @@ test_that("o DACTE do CT-e e o do CT-e OS: a identifica\u00e7\u00e3o, a chave, o
   dacte_pdf(system.file("exemplos", "cte_os_sp.xml", package = "RNFe"), arquivo_os)
   texto_os = gsub("\\s+", " ", gsub("\u00ad", "-", pdftools::pdf_text(arquivo_os), fixed = TRUE))
   expect_match(texto_os, "DACTE OS", fixed = TRUE)
-  expect_match(texto_os, "FRETAMENTO 1.000,00", fixed = TRUE)
+  expect_match(texto_os, "VALOR TOTAL DA PRESTA\u00c7\u00c3O", fixed = TRUE)
+  expect_match(texto_os, "1.000,00", fixed = TRUE)
   expect_match(texto_os, "135260000054321", fixed = TRUE)
+  # O DACTE OS: o tomador (o grupo toma), o serviço prestado, a quantidade, o TAF e o tipo de serviço por extenso.
+  expect_match(texto_os, "TOMADOR/USU\u00c1RIO DO SERVI\u00c7O", fixed = TRUE)
+  expect_match(texto_os, "11.222.333/0001-81", fixed = TRUE)
+  expect_match(texto_os, "FRETAMENTO EVENTUAL", fixed = TRUE)
+  expect_match(texto_os, "123456789012", fixed = TRUE)
+  expect_match(texto_os, "TRANSPORTE DE PESSOAS", fixed = TRUE)
+  expect_match(texto_os, "CONTRATO: CONTRATO DE TESTE 123", fixed = TRUE)
+  # O ICMS cobrado por substituição (ICMS60): a base, a alíquota e o valor retidos.
+  cte = paste(readLines(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"), encoding = "UTF-8"), collapse = "\n")
+  com_icms60 = sub("(?s)<ICMS>.*</ICMS>", paste0("<ICMS><ICMS60><CST>60</CST><vBCSTRet>1500.00</vBCSTRet><vICMSSTRet>180.00",
+                                                   "</vICMSSTRet><pICMSSTRet>12.00</pICMSSTRet><vCred>0.00</vCred></ICMS60></ICMS>"),
+                   cte, perl = TRUE)
+  arquivo_icms60 = tempfile(fileext = ".pdf")
+  dacte_pdf(com_icms60, arquivo_icms60)
+  texto_icms60 = gsub("\\s+", " ", pdftools::pdf_text(arquivo_icms60))
+  expect_match(texto_icms60, "1.500,00", fixed = TRUE)
+  expect_match(texto_icms60, "180,00", fixed = TRUE)
   expect_error(dacte_pdf(system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe"), tempfile(fileext = ".pdf")), "CT-e")
 })

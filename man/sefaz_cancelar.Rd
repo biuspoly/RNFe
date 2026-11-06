@@ -48,8 +48,11 @@ legislação da UF (em geral, 24 horas da autorização na NF-e e 30 minutos na
 NFC-e); fora dele, a SEFAZ rejeita ou registra como fora de prazo (155).
 }
 \details{
-O evento é assinado com o certificado, que tem de ser o do emitente da nota.
-Por enquanto só o ambiente de \strong{homologação}.
+O autor do evento é o emitente da chave (o CNPJ ou, nas séries do emitente
+pessoa física, o CPF), e o certificado pode ser o dele ou o de outro
+estabelecimento da empresa (o mesmo CNPJ-base): a nota de uma filial pode
+ser cancelada com o certificado da matriz. Por enquanto só o ambiente de
+\strong{homologação}.
 }
 \examples{
 \dontrun{

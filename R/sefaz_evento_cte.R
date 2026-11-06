@@ -14,12 +14,17 @@ NAMESPACE_DO_CTE = "http://www.portalfiscal.inf.br/cte"
 #' dias da autorização do CT-e. `sefaz_cte_cancelar_desacordo()` cancela o
 #' evento registrado por engano (o 610111).
 #'
-#' O evento é assinado com o certificado, que tem de ser o do tomador do
-#' serviço do CT-e. Por enquanto só o ambiente de **homologação**.
+#' O autor do evento é o tomador do serviço (a regra N19 do MOC do CT-e
+#' rejeita outro), e o certificado tem de ter o CNPJ-base (ou o CPF) dele. Sem
+#' `tomador`, o autor é o CNPJ do certificado; quando o tomador é uma filial e
+#' o certificado é o da matriz, informe o CNPJ da filial. Por enquanto só o
+#' ambiente de **homologação**.
 #'
 #' @param chave A chave de acesso do CT-e (modelo 57) ou do CT-e OS (67).
 #' @param observacao O motivo do desacordo, de 15 a 255 caracteres.
 #' @param sequencia O número do evento para o CT-e: 1 no primeiro (até 20).
+#' @param tomador Opcional: o CNPJ (ou o CPF) do tomador do serviço, quando
+#'   não é o do certificado (o mesmo CNPJ-base).
 #' @inheritParams sefaz_cancelar
 #' @return Um `data.frame` com uma linha, como o de [sefaz_cancelar()]: a
 #'   situação 135 é o evento registrado, e `xml_evento` traz o
@@ -36,13 +41,14 @@ NAMESPACE_DO_CTE = "http://www.portalfiscal.inf.br/cte"
 #'                     Sys.getenv("SENHA_DO_CERTIFICADO"))
 #' }
 #' @export
-sefaz_cte_desacordo = function(chave, observacao, certificado, senha, sequencia = 1, ambiente = "homologacao") {
+sefaz_cte_desacordo = function(chave, observacao, certificado, senha, sequencia = 1, ambiente = "homologacao",
+                               tomador = NULL) {
   conferir_ambiente(ambiente)
   conferir_texto_do_evento(observacao, "observacao", 15, 255)
   detalhe = paste0("<evPrestDesacordo><descEvento>Prestacao do Servico em Desacordo</descEvento>",
                    "<indDesacordoOper>1</indDesacordoOper><xObs>", escapar_texto_canonico(observacao),
                    "</xObs></evPrestDesacordo>")
-  registrar_evento_do_cte(chave, "610110", sequencia, detalhe, certificado, senha, ambiente)
+  registrar_evento_do_cte(chave, "610110", sequencia, detalhe, certificado, senha, ambiente, tomador)
 }
 
 #' @rdname sefaz_cte_desacordo
@@ -50,7 +56,7 @@ sefaz_cte_desacordo = function(chave, observacao, certificado, senha, sequencia 
 #'   cancelado (15 algarismos).
 #' @export
 sefaz_cte_cancelar_desacordo = function(chave, protocolo_do_desacordo, certificado, senha, sequencia = 1,
-                                        ambiente = "homologacao") {
+                                        ambiente = "homologacao", tomador = NULL) {
   conferir_ambiente(ambiente)
   if (length(protocolo_do_desacordo) != 1 || is.na(protocolo_do_desacordo) ||
       !grepl("^[0-9]{15}$", protocolo_do_desacordo)) {
@@ -58,16 +64,17 @@ sefaz_cte_cancelar_desacordo = function(chave, protocolo_do_desacordo, certifica
   }
   detalhe = paste0("<evCancPrestDesacordo><descEvento>Cancelamento Prestacao do Servico em Desacordo</descEvento>",
                    "<nProtEvPrestDes>", protocolo_do_desacordo, "</nProtEvPrestDes></evCancPrestDesacordo>")
-  registrar_evento_do_cte(chave, "610111", sequencia, detalhe, certificado, senha, ambiente)
+  registrar_evento_do_cte(chave, "610111", sequencia, detalhe, certificado, senha, ambiente, tomador)
 }
 
-registrar_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente) {
+registrar_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
+                                   tomador = NULL) {
   exigir_pacotes(c("httr2", "curl", "openssl"))
   sequencia = suppressWarnings(as.integer(sequencia))
   if (length(sequencia) != 1 || is.na(sequencia) || sequencia < 1 || sequencia > 20) {
     stop("Informe a sequ\u00eancia do evento: de 1 a 20.", call. = FALSE)
   }
-  montado = montar_o_evento_do_cte(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente)
+  montado = montar_o_evento_do_cte(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente, tomador)
   if (is.null(montado$pedido)) {
     return(montado$linha)
   }
@@ -81,16 +88,17 @@ registrar_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, 
   linha
 }
 
-# A linha do evento, o evento assinado e o pedido, sem mandar nada. O autor é o CNPJ (ou CPF) do certificado; o órgão,
-# a UF da chave, cujo autorizador recebe o evento.
-montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente) {
+# A linha do evento, o evento assinado e o pedido, sem mandar nada. O autor é o tomador (o informado ou o do
+# certificado); o órgão, a UF da chave, cujo autorizador recebe o evento.
+montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
+                                  tomador = NULL) {
   chave_limpa = limpar_chaves(chave)
   partes = chave_decompor(chave_limpa)
   if (length(chave_limpa) != 1 || !partes$valida || !(partes$modelo %in% c("57", "67"))) {
     stop("Informe a chave de um CT-e ou CT-e OS (44 posi\u00e7\u00f5es, com o d\u00edgito certo).", call. = FALSE)
   }
   conferir_certificado(certificado, senha)
-  autor = certificado_ler(certificado, senha)
+  autor = autor_informado_ou_do_certificado(tomador, certificado, senha, "tomador")
   linha = data.frame(
     chave = chave_limpa, evento = codigo_do_evento, sequencia = sequencia, ambiente = ambiente,
     situacao_lote = NA_integer_, motivo_lote = NA_character_, situacao = NA_integer_, motivo = NA_character_,
@@ -103,7 +111,7 @@ montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, c
     return(list(linha = linha, pedido = NULL))
   }
   linha$endereco = servico$endereco
-  campo_do_autor = if (autor$tipo_documento %in% "CPF") "CPF" else "CNPJ"
+  campo_do_autor = if (autor$tipo_documento == "CPF") "CPF" else "CNPJ"
   identificador = paste0("ID", codigo_do_evento, chave_limpa, sprintf("%03d", sequencia))
   evento = paste0(
     '<eventoCTe xmlns="', NAMESPACE_DO_CTE, '" versao="4.00"><infEvento Id="', identificador, '"><cOrgao>',

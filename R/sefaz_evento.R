@@ -32,8 +32,11 @@ SITUACOES_DO_EVENTO_REGISTRADO = c(135L, 136L, 155L)
 #' legislação da UF (em geral, 24 horas da autorização na NF-e e 30 minutos na
 #' NFC-e); fora dele, a SEFAZ rejeita ou registra como fora de prazo (155).
 #'
-#' O evento é assinado com o certificado, que tem de ser o do emitente da nota.
-#' Por enquanto só o ambiente de **homologação**.
+#' O autor do evento é o emitente da chave (o CNPJ ou, nas séries do emitente
+#' pessoa física, o CPF), e o certificado pode ser o dele ou o de outro
+#' estabelecimento da empresa (o mesmo CNPJ-base): a nota de uma filial pode
+#' ser cancelada com o certificado da matriz. Por enquanto só o ambiente de
+#' **homologação**.
 #'
 #' @param chave A chave de acesso da nota (44 posições).
 #' @param protocolo O número do protocolo de autorização da nota.
@@ -75,8 +78,9 @@ sefaz_cancelar = function(chave, protocolo, justificativa, certificado, senha, a
 #' data. Cada carta nova substitui a anterior e leva o número seguinte
 #' (`sequencia`, de 1 a 20). Só a NF-e (modelo 55) tem carta de correção.
 #'
-#' O evento é assinado com o certificado, que tem de ser o do emitente da nota.
-#' Por enquanto só o ambiente de **homologação**.
+#' Como no cancelamento, o autor é o emitente da chave e o certificado pode ser
+#' o de outro estabelecimento da empresa (o mesmo CNPJ-base). Por enquanto só o
+#' ambiente de **homologação**.
 #'
 #' @param correcao O texto da correção, de 15 a 1.000 caracteres. A carta
 #'   nova tem de trazer todas as correções, também as das cartas anteriores.
@@ -116,13 +120,18 @@ sefaz_carta_correcao = function(chave, correcao, sequencia, certificado, senha, 
 #' desconhecimento (`"desconhecimento"`) ou a operação não realizada
 #' (`"nao_realizada"`, que pede a justificativa).
 #'
-#' O evento é assinado com o certificado, que tem de ser o do destinatário da
-#' nota. Por enquanto só o ambiente de **homologação**.
+#' O autor do evento é o destinatário da nota, e o certificado tem de ter o
+#' CNPJ-base (ou o CPF) dele. Sem `destinatario`, o autor é o CNPJ do
+#' certificado; quando a nota foi emitida para uma filial e o certificado é o
+#' da matriz, informe o CNPJ da filial. Por enquanto só o ambiente de
+#' **homologação**.
 #'
 #' @param tipo `"ciencia"`, `"confirmacao"`, `"desconhecimento"` ou
 #'   `"nao_realizada"`.
 #' @param justificativa Só na operação não realizada: o motivo, de 15 a 255
 #'   caracteres.
+#' @param destinatario Opcional: o CNPJ (ou o CPF) do destinatário da nota,
+#'   quando não é o do certificado (o mesmo CNPJ-base).
 #' @inheritParams sefaz_cancelar
 #' @inherit sefaz_cancelar return
 #' @seealso [sefaz_distribuicao()], que traz o XML completo depois da ciência.
@@ -135,7 +144,8 @@ sefaz_carta_correcao = function(chave, correcao, sequencia, certificado, senha, 
 #'                  certificado = "empresa.pfx", senha = Sys.getenv("SENHA_DO_CERTIFICADO"))
 #' }
 #' @export
-sefaz_manifestar = function(chave, tipo, justificativa = NULL, certificado, senha, ambiente = "homologacao") {
+sefaz_manifestar = function(chave, tipo, justificativa = NULL, certificado, senha, ambiente = "homologacao",
+                            destinatario = NULL) {
   conferir_ambiente(ambiente)
   if (length(tipo) != 1 || !(tipo %in% TIPOS_DE_MANIFESTACAO$tipo)) {
     stop("Informe o tipo: ", paste0("\"", TIPOS_DE_MANIFESTACAO$tipo, "\"", collapse = ", "), ".", call. = FALSE)
@@ -146,7 +156,63 @@ sefaz_manifestar = function(chave, tipo, justificativa = NULL, certificado, senh
     conferir_texto_do_evento(justificativa, "justificativa", 15, 255)
     detalhe = paste0(detalhe, "<xJust>", escapar_texto_canonico(justificativa), "</xJust>")
   }
-  registrar_evento(chave, manifestacao$codigo, 1L, detalhe, certificado, senha, ambiente, no_ambiente_nacional = TRUE)
+  registrar_evento(chave, manifestacao$codigo, 1L, detalhe, certificado, senha, ambiente, no_ambiente_nacional = TRUE,
+                   destinatario = destinatario)
+}
+
+# As séries em que a chave traz o CPF do emitente (precedido de zeros), e não o CNPJ: na NF-e, fora de 0 a 909 (a nota
+# da regra P12-44 do MOC 7.0); no MDF-e, de 920 a 969 (a regra J09 do MOC do MDF-e 3.00b).
+SERIES_DO_CPF_NA_NFE = 910:999
+SERIES_DO_CPF_NO_MDFE = 920:969
+
+# O autor de um evento do emitente: o CNPJ (ou o CPF) que está na chave. O MOC da NF-e (P12-44) e o do MDF-e (J09)
+# rejeitam o autor diferente do emitente da chave; o certificado pode ser o da matriz ou o de uma filial (o mesmo
+# CNPJ-base, item 5.9 do MOC da NF-e).
+autor_do_emitente = function(partes, series_do_cpf, certificado, senha) {
+  if (partes$serie %in% series_do_cpf) {
+    autor = list(tipo_documento = "CPF", documento = substr(partes$documento_emitente, 4, 14))
+  } else {
+    autor = list(tipo_documento = "CNPJ", documento = partes$documento_emitente)
+  }
+  conferir_o_certificado_do_autor(autor, certificado, senha, "o emitente da chave")
+  autor
+}
+
+# O autor informado (o destinatário da NF-e ou o tomador do CT-e, quando é uma filial e o certificado é o da matriz) ou,
+# sem ele, o do certificado.
+autor_informado_ou_do_certificado = function(documento, certificado, senha, quem) {
+  if (is.null(documento)) {
+    do_certificado = certificado_ler(certificado, senha)
+    if (is.na(do_certificado$documento)) {
+      stop("O certificado n\u00e3o traz o CNPJ nem o CPF do titular: informe o ", quem, ".", call. = FALSE)
+    }
+    return(list(tipo_documento = do_certificado$tipo_documento, documento = do_certificado$documento))
+  }
+  documento_limpo = toupper(gsub("[^0-9A-Za-z]", "", documento))
+  if (length(documento_limpo) != 1 || !(cnpj_confere(documento_limpo) || cpf_confere(documento_limpo))) {
+    stop("Informe o CNPJ ou o CPF do ", quem, " com os d\u00edgitos certos.", call. = FALSE)
+  }
+  autor = list(tipo_documento = if (nchar(documento_limpo) == 11) "CPF" else "CNPJ", documento = documento_limpo)
+  conferir_o_certificado_do_autor(autor, certificado, senha, paste("o", quem))
+  autor
+}
+
+# O certificado tem de ser do autor: o mesmo CNPJ-base (as 8 primeiras posições) ou o mesmo CPF.
+conferir_o_certificado_do_autor = function(autor, certificado, senha, quem) {
+  do_certificado = certificado_ler(certificado, senha)
+  if (is.na(do_certificado$documento)) {
+    stop("O certificado n\u00e3o traz o CNPJ nem o CPF do titular.", call. = FALSE)
+  }
+  if (autor$tipo_documento == "CPF") {
+    do_mesmo_titular = identical(do_certificado$documento, autor$documento)
+  } else {
+    do_mesmo_titular = identical(do_certificado$tipo_documento, "CNPJ") &&
+      identical(substr(do_certificado$documento, 1, 8), substr(autor$documento, 1, 8))
+  }
+  if (!do_mesmo_titular) {
+    stop("O certificado (", do_certificado$documento, ") n\u00e3o \u00e9 de ", quem, " (", autor$documento,
+         "): tem de ter o mesmo CNPJ-base (ou o mesmo CPF).", call. = FALSE)
+  }
 }
 
 conferir_texto_do_evento = function(texto, nome, minimo, maximo) {
@@ -157,13 +223,13 @@ conferir_texto_do_evento = function(texto, nome, minimo, maximo) {
   }
 }
 
-# Monta o evento, assina, manda e lê a resposta. O autor é o CNPJ (ou CPF) do certificado; o órgão é a UF da chave ou,
-# na manifestação, o Ambiente Nacional (91).
+# Monta o evento, assina, manda e lê a resposta. O autor é o emitente da chave ou, na manifestação, o destinatário (o
+# informado ou o do certificado); o órgão é a UF da chave ou, na manifestação, o Ambiente Nacional (91).
 registrar_evento = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
-                            no_ambiente_nacional) {
+                            no_ambiente_nacional, destinatario = NULL) {
   exigir_pacotes(c("httr2", "curl", "openssl"))
   montado = montar_o_evento(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
-                            no_ambiente_nacional)
+                            no_ambiente_nacional, destinatario)
   if (is.null(montado$pedido)) {
     return(montado$linha)
   }
@@ -179,14 +245,18 @@ registrar_evento = function(chave, codigo_do_evento, sequencia, detalhe, certifi
 
 # A linha do evento, o evento assinado e o pedido (o lote com ele), sem mandar nada.
 montar_o_evento = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
-                           no_ambiente_nacional) {
+                           no_ambiente_nacional, destinatario = NULL) {
   chave_limpa = limpar_chaves(chave)
   partes = chave_decompor(chave_limpa)
   if (length(chave_limpa) != 1 || !partes$valida || !(partes$modelo %in% c("55", "65"))) {
     stop("Informe a chave de uma NF-e ou NFC-e (44 posi\u00e7\u00f5es, com o d\u00edgito certo).", call. = FALSE)
   }
   conferir_certificado(certificado, senha)
-  autor = certificado_ler(certificado, senha)
+  if (no_ambiente_nacional) {
+    autor = autor_informado_ou_do_certificado(destinatario, certificado, senha, "destinat\u00e1rio")
+  } else {
+    autor = autor_do_emitente(partes, SERIES_DO_CPF_NA_NFE, certificado, senha)
+  }
   linha = data.frame(
     chave = chave_limpa, evento = codigo_do_evento, sequencia = sequencia, ambiente = ambiente,
     situacao_lote = NA_integer_, motivo_lote = NA_character_, situacao = NA_integer_, motivo = NA_character_,
@@ -206,7 +276,7 @@ montar_o_evento = function(chave, codigo_do_evento, sequencia, detalhe, certific
     return(list(linha = linha, pedido = NULL))
   }
   linha$endereco = servico$endereco
-  campo_do_autor = if (autor$tipo_documento %in% "CPF") "CPF" else "CNPJ"
+  campo_do_autor = if (autor$tipo_documento == "CPF") "CPF" else "CNPJ"
   identificador = paste0("ID", codigo_do_evento, chave_limpa, sprintf("%02d", sequencia))
   evento = paste0(
     '<evento xmlns="', NAMESPACE_DA_NFE, '" versao="1.00"><infEvento Id="', identificador, '"><cOrgao>', orgao,

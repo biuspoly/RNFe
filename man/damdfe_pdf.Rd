@@ -6,16 +6,20 @@
 \source{
 Manual de Orientação do Contribuinte do MDF-e 3.00b, Anexo II:
 Manual de Especificações Técnicas do DAMDFE (agosto de 2022), itens 2.3 a
-2.8; e a Visão Geral, item 10.1 (o endereço da consulta).
+2.8; e a Visão Geral, itens 9.2 (o QR-Code, também o da contingência), 10.1
+(o endereço da consulta) e 11.1 (o DAMDFE da contingência).
 }
 \usage{
-damdfe_pdf(xml, arquivo)
+damdfe_pdf(xml, arquivo, certificado = NULL, senha = NULL)
 }
 \arguments{
 \item{xml}{O MDF-e: o caminho do arquivo ou o texto do XML (o \code{mdfeProc},
 com o protocolo).}
 
 \item{arquivo}{O PDF a gravar.}
+
+\item{certificado, senha}{Só para o MDF-e em contingência sem o QR-Code no
+XML: o certificado que assinou o MDF-e e a senha, para assinar a chave.}
 }
 \value{
 O caminho do PDF, invisível.
@@ -32,6 +36,12 @@ homologação leva "EMITIDO EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL".
 }
 \details{
 Precisa do pacote \code{qrcode}.
+
+O MDF-e emitido em contingência (\code{tpEmis} 2) leva "EMISSÃO EM CONTINGÊNCIA",
+as chaves dos documentos que ele relaciona e o QR-Code com a assinatura da
+chave (o parâmetro \code{sign}, que só sai com o certificado, quando o XML ainda
+não traz o QR-Code). As observações que não cabem seguem em folhas
+adicionais.
 }
 \examples{
 \donttest{

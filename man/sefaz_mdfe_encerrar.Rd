@@ -69,8 +69,9 @@ outro MDF-e para o mesmo veículo e a mesma UF de carregamento.
 (o evento 110114).
 }
 \details{
-O evento é assinado com o certificado, que tem de ser o do emitente do
-MDF-e. Por enquanto só o ambiente de \strong{homologação}.
+O autor do evento é o emitente da chave (o CNPJ ou, nas séries 920 a 969, o
+CPF), e o certificado pode ser o dele ou o de outro estabelecimento da
+empresa (o mesmo CNPJ-base). Por enquanto só o ambiente de \strong{homologação}.
 }
 \examples{
 \dontrun{

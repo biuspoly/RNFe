@@ -1557,8 +1557,40 @@ internet ficam fora da checagem do CRAN (`skip_on_cran()`).
   competência de 2026 (nota 6); as exclusões da base do IBS e da CBS somam o que a nota tiver, também os dois ajustes
   da NT 009 que substituíram o `vCalcReeRepRes`. A logomarca da NFS-e não vai (o texto "NFS-e" no lugar dela).
 - **Carta de correção** (`dacce_pdf`): não há modelo oficial; o desenho é do pacote (a chave em código de barras, o
-  registro, a correção e as condições de uso; a do CT-e em tabela). O ";" do texto não quebra a linha (no DANFE,
-  quebra, nas informações complementares).
+  registro, a correção e as condições de uso; a do CT-e em tabela).
+
+## Revisão da última etapa (06/11/2026)
+
+Revisão independente (um revisor sem o contexto do trabalho, com os manuais no rascunho), e cada achado conferido na
+fonte antes de corrigir:
+
+- **O autor dos eventos** era o CNPJ do certificado. O MOC da NF-e (P12-44), o do MDF-e (J09) e o do CT-e (N19) pedem
+  o emitente da chave (ou, no desacordo, o tomador); o certificado pode ser o da matriz ou o de uma filial (o mesmo
+  CNPJ-base, item 5.9 do MOC 7.0). Agora o autor sai da chave (o CPF nas séries do emitente pessoa física: 910 a 999 na
+  NF-e, 920 a 969 no MDF-e), e o certificado de outro CNPJ-base é recusado antes de montar o evento. Na manifestação e
+  no desacordo, `destinatario` e `tomador` informam a filial. O cancelamento da NFS-e segue com o CNPJ do certificado:
+  as fontes à mão não dizem a regra do autor dele.
+- **A autorização:** o recibo é consultado de novo só em 105 (lote em processamento); 106 e as rejeições do pedido são
+  a resposta final. A nota denegada (110, 301, 302, 303) ganha o `nfeProc` (item 5.1.6).
+- **O DANFE:** os volumes de mais de um grupo `vol` somados; a fatura com os valores (`vOrig`, `vDesc`, `vLiq`) e as
+  duplicatas que não cabem no quadro nas informações complementares (o 3.3.2 deixa reduzir o quadro, não aumentar); o
+  FCP com os seis campos e a unidade tributável quando o valor unitário tributável é outro (3.1.7); as alíquotas com
+  até 4 casas; o canhoto em duas linhas; a contingência FS e FS-DA com o código "Dados da NF-e" e o EPEC com o
+  protocolo do evento (3.9.2 e 3.9.3); as informações complementares em quantas folhas precisarem. O ";" não quebra
+  mais a linha em PDF nenhum: nenhum manual pede isso.
+- **O DACTE OS:** o tomador (o grupo `toma`), a descrição e a quantidade do serviço, o seguro, o modal rodoviário do OS
+  (TAF, registro estadual, veículo), os tipos de serviço 6 a 8; no DACTE, o ICMS ST retido e o de outra UF, e o uso do
+  emissor e o reservado ao Fisco (`ObsCont`, `ObsFisco`).
+- **O DANFSe:** o `indDest` 0 é o destinatário igual ao tomador (nota 3); o benefício municipal e as deduções nos
+  lugares da tabela da NT 008; as máscaras do código de tributação, da NBS e do CEP; o município do cabeçalho (que sai
+  quando o item do código é o 99); o país da prestação e da incidência; a UF da incidência do IBS e da CBS.
+- **O MDF-e em contingência:** o QR-Code com o `sign` (9.2.2) e o DAMDFE com as chaves dos documentos (11.1); as
+  observações que não cabem seguem em folhas adicionais.
+- **Os QR-Code:** a borda em branco da matriz do `qrcode` sai, e o lado pedido é o do símbolo (no DANFE NFC-e, 2,4 cm
+  numa área de 3 cm, acima dos 22 mm de conteúdo do manual); o DANFE NFC-e mostra o endereço de entrega.
+- **Números acima de 2.147.483.647** saíam "NA" no formato brasileiro.
+- **Testes:** o do QR-Code da NFC-e normal usava uma nota impossível (o `tpEmis` 1 com a chave de contingência); o do
+  DANFE longo confere as três folhas.
 
 ## O robô das tabelas
 
