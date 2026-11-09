@@ -1173,7 +1173,8 @@ juntar_linhas = function(lista_de_linhas) {
 }
 
 # O código e a mensagem de cada regra, o filtro pelo modelo (algumas regras são só da NF-e ou só da NFC-e) e pela data
-# (a regra só vale para a nota emitida depois de entrar em produção; sem a data de emissão, todas valem), o que não
+# (a regra só vale para a nota emitida depois de entrar em produção; sem a data de emissão, todas as que têm data
+# valem), o que não
 # confere hoje mas pode ter conferido na emissão e a observação da regra quando a linha não tem uma própria.
 completar_com_as_regras = function(conferencias, notas, itens) {
   regras = regras_do_ibs_cbs()
@@ -1182,9 +1183,11 @@ completar_com_as_regras = function(conferencias, notas, itens) {
   modelo_da_nota = notas$modelo[da_nota]
   emissao = notas$data_emissao[da_nota]
   modelos_da_regra = regras$modelos[da_regra]
-  do_modelo = modelos_da_regra %in% "55/65" | (!is.na(modelo_da_nota) & modelos_da_regra == modelo_da_nota)
+  do_modelo = modelos_da_regra %in% "55/65" |
+    (!is.na(modelos_da_regra) & !is.na(modelo_da_nota) & modelos_da_regra == modelo_da_nota)
   em_producao_desde = regras$em_producao_desde[da_regra]
-  em_producao = is.na(emissao) | (!is.na(em_producao_desde) & emissao >= em_producao_desde)
+  # A regra sem data (implementação futura) nunca vale, nem na nota sem a data de emissão.
+  em_producao = !is.na(em_producao_desde) & (is.na(emissao) | emissao >= em_producao_desde)
   conferencias$codigo_sefaz = regras$codigo_sefaz[da_regra]
   conferencias$mensagem = regras$mensagem[da_regra]
   conferencias = conferencias[do_modelo & em_producao, ]

@@ -482,6 +482,8 @@ test_that("a devolu\u00e7\u00e3o referencia um documento: a reda\u00e7\u00e3o an
   expect_identical(na_janela$item, 1:2)
   expect_identical(na_janela$confere, c(NA, FALSE))
   expect_match(na_janela$observacao[1], "30/10 e 15/11/2026")
+  # A NT põe a redação nova em produção "até 16/11/2026": pode ter entrado antes, por isso a janela.
+  expect_match(na_janela$observacao[1], "(em produ\u00e7\u00e3o \"at\u00e9 16/11/2026\")", fixed = TRUE)
 })
 
 test_that("o total dos produtos soma s\u00f3 os itens com ICMS, IBS, CBS ou IS (W07-10)", {

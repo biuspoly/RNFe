@@ -18,3 +18,4 @@
 "devolucao_nova_publicada_em","2026-10-30","Publicada a NT v1.53, com a nova referência na devolução: daqui até a véspera da produção, a SEFAZ podia aplicar a redação antiga ou a nova da VC02-14.","NT 2025.002-RTC v1.53 (publicação e cronograma)","ibs_cbs_conferir (VC02-14)"
 "devolucao_nova_desde","2026-11-16","Em produção as mudanças da devolução da NT v1.53: a nova redação da VC02-14 e a referência única no cabeçalho (B25-40).","NT 2025.002-RTC v1.53 (cronograma)","ibs_cbs_conferir (B25-40 e VC02-14)"
 "monofasico_novo_desde","2026-11-16","Em produção o leiaute novo do monofásico (NT v1.50): antes, não dá para saber se a SEFAZ aplicava a LA01-30 ao monofásico.","NT 2025.002-RTC v1.50 (cronograma)","ibs_cbs_conferir (LA01-30)"
+"danfse_sem_pis_e_cofins_proprios_desde","2027-01-01","O DANFSe deixa de mostrar o PIS e a COFINS de apuração própria (só até a competência de 2026).","NT SE/CGNFS-e 008/2026 (DANFSe v2.0), nota 6","danfse (a tributação federal)"

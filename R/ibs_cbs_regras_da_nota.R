@@ -506,8 +506,8 @@ texto_da_janela_da_devolucao = function() {
   # No mesmo ano, o ano vai só no fim ("30/10 e 15/11/2026").
   formato_da_publicacao = if (format(publicada_em, "%Y") == format(vespera, "%Y")) "%d/%m" else "%d/%m/%Y"
   paste0("Entre ", format(publicada_em, formato_da_publicacao), " e ", format(vespera, "%d/%m/%Y"), " a SEFAZ podia ",
-         "aplicar a reda\u00e7\u00e3o antiga ou a da NT v1.53 (em produ\u00e7\u00e3o desde ",
-         format(em_producao_desde, "%d/%m/%Y"), "), e elas discordam aqui.")
+         "aplicar a reda\u00e7\u00e3o antiga ou a da NT v1.53 (em produ\u00e7\u00e3o \"at\u00e9 ",
+         format(em_producao_desde, "%d/%m/%Y"), "\"), e elas discordam aqui.")
 }
 
 conferir_as_aliquotas_da_compra_governamental = function(itens) {

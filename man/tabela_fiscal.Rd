@@ -172,8 +172,8 @@ de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
 (art. 347) e fica vazia enquanto não for publicada. A tabela vai até 2028:
 as alíquotas de 2029 em diante ainda serão publicadas. Sem \code{codigo}: uma
 linha por período (\code{inicio} e \code{fim}).
-\item \code{"marcos_ibs_cbs"}: as datas da Reforma que a conferência e o cálculo
-usam, uma por linha: o \code{marco} (o nome que o código procura), o \code{inicio}
+\item \code{"marcos_ibs_cbs"}: as datas da Reforma que a conferência, o cálculo, o
+cruzamento da EFD e o DANFSe usam, uma por linha: o \code{marco} (o nome que o código procura), o \code{inicio}
 (o primeiro dia em que a mudança vale), a \code{descricao}, a \code{base_legal} e
 onde ela é usada (\code{usado_em}). Quando a lei ou a NT muda uma data, muda a
 linha, e \code{\link[=tabelas_atualizar]{tabelas_atualizar()}} leva a mudança a quem já tem o pacote.

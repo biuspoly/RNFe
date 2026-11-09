@@ -1,6 +1,6 @@
 # As datas da Reforma vêm da tabela_fiscal("marcos_ibs_cbs"), não do código: mudar uma data é mudar a linha da tabela.
 ARQUIVOS_DA_REFORMA = c("ibs_cbs_conferir.R", "ibs_cbs_calcular.R", "ibs_cbs_monofasico.R", "ibs_cbs_regras_da_nota.R",
-                        "efd_icms_ipi_cruzar_nfe.R", "ibs_cbs_marcos.R")
+                        "efd_icms_ipi_cruzar_nfe.R", "ibs_cbs_marcos.R", "danfse.R")
 
 # As linhas de código (sem os comentários) dos arquivos da Reforma, quando o código-fonte está à mão.
 linhas_de_codigo_da_reforma = function() {
@@ -42,20 +42,20 @@ test_that("o texto de cada marco: pelo ano no 1\u00ba de janeiro, pela data nos 
 
 test_that("nenhum ano da Reforma escrito no c\u00f3digo, e todo marco usado est\u00e1 na tabela", {
   linhas = linhas_de_codigo_da_reforma()
-  # No pacote instalado (o R CMD check) o código-fonte não está aqui: o teste vale onde está.
-  if (length(linhas) > 0) {
-    com_ano = linhas[grepl("(?<![0-9.])20(2[5-9]|3[0-9])(?![0-9.])", linhas, perl = TRUE)]
-    expect_identical(com_ano, character())
-    texto_do_codigo = paste(linhas, collapse = "\n")
-    chamados = regmatches(texto_do_codigo, gregexpr("(marco_da_reforma|_marco|_marcos)\\(\"[a-z0-9_]+\"", texto_do_codigo))[[1]]
-    nomes_chamados = unique(sub("^.*\\(\"", "", sub("\"$", "", chamados)))
-    nomes_chamados = c(nomes_chamados, COMPONENTES_DA_BASE$entra_no_marco, COMPONENTES_DA_BASE$sai_no_marco)
-    marcos = tabela_fiscal("marcos_ibs_cbs")
-    expect_identical(setdiff(nomes_chamados, marcos$marco), character())
-    # E todo marco da tabela é usado em algum lugar (os do texto entre dois marcos aparecem como o segundo argumento).
-    sem_uso = marcos$marco[!vapply(marcos$marco, grepl, logical(1), x = texto_do_codigo, fixed = TRUE)]
-    expect_identical(sem_uso, character())
-  }
+  # No pacote instalado (o R CMD check) o código-fonte não está aqui: o teste roda no test_local(), na pasta do código.
+  skip_if(length(linhas) == 0, "o c\u00f3digo-fonte n\u00e3o est\u00e1 \u00e0 m\u00e3o (pacote instalado)")
+  expect_true(all(file.exists(file.path(test_path("..", "..", "R"), ARQUIVOS_DA_REFORMA))))
+  com_ano = linhas[grepl("(?<![0-9.])20(2[5-9]|3[0-9])(?![0-9.])", linhas, perl = TRUE)]
+  expect_identical(com_ano, character())
+  texto_do_codigo = paste(linhas, collapse = "\n")
+  chamados = regmatches(texto_do_codigo, gregexpr("(marco_da_reforma|_marco|_marcos)\\(\"[a-z0-9_]+\"", texto_do_codigo))[[1]]
+  nomes_chamados = unique(sub("^.*\\(\"", "", sub("\"$", "", chamados)))
+  nomes_chamados = c(nomes_chamados, COMPONENTES_DA_BASE$entra_no_marco, COMPONENTES_DA_BASE$sai_no_marco)
+  marcos = tabela_fiscal("marcos_ibs_cbs")
+  expect_identical(setdiff(nomes_chamados, marcos$marco), character())
+  # E todo marco da tabela é usado em algum lugar (os do texto entre dois marcos aparecem como o segundo argumento).
+  sem_uso = marcos$marco[!vapply(marcos$marco, grepl, logical(1), x = texto_do_codigo, fixed = TRUE)]
+  expect_identical(sem_uso, character())
 })
 
 test_that("as regras de implementa\u00e7\u00e3o futura est\u00e3o na tabela sem data, e o c\u00f3digo ainda n\u00e3o as usa", {
@@ -65,13 +65,17 @@ test_that("as regras de implementa\u00e7\u00e3o futura est\u00e3o na tabela sem 
   expect_true(all(c("UB01-10", "UB16-10", "UB13-40", "W60-10", "11BC01-30") %in% futuras$regra))
   expect_true(all(grepl("mplementa\u00e7\u00e3o futura", futuras$observacao)))
   expect_false(any(duplicated(regras$regra)))
+  # Sem a data, ela não sai na conferência, nem na nota sem a data de emissão.
+  conferencia_futura = data.frame(chave = "x", item = 1L, regra = "UB88a-10", campo = NA, no_documento = NA,
+                                  esperado = NA, diferenca = NA, confere = FALSE, observacao = NA)
+  nota_sem_data = data.frame(chave = "x", modelo = "55", data_emissao = as.Date(NA))
+  expect_identical(nrow(completar_com_as_regras(conferencia_futura, nota_sem_data, data.frame())), 0L)
   linhas = linhas_de_codigo_da_reforma()
-  if (length(linhas) > 0) {
-    texto_do_codigo = paste(linhas, collapse = "\n")
-    usadas = futuras$regra[vapply(paste0("\"", futuras$regra, "\""), grepl, logical(1), x = texto_do_codigo, fixed = TRUE)]
-    # Quem passar a conferir uma regra futura põe também a data de produção dela na tabela.
-    expect_identical(usadas, character())
-  }
+  skip_if(length(linhas) == 0, "o c\u00f3digo-fonte n\u00e3o est\u00e1 \u00e0 m\u00e3o (pacote instalado)")
+  texto_do_codigo = paste(linhas, collapse = "\n")
+  usadas = futuras$regra[vapply(paste0("\"", futuras$regra, "\""), grepl, logical(1), x = texto_do_codigo, fixed = TRUE)]
+  # Quem passar a conferir uma regra futura põe também a data de produção dela na tabela.
+  expect_identical(usadas, character())
 })
 
 test_that("mudar a data na tabela muda o resultado, sem mexer no c\u00f3digo", {

@@ -1768,8 +1768,8 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
 
 - **`tabela_fiscal("marcos_ibs_cbs")`**, escrita à mão: cada data da Reforma que a conferência, o cálculo e o
   cruzamento da EFD usam, com o nome que o código procura, o primeiro dia em que vale, a descrição, a base legal e
-  onde é usada (19 marcos). Antes, os anos estavam no código (2026, 2027, 2029, 2033, 16/11/2026...), em cinco
-  arquivos. Agora o código só pede o marco pelo nome (`R/ibs_cbs_marcos.R`), e os textos ("a partir de 2029", "até
+  onde é usada (20 marcos, com o do DANFSe que a revisão achou). Antes, os anos estavam no código (2026, 2027, 2029,
+  2033, 16/11/2026...), em seis arquivos. Agora o código só pede o marco pelo nome (`R/ibs_cbs_marcos.R`), e os textos ("a partir de 2029", "até
   2028") saem da data. Os componentes da base do cálculo dizem em que marco entram e em que marco saem.
 - **`tabela_fiscal("regras_ibs_cbs")`**: a planilha das regras saiu de `inst/extdata/` para a pasta das tabelas,
   para que `tabelas_atualizar()` leve também a mudança de data de produção de uma regra (a NT adia e antecipa com
@@ -1789,3 +1789,20 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   o robô das tabelas rodou no ramo e não achou mudança.
 - O que não mudou: as alíquotas já estavam numa tabela (`aliquotas_ibs_cbs`), e as regras da pré-conferência
   (`regras_nfe.csv`), que não são da Reforma, continuam onde estavam.
+- **Revisão independente, no mesmo dia** (pergunta do usuário: "você tem certeza de que tá tudo ok?"). Um revisor com
+  o código de antes e o de agora, sem as minhas conclusões, rodou 23 variantes da nota de exemplo em 19 datas de
+  fronteira (437 conferências, 32.934 linhas) e o cálculo nas mesmas datas. Achados, conferidos e corrigidos:
+  - **Erro meu:** a observação da VC02-14 na janela da devolução (30/10 a 15/11/2026) passou a dizer "em produção
+    desde 16/11/2026"; a NT diz "até 16/11/2026", e é por isso que a janela existe. Voltou ao texto de antes, com teste.
+  - **Uma data que ficou no código:** o DANFSe mostra o PIS e a COFINS próprios só até a competência de 2026 (nota 6
+    da NT 008/2026). Virou o marco `danfse_sem_pis_e_cofins_proprios_desde`, separado do cálculo (outra base legal),
+    e o `danfse.R` entrou no teste que procura anos no código.
+  - **Uma armadilha para quando uma regra futura for ligada:** sem a data de emissão, o filtro deixava passar a regra
+    sem data de produção, e as quatro sem modelo davam linha vazia. Agora a regra sem data nunca vale, e o modelo
+    vazio não vale para nenhum (com teste). Hoje nada disso acontecia: o código não gera essas regras.
+  - Os testes que leem o código-fonte passam a dizer que foram pulados no pacote instalado (o R CMD check), em vez de
+    passar sem conferir; no CI eles rodam pelo `test_local()`, na pasta do código.
+  - Não eram erro: as mudanças dos textos do monofásico (já ditas acima) e a tabela baixada que falta ou mudou de
+    formato, que fica com a do pacote (é de propósito e tem teste; o "nunca misturar" da ajuda é da troca).
+  Com as correções, as mesmas 437 conferências: só os seis textos do monofásico diferentes do código de antes; o
+  cálculo igual.

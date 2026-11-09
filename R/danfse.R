@@ -344,8 +344,8 @@ desenhar_tributacao_federal_do_danfse = function(nota, y) {
   campo_do_danfse(10.51, y, 5.09, 0.63, "Contribui\u00e7\u00e3o Previdenci\u00e1ria - Retida", reais_do_danfse(nota$valor_retido_cp))
   campo_do_danfse(15.62, y, 5.09, 0.63, "Contribui\u00e7\u00f5es Sociais - Retidas", reais_do_danfse(nota$valor_retido_csll))
   y = y + 0.64
-  # A nota 6: o PIS e a COFINS próprios só até a competência de 2026.
-  if (!is.na(nota$competencia) && format(nota$competencia, "%Y") <= "2026") {
+  # A nota 6: o PIS e a COFINS próprios só até a competência de 2026 (a data vem da tabela dos marcos).
+  if (!is.na(nota$competencia) && nota$competencia < marco_da_reforma("danfse_sem_pis_e_cofins_proprios_desde")) {
     campo_do_danfse(0.30, y, 5.09, 0.63, "PIS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(nota$valor_pis))
     campo_do_danfse(5.41, y, 5.09, 0.63, "COFINS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(nota$valor_cofins))
     campo_do_danfse(10.51, y, 10.19, 0.63, "Descri\u00e7\u00e3o Contrib. Sociais - Retidas",
