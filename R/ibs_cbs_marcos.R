@@ -1,4 +1,5 @@
-# As datas da Reforma que a conferência e o cálculo usam vêm da tabela_fiscal("marcos_ibs_cbs"), nunca escritas no
+# As datas da Reforma que a conferência, o cálculo, o cruzamento da EFD e o DANFSe usam vêm da
+# tabela_fiscal("marcos_ibs_cbs"), nunca escritas no
 # código: quando a lei ou a NT muda uma data, muda a linha da tabela, e tabelas_atualizar() leva a mudança a quem já
 # tem o pacote. Cada marco é o primeiro dia em que a mudança vale; "até o marco" é até a véspera dele.
 

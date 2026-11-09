@@ -1172,10 +1172,10 @@ juntar_linhas = function(lista_de_linhas) {
   juntas
 }
 
-# O código e a mensagem de cada regra, o filtro pelo modelo (algumas regras são só da NF-e ou só da NFC-e) e pela data
-# (a regra só vale para a nota emitida depois de entrar em produção; sem a data de emissão, todas as que têm data
-# valem), o que não
-# confere hoje mas pode ter conferido na emissão e a observação da regra quando a linha não tem uma própria.
+# O código e a mensagem de cada regra, o filtro pelo modelo (algumas regras são só da NF-e ou só da NFC-e; a regra sem
+# modelo não vale para nenhum) e pela data (a regra só vale para a nota emitida depois de entrar em produção; sem a
+# data de emissão, valem todas as que têm data; a sem data, nunca), o que não confere hoje mas pode ter conferido na
+# emissão e a observação da regra quando a linha não tem uma própria.
 completar_com_as_regras = function(conferencias, notas, itens) {
   regras = regras_do_ibs_cbs()
   da_regra = match(conferencias$regra, regras$regra)

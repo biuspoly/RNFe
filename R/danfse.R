@@ -32,7 +32,8 @@ BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da
 #' VALIDADE JURÍDICA" na Produção Restrita), os dados da NFS-e, o QR-Code da
 #' consulta pública, o prestador, o tomador, o destinatário e o intermediário
 #' (ou a frase de que a nota não os identifica), o serviço, a tributação
-#' municipal, a federal (o PIS e a COFINS próprios até a competência de 2026) e
+#' municipal, a federal (o PIS e a COFINS próprios até a competência de 2026,
+#' pela data em `tabela_fiscal("marcos_ibs_cbs")`) e
 #' a do IBS e da CBS, os totais, as informações complementares (com os totais
 #' aproximados dos tributos) e o canhoto. O campo sem informação leva um traço.
 #' A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e".

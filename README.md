@@ -604,7 +604,7 @@ tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_c
 tabela_fiscal("credito_presumido_ibs_cbs")  # o cCredPres: os grupos que cada código exige e se desconta do IBS
 tabela_fiscal("mudancas_ibs_cbs")        # o que mudou nessas três de uma versão para a outra, com o prazo de produção
 tabela_fiscal("aliquotas_ibs_cbs")       # as alíquotas do IBS e da CBS de cada ano, com a base legal
-tabela_fiscal("marcos_ibs_cbs")          # as datas da Reforma que a conferência e o cálculo usam
+tabela_fiscal("marcos_ibs_cbs")          # as datas da Reforma que o pacote usa, cada uma com a base legal
 tabela_fiscal("regras_ibs_cbs")          # as regras da NT 2025.002: código, mensagem e desde quando valem
 tabela_fiscal("local_operacao_ibs_cbs")  # o cIndOp (local da operação), do Anexo VII da NFS-e Nacional
 tabela_fiscal("biocombustivel_ibs_cbs")  # o etanol anidro obrigatório em cada gasolina C, com a vigência

@@ -1806,3 +1806,10 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
     formato, que fica com a do pacote (é de propósito e tem teste; o "nunca misturar" da ajuda é da troca).
   Com as correções, as mesmas 437 conferências: só os seis textos do monofásico diferentes do código de antes; o
   cálculo igual.
+- **Segunda revisão independente, das correções** (o usuário perguntou de novo: "está tudo realmente ok?"). Confirmou
+  as três, com o filtro igual ao antigo em tudo o que o código gera (207 códigos de regra, todos com data e modelo; as
+  282 chamadas dos testes, também sem a data de emissão e sem o modelo) e a lista de conferência batendo com os
+  arquivos do jeito que o GitHub os entrega (o md5 e as linhas das 27). Um achado de verdade: o teste da regra futura
+  usava uma regra também sem modelo, e passava mesmo com o filtro da data antigo. Agora usa a UB16-10 (com modelo), e
+  um teste à parte tira o modelo de uma regra com data; com cada filtro antigo de volta, numa cópia, o teste falha.
+  Também: o comentário do filtro, o `fontes.csv` dos marcos com a NT do DANFSe e os textos que não citavam o DANFSe.

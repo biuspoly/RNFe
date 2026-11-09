@@ -21,6 +21,17 @@ usar_estes_marcos = function(marcos) {
   tabelas_ja_lidas[["marcos_ibs_cbs"]] = marcos
 }
 
+# O mesmo, com a tabela das regras.
+usar_estas_regras = function(regras) {
+  tabelas_ja_lidas[["regras_ibs_cbs"]] = regras
+}
+
+# Uma linha de conferência só com a regra (confere, para não depender dos itens da nota).
+uma_conferencia = function(regra) {
+  data.frame(chave = "x", item = 1L, regra = regra, campo = NA, no_documento = NA, esperado = NA, diferenca = NA,
+             confere = TRUE, observacao = NA)
+}
+
 test_that("a tabela dos marcos: um nome por linha, todos com a data e a base legal", {
   marcos = tabela_fiscal("marcos_ibs_cbs")
   expect_identical(names(marcos), c("marco", "inicio", "descricao", "base_legal", "usado_em"))
@@ -65,17 +76,31 @@ test_that("as regras de implementa\u00e7\u00e3o futura est\u00e3o na tabela sem 
   expect_true(all(c("UB01-10", "UB16-10", "UB13-40", "W60-10", "11BC01-30") %in% futuras$regra))
   expect_true(all(grepl("mplementa\u00e7\u00e3o futura", futuras$observacao)))
   expect_false(any(duplicated(regras$regra)))
-  # Sem a data, ela não sai na conferência, nem na nota sem a data de emissão.
-  conferencia_futura = data.frame(chave = "x", item = 1L, regra = "UB88a-10", campo = NA, no_documento = NA,
-                                  esperado = NA, diferenca = NA, confere = FALSE, observacao = NA)
+  # Sem a data, ela não sai na conferência, nem na nota sem a data de emissão (a UB16-10 tem o modelo: só a data a
+  # tira). A regra com data, na mesma nota, sai.
+  expect_identical(regras$modelos[regras$regra == "UB16-10"], "55/65")
   nota_sem_data = data.frame(chave = "x", modelo = "55", data_emissao = as.Date(NA))
-  expect_identical(nrow(completar_com_as_regras(conferencia_futura, nota_sem_data, data.frame())), 0L)
+  expect_identical(nrow(completar_com_as_regras(uma_conferencia("UB16-10"), nota_sem_data, data.frame())), 0L)
+  expect_identical(nrow(completar_com_as_regras(uma_conferencia("UB56-10"), nota_sem_data, data.frame())), 1L)
   linhas = linhas_de_codigo_da_reforma()
   skip_if(length(linhas) == 0, "o c\u00f3digo-fonte n\u00e3o est\u00e1 \u00e0 m\u00e3o (pacote instalado)")
   texto_do_codigo = paste(linhas, collapse = "\n")
   usadas = futuras$regra[vapply(paste0("\"", futuras$regra, "\""), grepl, logical(1), x = texto_do_codigo, fixed = TRUE)]
   # Quem passar a conferir uma regra futura põe também a data de produção dela na tabela.
   expect_identical(usadas, character())
+})
+
+test_that("a regra sem modelo na tabela n\u00e3o vale para nenhum", {
+  regras_do_pacote = tabela_fiscal("regras_ibs_cbs")
+  nota_de_2030 = data.frame(chave = "x", modelo = "55", data_emissao = as.Date("2030-01-01"))
+  expect_identical(nrow(completar_com_as_regras(uma_conferencia("UB56-10"), nota_de_2030, data.frame())), 1L)
+  regras_sem_o_modelo = regras_do_pacote
+  regras_sem_o_modelo$modelos[regras_sem_o_modelo$regra == "UB56-10"] = NA
+  usar_estas_regras(regras_sem_o_modelo)
+  linhas_sem_o_modelo = tryCatch(nrow(completar_com_as_regras(uma_conferencia("UB56-10"), nota_de_2030, data.frame())),
+                                 finally = usar_estas_regras(regras_do_pacote))
+  expect_identical(linhas_sem_o_modelo, 0L)
+  expect_identical(tabela_fiscal("regras_ibs_cbs"), regras_do_pacote)
 })
 
 test_that("mudar a data na tabela muda o resultado, sem mexer no c\u00f3digo", {
