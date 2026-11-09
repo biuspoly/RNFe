@@ -33,8 +33,10 @@ escrever_aviso_da_nota_tecnica = function(nota_tecnica, pasta_dos_avisos, numero
     "",
     paste0("O que fazer: ler a tabela de versões do começo da nota técnica (as regras de validação alteradas, criadas ",
            "e excluídas, e a data de produção de cada versão) e conferir se ela muda alguma regra de ",
-           "`inst/extdata/regras_nfe.csv` (a pré-conferência) ou de `inst/extdata/regras_ibs_cbs.csv` (a Reforma). ",
-           "O texto que sai vem riscado: confira na página do PDF, não no texto copiado. Depois, rodar ",
+           "`inst/extdata/regras_nfe.csv` (a pré-conferência) ou de `inst/extdata/tabelas/regras_ibs_cbs.csv` (a ",
+           "Reforma: as regras de implementação futura estão lá, sem data) e se muda alguma data de ",
+           "`inst/extdata/tabelas/marcos_ibs_cbs.csv`. O texto que sai vem riscado: confira na página do PDF, não no ",
+           "texto copiado. Mexeu numa tabela, rodar `Rscript ferramentas/gerar_conferencia_das_tabelas.R`. Depois, rodar ",
            "`Rscript ferramentas/vigiar_notas_tecnicas.R --registrar`.")
   )
   arquivo_do_aviso = file.path(pasta_dos_avisos, sprintf("nt_%03d.md", numero_do_aviso))

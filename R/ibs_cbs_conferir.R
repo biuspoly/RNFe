@@ -1,8 +1,8 @@
 # Conferência do IBS e da CBS de uma NF-e ou NFC-e pelas regras de validação da NT 2025.002-RTC v1.53: o que a SEFAZ
-# rejeitaria. O código e a mensagem de cada regra estão em inst/extdata/regras_ibs_cbs.csv, tirados do texto da NT; os
-# indicadores de cada CST e de cada classificação, nas tabelas cst_ibs_cbs e classificacao_ibs_cbs; as alíquotas de
-# cada ano, na aliquotas_ibs_cbs. As regras fora do grupo UB estão em ibs_cbs_regras_da_nota.R e as do monofásico, em
-# ibs_cbs_monofasico.R.
+# rejeitaria. O código, a mensagem e a data de produção de cada regra estão na tabela regras_ibs_cbs, tirados do texto
+# da NT; os indicadores de cada CST e de cada classificação, nas tabelas cst_ibs_cbs e classificacao_ibs_cbs; as
+# alíquotas de cada ano, na aliquotas_ibs_cbs; as datas da Reforma, na marcos_ibs_cbs (ibs_cbs_marcos.R). As regras
+# fora do grupo UB estão em ibs_cbs_regras_da_nota.R e as do monofásico, em ibs_cbs_monofasico.R.
 
 #' @include ler_xml.R tabelas.R
 NULL
@@ -399,6 +399,12 @@ W59d-10  gMono/vCBSMonoRet           total_cbs_monofasica_retida   monofasico_cb
 #' Como na NT, as regras só valem para o documento com o IBS, a CBS ou o
 #' Imposto Seletivo preenchidos: a nota sem eles não é conferida.
 #'
+#' As datas de produção de cada regra estão em
+#' `tabela_fiscal("regras_ibs_cbs")`, e as datas da Reforma que as regras
+#' usam (o ano em que a CBS passa a ad rem no monofásico, por exemplo), em
+#' `tabela_fiscal("marcos_ibs_cbs")`: quando a NT ou a lei muda uma data, muda
+#' a linha, e [tabelas_atualizar()] leva a mudança sem esperar versão nova.
+#'
 #' Cada regra vale como a SEFAZ a aplicava no dia da emissão (`dhEmi`):
 #' - a regra só é conferida na nota emitida depois de ela entrar em produção
 #'   (pelo cronograma da NT: 10/11/2025 para a maioria, 02/02/2026 e
@@ -422,7 +428,9 @@ W59d-10  gMono/vCBSMonoRet           total_cbs_monofasica_retida   monofasico_cb
 #'
 #' Fica de fora: as regras que a NT deixa para implementação futura (as do
 #' Imposto Seletivo, a da base de cálculo, UB16-10, e a exigência do grupo
-#' monofásico pelo CST, UB13-40, entre outras); as que a SEFAZ confere no
+#' monofásico pelo CST, UB13-40, entre outras; elas estão em
+#' `tabela_fiscal("regras_ibs_cbs")`, sem a data de produção, e a ajuda de
+#' [tabela_fiscal()] diz como elas entram quando a NT der a data); as que a SEFAZ confere no
 #' documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50); e
 #' o CT-e e os outros documentos, que têm as notas técnicas deles. Uma regra
 #' que se aplica mas não dá para conferir (a CBS de 2027 em diante, sem a
@@ -872,12 +880,13 @@ conferir_a_area_incentivada_da_cbs = function(itens) {
 
 # O crédito presumido da operação (gCredPresOper), pela tabela de crédito presumido: o código existe; os grupos do IBS e
 # da CBS que ele exige ou não permite; no código 04 (bem móvel comprado de pessoa física para revenda), o crédito até o
-# valor do produto; e o crédito em condição suspensiva, que só vale no código 04, no IBS a partir de 2033 e na CBS a
-# partir de 2027.
+# valor do produto; e o crédito em condição suspensiva, que só vale no código 04 e a partir do marco de cada tributo.
 conferir_o_credito_presumido = function(itens) {
   com_o_codigo = itens$tem_credito_presumido & !is.na(itens$credito_presumido_codigo)
   do_bem_movel = itens$credito_presumido_codigo %in% "04"
   ano_da_emissao = as.integer(format(itens$data_emissao, "%Y"))
+  suspenso_do_ibs_aceito = itens$data_emissao >= marco_da_reforma("credito_suspenso_ibs_desde")
+  suspenso_da_cbs_aceito = itens$data_emissao >= marco_da_reforma("credito_suspenso_cbs_desde")
   texto_do_suspenso = paste0("cCredPres ", texto_ou_vazio(itens$credito_presumido_codigo), ", emitida em ",
                              texto_ou_vazio(as.character(ano_da_emissao)))
   linhas = list(
@@ -901,11 +910,13 @@ conferir_o_credito_presumido = function(itens) {
                     campo = "gCBSCredPres/vCredPres", no_documento = texto_do_numero(itens$credito_presumido_cbs, 2),
                     esperado = paste0("at\u00e9 ", texto_do_numero(itens$valor_produto, 2), " (vProd)")),
     linhas_da_regra("UB126-10", itens, aplica = !is.na(itens$credito_suspenso_ibs),
-                    confere = do_bem_movel & ano_da_emissao >= 2033, campo = "gIBSCredPres/vCredPresCondSus",
-                    no_documento = texto_do_suspenso, esperado = "cCredPres 04, a partir de 2033"),
+                    confere = do_bem_movel & suspenso_do_ibs_aceito, campo = "gIBSCredPres/vCredPresCondSus",
+                    no_documento = texto_do_suspenso,
+                    esperado = paste0("cCredPres 04, ", texto_a_partir_do_marco("credito_suspenso_ibs_desde"))),
     linhas_da_regra("UB130-10", itens, aplica = !is.na(itens$credito_suspenso_cbs),
-                    confere = do_bem_movel & ano_da_emissao >= 2027, campo = "gCBSCredPres/vCredPresCondSus",
-                    no_documento = texto_do_suspenso, esperado = "cCredPres 04, a partir de 2027")
+                    confere = do_bem_movel & suspenso_da_cbs_aceito, campo = "gCBSCredPres/vCredPresCondSus",
+                    no_documento = texto_do_suspenso,
+                    esperado = paste0("cCredPres 04, ", texto_a_partir_do_marco("credito_suspenso_cbs_desde")))
   )
   juntar_linhas(linhas)
 }
@@ -933,16 +944,18 @@ conferir_as_aliquotas = function(itens) {
       observacao = ifelse(sem_aliquota_publicada, "A al\u00edquota do IBS deste ano ainda n\u00e3o foi publicada.", NA)
     )
   }
-  # A CBS pelo ano da emissão: a UB56-10 é a de 2025 e 2026; a UB56-20, a de 2027 em diante, com outras exceções.
-  ano = as.integer(format(itens$data_emissao, "%Y"))
-  ate_2026 = ano %in% c(2025, 2026)
-  de_2027_em_diante = (ano >= 2027) %in% TRUE
+  # A CBS pela data da emissão: a UB56-10 vale do começo do cálculo até a véspera do marco da UB56-20; a UB56-20, com
+  # outras exceções, dali em diante.
+  pela_ub56_10 = (itens$data_emissao >= marco_da_reforma("inicio_do_calculo") &
+                    itens$data_emissao < marco_da_reforma("cbs_pela_ub56_20_desde")) %in% TRUE
+  pela_ub56_20 = (itens$data_emissao >= marco_da_reforma("cbs_pela_ub56_20_desde")) %in% TRUE
   esperada_cbs = ifelse(tributacao_regular, 0, itens$aliquota_do_ano_cbs)
   zero_na_area_incentivada = !tributacao_regular & itens$aliquota_cbs %in% 0 & itens$mesma_area_incentivada &
     !itens$ncm_fora_da_area_incentivada
   linhas[[length(linhas) + 1]] = linhas_da_regra(
     "UB56-10", itens,
-    aplica = itens$tem_grupo_ibs_cbs & ate_2026 & !is.na(itens$aliquota_do_ano_cbs) & !(itens$tipo_nota_credito %in% "04"),
+    aplica = itens$tem_grupo_ibs_cbs & pela_ub56_10 & !is.na(itens$aliquota_do_ano_cbs) &
+      !(itens$tipo_nota_credito %in% "04"),
     confere = igual_com_tolerancia(itens$aliquota_cbs, esperada_cbs, TOLERANCIA_DO_PERCENTUAL) | zero_na_area_incentivada,
     campo = "gCBS/pCBS", no_documento = texto_da_aliquota(itens$aliquota_cbs),
     esperado = ifelse(tributacao_regular, "0 (classifica\u00e7\u00e3o com tributa\u00e7\u00e3o regular)",
@@ -955,7 +968,7 @@ conferir_as_aliquotas = function(itens) {
   esperada_cbs_depois = ifelse(cbs_zero, 0, itens$aliquota_do_ano_cbs)
   da_para_conferir = cbs_zero | aliquota_publicada
   linhas[[length(linhas) + 1]] = linhas_da_regra(
-    "UB56-20", itens, aplica = itens$tem_grupo_ibs_cbs & de_2027_em_diante & !sem_regra_do_ibs,
+    "UB56-20", itens, aplica = itens$tem_grupo_ibs_cbs & pela_ub56_20 & !sem_regra_do_ibs,
     confere = ifelse(da_para_conferir, igual_com_tolerancia(itens$aliquota_cbs, esperada_cbs_depois, TOLERANCIA_DO_PERCENTUAL),
                      NA),
     campo = "gCBS/pCBS", no_documento = texto_da_aliquota(itens$aliquota_cbs),
@@ -1269,16 +1282,7 @@ texto_do_valor_da_tabela = function(valores) {
 
 # As regras da NT 2025.002 que a conferência usa, com o modelo, o código e a mensagem da rejeição (lidas uma vez).
 regras_do_ibs_cbs = function() {
-  if (is.null(tabelas_ja_lidas[["regras_ibs_cbs"]])) {
-    tabelas_ja_lidas[["regras_ibs_cbs"]] = utils::read.csv(
-      system.file("extdata", "regras_ibs_cbs.csv", package = "RNFe"), colClasses = "character", fileEncoding = "UTF-8",
-      na.strings = ""
-    )
-    for (coluna in c("em_producao_desde", "mudou_em_producao_em")) {
-      tabelas_ja_lidas[["regras_ibs_cbs"]][[coluna]] = as.Date(tabelas_ja_lidas[["regras_ibs_cbs"]][[coluna]])
-    }
-  }
-  tabelas_ja_lidas[["regras_ibs_cbs"]]
+  tabela_fiscal("regras_ibs_cbs")
 }
 
 # O valor calculado vai a 2 casas, como o campo, antes da tolerância (meio centavo para cima): a SEFAZ autorizou nota

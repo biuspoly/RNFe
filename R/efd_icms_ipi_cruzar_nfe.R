@@ -45,9 +45,8 @@ EVENTOS_DE_CANCELAMENTO = c("110111", "110112")
 # em 01/12/2021 (Ajustes SINIEF 34/2021 e 38/2021).
 SITUACOES_QUE_SE_ESCRITURAM = c(100L, 150L)
 
-# A partir de 2027, o valor total do documento inclui o IBS, a CBS e o IS (Guia, campo 12 do C100: em 2026 eles ficam
-# fora).
-INICIO_DO_VALOR_COM_IBS_CBS_IS = as.Date("2027-01-01")
+# A partir do marco valor_da_nota_com_ibs_cbs_is_desde (2027), o valor total do documento inclui o IBS, a CBS e o IS
+# (Guia, campo 12 do C100: em 2026 eles ficam fora).
 
 #' Cruzar a EFD ICMS/IPI com as NF-e e NFC-e
 #'
@@ -224,7 +223,8 @@ diferencas_das_notas = function(pares, xml, canceladas, com_eventos) {
     no_xml = valores_do_xml(xml, campo$coluna_xml)
     comparacao = comparar_campo(na_efd, no_xml, campo$tipo)
     if (campo$campo_efd == "VL_DOC") {
-      com_ibs_cbs_is = (xml$data_emissao >= INICIO_DO_VALOR_COM_IBS_CBS_IS) %in% TRUE & !is.na(xml$valor_nota_com_ibs_cbs_is)
+      com_ibs_cbs_is = (xml$data_emissao >= marco_da_reforma("valor_da_nota_com_ibs_cbs_is_desde")) %in% TRUE &
+        !is.na(xml$valor_nota_com_ibs_cbs_is)
       pelo_total_com_ibs_cbs_is = abs(round(valor_ou_zero(na_efd) - xml$valor_nota_com_ibs_cbs_is, 2)) < 0.005
       comparacao$confere = comparacao$confere | (com_ibs_cbs_is & pelo_total_com_ibs_cbs_is %in% TRUE)
     }

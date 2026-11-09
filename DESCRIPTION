@@ -111,6 +111,7 @@ Collate:
     'gtve_ler.R'
     'ibs_cbs_conferir.R'
     'ibs_cbs_calcular.R'
+    'ibs_cbs_marcos.R'
     'ibs_cbs_monofasico.R'
     'ibs_cbs_regras_da_nota.R'
     'mdfe_ler.R'

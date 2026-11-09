@@ -5,33 +5,30 @@
 #' @include ler_xml.R tabelas.R ibs_cbs_conferir.R
 NULL
 
-# Os componentes da base (UB16-10 da NT 2025.002, que confere com o art. 12 da LC 214/2025): o sinal, os anos em que
-# entram, se valem no bem, no serviço ou nos dois, e em que modelo. Os anos, a natureza e o modelo são os da
-# calculadora oficial, que ignora o componente fora deles: o PIS e a COFINS só em 2026; o ICMS, o FCP e o ISSQN até
+# Os componentes da base (UB16-10 da NT 2025.002, que confere com o art. 12 da LC 214/2025): o sinal, os marcos em que
+# entram e saem (tabela_fiscal("marcos_ibs_cbs"): entra no dia do primeiro e sai no dia do segundo), se valem no bem,
+# no serviço ou nos dois, e em que modelo. Os períodos, a natureza e o modelo são os da calculadora oficial, que ignora
+# o componente fora deles: o PIS e a COFINS só em 2026 (em 2025 vale a regra de 2026); o ICMS, o FCP e o ISSQN até
 # 2032 (art. 12, § 2º, V); o II e o ICMS só no bem; o ISSQN só no serviço; o Imposto Seletivo de 2027 a 2033; o II, o
 # ICMS da UF de destino e o FCP dele só na NF-e (modelo 55).
 COMPONENTES_DA_BASE = ler_campos("
-coluna                caminho                         sinal primeiro_ano ultimo_ano natureza modelos
-valor_produto         prod/vProd                      1     2026         2033       ambas    55/65
-valor_frete           prod/vFrete                     1     2026         2033       ambas    55/65
-valor_seguro          prod/vSeg                       1     2026         2033       ambas    55/65
-valor_outros          prod/vOutro                     1     2026         2033       ambas    55/65
-valor_ii              imposto/II/vII                  1     2026         2033       bem      55
-valor_is              imposto/IS/vIS                  1     2027         2033       ambas    55/65
-valor_desconto        prod/vDesc                      -1    2026         2033       ambas    55/65
-valor_pis             imposto/PIS/*/vPIS              -1    2026         2026       ambas    55/65
-valor_cofins          imposto/COFINS/*/vCOFINS        -1    2026         2026       ambas    55/65
-valor_icms            imposto/ICMS/*/vICMS            -1    2026         2032       bem      55/65
-valor_icms_uf_destino imposto/ICMSUFDest/vICMSUFDest  -1    2026         2032       bem      55
-valor_fcp             imposto/ICMS/*/vFCP             -1    2026         2032       bem      55/65
-valor_fcp_uf_destino  imposto/ICMSUFDest/vFCPUFDest   -1    2026         2032       bem      55
-valor_icms_monofasico imposto/ICMS/*/vICMSMono        -1    2026         2032       bem      55/65
-valor_issqn           imposto/ISSQN/vISSQN            -1    2026         2032       servico  55/65
+coluna                caminho                         sinal entra_no_marco                 sai_no_marco                   natureza modelos
+valor_produto         prod/vProd                      1     inicio_do_calculo              fim_do_calculo                 ambas    55/65
+valor_frete           prod/vFrete                     1     inicio_do_calculo              fim_do_calculo                 ambas    55/65
+valor_seguro          prod/vSeg                       1     inicio_do_calculo              fim_do_calculo                 ambas    55/65
+valor_outros          prod/vOutro                     1     inicio_do_calculo              fim_do_calculo                 ambas    55/65
+valor_ii              imposto/II/vII                  1     inicio_do_calculo              fim_do_calculo                 bem      55
+valor_is              imposto/IS/vIS                  1     imposto_seletivo_na_base_desde fim_do_calculo                 ambas    55/65
+valor_desconto        prod/vDesc                      -1    inicio_do_calculo              fim_do_calculo                 ambas    55/65
+valor_pis             imposto/PIS/*/vPIS              -1    inicio_do_calculo              fim_do_pis_e_da_cofins_na_base ambas    55/65
+valor_cofins          imposto/COFINS/*/vCOFINS        -1    inicio_do_calculo              fim_do_pis_e_da_cofins_na_base ambas    55/65
+valor_icms            imposto/ICMS/*/vICMS            -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base bem      55/65
+valor_icms_uf_destino imposto/ICMSUFDest/vICMSUFDest  -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base bem      55
+valor_fcp             imposto/ICMS/*/vFCP             -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base bem      55/65
+valor_fcp_uf_destino  imposto/ICMSUFDest/vFCPUFDest   -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base bem      55
+valor_icms_monofasico imposto/ICMS/*/vICMSMono        -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base bem      55/65
+valor_issqn           imposto/ISSQN/vISSQN            -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base servico  55/65
 ")
-
-# Os anos que o cálculo cobre: a NT aceita em 2025 as regras de 2026, e a vigência dos componentes vai até 2033.
-PRIMEIRO_ANO_DO_CALCULO = 2025
-ULTIMO_ANO_DO_CALCULO = 2033
 
 # Os CSTs que o cálculo cobre: com o grupo do IBS e da CBS, a tributação integral (000), a redução (200), o diferimento
 # (510 e 515) e a suspensão com a tributação regular (550); sem o grupo, a isenção (400) e a imunidade (410).
@@ -89,7 +86,8 @@ PARTES_DO_CALCULO = c("ibs_uf", "ibs_municipio", "cbs")
 #'   2032; o II e o ICMS só no bem; o ISSQN só no serviço (o item com ISSQN); o
 #'   Imposto Seletivo a partir de 2027; o II, o ICMS da UF de destino e o FCP
 #'   dele só na NF-e. Em 2025 vale a regra de 2026 (a NT aceita em 2025 as
-#'   alíquotas de 2026; a calculadora não calcula 2025). O PIS e a COFINS por
+#'   alíquotas de 2026; a calculadora não calcula 2025). Essas datas vêm de
+#'   `tabela_fiscal("marcos_ibs_cbs")`, não do código. O PIS e a COFINS por
 #'   substituição tributária não entram (a calculadora não tem esses campos, e
 #'   a UB16-10 ainda é implementação futura). A base pode vir pronta, na coluna
 #'   `base`;
@@ -391,16 +389,15 @@ itens_da_tabela_para_calcular = function(tabela) {
   itens
 }
 
-# A base de cada item: a soma dos componentes que valem no ano, na natureza e no modelo dele (a de 2025 segue a de 2026).
-base_pelos_componentes = function(itens, anos) {
-  ano_da_regra = pmax(anos, 2026)
+# A base de cada item: a soma dos componentes que valem na data, na natureza e no modelo dele.
+base_pelos_componentes = function(itens, datas) {
   base = rep(0, nrow(itens))
   for (numero_do_componente in seq_len(nrow(COMPONENTES_DA_BASE))) {
     componente = COMPONENTES_DA_BASE[numero_do_componente, ]
     natureza_certa = componente$natureza == "ambas" | (componente$natureza == "servico") == itens$servico
     modelo_certo = itens$modelo %in% strsplit(componente$modelos, "/")[[1]]
-    entra = !is.na(ano_da_regra) & ano_da_regra >= componente$primeiro_ano & ano_da_regra <= componente$ultimo_ano &
-      natureza_certa & modelo_certo
+    entra = !is.na(datas) & datas >= marco_da_reforma(componente$entra_no_marco) &
+      datas < marco_da_reforma(componente$sai_no_marco) & natureza_certa & modelo_certo
     valores = valor_ou_zero(itens[[componente$coluna]])
     base = base + ifelse(entra, componente$sinal * valores, 0)
   }
@@ -453,7 +450,7 @@ arredondar_em_quatro_casas = function(valores) {
 }
 
 # O motivo de cada item que não dá para calcular (NA quando dá). Quando há mais de um, fica o último daqui.
-motivo_para_nao_calcular = function(itens, ano, base, cst_da_tabela, classificacao_da_tabela) {
+motivo_para_nao_calcular = function(itens, datas, base, cst_da_tabela, classificacao_da_tabela) {
   motivo = rep(NA_character_, nrow(itens))
   sem_o_grupo = itens$cst_ibs_cbs %in% CST_SEM_O_GRUPO
   cst_fora = !(itens$cst_ibs_cbs %in% c(CST_CALCULADOS, CST_SEM_O_GRUPO))
@@ -483,25 +480,26 @@ motivo_para_nao_calcular = function(itens, ano, base, cst_da_tabela, classificac
     "A base ficou negativa (o que se subtrai passa do que se soma): a calculadora oficial recusa."
   )
   motivo[is.na(itens$base) & is.na(itens$valor_produto)] = "Sem a base nem o valor do produto."
-  motivo[!is.na(ano) & (ano < PRIMEIRO_ANO_DO_CALCULO | ano > ULTIMO_ANO_DO_CALCULO)] = paste(
-    "O c\u00e1lculo cobre as notas de 2025 a 2033 (a vig\u00eancia dos componentes da base)."
+  fora_do_calculo = (datas < marco_da_reforma("inicio_do_calculo") | datas >= marco_da_reforma("fim_do_calculo")) %in% TRUE
+  motivo[fora_do_calculo] = paste0(
+    "O c\u00e1lculo cobre as notas ", texto_entre_os_marcos("inicio_do_calculo", "fim_do_calculo"),
+    " (a vig\u00eancia dos componentes da base)."
   )
-  motivo[is.na(ano)] = "Sem a data do c\u00e1lculo (informe em data, ou a data de emiss\u00e3o)."
+  motivo[is.na(datas)] = "Sem a data do c\u00e1lculo (informe em data, ou a data de emiss\u00e3o)."
   motivo[is.na(itens$cst_ibs_cbs) | is.na(itens$classificacao_ibs_cbs)] = "Sem o CST ou a classifica\u00e7\u00e3o do IBS e da CBS."
   motivo
 }
 
 calcular_os_itens = function(itens, aliquotas_pedidas) {
   quantidade = nrow(itens)
-  ano = as.integer(format(itens$data_emissao, "%Y"))
   tabela_do_cst = tabela_fiscal("cst_ibs_cbs")
   tabela_da_classificacao = tabela_fiscal("classificacao_ibs_cbs")
   cst_da_tabela = tabela_do_cst[match(itens$cst_ibs_cbs, tabela_do_cst$codigo), ]
   classificacao_da_tabela = tabela_da_classificacao[match(itens$classificacao_ibs_cbs, tabela_da_classificacao$codigo), ]
   regular_da_tabela = tabela_da_classificacao[match(itens$classificacao_regular, tabela_da_classificacao$codigo), ]
   cst_regular_da_tabela = tabela_do_cst[match(itens$cst_regular, tabela_do_cst$codigo), ]
-  base = ifelse(!is.na(itens$base), arredondar_no_centavo(itens$base), base_pelos_componentes(itens, ano))
-  motivo = motivo_para_nao_calcular(itens, ano, base, cst_da_tabela, classificacao_da_tabela)
+  base = ifelse(!is.na(itens$base), arredondar_no_centavo(itens$base), base_pelos_componentes(itens, itens$data_emissao))
+  motivo = motivo_para_nao_calcular(itens, itens$data_emissao, base, cst_da_tabela, classificacao_da_tabela)
   da_para_calcular = is.na(motivo)
   com_o_grupo = da_para_calcular & !(itens$cst_ibs_cbs %in% CST_SEM_O_GRUPO)
   tributacao_regular = classificacao_da_tabela$grupo_tributacao_regular %in% 1

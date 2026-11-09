@@ -515,7 +515,8 @@ conhecido: a SEFAZ autorizou NF-e com a 200001, que a 1.40 tirou da NF-e, um mê
 Essas mudanças estão em `tabela_fiscal("mudancas_ibs_cbs")`, montada pelo robô das tabelas comparando as versões
 publicadas desde 03/10/2025.
 
-Ficam de fora as regras que a NT deixa para implementação futura (as do Imposto Seletivo entre elas) e as quatro
+Ficam de fora as regras que a NT deixa para implementação futura (as do Imposto Seletivo entre elas; as 31 da v1.53
+estão em `tabela_fiscal("regras_ibs_cbs")`, sem a data de produção) e as quatro
 que a SEFAZ confere no documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50). Duas contas do
 monofásico ficam sempre sem conferir, com o motivo: o valor ad valorem que não bate com a alíquota lida como
 percentual (a NT não diz a unidade) e o valor da diferença do biocombustível (a tabela que ele usa ainda não foi
@@ -603,6 +604,8 @@ tabela_fiscal("classificacao_ibs_cbs")   # a cClassTrib da Reforma, e "cst_ibs_c
 tabela_fiscal("credito_presumido_ibs_cbs")  # o cCredPres: os grupos que cada código exige e se desconta do IBS
 tabela_fiscal("mudancas_ibs_cbs")        # o que mudou nessas três de uma versão para a outra, com o prazo de produção
 tabela_fiscal("aliquotas_ibs_cbs")       # as alíquotas do IBS e da CBS de cada ano, com a base legal
+tabela_fiscal("marcos_ibs_cbs")          # as datas da Reforma que a conferência e o cálculo usam
+tabela_fiscal("regras_ibs_cbs")          # as regras da NT 2025.002: código, mensagem e desde quando valem
 tabela_fiscal("local_operacao_ibs_cbs")  # o cIndOp (local da operação), do Anexo VII da NFS-e Nacional
 tabela_fiscal("biocombustivel_ibs_cbs")  # o etanol anidro obrigatório em cada gasolina C, com a vigência
 tabela_fiscal("combustiveis_monofasicos") # os combustíveis do ICMS monofásico e a alíquota ad rem de cada período
@@ -627,6 +630,13 @@ não permite no documento e os documentos em que a classificação vale), que as
 consultam. As alíquotas do IBS e da CBS vêm da LC 214/2025: 0,1% de IBS da UF e 0,9% de CBS em 2026, e 0,05% de IBS
 da UF e do município em 2027 e 2028; a CBS de 2027 e 2028 é a alíquota de referência que o Senado fixa menos 0,1
 ponto percentual, e fica vazia até ser publicada. A tabela vai até 2028.
+
+As datas da Reforma não estão no código: ficam em `tabela_fiscal("marcos_ibs_cbs")`, uma por linha, com a base
+legal (por exemplo, a CBS ad rem no monofásico a partir de 2027, a nota de crédito do tipo 02 a partir de 2029, o ICMS
+fora da base a partir de 2033). As regras de validação ficam em `tabela_fiscal("regras_ibs_cbs")`, com a data em que
+cada uma entrou em produção; as que a NT deixa para implementação futura também estão lá, sem a data. Quando a lei ou
+a NT muda uma data, muda a linha da tabela, e `tabelas_atualizar()` leva a mudança a quem já tem o pacote. Conferir
+uma regra nova ainda pede o código dela, numa versão nova do pacote.
 `ferramentas/gerar_tabelas.R` baixa tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso
 quando alguma tabela muda. Os municípios ficam de fora do robô, porque o IBGE não aceita conexão dos
 servidores do GitHub.

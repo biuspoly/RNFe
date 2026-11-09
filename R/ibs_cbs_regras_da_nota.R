@@ -16,10 +16,8 @@ PRODUTOS_ANP_DA_PARTILHA = c("820101001", "820101010", "810102001", "810102004",
                              "220101006", "560101001")
 UFS_DA_SUFRAMA = c("AC", "AM", "RO", "RR")
 MUNICIPIOS_DO_AMAPA_NA_SUFRAMA = c("1600303", "1600600")
-# Desde 16/11/2026, as mudanças da devolução da NT v1.53 (a B25-40 e a VC02-14). A v1.53 foi publicada em 30/10/2026,
-# e a VC02-14 nova entra "até 16/11/2026" (a B25-40, em 16/11/2026).
-INICIO_DA_DEVOLUCAO_NOVA = as.Date("2026-11-16")
-PUBLICACAO_DA_DEVOLUCAO_NOVA = as.Date("2026-10-30")
+# As mudanças da devolução da NT v1.53 (a B25-40 e a VC02-14) valem desde o marco devolucao_nova_desde; entre a
+# publicação (devolucao_nova_publicada_em) e ele, a SEFAZ podia aplicar a redação antiga ou a nova da VC02-14.
 # Os documentos que a redação antiga da VC02-14 aceita no cabeçalho da devolução (NF-e, NFC-e, NF modelo 1, NF de
 # produtor e ECF).
 REFERENCIAS_DA_DEVOLUCAO_ANTIGA = c("refNFe", "refNFeSig", "refNF", "refNFP", "refECF")
@@ -114,9 +112,9 @@ conferir_a_identificacao_da_nota = function(notas, referencias) {
   credito = notas$tipo_nota_credito
   debito = notas$tipo_nota_debito
   quantas_referencias = as.integer(table(factor(referencias$chave, levels = notas$chave)))
-  # Na devolução, uma referência só a partir de 16/11/2026 (NT v1.53).
+  # Na devolução, uma referência só a partir do marco da devolução nova (NT v1.53).
   devolucao_com_uma_referencia = notas$finalidade %in% "4" & !is.na(notas$data_emissao) &
-    notas$data_emissao >= INICIO_DA_DEVOLUCAO_NOVA
+    notas$data_emissao >= marco_da_reforma("devolucao_nova_desde")
   # B25-50 e B25-60: a NF referenciada. A chave da NF-e avulsa (série 890 a 899) traz o CNPJ do Fisco, não o do
   # emitente: na B25-50 ela fica sem conferir; na B25-60 vale (a UF da chave é a verdadeira).
   referencias_da_nota = referencias[referencias$tipo %in% c("refNFe", "refNFeSig", "refNF", "refNFP"), ]
@@ -198,8 +196,10 @@ conferir_a_identificacao_da_nota = function(notas, referencias) {
     linhas_da_regra("B25.2-20", notas, aplica = notas$finalidade %in% "5", confere = !is.na(credito),
                     campo = "ide/tpNFCredito", no_documento = texto_ou_vazio(credito), esperado = "informado",
                     itens_da_regra = sem_item),
-    linhas_da_regra("B25.2-30", notas, aplica = credito %in% "02", confere = !is.na(ano) & ano >= 2029, campo = "ide/dhEmi",
-                    no_documento = paste0("emitida em ", ano), esperado = "a partir de 2029", itens_da_regra = sem_item),
+    linhas_da_regra("B25.2-30", notas, aplica = credito %in% "02",
+                    confere = (notas$data_emissao >= marco_da_reforma("nota_de_credito_02_desde")) %in% TRUE,
+                    campo = "ide/dhEmi", no_documento = paste0("emitida em ", ano),
+                    esperado = texto_a_partir_do_marco("nota_de_credito_02_desde"), itens_da_regra = sem_item),
     linhas_da_regra("B25.2-40", notas, aplica = credito %in% "03", confere = notas$tipo_operacao %in% "0", campo = "ide/tpNF",
                     no_documento = texto_ou_vazio(notas$tipo_operacao), esperado = "0 (entrada)", itens_da_regra = sem_item),
     linhas_da_regra("B25b-20", notas, aplica = TRUE, confere = notas$presenca %in% c("1", "4", "5"), campo = "ide/indPres",
@@ -352,12 +352,13 @@ conferir_os_itens_da_nota = function(itens, referencias) {
   finalidade = itens$finalidade
   credito = itens$tipo_nota_credito
   debito = itens$tipo_nota_debito
-  ano = as.integer(format(itens$data_emissao, "%Y"))
   debito_ou_credito = finalidade %in% c("5", "6") | itens$operacao_governamental %in% "2"
   # B25-80: na nota de débito e de crédito só vão o IBS e a CBS; o pagamento antecipado (débito 06) aceita o PIS e a
-  # COFINS na nota de 2026 e o IPI sempre.
+  # COFINS entre os dois marcos da exceção (a nota de 2026) e o IPI sempre.
   pagamento_antecipado = debito %in% "06"
-  com_pis_e_cofins_aceitos = pagamento_antecipado & ano %in% 2026
+  na_excecao_do_pis_e_da_cofins = (itens$data_emissao >= marco_da_reforma("pis_cofins_no_pagamento_antecipado_desde") &
+                                     itens$data_emissao < marco_da_reforma("pis_cofins_no_pagamento_antecipado_ate")) %in% TRUE
+  com_pis_e_cofins_aceitos = pagamento_antecipado & na_excecao_do_pis_e_da_cofins
   tributos_a_mais = cbind(
     ICMS = itens$tem_icms, ISSQN = itens$tem_issqn, IPI = itens$tem_ipi & !pagamento_antecipado, II = itens$tem_ii,
     PIS = itens$tem_pis & !com_pis_e_cofins_aceitos, PISST = itens$tem_pis_st & !com_pis_e_cofins_aceitos,
@@ -408,10 +409,10 @@ conferir_os_itens_da_nota = function(itens, referencias) {
   zero_fora_da_suframa = itens$tipo_credito_zfm_produto %in% "0" & !emitente_na_suframa
   # VC02-14: a redação antiga (NT 2013/005): a devolução referencia um documento no cabeçalho (NFref) ou no item, menos
   # nos CFOP da exceção. A da v1.53: sem o refNFe no cabeçalho, o item referencia. O cronograma da v1.53 (publicada em
-  # 30/10/2026) põe a nova em produção "até 16/11/2026": entre as duas datas, quando as redações discordam, fica sem
+  # 30/10/2026) põe a nova em produção "até 16/11/2026": entre os dois marcos, quando as redações discordam, fica sem
   # conferir.
-  devolucao_nova = (itens$data_emissao >= INICIO_DA_DEVOLUCAO_NOVA) %in% TRUE
-  devolucao_na_janela = !devolucao_nova & (itens$data_emissao >= PUBLICACAO_DA_DEVOLUCAO_NOVA) %in% TRUE
+  devolucao_nova = (itens$data_emissao >= marco_da_reforma("devolucao_nova_desde")) %in% TRUE
+  devolucao_na_janela = !devolucao_nova & (itens$data_emissao >= marco_da_reforma("devolucao_nova_publicada_em")) %in% TRUE
   com_referencia_antiga = itens$chave %in% referencias$chave[referencias$tipo %in% REFERENCIAS_DA_DEVOLUCAO_ANTIGA]
   aplica_a_antiga = finalidade %in% "4" & !(itens$cfop %in% CFOP_FORA_DA_DEVOLUCAO_ANTIGA)
   aplica_a_nova = finalidade %in% "4" & !nfe_no_cabecalho & !(itens$cfop %in% c("5921", "6921"))
@@ -480,9 +481,8 @@ conferir_os_itens_da_nota = function(itens, referencias) {
                     no_documento = ifelse(com_referencia_antiga, "NFref no cabe\u00e7alho", texto_da_presenca(com_dfe)),
                     esperado = ifelse(devolucao_nova, "informado (sem refNFe no cabe\u00e7alho)",
                                       "informado, ou um documento no NFref do cabe\u00e7alho"),
-                    observacao = ifelse(devolucao_na_janela & is.na(confere_a_devolucao), paste(
-                      "Entre 30/10 e 15/11/2026 a SEFAZ podia aplicar a reda\u00e7\u00e3o antiga ou a da NT v1.53 (em produ\u00e7\u00e3o",
-                      "\"at\u00e9 16/11/2026\"), e elas discordam aqui."), NA)),
+                    observacao = ifelse(devolucao_na_janela & is.na(confere_a_devolucao), texto_da_janela_da_devolucao(),
+                                        NA)),
     linhas_da_regra("VC02-30", itens, aplica = com_dfe & !(debito %in% c("03", "07")) & !(finalidade %in% "4"),
                     confere = documentos_diferentes <= 1, campo = "DFeReferenciado/chaveAcesso",
                     no_documento = paste0(documentos_diferentes, " documentos na nota"), esperado = "um documento s\u00f3"),
@@ -498,14 +498,27 @@ conferir_os_itens_da_nota = function(itens, referencias) {
   juntar_linhas(linhas)
 }
 
+# Entre a publicação da NT v1.53 e a véspera da produção da devolução nova, a SEFAZ podia aplicar as duas redações.
+texto_da_janela_da_devolucao = function() {
+  publicada_em = marco_da_reforma("devolucao_nova_publicada_em")
+  em_producao_desde = marco_da_reforma("devolucao_nova_desde")
+  vespera = em_producao_desde - 1
+  # No mesmo ano, o ano vai só no fim ("30/10 e 15/11/2026").
+  formato_da_publicacao = if (format(publicada_em, "%Y") == format(vespera, "%Y")) "%d/%m" else "%d/%m/%Y"
+  paste0("Entre ", format(publicada_em, formato_da_publicacao), " e ", format(vespera, "%d/%m/%Y"), " a SEFAZ podia ",
+         "aplicar a reda\u00e7\u00e3o antiga ou a da NT v1.53 (em produ\u00e7\u00e3o desde ",
+         format(em_producao_desde, "%d/%m/%Y"), "), e elas discordam aqui.")
+}
+
 conferir_as_aliquotas_da_compra_governamental = function(itens) {
-  ano = as.integer(format(itens$data_emissao, "%Y"))
   ente = itens$ente_governamental
   ibs_uf = valor_ou_zero(itens$aliquota_ibs_uf) > 0
   ibs_mun = valor_ou_zero(itens$aliquota_ibs_mun) > 0
   cbs = valor_ou_zero(itens$aliquota_cbs) > 0
-  na_transicao = !is.na(ano) & ano >= 2027 & ano <= 2032
-  depois = !is.na(ano) & ano >= 2033
+  # A tabela da BB02-10: da transição (2027 a 2032) e definitiva (a partir de 2033), pelos marcos.
+  na_transicao = (itens$data_emissao >= marco_da_reforma("compra_governamental_transicao_desde") &
+                    itens$data_emissao < marco_da_reforma("compra_governamental_definitiva_desde")) %in% TRUE
+  depois = (itens$data_emissao >= marco_da_reforma("compra_governamental_definitiva_desde")) %in% TRUE
   outra_aliquota = ifelse(na_transicao,
                           (ente %in% "1" & (ibs_uf | ibs_mun)) | (ente %in% c("2", "3") & ibs_mun) | (ente %in% "4" & ibs_uf),
                           (ente %in% "1" & (ibs_uf | ibs_mun)) | (ente %in% c("2", "3") & (cbs | ibs_mun)) |

@@ -33,10 +33,12 @@ test_that("o exemplo certo confere em todas as regras", {
   expect_identical(nrow(todas$conferencias), todas$notas$regras_conferidas)
   expect_true(all(todas$conferencias$confere))
   expect_false(anyNA(todas$conferencias$codigo_sefaz))
-  # Toda regra da conferência está na lista das regras, com o código e a data de produção.
+  # Toda regra da conferência está na lista das regras, com o código e a data de produção (só as de implementação
+  # futura, que a conferência ainda não usa, ficam sem a data).
   regras = regras_do_ibs_cbs()
   expect_true(all(todas$conferencias$regra %in% regras$regra))
-  expect_false(anyNA(regras$em_producao_desde))
+  expect_false(anyNA(regras$em_producao_desde[regras$regra %in% todas$conferencias$regra]))
+  expect_true(all(grepl("mplementa\u00e7\u00e3o futura", regras$observacao[is.na(regras$em_producao_desde)])))
   valor_da_cbs = linha_da_regra(todas$conferencias, "UB67-10")
   expect_identical(c(valor_da_cbs$no_documento, valor_da_cbs$esperado), c("0.45", "0.45"))
   expect_identical(valor_da_cbs$mensagem, "Valor da CBS difere do calculado")

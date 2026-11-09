@@ -92,6 +92,12 @@ nos totais.
 Como na NT, as regras só valem para o documento com o IBS, a CBS ou o
 Imposto Seletivo preenchidos: a nota sem eles não é conferida.
 
+As datas de produção de cada regra estão em
+\code{tabela_fiscal("regras_ibs_cbs")}, e as datas da Reforma que as regras
+usam (o ano em que a CBS passa a ad rem no monofásico, por exemplo), em
+\code{tabela_fiscal("marcos_ibs_cbs")}: quando a NT ou a lei muda uma data, muda
+a linha, e \code{\link[=tabelas_atualizar]{tabelas_atualizar()}} leva a mudança sem esperar versão nova.
+
 Cada regra vale como a SEFAZ a aplicava no dia da emissão (\code{dhEmi}):
 \itemize{
 \item a regra só é conferida na nota emitida depois de ela entrar em produção
@@ -117,7 +123,9 @@ motivo. A redação antiga da VC02-14 (a referência na devolução) vale até
 
 Fica de fora: as regras que a NT deixa para implementação futura (as do
 Imposto Seletivo, a da base de cálculo, UB16-10, e a exigência do grupo
-monofásico pelo CST, UB13-40, entre outras); as que a SEFAZ confere no
+monofásico pelo CST, UB13-40, entre outras; elas estão em
+\code{tabela_fiscal("regras_ibs_cbs")}, sem a data de produção, e a ajuda de
+\code{\link[=tabela_fiscal]{tabela_fiscal()}} diz como elas entram quando a NT der a data); as que a SEFAZ confere no
 documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50); e
 o CT-e e os outros documentos, que têm as notas técnicas deles. Uma regra
 que se aplica mas não dá para conferir (a CBS de 2027 em diante, sem a

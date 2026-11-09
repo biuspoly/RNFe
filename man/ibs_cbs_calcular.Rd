@@ -72,7 +72,8 @@ calculadora não os aceita depois de 2026); o ICMS, o FCP e o ISSQN até
 2032; o II e o ICMS só no bem; o ISSQN só no serviço (o item com ISSQN); o
 Imposto Seletivo a partir de 2027; o II, o ICMS da UF de destino e o FCP
 dele só na NF-e. Em 2025 vale a regra de 2026 (a NT aceita em 2025 as
-alíquotas de 2026; a calculadora não calcula 2025). O PIS e a COFINS por
+alíquotas de 2026; a calculadora não calcula 2025). Essas datas vêm de
+\code{tabela_fiscal("marcos_ibs_cbs")}, não do código. O PIS e a COFINS por
 substituição tributária não entram (a calculadora não tem esses campos, e
 a UB16-10 ainda é implementação futura). A base pode vir pronta, na coluna
 \code{base};

@@ -3,12 +3,12 @@
 
 NOMES_DAS_TABELAS = c(
   "cfop", "ncm", "origem", "cst_icms", "csosn", "cst_ipi", "cst_pis", "cst_cofins", "cest", "cst_ibs_cbs",
-  "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs",
-  "local_operacao_ibs_cbs", "biocombustivel_ibs_cbs", "combustiveis_monofasicos", "meios_pagamento", "bandeiras_cartao",
+  "classificacao_ibs_cbs", "credito_presumido_ibs_cbs", "mudancas_ibs_cbs", "aliquotas_ibs_cbs", "marcos_ibs_cbs",
+  "regras_ibs_cbs", "local_operacao_ibs_cbs", "biocombustivel_ibs_cbs", "combustiveis_monofasicos", "meios_pagamento", "bandeiras_cartao",
   "municipios", "codigos_dos_campos", "leiaute_efd_icms_ipi", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em", "publicada_em", "em_producao_ate", "inicio_cbs",
-                    "fim_cbs", "inicio_ibs", "fim_ibs")
+                    "fim_cbs", "inicio_ibs", "fim_ibs", "em_producao_desde", "mudou_em_producao_em")
 COLUNAS_DE_INDICADOR = c(
   "comunicacao", "transporte", "devolucao", "retorno", "anulacao", "remessa", "combustivel", "exclusivo_ibs_cbs",
   # O CST do IBS e da CBS: 1 = o grupo é exigido, 0 = não é permitido.
@@ -47,7 +47,7 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' oficial. Escolha pelo nome: `"cfop"`, `"ncm"`, `"origem"`, `"cst_icms"`,
 #' `"csosn"`, `"cst_ipi"`, `"cst_pis"`, `"cst_cofins"`, `"cest"`, `"cst_ibs_cbs"`,
 #' `"classificacao_ibs_cbs"`, `"credito_presumido_ibs_cbs"`, `"mudancas_ibs_cbs"`, `"aliquotas_ibs_cbs"`,
-#' `"local_operacao_ibs_cbs"`, `"biocombustivel_ibs_cbs"`, `"combustiveis_monofasicos"`,
+#' `"marcos_ibs_cbs"`, `"regras_ibs_cbs"`, `"local_operacao_ibs_cbs"`, `"biocombustivel_ibs_cbs"`, `"combustiveis_monofasicos"`,
 #' `"meios_pagamento"`, `"bandeiras_cartao"`,
 #' `"municipios"`, `"codigos_dos_campos"` (o que quer dizer cada código dos
 #' campos dos documentos) ou `"fontes"` (de onde veio cada uma, com a data).
@@ -154,6 +154,20 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   (art. 347) e fica vazia enquanto não for publicada. A tabela vai até 2028:
 #'   as alíquotas de 2029 em diante ainda serão publicadas. Sem `codigo`: uma
 #'   linha por período (`inicio` e `fim`).
+#' - `"marcos_ibs_cbs"`: as datas da Reforma que a conferência e o cálculo
+#'   usam, uma por linha: o `marco` (o nome que o código procura), o `inicio`
+#'   (o primeiro dia em que a mudança vale), a `descricao`, a `base_legal` e
+#'   onde ela é usada (`usado_em`). Quando a lei ou a NT muda uma data, muda a
+#'   linha, e [tabelas_atualizar()] leva a mudança a quem já tem o pacote.
+#' - `"regras_ibs_cbs"`: as regras de validação da NT 2025.002 que a
+#'   conferência usa: a `regra`, os `modelos`, o `codigo_sefaz` e a
+#'   `mensagem` da rejeição, desde quando está em produção
+#'   (`em_producao_desde`), a versão da NT e a data de produção da última
+#'   mudança que pode ter aceitado antes o que hoje não aceita
+#'   (`mudou_na_versao` e `mudou_em_producao_em`) e a `observacao`. As regras
+#'   que a NT deixa para implementação futura também estão aqui, com
+#'   `em_producao_desde` vazio: quando a NT der a data, ela entra na linha, e a
+#'   conferência da regra entra no pacote.
 #' - `"local_operacao_ibs_cbs"`: o código indicador do local da operação
 #'   (`cIndOp`, art. 11 da LC 214/2025), do Anexo VII da documentação da NFS-e
 #'   Nacional: o `codigo`, o `tipo_operacao`, a `caracteristica` do
@@ -255,7 +269,10 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #'   publica (a do CEST é a 18, de 03/10/2024), com a origem 8 e os CST de
 #'   combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 #'   porque as tabelas A e B do SPED não foram atualizadas. A versão e a data de
-#'   cada uma estão em `tabela_fiscal("fontes")`.
+#'   cada uma estão em `tabela_fiscal("fontes")`. Os marcos e as regras do IBS e
+#'   da CBS: escritos à mão da NT 2025.002-RTC v1.53, da LC 214/2025, do Guia
+#'   Prático da EFD ICMS/IPI e da calculadora oficial da Receita (cada marco
+#'   diz a sua base legal).
 #' @examples
 #' tabela_fiscal("cst_icms")
 #' cfop = tabela_fiscal("cfop")

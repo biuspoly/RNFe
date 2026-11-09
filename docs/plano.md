@@ -1761,3 +1761,31 @@ CEST (conferidas 495 publicações em cinco seções).
 | Convênio ICMS 142/18, página do Confaz | a redação atual (linhas de classe `A7-*`; as anteriores são `A9-*`) e o NCM de cada CEST | as seções de RETIFICAÇÃO e as tabelas repetidas da cláusula vigésima segunda deixam 36 códigos com mais de um texto "atual"; 3 códigos vigentes só no SPED e 15 só no Confaz; as notas de alteração têm 99 modelos de "nova redação" e 58 de "redação anterior" (com "sem efeitos", intervalos e erros de digitação) |
 
 Opções quando voltar: só o SPED (descrições até 31/08/2023), ou o Confaz revisado caso a caso com o usuário.
+
+## As datas da Reforma numa tabela (09/11/2026)
+
+Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo passe a valer com o tempo"):
+
+- **`tabela_fiscal("marcos_ibs_cbs")`**, escrita à mão: cada data da Reforma que a conferência, o cálculo e o
+  cruzamento da EFD usam, com o nome que o código procura, o primeiro dia em que vale, a descrição, a base legal e
+  onde é usada (19 marcos). Antes, os anos estavam no código (2026, 2027, 2029, 2033, 16/11/2026...), em cinco
+  arquivos. Agora o código só pede o marco pelo nome (`R/ibs_cbs_marcos.R`), e os textos ("a partir de 2029", "até
+  2028") saem da data. Os componentes da base do cálculo dizem em que marco entram e em que marco saem.
+- **`tabela_fiscal("regras_ibs_cbs")`**: a planilha das regras saiu de `inst/extdata/` para a pasta das tabelas,
+  para que `tabelas_atualizar()` leve também a mudança de data de produção de uma regra (a NT adia e antecipa com
+  frequência). Ganhou as 31 regras que a NT v1.53 marca como implementação futura, sem a data de produção, conferidas
+  no texto e na imagem das páginas (as do Imposto Seletivo, UB01 a UB11 e W33-10; UB12-10 e UB13-40; UB16-10, a base;
+  as contas do monofásico retido e da diferença do biocombustível ad valorem, UB88a, UB93a, UB94b, UB98a, UB103a e
+  UB104b; os totais do monofásico, UB105a e UB105b; o vItem e o vNFTot, VB01 e W60; VC02-20, VC03-20, I05k-30 e
+  11BC01-30). Nas quatro "a" do monofásico retido a NT deixa o modelo em branco, e ele fica vazio.
+- **Um teste** reclama se um ano da Reforma voltar a ser escrito no código desses arquivos, se o código pedir um
+  marco que a tabela não tem, se a tabela tiver um marco que ninguém usa, e se o código passar a conferir uma regra
+  futura sem a data dela na tabela. Outro mostra que mudar a data na tabela muda o resultado, sem mexer no código.
+- **O resultado não muda.** O acervo inteiro com IBS, CBS ou IS (12.561 XML, 12.376 NF-e), conferido e calculado com o
+  código de antes e com o de agora: as 1.688.508 conferências iguais em todas as colunas, e o cálculo dos 63.150 itens
+  igual. Nos testes mudam só alguns textos de `esperado`, que agora saem da data: "não informado em 2026" virou "não
+  informado até 2026" (UB95a-10 e UB100-20, que valem também em 2025), e "depois de 2028" ou "depois de 2026", "a
+  partir de 2029" ou "a partir de 2027" (no acervo nenhuma conferência usa esses textos). CI: 3.175 testes, check OK;
+  o robô das tabelas rodou no ramo e não achou mudança.
+- O que não mudou: as alíquotas já estavam numa tabela (`aliquotas_ibs_cbs`), e as regras da pré-conferência
+  (`regras_nfe.csv`), que não são da Reforma, continuam onde estavam.

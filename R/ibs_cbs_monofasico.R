@@ -6,8 +6,6 @@
 #' @include ler_xml.R tabelas.R
 NULL
 
-INICIO_DO_MONOFASICO_NOVO = as.Date("2026-11-16")
-
 # A partir de cada det: os campos dos quatro grupos (IBS e CBS, ad rem e ad valorem).
 CAMPOS_DO_MONOFASICO = ler_campos("
 coluna                                    caminho                                                                          tipo
@@ -113,42 +111,48 @@ conferir_o_monofasico = function(itens) {
   ))
 }
 
-# O grupo de cada ano (a tabela das regras UB85a, UB90, UB95a e UB100): o IBS é ad valorem até 2028 e ad rem depois; a
-# CBS, ad valorem em 2026 e ad rem depois. O grupo do ano é exigido quando a classificação exige algum subgrupo. Em
-# homologação, a CBS ad rem é aceita em 2026, e com ela a ad valorem deixa de ser exigida.
+# O grupo de cada ano (a tabela das regras UB85a, UB90, UB95a e UB100): o IBS é ad valorem até a véspera do marco
+# ibs_monofasico_ad_rem_desde (2029) e ad rem dali em diante; a CBS, ad valorem até a véspera do marco
+# cbs_monofasica_ad_rem_desde (2027) e ad rem dali em diante. O grupo do ano é exigido quando a classificação exige
+# algum subgrupo. Em homologação, a CBS ad rem é aceita antes do marco, e com ela a ad valorem deixa de ser exigida.
 conferir_os_grupos_do_ano = function(itens) {
-  ano = as.integer(format(itens$data_emissao, "%Y"))
-  com_o_grupo = itens$tem_monofasico & !is.na(ano)
+  com_o_grupo = itens$tem_monofasico & !is.na(itens$data_emissao)
+  ibs_ad_rem = itens$data_emissao >= marco_da_reforma("ibs_monofasico_ad_rem_desde")
+  cbs_ad_rem = itens$data_emissao >= marco_da_reforma("cbs_monofasica_ad_rem_desde")
+  ibs_ate_o_marco = texto_ate_o_marco("ibs_monofasico_ad_rem_desde")
+  ibs_a_partir_do_marco = texto_a_partir_do_marco("ibs_monofasico_ad_rem_desde")
+  cbs_ate_o_marco = texto_ate_o_marco("cbs_monofasica_ad_rem_desde")
+  cbs_a_partir_do_marco = texto_a_partir_do_marco("cbs_monofasica_ad_rem_desde")
   exige_algum_subgrupo = itens$grupo_monofasico_padrao_da_classificacao %in% 1 |
     itens$grupo_monofasico_retencao_da_classificacao %in% 1 | itens$grupo_monofasico_retido_da_classificacao %in% 1 |
     itens$grupo_diferenca_biocombustivel_da_classificacao %in% 1
   em_homologacao = itens$ambiente %in% "2"
   linhas = list(
-    linhas_da_regra("UB85a-10", itens, aplica = com_o_grupo & ano <= 2028, confere = !itens$tem_ibs_ad_rem,
+    linhas_da_regra("UB85a-10", itens, aplica = com_o_grupo & !ibs_ad_rem, confere = !itens$tem_ibs_ad_rem,
                     campo = "gIBSCBSMono/gIBSMonoAdRem", no_documento = texto_da_presenca(itens$tem_ibs_ad_rem),
-                    esperado = "n\u00e3o informado at\u00e9 2028"),
-    linhas_da_regra("UB85a-20", itens, aplica = com_o_grupo & ano > 2028 & exige_algum_subgrupo,
+                    esperado = paste("n\u00e3o informado", ibs_ate_o_marco)),
+    linhas_da_regra("UB85a-20", itens, aplica = com_o_grupo & ibs_ad_rem & exige_algum_subgrupo,
                     confere = itens$tem_ibs_ad_rem, campo = "gIBSCBSMono/gIBSMonoAdRem",
-                    no_documento = texto_da_presenca(itens$tem_ibs_ad_rem), esperado = "informado depois de 2028"),
-    linhas_da_regra("UB90-10", itens, aplica = com_o_grupo & ano > 2028, confere = !itens$tem_ibs_ad_valorem,
+                    no_documento = texto_da_presenca(itens$tem_ibs_ad_rem), esperado = paste("informado", ibs_a_partir_do_marco)),
+    linhas_da_regra("UB90-10", itens, aplica = com_o_grupo & ibs_ad_rem, confere = !itens$tem_ibs_ad_valorem,
                     campo = "gIBSCBSMono/gIBSMonoAdValorem", no_documento = texto_da_presenca(itens$tem_ibs_ad_valorem),
-                    esperado = "n\u00e3o informado depois de 2028"),
-    linhas_da_regra("UB90-20", itens, aplica = com_o_grupo & ano <= 2028 & exige_algum_subgrupo,
+                    esperado = paste("n\u00e3o informado", ibs_a_partir_do_marco)),
+    linhas_da_regra("UB90-20", itens, aplica = com_o_grupo & !ibs_ad_rem & exige_algum_subgrupo,
                     confere = itens$tem_ibs_ad_valorem, campo = "gIBSCBSMono/gIBSMonoAdValorem",
-                    no_documento = texto_da_presenca(itens$tem_ibs_ad_valorem), esperado = "informado at\u00e9 2028"),
-    linhas_da_regra("UB95a-10", itens, aplica = com_o_grupo & ano <= 2026 & !em_homologacao,
+                    no_documento = texto_da_presenca(itens$tem_ibs_ad_valorem), esperado = paste("informado", ibs_ate_o_marco)),
+    linhas_da_regra("UB95a-10", itens, aplica = com_o_grupo & !cbs_ad_rem & !em_homologacao,
                     confere = !itens$tem_cbs_ad_rem, campo = "gIBSCBSMono/gCBSMonoAdRem",
-                    no_documento = texto_da_presenca(itens$tem_cbs_ad_rem), esperado = "n\u00e3o informado em 2026"),
-    linhas_da_regra("UB95a-20", itens, aplica = com_o_grupo & ano > 2026 & exige_algum_subgrupo,
+                    no_documento = texto_da_presenca(itens$tem_cbs_ad_rem), esperado = paste("n\u00e3o informado", cbs_ate_o_marco)),
+    linhas_da_regra("UB95a-20", itens, aplica = com_o_grupo & cbs_ad_rem & exige_algum_subgrupo,
                     confere = itens$tem_cbs_ad_rem, campo = "gIBSCBSMono/gCBSMonoAdRem",
-                    no_documento = texto_da_presenca(itens$tem_cbs_ad_rem), esperado = "informado depois de 2026"),
-    linhas_da_regra("UB100-10", itens, aplica = com_o_grupo & ano > 2026, confere = !itens$tem_cbs_ad_valorem,
+                    no_documento = texto_da_presenca(itens$tem_cbs_ad_rem), esperado = paste("informado", cbs_a_partir_do_marco)),
+    linhas_da_regra("UB100-10", itens, aplica = com_o_grupo & cbs_ad_rem, confere = !itens$tem_cbs_ad_valorem,
                     campo = "gIBSCBSMono/gCBSMonoAdValorem", no_documento = texto_da_presenca(itens$tem_cbs_ad_valorem),
-                    esperado = "n\u00e3o informado depois de 2026"),
+                    esperado = paste("n\u00e3o informado", cbs_a_partir_do_marco)),
     linhas_da_regra("UB100-20", itens,
-                    aplica = com_o_grupo & ano <= 2026 & exige_algum_subgrupo & !(em_homologacao & itens$tem_cbs_ad_rem),
+                    aplica = com_o_grupo & !cbs_ad_rem & exige_algum_subgrupo & !(em_homologacao & itens$tem_cbs_ad_rem),
                     confere = itens$tem_cbs_ad_valorem, campo = "gIBSCBSMono/gCBSMonoAdValorem",
-                    no_documento = texto_da_presenca(itens$tem_cbs_ad_valorem), esperado = "informado em 2026")
+                    no_documento = texto_da_presenca(itens$tem_cbs_ad_valorem), esperado = paste("informado", cbs_ate_o_marco))
   )
   juntar_linhas(linhas)
 }
@@ -282,17 +286,19 @@ conferir_o_combustivel = function(itens) {
                             texto_ou_vazio(itens$produto_anp))
   sem_a_tabela = is.na(obrigatoria)
   observacao = ifelse(sem_a_tabela, "O cProdANP n\u00e3o est\u00e1 na tabela de biocombust\u00edvel na data de emiss\u00e3o.", NA)
-  # A NT adiou as regras do monofásico (v1.35) e o reformulou na v1.50, em produção em 16/11/2026, e há NF-e autorizada
-  # antes disso com a classificação 620 sem o grupo comb. Sem saber desde quando a SEFAZ aplica a LA01-30 ao
-  # monofásico, a nota de antes fica sem conferir.
+  # A NT adiou as regras do monofásico (v1.35) e o reformulou na v1.50, em produção no marco monofasico_novo_desde, e
+  # há NF-e autorizada antes disso com a classificação 620 sem o grupo comb. Sem saber desde quando a SEFAZ aplica a
+  # LA01-30 ao monofásico, a nota de antes fica sem conferir.
+  inicio_do_monofasico_novo = marco_da_reforma("monofasico_novo_desde")
   monofasico_antes_do_leiaute_novo = substr(itens$classificacao, 1, 3) %in% "620" &
-    (itens$data_emissao < INICIO_DO_MONOFASICO_NOVO) %in% TRUE
+    (itens$data_emissao < inicio_do_monofasico_novo) %in% TRUE
   combustivel_sem_saber = monofasico_antes_do_leiaute_novo & !itens$tem_combustivel
   juntar_linhas(list(
     linhas_da_regra("LA01-30", itens, aplica = de_combustivel, confere = ifelse(combustivel_sem_saber, NA, itens$tem_combustivel),
                     campo = "prod/comb", no_documento = texto_da_presenca(itens$tem_combustivel), esperado = "informado",
                     observacao = ifelse(combustivel_sem_saber, paste0(
-                      "Antes de 16/11/2026 n\u00e3o d\u00e1 para saber se a SEFAZ aplicava esta regra ao monof\u00e1sico ",
+                      "Antes de ", format(inicio_do_monofasico_novo, "%d/%m/%Y"),
+                      " n\u00e3o d\u00e1 para saber se a SEFAZ aplicava esta regra ao monof\u00e1sico ",
                       "(cClassTrib 620): a NT adiou as regras do monof\u00e1sico (v1.35) e o reformulou na v1.50, e h\u00e1 NF-e ",
                       "autorizada sem o grupo comb."), NA)),
     linhas_da_regra("UB14-30", itens, aplica = itens$classificacao %in% "620004",

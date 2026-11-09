@@ -28,7 +28,10 @@ externas do SPED Fiscal (Receita Federal), cada uma na versão que o SPED
 publica (a do CEST é a 18, de 03/10/2024), com a origem 8 e os CST de
 combustível monofásico (de 2023) tirados da tabela de CST de três dígitos,
 porque as tabelas A e B do SPED não foram atualizadas. A versão e a data de
-cada uma estão em \code{tabela_fiscal("fontes")}.
+cada uma estão em \code{tabela_fiscal("fontes")}. Os marcos e as regras do IBS e
+da CBS: escritos à mão da NT 2025.002-RTC v1.53, da LC 214/2025, do Guia
+Prático da EFD ICMS/IPI e da calculadora oficial da Receita (cada marco
+diz a sua base legal).
 }
 \usage{
 tabela_fiscal(nome_da_tabela)
@@ -60,7 +63,7 @@ Devolve uma tabela de códigos dos documentos fiscais, copiada da fonte
 oficial. Escolha pelo nome: \code{"cfop"}, \code{"ncm"}, \code{"origem"}, \code{"cst_icms"},
 \code{"csosn"}, \code{"cst_ipi"}, \code{"cst_pis"}, \code{"cst_cofins"}, \code{"cest"}, \code{"cst_ibs_cbs"},
 \code{"classificacao_ibs_cbs"}, \code{"credito_presumido_ibs_cbs"}, \code{"mudancas_ibs_cbs"}, \code{"aliquotas_ibs_cbs"},
-\code{"local_operacao_ibs_cbs"}, \code{"biocombustivel_ibs_cbs"}, \code{"combustiveis_monofasicos"},
+\code{"marcos_ibs_cbs"}, \code{"regras_ibs_cbs"}, \code{"local_operacao_ibs_cbs"}, \code{"biocombustivel_ibs_cbs"}, \code{"combustiveis_monofasicos"},
 \code{"meios_pagamento"}, \code{"bandeiras_cartao"},
 \code{"municipios"}, \code{"codigos_dos_campos"} (o que quer dizer cada código dos
 campos dos documentos) ou \code{"fontes"} (de onde veio cada uma, com a data).
@@ -169,6 +172,20 @@ de referência fixada pelo Senado (art. 349) menos 0,1 ponto percentual
 (art. 347) e fica vazia enquanto não for publicada. A tabela vai até 2028:
 as alíquotas de 2029 em diante ainda serão publicadas. Sem \code{codigo}: uma
 linha por período (\code{inicio} e \code{fim}).
+\item \code{"marcos_ibs_cbs"}: as datas da Reforma que a conferência e o cálculo
+usam, uma por linha: o \code{marco} (o nome que o código procura), o \code{inicio}
+(o primeiro dia em que a mudança vale), a \code{descricao}, a \code{base_legal} e
+onde ela é usada (\code{usado_em}). Quando a lei ou a NT muda uma data, muda a
+linha, e \code{\link[=tabelas_atualizar]{tabelas_atualizar()}} leva a mudança a quem já tem o pacote.
+\item \code{"regras_ibs_cbs"}: as regras de validação da NT 2025.002 que a
+conferência usa: a \code{regra}, os \code{modelos}, o \code{codigo_sefaz} e a
+\code{mensagem} da rejeição, desde quando está em produção
+(\code{em_producao_desde}), a versão da NT e a data de produção da última
+mudança que pode ter aceitado antes o que hoje não aceita
+(\code{mudou_na_versao} e \code{mudou_em_producao_em}) e a \code{observacao}. As regras
+que a NT deixa para implementação futura também estão aqui, com
+\code{em_producao_desde} vazio: quando a NT der a data, ela entra na linha, e a
+conferência da regra entra no pacote.
 \item \code{"local_operacao_ibs_cbs"}: o código indicador do local da operação
 (\code{cIndOp}, art. 11 da LC 214/2025), do Anexo VII da documentação da NFS-e
 Nacional: o \code{codigo}, o \code{tipo_operacao}, a \code{caracteristica} do
