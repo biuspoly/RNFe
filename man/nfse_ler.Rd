@@ -6,7 +6,8 @@
 \source{
 Schema oficial da NFS-e Nacional, pacote NFSe-ESQUEMAS_XSD-v1.01-20260209,
 publicado na documentação técnica do portal da NFS-e (gov.br/nfse); Nota
-Técnica SE/CGNFS-e 009, versão 1.01 (itens 2.2, 2.3, 2.11 e 2.16).
+Técnica SE/CGNFS-e 009, versão 1.01 (itens 2.2, 2.3, 2.11 e 2.16), e o schema
+dela na Produção Restrita, pacote NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020.
 }
 \usage{
 nfse_ler(arquivos, todos_os_campos = TRUE)
@@ -41,7 +42,7 @@ CBS, a dedução do ISSQN), a coluna vem de onde o campo estiver. Na NT 009,
 a \code{deducao_calculada} (o \code{vCalcAjusteBCISSQN}, antes \code{vCalcDR}) soma também
 os ajustes por documento, e a base do ISSQN desconta a \code{deducao_valor} e a
 \code{deducao_calculada} somadas (antes, uma ou a outra). Os campos novos dela (as notas de ajuste, o grupo
-\code{vAjusteBC} inteiro, os condomínios) estão na tabela \code{campos}. A NFS-e de prefeitura (os padrões
+\code{vAjusteBC} inteiro, os condomínios, as unidades imobiliárias e os bens móveis) estão na tabela \code{campos}. A NFS-e de prefeitura (os padrões
 municipais) é lida por \code{\link[=nfse_prefeitura_ler]{nfse_prefeitura_ler()}}. Um arquivo que não dá para ler não interrompe os
 outros: fica em \code{arquivos}, com o motivo. Para saber se a NFS-e foi
 cancelada ou substituída, leia os eventos dela com \code{\link[=eventos_ler]{eventos_ler()}}.

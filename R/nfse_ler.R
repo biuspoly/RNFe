@@ -1,9 +1,10 @@
 # Leitura do XML da NFS-e Nacional (padrão nacional, leiautes 1.00 e 1.01) em tabelas. Os caminhos seguem o
 # schema oficial do portal da NFS-e (NFSe-ESQUEMAS_XSD-v1.01-20260209, que traz as duas versões) e, onde a NT
-# SE/CGNFS-e 009 (v1.01) mudou o campo de lugar, o caminho novo também: a finalidade (item 2.2), o indDest e o dest
-# (item 2.11) foram para o infDPS, o CST e a classificação do IBS e da CBS saíram do gIBSCBS (item 2.16), a dedução
-# do ISSQN foi para o vAjusteBC e o vCalcDR virou vCalcAjusteBCISSQN (item 2.3). Vale o texto da NT: a cópia do XSD
-# que circula ainda põe o indDest e o dest no IBSCBS.
+# SE/CGNFS-e 009 (v1.01) mudou o campo de lugar, o caminho novo também, conferido no XSD oficial da Produção Restrita
+# (NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020): a finalidade foi para o infDPS (item 2.2), o CST e a classificação do
+# IBS e da CBS saíram do gIBSCBS (item 2.16), a dedução do ISSQN foi para o vAjusteBC e o vCalcDR virou
+# vCalcAjusteBCISSQN (item 2.3). O indDest e o dest: o texto do item 2.11 põe no infDPS, o XSD deixa no IBSCBS; valem
+# os dois lugares.
 
 #' @include ler_xml.R
 NULL
@@ -165,7 +166,7 @@ destinatario_indicador             indDest        -
 #' a `deducao_calculada` (o `vCalcAjusteBCISSQN`, antes `vCalcDR`) soma também
 #' os ajustes por documento, e a base do ISSQN desconta a `deducao_valor` e a
 #' `deducao_calculada` somadas (antes, uma ou a outra). Os campos novos dela (as notas de ajuste, o grupo
-#' `vAjusteBC` inteiro, os condomínios) estão na tabela `campos`. A NFS-e de prefeitura (os padrões
+#' `vAjusteBC` inteiro, os condomínios, as unidades imobiliárias e os bens móveis) estão na tabela `campos`. A NFS-e de prefeitura (os padrões
 #' municipais) é lida por [nfse_prefeitura_ler()]. Um arquivo que não dá para ler não interrompe os
 #' outros: fica em `arquivos`, com o motivo. Para saber se a NFS-e foi
 #' cancelada ou substituída, leia os eventos dela com [eventos_ler()].
@@ -218,7 +219,8 @@ destinatario_indicador             indDest        -
 #'   `todos_os_campos = TRUE`) e `arquivos`.
 #' @source Schema oficial da NFS-e Nacional, pacote NFSe-ESQUEMAS_XSD-v1.01-20260209,
 #'   publicado na documentação técnica do portal da NFS-e (gov.br/nfse); Nota
-#'   Técnica SE/CGNFS-e 009, versão 1.01 (itens 2.2, 2.3, 2.11 e 2.16).
+#'   Técnica SE/CGNFS-e 009, versão 1.01 (itens 2.2, 2.3, 2.11 e 2.16), e o schema
+#'   dela na Produção Restrita, pacote NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020.
 #' @examples
 #' nfse = system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe")
 #' lida = nfse_ler(nfse)

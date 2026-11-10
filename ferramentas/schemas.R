@@ -2,13 +2,15 @@
 # tirar de um schema a lista de campos, com as regras de cada um. Usado por baixar_schemas.R,
 # vigiar_schemas.R e validar_exemplos.R (com source()). Precisa dos pacotes httr2 e xml2.
 
-# As páginas de cada portal que listam os pacotes de schemas. A NFS-e publica em duas: a da documentação
-# atual e a da Reforma Tributária (RTC).
+# As páginas de cada portal que listam os pacotes de schemas. A NFS-e publica em três: a da documentação
+# atual (produção), a da Produção Restrita (o leiaute que vem, como o da NT 009, sai primeiro nela) e a da
+# Reforma Tributária (RTC).
 PAGINA_DOS_SCHEMAS = list(
   nfe = "https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=BMPFMBoln3w=",
   cte = "https://www.cte.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=0xlG1bdBass=",
   mdfe = "https://dfe-portal.svrs.rs.gov.br/Mdfe/Documentos",
   nfse = c("https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+           "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/producao-restrita",
            "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc")
 )
 DOWNLOAD_DO_PORTAL_DO_MDFE = "https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArquivoEstatico/?sistema=MDFE&tipoArquivo=2&nomeArquivo="

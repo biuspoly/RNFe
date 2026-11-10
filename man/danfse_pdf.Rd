@@ -6,7 +6,9 @@
 \source{
 Nota Técnica SE/CGNFS-e 008/2026 (o DANFSe v2.0, 05/05/2026), itens 2.1
 a 2.5 e o Anexo I; na nota do leiaute novo, a Nota Técnica SE/CGNFS-e 009,
-versão 1.01 (item 2.3, a dedução do ISSQN, e 2.11, o destinatário).
+versão 1.01 (item 2.3, a dedução do ISSQN, e 2.11, o destinatário), e o schema
+dela na Produção Restrita (NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020: o
+destinatário no \code{IBSCBS} e a inscrição imobiliária em cada unidade do imóvel).
 }
 \usage{
 danfse_pdf(xml, arquivo)

@@ -46,7 +46,9 @@ BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da
 #' @seealso [nfse_ler()], [nfse_emitir()]
 #' @source Nota Técnica SE/CGNFS-e 008/2026 (o DANFSe v2.0, 05/05/2026), itens 2.1
 #'   a 2.5 e o Anexo I; na nota do leiaute novo, a Nota Técnica SE/CGNFS-e 009,
-#'   versão 1.01 (item 2.3, a dedução do ISSQN, e 2.11, o destinatário).
+#'   versão 1.01 (item 2.3, a dedução do ISSQN, e 2.11, o destinatário), e o schema
+#'   dela na Produção Restrita (NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020: o
+#'   destinatário no `IBSCBS` e a inscrição imobiliária em cada unidade do imóvel).
 #' @examples
 #' \donttest{
 #' if (requireNamespace("qrcode", quietly = TRUE)) {
@@ -75,7 +77,7 @@ danfse_pdf = function(xml, arquivo) {
   tomador = pessoa_do_danfse(dps, "toma")
   destinatario = pessoa_do_danfse(dps, "IBSCBS/dest")
   if (is.null(destinatario)) {
-    # Na NT SE/CGNFS-e 009 (item 2.11), o dest e o indDest foram para o infDPS.
+    # O texto do item 2.11 da NT SE/CGNFS-e 009 põe o dest e o indDest no infDPS (o XSD dela os deixa no IBSCBS).
     destinatario = pessoa_do_danfse(dps, "dest")
   }
   y = desenhar_pessoa_do_danfse("PRESTADOR / FORNECEDOR", pessoa_do_danfse(dps, "prest", nota, informacao), y,
@@ -424,6 +426,22 @@ desenhar_totais_do_danfse = function(nota, y) {
   y + 0.69
 }
 
+# A inscrição imobiliária: a da obra ou a do imóvel. No leiaute da NT 009 ela fica em cada unidade imobiliária do imóvel
+# (o gUnidImob, até 99), e a NT 008, que é de antes, não diz como mostrar várias: entram todas, separadas por vírgula.
+inscricao_imobiliaria_do_danfse = function(dps) {
+  da_obra_ou_do_imovel = texto_pelo_caminho(dps, "serv/obra/inscImobFisc|IBSCBS/imovel/inscImobFisc")
+  if (!is.na(da_obra_ou_do_imovel)) {
+    return(da_obra_ou_do_imovel)
+  }
+  caminho_das_unidades = paste0("./*[local-name()='IBSCBS']/*[local-name()='imovel']/*[local-name()='gUnidImob']",
+                                "/*[local-name()='inscImobFisc']")
+  das_unidades = xml2::xml_text(xml2::xml_find_all(dps, caminho_das_unidades))
+  if (length(das_unidades) == 0) {
+    return(NA_character_)
+  }
+  paste(unique(das_unidades), collapse = ", ")
+}
+
 # As informações complementares, na ordem da NT e separadas por "|", com a linha dos totais aproximados dos tributos.
 desenhar_informacoes_do_danfse = function(nota, dps, y) {
   titulo_do_bloco_do_danfse("INFORMA\u00c7\u00d5ES COMPLEMENTARES", y, 0.39)
@@ -432,7 +450,7 @@ desenhar_informacoes_do_danfse = function(nota, dps, y) {
     rotulo_do_danfse("NFS-e Subst.:", texto_pelo_caminho(dps, "subst/chSubstda")),
     rotulo_do_danfse("Doc. Ref.:", texto_pelo_caminho(dps, "serv/infoCompl/docRef")),
     rotulo_do_danfse("Cod. Obra:", texto_pelo_caminho(dps, "serv/obra/cObra")),
-    rotulo_do_danfse("Insc. Imob.:", texto_pelo_caminho(dps, "serv/obra/inscImobFisc|IBSCBS/imovel/inscImobFisc")),
+    rotulo_do_danfse("Insc. Imob.:", inscricao_imobiliaria_do_danfse(dps)),
     rotulo_do_danfse("Cod. Evt.:", texto_pelo_caminho(dps, "serv/atvEvento/idAtvEvt")),
     rotulo_do_danfse("Doc. Tec.:", texto_pelo_caminho(dps, "serv/infoCompl/idDocTec")),
     rotulo_do_danfse("N\u00fam. Ped.:", texto_pelo_caminho(dps, "serv/infoCompl/xPed")),

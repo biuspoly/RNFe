@@ -1920,3 +1920,37 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   17:10 (pdftools, qrcode, magick, opencv, tesseract, qpdf, Rcpp, digest, assertthat, rappdirs; a política do Windows
   continua desligada) e 19 testes de PDF e OCR passaram a ser pulados; reinstalados, a suíte voltou a rodar inteira:
   3.226 testes, nenhuma falha, nada pulado.
+
+## Os robôs olham as notas técnicas dos quatro portais, e o schema oficial da NT 009 (10/11/2026)
+
+- **Pedido do usuário:** a preocupação com a SEFAZ mudar as regras ou a API de uma hora para outra, e "sim" para
+  estender o vigia das notas técnicas, que só olhava o Portal da NF-e.
+- **O vigia das notas técnicas** (`ferramentas/vigiar_notas_tecnicas.R`) olha agora os quatro portais: as notas
+  técnicas da NF-e e do CT-e (a página de cada portal), as notas técnicas e os manuais do MDF-e (os tipos 1 e 3 do
+  portal da SVRS, com as notas técnicas conjuntas, que ficam no sistema DFE) e, na NFS-e, todos os documentos das
+  páginas da documentação atual, da Produção Restrita, da RTC e das notas técnicas da NFS-e Via (notas técnicas,
+  manuais das APIs e anexos do leiaute, porque lá a mudança de leiaute e de API sai neles). Uma publicação é conhecida
+  pelo portal e pelo endereço, como no vigia dos schemas: as 326 da NF-e que estavam registradas pelo título tinham
+  todas o mesmo endereço hoje, então nenhum aviso falso. Um portal que não responde não impede os avisos dos outros, e
+  o robô termina com erro. Avisos com o mesmo título viram um só (a nota técnica do CT-e e a do BP-e saem com o mesmo
+  nome); no MDF-e e na NFS-e o nome do arquivo, que traz a versão, entra no título, porque o robô não abre dois avisos
+  com o mesmo título e lá o título de um manual se repete de uma versão para a outra.
+- **O que foi registrado:** as 509 publicações de hoje (NF-e 326, CT-e 123, MDF-e 17, NFS-e 43), menos a NT SE/CGNFS-e
+  010 (o leiaute da NFS-e Via e o evento de manifestação do adquirente), que ninguém conferiu: o robô abre o aviso
+  dela. As outras recentes já tinham sido conferidas (as do CT-e de 30/10 com os schemas em 05/11; a NT 2026.001 do
+  MDF-e na etapa 2; a NT 009 e os anexos dela nesta etapa).
+- **O vigia dos schemas não olhava a página da Produção Restrita da NFS-e**, e é lá que o schema da NT 009 saiu
+  (NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020): a página que ele olhava era a da RTC. Entrou, e o pacote foi registrado
+  depois de conferido. Comparado com o de 09/02/2026: 75 campos entraram, 86 saíram e 36 mudaram de regra; o evento
+  (o `pedRegEvento`) só mudou os padrões, para aceitar o CNPJ com letras.
+- **O que o schema oficial confirma e o que desmente:** confirma a finalidade no `infDPS` (logo depois do `tpEmit`), o
+  CST e a classificação fora do `gIBSCBS`, o `vAjusteBC` no lugar do `vDedRed` e o `vCalcAjusteBCISSQN`. O `indDest` e
+  o `dest` continuam no `IBSCBS`, ao contrário do texto do item 2.11; o leitor e o DANFSe leem os dois lugares, então
+  nada muda neles. O `finNFSe` só aceita 0 e o `opSimpNac`, de 1 a 3: os códigos novos do texto da NT ainda não estão
+  no schema, e a descrição deles segue de fora até ele aceitar.
+- **O que mudou no pacote:** o DANFSe mostra a inscrição imobiliária das unidades do imóvel (o `gUnidImob`, até 99,
+  que substituiu a inscrição do imóvel; a NT 008, de antes, não diz como mostrar várias: entram todas, separadas por
+  vírgula), e a nota da NT 009 dos testes passou a seguir o schema oficial: as três variantes (sem destinatário, com o
+  destinatário no `IBSCBS`, com duas unidades imobiliárias) passam na validação contra ele, e a variante do texto do
+  item 2.11 (o destinatário no `infDPS`), que ele recusa, continua nos testes. A `nfse_emitir()` não muda: ela assina
+  e envia a DPS que recebe, sem montar o leiaute.
