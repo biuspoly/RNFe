@@ -30,14 +30,14 @@ lida$itens        # uma linha por item: produto, CFOP, NCM e os impostos princip
 
 | Página | O que tem |
 |---|---|
-| [Ler os documentos](guia/ler.md) | A chave de acesso (também achada num PDF ou numa foto) e o XML da NF-e, da NFC-e, do CT-e, do CT-e OS, do CT-e simplificado, da GTV-e, do MDF-e, da NFS-e Nacional, da NFS-e de prefeitura e dos eventos, em tabelas |
-| [Certificado digital e SEFAZ](guia/sefaz.md) | O certificado A1, o status do serviço, a consulta pela chave, os MDF-e não encerrados, o cadastro de contribuintes, a Distribuição de DF-e, a NFS-e Nacional e a situação do CNPJ na Receita |
-| [Assinar, enviar e registrar eventos](guia/emitir.md) | A assinatura, a autorização da NF-e e da NFC-e (com o QR-Code), o cancelamento, a carta de correção, a manifestação, o desacordo do CT-e, o MDF-e e a NFS-e Nacional |
-| [Os documentos auxiliares em PDF](guia/pdf.md) | O DANFE, o DANFE Simplificado e a Etiqueta, o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de correção |
-| [A pré-conferência da NF-e](guia/conferir.md) | O schema e as regras de validação do Manual de Orientação do Contribuinte, antes de enviar |
-| [IBS e CBS](guia/reforma.md) | A conferência pelas regras da NT 2025.002, como a SEFAZ as aplicava no dia da emissão, e o cálculo de cada item, também para simular outro ano |
-| [SPED Fiscal](guia/sped.md) | A EFD ICMS/IPI em tabelas, uma por registro, e o cruzamento com os XML das NF-e |
-| [Tabelas fiscais](guia/tabelas.md) | CFOP, NCM, CEST, os CST, as tabelas da Reforma, os municípios e o significado dos códigos, com a vigência, e como atualizá-las |
+| [Ler os documentos](https://github.com/biuspoly/RNFe/blob/main/guia/ler.md) | A chave de acesso (também achada num PDF ou numa foto) e o XML da NF-e, da NFC-e, do CT-e, do CT-e OS, do CT-e simplificado, da GTV-e, do MDF-e, da NFS-e Nacional, da NFS-e de prefeitura e dos eventos, em tabelas |
+| [Certificado digital e SEFAZ](https://github.com/biuspoly/RNFe/blob/main/guia/sefaz.md) | O certificado A1, o status do serviço, a consulta pela chave, os MDF-e não encerrados, o cadastro de contribuintes, a Distribuição de DF-e, a NFS-e Nacional e a situação do CNPJ na Receita |
+| [Assinar, enviar e registrar eventos](https://github.com/biuspoly/RNFe/blob/main/guia/emitir.md) | A assinatura, a autorização da NF-e e da NFC-e (com o QR-Code), o cancelamento, a carta de correção, a manifestação, o desacordo do CT-e, o MDF-e e a NFS-e Nacional |
+| [Os documentos auxiliares em PDF](https://github.com/biuspoly/RNFe/blob/main/guia/pdf.md) | O DANFE, o DANFE Simplificado e a Etiqueta, o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de correção |
+| [A pré-conferência da NF-e](https://github.com/biuspoly/RNFe/blob/main/guia/conferir.md) | O schema e as regras de validação do Manual de Orientação do Contribuinte, antes de enviar |
+| [IBS e CBS](https://github.com/biuspoly/RNFe/blob/main/guia/reforma.md) | A conferência pelas regras da NT 2025.002, como a SEFAZ as aplicava no dia da emissão, e o cálculo de cada item, também para simular outro ano |
+| [SPED Fiscal](https://github.com/biuspoly/RNFe/blob/main/guia/sped.md) | A EFD ICMS/IPI em tabelas, uma por registro, e o cruzamento com os XML das NF-e |
+| [Tabelas fiscais](https://github.com/biuspoly/RNFe/blob/main/guia/tabelas.md) | CFOP, NCM, CEST, os CST, as tabelas da Reforma, os municípios e o significado dos códigos, com a vigência, e como atualizá-las |
 
 ## De onde vêm as regras
 
@@ -63,7 +63,7 @@ O RNFe se apoia no trabalho de muita gente.
 - O **[PyNFe](https://github.com/TadaSoftware/PyNFe)** (TadaSoftware, LGPL-3.0), a biblioteca de NF-e do Python,
   é a principal referência deste pacote. O plano do RNFe parte do que ele faz (consulta à SEFAZ, distribuição
   de documentos, emissão, eventos), e a assinatura digital do RNFe foi conferida com a dele: o mesmo XML sai
-  assinado igual, byte a byte. Obrigado a quem mantém o PyNFe e a todos que contribuíram com ele.
+  assinado igual, byte a byte (o PyNFe tira os acentos antes de assinar; o RNFe não). Obrigado a quem mantém o PyNFe e a todos que contribuíram com ele.
 - O **[brans-nfe](https://github.com/badbrans/brans-nfe)** (MIT), cliente Python da NFS-e Nacional, e o
   **[BrazilFiscalReport](https://github.com/Engenere/BrazilFiscalReport)** (Engenere, LGPL-3.0), que gera o
   DANFE, o DACTE, o DAMDFE, a DACCe e o DANFSe, mostraram o que mais o RNFe precisa cobrir.

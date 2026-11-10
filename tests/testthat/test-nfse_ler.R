@@ -127,6 +127,11 @@ test_that("a NFS-e no leiaute da NT 009: os campos que mudaram de lugar v\u00eam
   expect_false(is.na(nfse$cst_ibs_cbs_descricao))
   expect_equal(nfse$deducao_valor, 100)
   expect_equal(nfse$deducao_calculada, 100)
+  # O destinatário que não é o tomador, com o grupo dest no infDPS.
+  com_destinatario = nfse_ler(nfse_da_nt_009_com_destinatario())$nfses
+  expect_identical(com_destinatario$destinatario_indicador, 1L)
+  expect_identical(com_destinatario$destinatario_documento, "11444777000161")
+  expect_identical(com_destinatario$destinatario_nome, "DESTINATARIO DE TESTE")
   com_percentual = trocar_uma_vez(texto, "<vAjusteBCISSQN>100.00</vAjusteBCISSQN>", "<pAjusteBCISSQN>10.00</pAjusteBCISSQN>")
   expect_equal(nfse_ler(com_percentual)$nfses$deducao_percentual, 10)
   # O resto da nota sai igual ao do leiaute de antes.

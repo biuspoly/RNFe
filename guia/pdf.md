@@ -22,7 +22,8 @@ DANFE Simplificado Tipo 2 da NT 2026.002 não entrou: a nota técnica não traz 
 Manual de Padrões Técnicos do DANFE NFC-e e QR Code (as divisões da bobina, a contingência e o consumidor); o DACTE, o
 do CT-e 4.00 (também o DACTE OS); o DAMDFE, o Anexo II do Manual do MDF-e; e o DANFSe, a Nota Técnica SE/CGNFS-e
 008/2026 (a versão 2.0, com os blocos do IBS e da CBS e as linhas únicas de quando a nota não tem tomador,
-destinatário, intermediário ou ISSQN). A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e". A carta de
+destinatário, intermediário ou ISSQN); na nota do leiaute da NT SE/CGNFS-e 009, o destinatário vem do lugar novo
+(item 2.11) e a dedução do ISSQN soma o ajuste informado e o calculado, como a fórmula da base (item 2.3). A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e". A carta de
 correção não tem modelo oficial: o desenho é o do RNFe, com a chave em código de barras, o registro na SEFAZ, a
 correção e as condições de uso. Os documentos de homologação saem com a marca de sem valor fiscal (no DANFSe, "NFS-e
 SEM VALIDADE JURÍDICA"). Na contingência, o DANFE com formulário de segurança leva o segundo código de barras "Dados da

@@ -104,6 +104,11 @@ test_that("os erros antes de qualquer conex\u00e3o", {
                               "teste", ambiente = "producao"), "homologa\u00e7\u00e3o")
   expect_error(sefaz_carta_correcao(CHAVE_DA_NOTA_DE_SP, "CORRECAO DO ENDERECO DO CLIENTE", 21, CERTIFICADO_DO_EVENTO, "teste"),
                "1 a 20")
+  expect_error(sefaz_carta_correcao(CHAVE_DA_NOTA_DE_SP, "CORRECAO DO ENDERECO DO CLIENTE", 1.5, CERTIFICADO_DO_EVENTO, "teste"),
+               "1 a 20")
+  # O texto com o que o TString do schema não aceita (a quebra de linha) é recusado antes de ir à SEFAZ.
+  expect_error(sefaz_carta_correcao(CHAVE_DA_NOTA_DE_SP, "CORRECAO DO ENDERECO\nDO CLIENTE", 1, CERTIFICADO_DO_EVENTO, "teste"),
+               "quebra de linha")
   expect_error(sefaz_carta_correcao("23261011444777000161650030000000779135724686", "CORRECAO DO ENDERECO DO CLIENTE", 1,
                                     CERTIFICADO_DO_EVENTO, "teste"), "modelo 55")
   expect_error(sefaz_manifestar(CHAVE_DA_NOTA_DE_SP, "outro", certificado = CERTIFICADO_DO_EVENTO, senha = "teste"), "tipo")

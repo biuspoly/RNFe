@@ -1901,3 +1901,22 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   `nfse_ler()` de agora lê a finalidade, o de antes da correção a deixava `NA`, e o resto das colunas saiu igual. A
   nota não tem o grupo do IBS e da CBS, então o CST e o destinatário não aparecem nela (nem antes, nem agora).
 - As cópias com os documentos foram apagadas.
+
+## A revisão final de 10/11/2026
+
+- **Pedido do usuário:** "só me retorne se tiver realmente tudo ok sobre tudo, sem brechas". Um revisor independente
+  leu o diff do dia inteiro (124d799 a bd966cd), com a NT 009, os schemas do MDF-e e da NF-e e o MOC do MDF-e.
+- **Sem regressão nem erro de lógica:** a recusa dos caracteres fora do `TString` vale igual em todos os schemas que
+  usam a conferência (o `TJust` e o `TString` da NF-e, o `xObs` do desacordo do CT-e, o `TString` do MDF-e, o
+  `TSMotivo` da NFS-e); a nota antiga sai igual no leitor e no DANFSe (seis variantes); a soma da dedução só na nota
+  da NT 009; o evento do MDF-e passa no schema nos casos válidos e para antes do envio nos errados.
+- **Corrigido a partir dela:** o `@source` do `danfse_pdf()` e o `guia/pdf.md` passam a citar a NT 009 (itens 2.3 e
+  2.11); os links do README para o `guia/` viraram endereços completos (a pasta fica fora do pacote, e no CRAN o link
+  relativo daria nota de arquivo inválido); a frase da assinatura ganhou a ressalva dos acentos; testes do
+  destinatário no `infDPS` com documento e nome (no leitor e no DANFSe), a trava de rede nos testes de erro do MDF-e,
+  e a carta de correção também recusa a sequência com casas decimais e o texto com quebra de linha; um número no
+  lugar do texto do evento não cai mais no erro cru do R.
+- **No ambiente:** dez pacotes da biblioteca de teste (scratchpad/rlib) perderam o DESCRIPTION e o NAMESPACE às
+  17:10 (pdftools, qrcode, magick, opencv, tesseract, qpdf, Rcpp, digest, assertthat, rappdirs; a política do Windows
+  continua desligada) e 19 testes de PDF e OCR passaram a ser pulados; reinstalados, a suíte voltou a rodar inteira:
+  3.226 testes, nenhuma falha, nada pulado.

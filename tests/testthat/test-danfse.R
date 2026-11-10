@@ -52,6 +52,13 @@ test_that("o DANFSe da nota no leiaute da NT 009: o destinat\u00e1rio, o CST e a
   expect_match(texto, "000 / 000001", fixed = TRUE)
   # A base do ISSQN desconta o vAjusteBCISSQN e o vCalcAjusteBCISSQN somados (100 + 100, item 2.3).
   expect_match(texto, "R$ 200,00", fixed = TRUE)
+  # O destinatário que não é o tomador, com o grupo dest no infDPS.
+  arquivo_com_destinatario = tempfile(fileext = ".pdf")
+  danfse_pdf(nfse_da_nt_009_com_destinatario(), arquivo_com_destinatario)
+  texto_com_destinatario = texto_do_pdf(arquivo_com_destinatario)
+  expect_match(texto_com_destinatario, "DESTINATARIO DE TESTE", fixed = TRUE)
+  expect_match(texto_com_destinatario, "11.444.777/0001-61", fixed = TRUE)
+  expect_false(grepl("DESTINAT\u00c1RIO DA OPERA\u00c7\u00c3O N\u00c3O IDENTIFICADO", texto_com_destinatario, fixed = TRUE))
 })
 
 test_that("o DANFSe sem tomador e sem ISSQN: as linhas \u00fanicas da NT 008", {

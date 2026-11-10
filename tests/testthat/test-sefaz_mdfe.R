@@ -130,7 +130,10 @@ incluir_no_mdfe_de_teste = function(chaves_nfe, municipios = "2304400", nomes = 
 }
 
 test_that("a inclus\u00e3o de DF-e: os erros antes de qualquer conex\u00e3o", {
+  skip_if_not_installed("httr2")
   skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  httr2::local_mocked_responses(function(req) stop("n\u00e3o devia ter conectado"))
   expect_error(incluir_no_mdfe_de_teste(CHAVE_DO_MDFE_DO_CE), "modelo 55")
   expect_error(incluir_no_mdfe_de_teste(c(NFE_INCLUIDA_1, NFE_INCLUIDA_1)), "mais de uma vez")
   expect_error(incluir_no_mdfe_de_teste(c(NFE_INCLUIDA_1, NFE_INCLUIDA_2), c("2304400", "2307304", "2311306")), "um para cada")

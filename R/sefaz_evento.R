@@ -100,10 +100,12 @@ sefaz_cancelar = function(chave, protocolo, justificativa, certificado, senha, a
 sefaz_carta_correcao = function(chave, correcao, sequencia, certificado, senha, ambiente = "homologacao") {
   conferir_ambiente(ambiente)
   conferir_texto_do_evento(correcao, "correcao", 15, 1000)
-  sequencia = suppressWarnings(as.integer(sequencia))
-  if (length(sequencia) != 1 || is.na(sequencia) || sequencia < 1 || sequencia > 20) {
+  numero_da_sequencia = suppressWarnings(as.numeric(sequencia))
+  if (length(numero_da_sequencia) != 1 || is.na(numero_da_sequencia) || numero_da_sequencia != round(numero_da_sequencia) ||
+      numero_da_sequencia < 1 || numero_da_sequencia > 20) {
     stop("Informe a sequ\u00eancia da carta de corre\u00e7\u00e3o: de 1 a 20.", call. = FALSE)
   }
+  sequencia = as.integer(numero_da_sequencia)
   if (!identical(chave_decompor(chave)$modelo, "55")) {
     stop("S\u00f3 a NF-e (modelo 55) tem carta de corre\u00e7\u00e3o.", call. = FALSE)
   }
@@ -222,7 +224,7 @@ conferir_texto_do_evento = function(texto, nome, minimo, maximo) {
          call. = FALSE)
   }
   # O TString dos schemas (NF-e, CT-e, MDF-e e NFS-e) só aceita do espaço (U+0020) ao U+00FF.
-  if (grepl("[^\\x{20}-\\x{FF}]", enc2utf8(texto), perl = TRUE)) {
+  if (grepl("[^\\x{20}-\\x{FF}]", enc2utf8(as.character(texto)), perl = TRUE)) {
     stop("Informe ", nome, " sem quebra de linha, tabula\u00e7\u00e3o nem caractere fora do Latin-1 (como o travess\u00e3o).",
          call. = FALSE)
   }

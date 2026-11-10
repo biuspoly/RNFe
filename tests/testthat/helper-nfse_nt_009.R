@@ -16,6 +16,13 @@ nfse_no_leiaute_da_nt_009 = function() {
   trocar_uma_vez(texto, "    <valores>\n      <vBC>", "    <valores>\n      <vCalcAjusteBCISSQN>100.00</vCalcAjusteBCISSQN>\n      <vBC>")
 }
 
+# A mesma nota com um destinatário que não é o tomador (indDest 1), com o grupo dest no infDPS (item 2.11).
+nfse_da_nt_009_com_destinatario = function() {
+  trocar_uma_vez(nfse_no_leiaute_da_nt_009(), "        <indDest>0</indDest>\n",
+                 paste0("        <indDest>1</indDest>\n        <dest>\n          <CNPJ>11444777000161</CNPJ>\n",
+                        "          <xNome>DESTINATARIO DE TESTE</xNome>\n        </dest>\n"))
+}
+
 # Troca um trecho que aparece uma vez só no texto (senão o teste não está mexendo onde pensa).
 trocar_uma_vez = function(texto, antes, depois) {
   vezes = lengths(regmatches(texto, gregexpr(antes, texto, fixed = TRUE)))
