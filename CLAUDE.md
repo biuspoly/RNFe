@@ -4,7 +4,8 @@ Pacote em R de documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, M
 leitura do XML, tabelas fiscais e, mais adiante, certificado e SEFAZ. Projeto pessoal do Marlon (biuspoly),
 parte do portfólio, irmão do `veiculosbr`. Só em R (decisão do usuário, 29/10/2026: no Python já existe o
 PyNFe). O nome é **RNFe**, com o F maiúsculo como o PyNFe (era RNfe até 30/10/2026). O plano e a situação
-ficam em `docs/plano.md`; o README é o que quem usa o pacote lê.
+ficam em `docs/plano.md`. Quem usa o pacote lê o README (curto: o que é, instalar, um exemplo e a lista das
+páginas) e as páginas de `guia/`, uma por assunto; função nova entra na página do assunto dela.
 
 ## Testar
 
@@ -25,8 +26,8 @@ ficam em `docs/plano.md`; o README é o que quem usa o pacote lê.
 - **Dados de teste inventados.** CNPJ só os fictícios (11.222.333/0001-81, 11.444.777/0001-61) e o exemplo da
   Receita (12.ABC.345/01DE-35); CPF 123.456.789-09. Nota de teste é XML montado à mão, nunca uma nota real
   com os números trocados.
-- **Toda regra diz de onde vem**: o manual ou a nota técnica, com a versão, no `@source` da função e no
-  README. Exemplo de teste com resultado calculado à parte (pelo algoritmo do anexo da NT), não pelo próprio
+- **Toda regra diz de onde vem**: o manual ou a nota técnica, com a versão, no `@source` da função e na
+  página do `guia/`. Exemplo de teste com resultado calculado à parte (pelo algoritmo do anexo da NT), não pelo próprio
   pacote.
 - **Lista pública enxuta**: só o que o plano prevê; peça interna fica interna.
 - **CRAN:** strings do código R só em ASCII, com `\u00e3` no lugar do acento (comentário e roxygen podem ter

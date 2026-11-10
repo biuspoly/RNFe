@@ -1813,3 +1813,20 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   usava uma regra também sem modelo, e passava mesmo com o filtro da data antigo. Agora usa a UB16-10 (com modelo), e
   um teste à parte tira o modelo de uma regra com data; com cada filtro antigo de volta, numa cópia, o teste falha.
   Também: o comentário do filtro, o `fontes.csv` dos marcos com a NT do DANFSe e os textos que não citavam o DANFSe.
+
+## O README em páginas, e a máquina local liberada (10/11/2026)
+
+- **Pedido do usuário:** "acho que a documentação no github tá muito extensa pra uma página inicial [...] não
+  consegue deixar numa segunda página?". O README (707 linhas) ficou com o que é, como instalar, um exemplo, a lista
+  das páginas, de onde vêm as regras e os agradecimentos. O resto foi para `guia/`, uma página por assunto (ler os
+  documentos, SEFAZ, emitir, PDFs, pré-conferência, IBS e CBS, SPED e tabelas), com o texto como estava: uma
+  conferência linha a linha mostrou as 550 linhas de texto do README antigo nas páginas, iguais e na mesma ordem.
+  `guia/` fica fora do pacote (`.Rbuildignore`). Páginas do GitHub e não vinhetas: não pedem knitr nem pandoc no
+  check; para o CRAN, elas podem virar vinhetas depois.
+- **No caminho, duas frases velhas do README corrigidas:** "nada aqui consulta a SEFAZ" (vale só para a leitura) e
+  "a assinatura, quando chegar aqui, vai ser conferida com a do PyNFe" (já foi: o mesmo XML sai assinado igual).
+- **O Controle Inteligente de Aplicativos foi desligado** (o usuário: "o bloqueio do windows acho que já tá ok";
+  `VerifiedAndReputablePolicyState` 0). O curl, o httr2, o testthat, o processx, o roxygen2 e o knitr carregam; 15
+  pacotes da biblioteca de teste que tinham ficado quebrados do tempo do bloqueio foram reinstalados. A suíte
+  inteira rodou aqui (3.183 testes, nenhuma falha, nada pulado) e o R CMD check local também (só as notas da versão
+  de desenvolvimento e da falta do pandoc nesta máquina). O ramo temporário no GitHub deixa de ser necessário.
