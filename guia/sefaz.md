@@ -81,7 +81,10 @@ a nota, e o ADN, o Ambiente de Dados Nacional, que guarda e distribui), com o me
 (precisa do pacote `jsonlite`). O ambiente de teste lá se chama **Produção Restrita**, e é ele que o RNFe usa com
 `ambiente = "homologacao"`. A NFS-e não tem código de situação: o cancelamento e os outros fatos vêm em eventos. Só
 quem aparece na nota consegue consultá-la. O DANFSe oficial não é mais baixado do sistema nacional: a API dele foi
-desativada em 03/08/2026, e pela NT 008/2026 cada sistema gera o seu.
+desativada em 03/08/2026, e pela NT 008/2026 cada sistema gera o seu. A distribuição foi conferida na Produção
+Restrita em 10/11/2026 com documentos de verdade (a NFS-e gerada e cancelada no teste da emissão): os dois vieram,
+com o XML descompactado lido pelo `nfse_ler()` e pelo `eventos_ler()`, a chave certa e a data de geração a menos de
+um minuto da nota e do evento.
 
 ```r
 # a situação do CNPJ na Receita Federal (sem certificado)

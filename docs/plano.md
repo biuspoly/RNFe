@@ -1887,3 +1887,17 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   municípios): o travessão, a quebra de linha e a tabulação passavam, e o `TString` dos schemas (NF-e, CT-e, MDF-e e
   NFS-e, o mesmo padrão nos quatro) só aceita do espaço ao U+00FF. Agora a conferência recusa antes de enviar. E a
   sequência com casas decimais (1,5) não vira mais 1 calada.
+
+## A distribuição da NFS-e com documentos de verdade (10/11/2026)
+
+- **Pedido do usuário:** "faça" (o item em aberto "conferir a distribuição da NFS-e com notas de verdade"). Na
+  Produção Restrita já havia uma: a NFS-e gerada e cancelada no teste da emissão (05/11/2026).
+- **`nfse_distribuicao()` com o certificado do prestador, do NSU 0 até o fim:** o primeiro pedido trouxe dois
+  documentos (a NFS-e e o evento de cancelamento; o ADN autorizou por `CnpjBase`), o segundo, o E2220 (nenhum
+  documento). Os dois XML vieram descompactados e abriram: a NFS-e no `nfse_ler()` (a chave igual à da distribuição,
+  o emitente o do certificado, o ambiente 2) e o cancelamento (101101) no `eventos_ler()`, da mesma chave. O
+  `gerado_em` ficou a menos de um minuto do `dhProc` da nota e da data do evento, no horário de Brasília.
+- **A mesma nota confirma a correção da NT 009:** ela foi gerada no leiaute da NT 009 (o `finNFSe` no `infDPS`); o
+  `nfse_ler()` de agora lê a finalidade, o de antes da correção a deixava `NA`, e o resto das colunas saiu igual. A
+  nota não tem o grupo do IBS e da CBS, então o CST e o destinatário não aparecem nela (nem antes, nem agora).
+- As cópias com os documentos foram apagadas.
