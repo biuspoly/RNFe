@@ -73,12 +73,16 @@ danfse_pdf = function(xml, arquivo) {
   y = desenhar_dados_da_nfse(nota)
   tomador = pessoa_do_danfse(dps, "toma")
   destinatario = pessoa_do_danfse(dps, "IBSCBS/dest")
+  if (is.null(destinatario)) {
+    # Na NT SE/CGNFS-e 009 (item 2.11), o dest e o indDest foram para o infDPS.
+    destinatario = pessoa_do_danfse(dps, "dest")
+  }
   y = desenhar_pessoa_do_danfse("PRESTADOR / FORNECEDOR", pessoa_do_danfse(dps, "prest", nota, informacao), y,
                                 "PRESTADOR / FORNECEDOR N\u00c3O IDENTIFICADO NA NFS-e", com_simples = TRUE, nota = nota)
   y = desenhar_pessoa_do_danfse("TOMADOR / ADQUIRENTE", tomador, y,
                                 "TOMADOR/ADQUIRENTE DA OPERA\u00c7\u00c3O N\u00c3O IDENTIFICADO NA NFS-e")
   # A nota 3: o indDest 0 diz que o destinatário é o próprio tomador (o leiaute não repete os dados dele).
-  if (identical(texto_pelo_caminho(dps, "IBSCBS/indDest"), "0")) {
+  if (identical(texto_pelo_caminho(dps, "IBSCBS/indDest|indDest"), "0")) {
     y = desenhar_linha_unica_do_danfse("O DESTINAT\u00c1RIO \u00c9 O PR\u00d3PRIO TOMADOR/ADQUIRENTE DA OPERA\u00c7\u00c3O", y)
   } else {
     y = desenhar_pessoa_do_danfse("DESTINAT\u00c1RIO DA OPERA\u00c7\u00c3O", destinatario, y,
@@ -320,10 +324,18 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
   calculo_do_beneficio = c(nota$beneficio_municipal_calculado,
                            as.numeric(texto_pelo_caminho(dps, "valores/trib/tribMun/BM/vRedBCBM")))
   calculo_do_beneficio = calculo_do_beneficio[!is.na(calculo_do_beneficio)][1]
-  deducoes = c(as.numeric(texto_pelo_caminho(dps, "valores/vDedRed/vDR")), nota$deducao_calculada,
-               as.numeric(texto_pelo_caminho(informacao, "valores/vCalcAjusteBCISSQN")))
+  # A dedução do ISSQN: na NT SE/CGNFS-e 009 (item 2.3), a base desconta o vAjusteBCISSQN e o vCalcAjusteBCISSQN
+  # somados; antes dela, o vDR ou o vCalcDR.
+  ajustes_da_nt_009 = as.numeric(c(texto_pelo_caminho(dps, "valores/vAjusteBC/vAjusteBCISSQN"),
+                                   texto_pelo_caminho(informacao, "valores/vCalcAjusteBCISSQN")))
+  if (any(!is.na(ajustes_da_nt_009))) {
+    deducao_do_issqn = sum(ajustes_da_nt_009, na.rm = TRUE)
+  } else {
+    deducoes_de_antes = c(as.numeric(texto_pelo_caminho(dps, "valores/vDedRed/vDR")), nota$deducao_calculada)
+    deducao_do_issqn = deducoes_de_antes[!is.na(deducoes_de_antes)][1]
+  }
   reembolso = as.numeric(texto_pelo_caminho(informacao, "IBSCBS/valores/vCalcReeRepRes"))
-  deducoes = c(deducoes[!is.na(deducoes)][1], reembolso)
+  deducoes = c(deducao_do_issqn, reembolso)
   total_das_deducoes = if (all(is.na(deducoes))) NA else sum(deducoes, na.rm = TRUE)
   if (!all(is.na(c(beneficio, calculo_do_beneficio, total_das_deducoes, nota$desconto_incondicionado)))) {
     campo_do_danfse(0.30, y, 5.09, 0.63, "Benef\u00edcio Municipal", conteudo_do_danfse(if (is.na(beneficio)) NA else BENEFICIOS_MUNICIPAIS[[beneficio]]))

@@ -162,6 +162,11 @@ declarou (a DPS) e o que o sistema nacional calculou (ISSQN, valor líquido, IBS
 reais (que não estão no repositório), contra outro sistema e contra um segundo leitor do XML: os campos comparados
 bateram em todas.
 
+Lê também a nota no leiaute da Nota Técnica SE/CGNFS-e 009, que a Produção Restrita já usa: onde ela mudou um campo
+de lugar (a finalidade, o destinatário, o CST e a classificação do IBS e da CBS, as deduções do ISSQN), a coluna vem
+de onde o campo estiver. Os significados dos códigos novos dela (a NFS-e de crédito e de débito, o optante pendente
+do Simples) entram quando o schema oficial da NT 009 sair no portal.
+
 No MDF-e e na NFS-e a tabela `campos` vem por padrão (`todos_os_campos = FALSE` a deixa de fora); na NF-e e
 no CT-e, que já têm tabelas para quase tudo, só com `todos_os_campos = TRUE`.
 

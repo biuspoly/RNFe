@@ -1830,3 +1830,34 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   pacotes da biblioteca de teste que tinham ficado quebrados do tempo do bloqueio foram reinstalados. A suíte
   inteira rodou aqui (3.183 testes, nenhuma falha, nada pulado) e o R CMD check local também (só as notas da versão
   de desenvolvimento e da falta do pandoc nesta máquina). O ramo temporário no GitHub deixa de ser necessário.
+
+## A NFS-e Nacional no leiaute da NT 009, e o MA no cadastro (10/11/2026)
+
+- **Pedido do usuário:** "veja o que dá pra adiantar". A NT SE/CGNFS-e 009 (v1.01), que a Produção Restrita já usa
+  (a produção ainda sem cronograma: "será publicado no portal da NFS-e"), mudou de lugar campos que o `nfse_ler()`
+  lia: numa nota dela, a finalidade, o destinatário, o CST e a classificação do IBS e da CBS e as deduções do ISSQN
+  saíam `NA`.
+- **Como foi achado:** os caminhos do leitor contra a cópia do XSD da NT 009 (a do repositório t3wv/nfse, a que a
+  emissão na Produção Restrita usou) deram seis campos; a revisão independente, pelo PDF oficial, achou o sétimo (o
+  item 2.11: o `indDest` e o `dest` foram para o `infDPS`), que essa cópia do XSD ainda põe no `IBSCBS`. **Vale o
+  texto da NT.** Os itens 2.1 a 2.16 foram lidos inteiros: nenhum outro campo das colunas mudou.
+- **O que mudou:** cada coluna aceita o caminho antigo ou o novo (o "a|b" do leitor; os dois nunca existem juntos):
+  `finalidade` (item 2.2), `destinatario_indicador`, `destinatario_documento` e `destinatario_nome` (2.11),
+  `cst_ibs_cbs` e `classificacao_ibs_cbs` (2.16), `deducao_percentual` e `deducao_valor` (o `vAjusteBC`, que juntou o
+  `vDedRed` e o `gReeRepRes`) e `deducao_calculada` (o `vCalcDR` virou `vCalcAjusteBCISSQN`, com outra fórmula), do
+  item 2.3. O DANFSe também: o destinatário no `infDPS` e, na nota da NT 009, a dedução do ISSQN é o
+  `vAjusteBCISSQN` mais o `vCalcAjusteBCISSQN` (a fórmula da base, pág. 8: `vBC = vServ - descIncond -
+  (vAjusteBCISSQN + vCalcAjusteBCISSQN) - ...`); antes dela, o `vDR` ou o `vCalcDR`, como era.
+- **As notas de hoje não mudam:** a revisão comparou o `nfses`, o `campos` e o texto do DANFSe dos dois exemplos com
+  o código de antes: iguais. Teste novo com uma nota fictícia no leiaute da NT 009 (`helper-nfse_nt_009.R`), no
+  leitor e no DANFSe.
+- **Fica para quando o schema oficial da NT 009 sair no portal:** os significados novos (o `finNFSe` 1, crédito, e
+  2, débito; o `opSimpNac` 4, "optante pendente"). A ferramenta que confere `codigos_dos_campos` exige que todo
+  código esteja no schema oficial, e o da NT 009 por enquanto só existe na cópia de terceiros. Até lá, a descrição
+  desses códigos fica vazia.
+- **O MA no `sefaz_cadastro()`:** a linha do MA dizia só que "a Relação de Serviços Web não traz este serviço".
+  Agora diz que o MA não oferece a consulta por web service (a SVAN não tem o serviço, a SVRS respondeu 410 em
+  03/11/2026 e os endereços da SEFAZ-MA devolveram 404 e 405 em 30/10/2026) e que o cadastro de lá só se consulta
+  no site do Sintegra do MA. O PE e o RN em produção (o que a sessão do app Python viu) ficaram de fora da ajuda: a
+  informação não veio de uma consulta que eu tenha à mão.
+- **Conferido:** a suíte inteira aqui (3.199 testes, nenhuma falha, nada pulado) e o R CMD check local.

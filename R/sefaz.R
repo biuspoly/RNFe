@@ -558,6 +558,11 @@ credenciado_nfe    indCredNFe -
 credenciado_cte    indCredCTe -
 ")
 
+# O MA não tem a consulta por web service: a SVAN, que o atende na NF-e, não tem o serviço, a SVRS respondeu 410 ("UF não
+# é atendida", homologação, 03/11/2026) e os endereços da própria SEFAZ-MA devolvem 404 e 405 (30/10/2026).
+MOTIVO_DO_MA_SEM_CADASTRO = paste("o MA n\u00e3o oferece a consulta de cadastro por web service (a SVAN n\u00e3o tem o servi\u00e7o",
+                                  "e a SVRS n\u00e3o atende o MA): s\u00f3 pelo Sintegra do MA, no site")
+
 # O formato de cada tipo de documento consultado, como o schema da consulta aceita.
 FORMATO_DO_DOCUMENTO_CONSULTADO = c(CNPJ = "^[0-9A-Z]{12}[0-9]{2}$", CPF = "^[0-9]{3,11}$", IE = "^[0-9]{2,14}$")
 
@@ -585,8 +590,10 @@ FORMATO_DO_DOCUMENTO_CONSULTADO = c(CNPJ = "^[0-9A-Z]{12}[0-9]{2}$", CPF = "^[0-
 #'   consulta de cadastro da SVRS, mas ela atende todas essas (e responde ao
 #'   CE, ao AL e ao PI também em produção).
 #' - **Sem o serviço:** o MA, que usa a SVAN para a NF-e. A SVAN não tem a
-#'   consulta e a SVRS responde que não atende a UF; a linha vem com o motivo
-#'   em `problema`, sem ir à SEFAZ.
+#'   consulta, a SVRS responde que não atende a UF e os endereços da própria
+#'   SEFAZ-MA devolvem erro (404 e 405, em 30/10/2026): o cadastro do MA só se
+#'   consulta no site do Sintegra de lá. A linha vem com esse motivo em `problema`, sem ir à
+#'   SEFAZ.
 #'
 #' A SEFAZ pode recusar por causa de quem pergunta: a **257** ("Solicitante
 #' não habilitado para emissão da NF-e") é sobre o CNPJ do certificado, não
@@ -703,6 +710,10 @@ comeco_do_cadastro = function(documento, uf, tipo, ambiente) {
     return(list(linha = linha, pedido = NULL))
   }
   servico = servico_da_uf(uf, "NfeConsultaCadastro", ambiente)
+  if (is.null(servico) && uf == "MA") {
+    linha$problema = MOTIVO_DO_MA_SEM_CADASTRO
+    return(list(linha = linha, pedido = NULL))
+  }
   if (is.null(servico)) {
     linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
     return(list(linha = linha, pedido = NULL))

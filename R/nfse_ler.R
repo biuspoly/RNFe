@@ -1,5 +1,9 @@
 # Leitura do XML da NFS-e Nacional (padrão nacional, leiautes 1.00 e 1.01) em tabelas. Os caminhos seguem o
-# schema oficial do portal da NFS-e (NFSe-ESQUEMAS_XSD-v1.01-20260209, que traz as duas versões).
+# schema oficial do portal da NFS-e (NFSe-ESQUEMAS_XSD-v1.01-20260209, que traz as duas versões) e, onde a NT
+# SE/CGNFS-e 009 (v1.01) mudou o campo de lugar, o caminho novo também: a finalidade (item 2.2), o indDest e o dest
+# (item 2.11) foram para o infDPS, o CST e a classificação do IBS e da CBS saíram do gIBSCBS (item 2.16), a dedução
+# do ISSQN foi para o vAjusteBC e o vCalcDR virou vCalcAjusteBCISSQN (item 2.3). Vale o texto da NT: a cópia do XSD
+# que circula ainda põe o indDest e o dest no IBSCBS.
 
 #' @include ler_xml.R
 NULL
@@ -65,12 +69,12 @@ valor_servico                       DPS/infDPS/valores/vServPrest/vServ         
 valor_recebido_intermediario        DPS/infDPS/valores/vServPrest/vReceb                                                        numero
 desconto_incondicionado             DPS/infDPS/valores/vDescCondIncond/vDescIncond                                              numero
 desconto_condicionado               DPS/infDPS/valores/vDescCondIncond/vDescCond                                                numero
-deducao_percentual                  DPS/infDPS/valores/vDedRed/pDR                                                              numero
-deducao_valor                       DPS/infDPS/valores/vDedRed/vDR                                                              numero
+deducao_percentual                  DPS/infDPS/valores/vDedRed/pDR|DPS/infDPS/valores/vAjusteBC/pAjusteBCISSQN                  numero
+deducao_valor                       DPS/infDPS/valores/vDedRed/vDR|DPS/infDPS/valores/vAjusteBC/vAjusteBCISSQN                  numero
 tributacao_issqn                    DPS/infDPS/valores/trib/tribMun/tribISSQN                                                   inteiro
 retencao_issqn                      DPS/infDPS/valores/trib/tribMun/tpRetISSQN                                                  inteiro
 aliquota_issqn_informada            DPS/infDPS/valores/trib/tribMun/pAliq                                                       numero
-deducao_calculada                   valores/vCalcDR                                                                             numero
+deducao_calculada                   valores/vCalcDR|valores/vCalcAjusteBCISSQN                                                  numero
 beneficio_municipal_calculado       valores/vCalcBM                                                                             numero
 base_issqn                          valores/vBC                                                                                 numero
 aliquota_issqn                      valores/pAliqAplic                                                                          numero
@@ -87,14 +91,14 @@ retencao_pis_cofins                 DPS/infDPS/valores/trib/tribFed/piscofins/tp
 valor_retido_cp                     DPS/infDPS/valores/trib/tribFed/vRetCP                                                      numero
 valor_retido_irrf                   DPS/infDPS/valores/trib/tribFed/vRetIRRF                                                    numero
 valor_retido_csll                   DPS/infDPS/valores/trib/tribFed/vRetCSLL                                                    numero
-finalidade                          DPS/infDPS/IBSCBS/finNFSe                                                                   inteiro
+finalidade                          DPS/infDPS/IBSCBS/finNFSe|DPS/infDPS/finNFSe                                                inteiro
 consumo_final                       DPS/infDPS/IBSCBS/indFinal                                                                  inteiro
 indicador_operacao                  DPS/infDPS/IBSCBS/cIndOp                                                                    texto
-destinatario_indicador              DPS/infDPS/IBSCBS/indDest                                                                   inteiro
-destinatario_documento              DPS/infDPS/IBSCBS/dest/CNPJ|DPS/infDPS/IBSCBS/dest/CPF|DPS/infDPS/IBSCBS/dest/NIF           texto
-destinatario_nome                   DPS/infDPS/IBSCBS/dest/xNome                                                                texto
-cst_ibs_cbs                         DPS/infDPS/IBSCBS/valores/trib/gIBSCBS/CST                                                  texto
-classificacao_ibs_cbs               DPS/infDPS/IBSCBS/valores/trib/gIBSCBS/cClassTrib                                           texto
+destinatario_indicador              DPS/infDPS/IBSCBS/indDest|DPS/infDPS/indDest                                                inteiro
+destinatario_documento              DPS/infDPS/IBSCBS/dest/CNPJ|DPS/infDPS/IBSCBS/dest/CPF|DPS/infDPS/IBSCBS/dest/NIF|DPS/infDPS/dest/CNPJ|DPS/infDPS/dest/CPF|DPS/infDPS/dest/NIF texto
+destinatario_nome                   DPS/infDPS/IBSCBS/dest/xNome|DPS/infDPS/dest/xNome                                          texto
+cst_ibs_cbs                         DPS/infDPS/IBSCBS/valores/trib/gIBSCBS/CST|DPS/infDPS/IBSCBS/valores/trib/CST               texto
+classificacao_ibs_cbs               DPS/infDPS/IBSCBS/valores/trib/gIBSCBS/cClassTrib|DPS/infDPS/IBSCBS/valores/trib/cClassTrib texto
 incidencia_ibs_cbs_codigo_municipio IBSCBS/cLocalidadeIncid                                                                     texto
 incidencia_ibs_cbs_municipio        IBSCBS/xLocalidadeIncid                                                                     texto
 base_ibs_cbs                        IBSCBS/valores/vBC                                                                          numero
@@ -154,7 +158,14 @@ destinatario_indicador             indDest        -
 #' o motivo do que não deu).
 #'
 #' Lê os leiautes 1.00 e 1.01 (raiz `NFSe`), de um arquivo, de vários de uma
-#' vez ou do próprio texto do XML. A NFS-e de prefeitura (os padrões
+#' vez ou do próprio texto do XML. Também lê a nota no leiaute da NT
+#' SE/CGNFS-e 009, que a Produção Restrita já usa: onde ela mudou um campo de
+#' lugar (a finalidade, o destinatário, o CST e a classificação do IBS e da
+#' CBS, a dedução do ISSQN), a coluna vem de onde o campo estiver. Na NT 009,
+#' a `deducao_calculada` (o `vCalcAjusteBCISSQN`, antes `vCalcDR`) soma também
+#' os ajustes por documento, e a base do ISSQN desconta a `deducao_valor` e a
+#' `deducao_calculada` somadas (antes, uma ou a outra). Os campos novos dela (as notas de ajuste, o grupo
+#' `vAjusteBC` inteiro, os condomínios) estão na tabela `campos`. A NFS-e de prefeitura (os padrões
 #' municipais) é lida por [nfse_prefeitura_ler()]. Um arquivo que não dá para ler não interrompe os
 #' outros: fica em `arquivos`, com o motivo. Para saber se a NFS-e foi
 #' cancelada ou substituída, leia os eventos dela com [eventos_ler()].
@@ -206,7 +217,8 @@ destinatario_indicador             indDest        -
 #' @return Uma lista com os `data.frame`s `nfses`, `campos` (só com
 #'   `todos_os_campos = TRUE`) e `arquivos`.
 #' @source Schema oficial da NFS-e Nacional, pacote NFSe-ESQUEMAS_XSD-v1.01-20260209,
-#'   publicado na documentação técnica do portal da NFS-e (gov.br/nfse).
+#'   publicado na documentação técnica do portal da NFS-e (gov.br/nfse); Nota
+#'   Técnica SE/CGNFS-e 009, versão 1.01 (itens 2.2, 2.3, 2.11 e 2.16).
 #' @examples
 #' nfse = system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe")
 #' lida = nfse_ler(nfse)

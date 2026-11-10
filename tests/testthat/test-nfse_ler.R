@@ -113,6 +113,28 @@ test_that("a NFS-e 1.00: MEI, tomador pessoa f\u00edsica, desconto e o xOutInf n
   expect_true(is.na(nfse$valor_cbs))
 })
 
+# A nota no leiaute da NT 009 sai de helper-nfse_nt_009.R.
+test_that("a NFS-e no leiaute da NT 009: os campos que mudaram de lugar v\u00eam do lugar novo", {
+  texto = nfse_no_leiaute_da_nt_009()
+  expect_false(grepl("<gIBSCBS>", texto, fixed = TRUE))
+  expect_identical(lengths(regmatches(texto, gregexpr("<indDest>", texto, fixed = TRUE))), 1L)
+  expect_true(grepl("</toma>\n        <indDest>0</indDest>", texto, fixed = TRUE))
+  nfse = nfse_ler(texto)$nfses
+  expect_identical(nfse$finalidade, 0L)
+  expect_identical(nfse$destinatario_indicador, 0L)
+  expect_identical(nfse$cst_ibs_cbs, "000")
+  expect_identical(nfse$classificacao_ibs_cbs, "000001")
+  expect_false(is.na(nfse$cst_ibs_cbs_descricao))
+  expect_equal(nfse$deducao_valor, 100)
+  expect_equal(nfse$deducao_calculada, 100)
+  com_percentual = trocar_uma_vez(texto, "<vAjusteBCISSQN>100.00</vAjusteBCISSQN>", "<pAjusteBCISSQN>10.00</pAjusteBCISSQN>")
+  expect_equal(nfse_ler(com_percentual)$nfses$deducao_percentual, 10)
+  # O resto da nota sai igual ao do leiaute de antes.
+  de_antes = nfse_ler(NFSE_SP)$nfses
+  mudaram = c("deducao_valor", "deducao_calculada", "arquivo")
+  expect_identical(nfse[, setdiff(names(nfse), mudaram)], de_antes[, setdiff(names(de_antes), mudaram)])
+})
+
 test_that("a tabela campos tem todos os campos, sem a assinatura", {
   campos = nfse_ler(c(NFSE_SP, NFSE_CE))$campos
   for (arquivo in c(NFSE_SP, NFSE_CE)) {

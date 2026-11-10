@@ -41,6 +41,19 @@ test_that("o DANFSe: o benef\u00edcio municipal e as dedu\u00e7\u00f5es dos luga
   expect_match(texto, "R$ 100,00", fixed = TRUE)
 })
 
+test_that("o DANFSe da nota no leiaute da NT 009: o destinat\u00e1rio, o CST e as dedu\u00e7\u00f5es somadas", {
+  skip_if_not_installed("pdftools")
+  skip_if_not_installed("qrcode")
+  arquivo = tempfile(fileext = ".pdf")
+  danfse_pdf(nfse_no_leiaute_da_nt_009(), arquivo)
+  texto = texto_do_pdf(arquivo)
+  # O indDest 0 no infDPS (item 2.11): o destinatário é o próprio tomador.
+  expect_match(texto, "O DESTINAT\u00c1RIO \u00c9 O PR\u00d3PRIO TOMADOR/ADQUIRENTE DA OPERA\u00c7\u00c3O", fixed = TRUE)
+  expect_match(texto, "000 / 000001", fixed = TRUE)
+  # A base do ISSQN desconta o vAjusteBCISSQN e o vCalcAjusteBCISSQN somados (100 + 100, item 2.3).
+  expect_match(texto, "R$ 200,00", fixed = TRUE)
+})
+
 test_that("o DANFSe sem tomador e sem ISSQN: as linhas \u00fanicas da NT 008", {
   skip_if_not_installed("pdftools")
   skip_if_not_installed("qrcode")

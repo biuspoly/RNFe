@@ -78,8 +78,10 @@ A Relação de Serviços Web do Portal da NF-e põe só AC, ES, PB, RN e SC na
 consulta de cadastro da SVRS, mas ela atende todas essas (e responde ao
 CE, ao AL e ao PI também em produção).
 \item \strong{Sem o serviço:} o MA, que usa a SVAN para a NF-e. A SVAN não tem a
-consulta e a SVRS responde que não atende a UF; a linha vem com o motivo
-em \code{problema}, sem ir à SEFAZ.
+consulta, a SVRS responde que não atende a UF e os endereços da própria
+SEFAZ-MA devolvem erro (404 e 405, em 30/10/2026): o cadastro do MA só se
+consulta no site do Sintegra de lá. A linha vem com esse motivo em \code{problema}, sem ir à
+SEFAZ.
 }
 
 A SEFAZ pode recusar por causa de quem pergunta: a \strong{257} ("Solicitante
