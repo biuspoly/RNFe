@@ -15,6 +15,8 @@ sefaz_cte_desacordo(chave_do_cte, "FRETE COBRADO EM DUPLICIDADE", "empresa.pfx",
 
 mdfe = sefaz_mdfe_autorizar(xml_assinar("mdfe.xml", "empresa.pfx", senha), "empresa.pfx", senha)   # o MDF-e
 sefaz_mdfe_incluir_condutor(mdfe$chave, "NOME DO MOTORISTA", cpf_do_motorista, certificado = "empresa.pfx", senha = senha)
+sefaz_mdfe_incluir_dfe(mdfe$chave, mdfe$protocolo, "2611606", "Recife", chaves_das_nfe, "2611606", "Recife",
+                       certificado = "empresa.pfx", senha = senha)   # as NF-e do MDF-e com carregamento posterior
 sefaz_mdfe_encerrar(mdfe$chave, mdfe$protocolo, "PE", "2611606", Sys.Date(), "empresa.pfx", senha)
 
 nfse = nfse_emitir("dps.xml", "empresa.pfx", senha)          # a NFS-e Nacional gerada a partir da DPS
@@ -44,7 +46,12 @@ manifestação do destinatário, esta no Ambiente Nacional) são montados, assin
 o registro feito por engano) no autorizador do CT-e, com o `procEventoCTe` de volta.
 
 O MDF-e vai compactado e é autorizado na hora pela SVRS, que atende todas as UF; o QR-Code dele entra sozinho
-quando falta (no MDF-e em contingência, com a chave assinada pelo certificado, o parâmetro `sign`). Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta. A NFS-e Nacional é
+quando falta (no MDF-e em contingência, com a chave assinada pelo certificado, o parâmetro `sign`). Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta.
+No MDF-e emitido com carregamento posterior (`indCarregaPosterior` 1: carga própria dentro da UF, quando o emitente,
+no início da viagem, não tem acesso aos documentos fiscais transportados), as NF-e entram depois, pela inclusão de DF-e, com o município de carregamento e o de
+descarregamento de cada nota; ele só se encerra depois de uma inclusão. Testado na SVRS de homologação em 10/11/2026:
+o MDF-e com carregamento posterior foi autorizado (100), duas inclusões foram registradas (135; a segunda com a
+sequência 2, embora o MOC diga que só vale a 1) e ele foi encerrado (135). A NFS-e Nacional é
 gerada pela Sefin a partir da DPS que você monta pelo leiaute; o RNFe assina, compacta, envia e devolve a NFS-e (que o
 `nfse_ler()` lê). O cancelamento também é montado e assinado aqui.
 

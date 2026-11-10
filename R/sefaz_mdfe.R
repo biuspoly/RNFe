@@ -1,7 +1,7 @@
-# A emissão do MDF-e e os eventos do emitente: o encerramento (110112) e a inclusão de condutor (110114). Pelo MOC do
-# MDF-e 3.00b: a recepção é síncrona, sem lote, com o MDF-e compactado em gzip dentro do base64; os eventos vão em XML
-# sem compactação; o cabeçalho SOAP (mdfeCabecMsg) foi descontinuado e não vai. O MDF-e é todo da SVRS. Só o ambiente
-# de homologação.
+# A emissão do MDF-e e os eventos do emitente: o encerramento (110112), a inclusão de condutor (110114) e a de DF-e
+# (110115). Pelo MOC do MDF-e 3.00b: a recepção é síncrona, sem lote, com o MDF-e compactado em gzip dentro do
+# base64; os eventos vão em XML sem compactação; o cabeçalho SOAP (mdfeCabecMsg) foi descontinuado e não vai. O MDF-e
+# é todo da SVRS. Só o ambiente de homologação.
 
 #' @include sefaz.R assinatura.R sefaz_evento.R nfse_emitir.R
 NULL
@@ -152,7 +152,13 @@ completar_autorizacao_do_mdfe = function(linha, resposta_lida, texto_do_manifest
 #' município e na data informados. Sem o encerramento, a SVRS não deixa emitir
 #' outro MDF-e para o mesmo veículo e a mesma UF de carregamento.
 #' `sefaz_mdfe_incluir_condutor()` acrescenta um condutor ao MDF-e rodoviário
-#' (o evento 110114).
+#' (o evento 110114). `sefaz_mdfe_incluir_dfe()` inclui NF-e no MDF-e emitido
+#' com carregamento posterior (`indCarregaPosterior` 1, o MDF-e de carga
+#' própria em operação dentro da UF, quando o emitente, no início da viagem,
+#' não tem acesso aos documentos fiscais transportados): o evento 110115, com o município onde as notas foram carregadas e o
+#' de descarregamento de cada uma. O MDF-e sem carregamento posterior é
+#' recusado pela SEFAZ (708), e o com carregamento posterior só se encerra
+#' depois de uma inclusão (715).
 #'
 #' O autor do evento é o emitente da chave (o CNPJ ou, nas séries 920 a 969, o
 #' CPF), e o certificado pode ser o dele ou o de outro estabelecimento da
@@ -170,9 +176,10 @@ completar_autorizacao_do_mdfe = function(linha, resposta_lida, texto_do_manifest
 #'   `procEventoMDFe`, que o [eventos_ler()] lê.
 #' @seealso [sefaz_mdfe_autorizar()], [sefaz_mdfe_nao_encerrados()]
 #' @source Manual de Orientação do Contribuinte do MDF-e, versão 3.00b, itens
-#'   5 e 6 (o serviço de eventos, o encerramento e a inclusão de condutor), e os
-#'   schemas `eventoMDFe_v3.00.xsd`, `evEncMDFe_v3.00.xsd` e
-#'   `evIncCondutorMDFe_v3.00.xsd`.
+#'   2.1.9 (o MDF-e com carregamento posterior), 5 e 6 (o serviço de eventos, o
+#'   encerramento, a inclusão de condutor e a de DF-e), e os schemas
+#'   `eventoMDFe_v3.00.xsd`, `evEncMDFe_v3.00.xsd`,
+#'   `evIncCondutorMDFe_v3.00.xsd` e `evInclusaoDFeMDFe_v3.00.xsd`.
 #' @examples
 #' \dontrun{
 #' sefaz_mdfe_encerrar("23261012ABC34501DE35580010000003211112233440", "923260000012345",
@@ -182,16 +189,12 @@ completar_autorizacao_do_mdfe = function(linha, resposta_lida, texto_do_manifest
 sefaz_mdfe_encerrar = function(chave, protocolo, uf, municipio, data = Sys.Date(), certificado, senha,
                                ambiente = "homologacao") {
   conferir_ambiente(ambiente)
-  if (length(protocolo) != 1 || is.na(protocolo) || !grepl("^[0-9]{15}$", protocolo)) {
-    stop("Informe o protocolo de autoriza\u00e7\u00e3o do MDF-e (15 algarismos).", call. = FALSE)
-  }
+  conferir_protocolo_do_mdfe(protocolo)
   if (length(uf) != 1 || is.na(uf) || !(uf %in% c(names(CODIGO_DA_UF), "EX"))) {
     stop("Informe a UF do encerramento pela sigla (\"EX\" para o exterior).", call. = FALSE)
   }
   codigo_da_uf = if (uf == "EX") "99" else CODIGO_DA_UF[[uf]]
-  if (length(municipio) != 1 || is.na(municipio) || !grepl("^[0-9]{7}$", municipio)) {
-    stop("Informe o c\u00f3digo IBGE do munic\u00edpio do encerramento (7 n\u00fameros).", call. = FALSE)
-  }
+  conferir_municipio_do_evento(municipio, "do encerramento")
   data = as.Date(data)
   if (length(data) != 1 || is.na(data)) {
     stop("Informe a data do encerramento.", call. = FALSE)
@@ -204,7 +207,9 @@ sefaz_mdfe_encerrar = function(chave, protocolo, uf, municipio, data = Sys.Date(
 #' @rdname sefaz_mdfe_encerrar
 #' @param nome,cpf O nome e o CPF do condutor incluído.
 #' @param sequencia O número do evento para o MDF-e: 1 no primeiro condutor
-#'   incluído (até 99).
+#'   (ou na primeira inclusão de DF-e), 2 no segundo, até 99. Na inclusão de
+#'   DF-e, o MOC diz que só vale a 1, mas a SVRS registrou a 2 em homologação
+#'   (10/11/2026): cada nova inclusão no mesmo MDF-e leva a sequência seguinte.
 #' @export
 sefaz_mdfe_incluir_condutor = function(chave, nome, cpf, sequencia = 1, certificado, senha, ambiente = "homologacao") {
   conferir_ambiente(ambiente)
@@ -212,13 +217,68 @@ sefaz_mdfe_incluir_condutor = function(chave, nome, cpf, sequencia = 1, certific
   if (length(cpf) != 1 || is.na(cpf) || !cpf_confere(cpf)) {
     stop("Informe o CPF do condutor (11 n\u00fameros, com o d\u00edgito certo).", call. = FALSE)
   }
-  sequencia = suppressWarnings(as.integer(sequencia))
-  if (length(sequencia) != 1 || is.na(sequencia) || sequencia < 1 || sequencia > 99) {
-    stop("Informe a sequ\u00eancia do evento: de 1 a 99.", call. = FALSE)
-  }
+  sequencia = conferir_sequencia_do_evento(sequencia)
   detalhe = paste0("<evIncCondutorMDFe><descEvento>Inclusao Condutor</descEvento><condutor><xNome>",
                    escapar_texto_canonico(nome), "</xNome><CPF>", cpf, "</CPF></condutor></evIncCondutorMDFe>")
   registrar_evento_do_mdfe(chave, "110114", sequencia, detalhe, certificado, senha, ambiente)
+}
+
+#' @rdname sefaz_mdfe_encerrar
+#' @param municipio_carregamento,nome_carregamento O código IBGE (7 números) e
+#'   o nome do município onde as NF-e incluídas foram carregadas.
+#' @param chaves_nfe As chaves das NF-e incluídas no MDF-e.
+#' @param municipios_descarregamento,nomes_descarregamento O código IBGE e o
+#'   nome do município de descarregamento de cada NF-e (um só vale para todas).
+#' @export
+sefaz_mdfe_incluir_dfe = function(chave, protocolo, municipio_carregamento, nome_carregamento, chaves_nfe,
+                                  municipios_descarregamento, nomes_descarregamento, sequencia = 1, certificado, senha,
+                                  ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  conferir_protocolo_do_mdfe(protocolo)
+  conferir_municipio_do_evento(municipio_carregamento, "do carregamento")
+  conferir_texto_do_evento(nome_carregamento, "o nome do munic\u00edpio do carregamento", 2, 60)
+  chaves_limpas = limpar_chaves(chaves_nfe)
+  partes_das_chaves = chave_decompor(chaves_limpas)
+  if (length(chaves_limpas) == 0 || !all(partes_das_chaves$valida %in% TRUE) || !all(partes_das_chaves$modelo %in% "55")) {
+    stop("Informe as chaves das NF-e (modelo 55, 44 posi\u00e7\u00f5es, com o d\u00edgito certo).", call. = FALSE)
+  }
+  if (anyDuplicated(chaves_limpas) > 0) {
+    stop("A mesma NF-e aparece mais de uma vez.", call. = FALSE)
+  }
+  if (length(municipios_descarregamento) == 1) {
+    municipios_descarregamento = rep(municipios_descarregamento, length(chaves_limpas))
+  }
+  if (length(nomes_descarregamento) == 1) {
+    nomes_descarregamento = rep(nomes_descarregamento, length(chaves_limpas))
+  }
+  if (length(municipios_descarregamento) != length(chaves_limpas) || length(nomes_descarregamento) != length(chaves_limpas)) {
+    stop("Informe um munic\u00edpio de descarregamento para todas as NF-e ou um para cada uma.", call. = FALSE)
+  }
+  documentos = character()
+  for (posicao in seq_along(chaves_limpas)) {
+    conferir_municipio_do_evento(municipios_descarregamento[posicao], "do descarregamento")
+    conferir_texto_do_evento(nomes_descarregamento[posicao], "o nome do munic\u00edpio do descarregamento", 2, 60)
+    documentos = c(documentos, paste0("<infDoc><cMunDescarga>", municipios_descarregamento[posicao], "</cMunDescarga>",
+                                      "<xMunDescarga>", escapar_texto_canonico(nomes_descarregamento[posicao]),
+                                      "</xMunDescarga><chNFe>", chaves_limpas[posicao], "</chNFe></infDoc>"))
+  }
+  sequencia = conferir_sequencia_do_evento(sequencia)
+  detalhe = paste0("<evIncDFeMDFe><descEvento>Inclusao DF-e</descEvento><nProt>", protocolo, "</nProt><cMunCarrega>",
+                   municipio_carregamento, "</cMunCarrega><xMunCarrega>", escapar_texto_canonico(nome_carregamento),
+                   "</xMunCarrega>", paste(documentos, collapse = ""), "</evIncDFeMDFe>")
+  registrar_evento_do_mdfe(chave, "110115", sequencia, detalhe, certificado, senha, ambiente)
+}
+
+conferir_protocolo_do_mdfe = function(protocolo) {
+  if (length(protocolo) != 1 || is.na(protocolo) || !grepl("^[0-9]{15}$", protocolo)) {
+    stop("Informe o protocolo de autoriza\u00e7\u00e3o do MDF-e (15 algarismos).", call. = FALSE)
+  }
+}
+
+conferir_municipio_do_evento = function(municipio, de_que) {
+  if (length(municipio) != 1 || is.na(municipio) || !grepl("^[0-9]{7}$", municipio)) {
+    stop("Informe o c\u00f3digo IBGE do munic\u00edpio ", de_que, " (7 n\u00fameros).", call. = FALSE)
+  }
 }
 
 registrar_evento_do_mdfe = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente) {

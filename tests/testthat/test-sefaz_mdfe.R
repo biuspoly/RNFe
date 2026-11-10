@@ -85,6 +85,70 @@ test_that("o encerramento e a inclus\u00e3o de condutor: o evento sozinho e o pr
                                                          "</CPF></condutor>"), fixed = TRUE)
 })
 
+# Duas NF-e fictícias do emitente do certificado de teste.
+NFE_INCLUIDA_1 = "35261011222333000181550010000010011123456785"
+NFE_INCLUIDA_2 = "35261011222333000181550010000010021123456782"
+
+test_that("a inclus\u00e3o de DF-e: o evento 110115 com as NF-e e o procEventoMDFe", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    resposta_da_svrs("MDFeRecepcaoEvento", retorno_do_evento_do_mdfe("110115"))
+  })
+  incluida = sefaz_mdfe_incluir_dfe(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "2304400", "Fortaleza",
+                                    c(NFE_INCLUIDA_1, NFE_INCLUIDA_2), "2304400", "Fortaleza",
+                                    certificado = CERTIFICADO_DO_MDFE, senha = "teste")
+  expect_identical(incluida$situacao, 135L)
+  expect_identical(incluida$evento, "110115")
+  expect_identical(eventos_ler(incluida$xml_evento)$eventos$tipo, "110115")
+  corpo = rawToChar(pedidos[[1]]$body$data)
+  expect_match(corpo, paste0('<infEvento Id="ID110115', CHAVE_DO_MDFE_DO_CERTIFICADO, '01">'), fixed = TRUE)
+  expect_match(corpo, paste0("<evIncDFeMDFe><descEvento>Inclusao DF-e</descEvento><nProt>923260000012345</nProt>",
+                             "<cMunCarrega>2304400</cMunCarrega><xMunCarrega>Fortaleza</xMunCarrega>",
+                             "<infDoc><cMunDescarga>2304400</cMunDescarga><xMunDescarga>Fortaleza</xMunDescarga><chNFe>",
+                             NFE_INCLUIDA_1, "</chNFe></infDoc><infDoc><cMunDescarga>2304400</cMunDescarga><xMunDescarga>",
+                             "Fortaleza</xMunDescarga><chNFe>", NFE_INCLUIDA_2, "</chNFe></infDoc></evIncDFeMDFe>"), fixed = TRUE)
+  # A segunda inclusão no mesmo MDF-e vai com a sequência 2 (a SVRS aceitou em homologação, em 10/11/2026).
+  # E a NF-e com o CNPJ alfanumérico (o exemplo da Receita) entra como as outras.
+  segunda = sefaz_mdfe_incluir_dfe(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "2304400", "Fortaleza",
+                                   "35261012ABC34501DE35550010000001231123456784", "2307304", "Juazeiro do Norte",
+                                   sequencia = 2, certificado = CERTIFICADO_DO_MDFE, senha = "teste")
+  expect_identical(segunda$sequencia, 2L)
+  expect_match(rawToChar(pedidos[[2]]$body$data), paste0('Id="ID110115', CHAVE_DO_MDFE_DO_CERTIFICADO, '02"'), fixed = TRUE)
+  expect_match(rawToChar(pedidos[[2]]$body$data), paste0("<cMunDescarga>2307304</cMunDescarga><xMunDescarga>Juazeiro do Norte",
+                                                         "</xMunDescarga><chNFe>35261012ABC34501DE35550010000001231123456784"),
+               fixed = TRUE)
+})
+
+# A inclusão no MDF-e de teste, mudando só o que cada caso de erro precisa.
+incluir_no_mdfe_de_teste = function(chaves_nfe, municipios = "2304400", nomes = "Fortaleza", protocolo = "923260000012345") {
+  sefaz_mdfe_incluir_dfe(CHAVE_DO_MDFE_DO_CERTIFICADO, protocolo, "2304400", "Fortaleza", chaves_nfe, municipios, nomes,
+                         certificado = CERTIFICADO_DO_MDFE, senha = "teste")
+}
+
+test_that("a inclus\u00e3o de DF-e: os erros antes de qualquer conex\u00e3o", {
+  skip_if_not_installed("openssl")
+  expect_error(incluir_no_mdfe_de_teste(CHAVE_DO_MDFE_DO_CE), "modelo 55")
+  expect_error(incluir_no_mdfe_de_teste(c(NFE_INCLUIDA_1, NFE_INCLUIDA_1)), "mais de uma vez")
+  expect_error(incluir_no_mdfe_de_teste(c(NFE_INCLUIDA_1, NFE_INCLUIDA_2), c("2304400", "2307304", "2311306")), "um para cada")
+  expect_error(incluir_no_mdfe_de_teste(NFE_INCLUIDA_1, "230440"), "7 n\u00fameros")
+  expect_error(incluir_no_mdfe_de_teste(NFE_INCLUIDA_1, nomes = " Fortaleza"), "espa\u00e7o")
+  expect_error(incluir_no_mdfe_de_teste(NFE_INCLUIDA_1, protocolo = "123"), "protocolo")
+  expect_error(incluir_no_mdfe_de_teste("35261011222333000181550010000010011123456780"), "d\u00edgito")
+  # O TString do schema só aceita do espaço ao U+00FF: o travessão e a quebra de linha não passam.
+  expect_error(incluir_no_mdfe_de_teste(NFE_INCLUIDA_1, nomes = "Juazeiro \u2013 Norte"), "Latin-1")
+  expect_error(incluir_no_mdfe_de_teste(NFE_INCLUIDA_1, nomes = "Juazeiro\ndo Norte"), "quebra de linha")
+  expect_error(sefaz_mdfe_incluir_dfe(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "2304400", "Fortaleza", NFE_INCLUIDA_1,
+                                      "2304400", "Fortaleza", sequencia = 100, certificado = CERTIFICADO_DO_MDFE,
+                                      senha = "teste"), "1 a 99")
+  expect_error(sefaz_mdfe_incluir_dfe(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "2304400", "Fortaleza", NFE_INCLUIDA_1,
+                                      "2304400", "Fortaleza", sequencia = 1.5, certificado = CERTIFICADO_DO_MDFE,
+                                      senha = "teste"), "1 a 99")
+})
+
 test_that("os erros antes de qualquer conex\u00e3o", {
   skip_if_not_installed("openssl")
   expect_error(sefaz_mdfe_autorizar(system.file("exemplos", "mdfe_ce_carga_propria.xml", package = "RNFe"),

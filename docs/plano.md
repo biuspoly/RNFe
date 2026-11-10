@@ -62,7 +62,7 @@ páginas do brans-nfe 0.2.0 (10/06/2026) e do BrazilFiscalReport 1.3.1 (13/10/20
 | Emitir NF-e e NFC-e (normal e contingência) | sim | não | não | pronto em homologação (o QR-Code da NFC-e na versão 3, também off-line) |
 | Cancelamento, carta de correção, inutilização | NF-e | NFS-e (cancelamento) | não | cancelamento e carta de correção prontos em homologação; a inutilização não (o serviço acaba em 11/11/2026, NT 2023.002) |
 | Manifestação do destinatário | sim | não | não | pronto em homologação |
-| MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | emitir, incluir condutor e encerrar: prontos em homologação; a inclusão de DF-e não |
+| MDF-e: emitir, encerrar, incluir condutor e DF-e | sim | não | não | emitir, incluir condutor, incluir DF-e (desde 10/11/2026) e encerrar: prontos em homologação |
 | CT-e: consultar e registrar desacordo | não | não | não | consultar: pronto em homologação (etapa 3); desacordo e o cancelamento dele: prontos em homologação |
 | NFS-e Nacional: emitir, consultar, cancelar, eventos | não | sim | não | consultar e ler os eventos (etapa 3), emitir e cancelar: prontos na Produção Restrita |
 | NFS-e no padrão Abrasf (Ginfes, Betha) | sim | não | não | ler: pronto (06/11/2026), a ABRASF 1.00 e 2.0x e o leiaute de São Paulo; emitir: não previsto, o padrão nacional substitui |
@@ -1861,3 +1861,29 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   no site do Sintegra do MA. O PE e o RN em produção (o que a sessão do app Python viu) ficaram de fora da ajuda: a
   informação não veio de uma consulta que eu tenha à mão.
 - **Conferido:** a suíte inteira aqui (3.199 testes, nenhuma falha, nada pulado) e o R CMD check local.
+
+## A inclusão de DF-e no MDF-e (10/11/2026)
+
+- **Pedido do usuário:** "faça" (a inclusão de DF-e, o evento que faltava do MDF-e). `sefaz_mdfe_incluir_dfe()`: o
+  evento 110115 pelo MOC do MDF-e 3.00b (itens 2.1.9 e 6.4) e o schema `evInclusaoDFeMDFe_v3.00.xsd` do pacote
+  PL_MDFe_300b_NT012025_1.05: o protocolo do MDF-e, o município de carregamento e, para cada NF-e (só NF-e, `chNFe`),
+  o município de descarregamento. Antes de ir à SEFAZ: protocolo de 15 algarismos, municípios de 7, nomes de 2 a 60
+  sem espaço nas pontas, chaves válidas do modelo 55, sem NF-e repetida.
+- **Só serve ao MDF-e com carregamento posterior** (`indCarregaPosterior` 1, carga própria em operação dentro da UF,
+  quando o emitente, no início da viagem, não tem acesso aos documentos transportados); o outro é rejeitado (708), e
+  o com carregamento posterior só se encerra depois de uma inclusão (715).
+- **A sequência:** o MOC diz que a do evento é "=1" (K01), mas a regra K14 fala da NF-e "vinculada ao MDF-e por outro
+  evento de inclusão". Em homologação, a SVRS registrou a segunda inclusão com a sequência 2: a função aceita de 1 a
+  99, como a do condutor.
+- **Testado na SVRS de homologação**, pelas funções do próprio RNFe (o curl voltou a carregar aqui), com o
+  certificado da empresa do RJ: duas NF-e montadas a partir de uma nota real, autorizadas (100); o MDF-e com
+  carregamento posterior, sem documento, autorizado (100); as duas inclusões (135), lidas pelo `eventos_ler()`; o
+  encerramento (135); e as duas NF-e canceladas no fim (135). As cópias com dados da empresa foram apagadas.
+- **Testes sem rede:** o evento montado (o `Id` com a sequência, o `detEvento` inteiro), a segunda inclusão com a
+  sequência 2 e a NF-e com o CNPJ alfanumérico, e os erros antes de qualquer conexão.
+- **Revisão independente:** o evento montado passa no schema oficial (também com o CNPJ alfanumérico, acento e "&",
+  60 caracteres); as mensagens do encerramento ficaram iguais. Achou uma falha que já existia na conferência dos
+  textos dos eventos (a justificativa, a correção, a observação do desacordo, o nome do condutor e agora os dos
+  municípios): o travessão, a quebra de linha e a tabulação passavam, e o `TString` dos schemas (NF-e, CT-e, MDF-e e
+  NFS-e, o mesmo padrão nos quatro) só aceita do espaço ao U+00FF. Agora a conferência recusa antes de enviar. E a
+  sequência com casas decimais (1,5) não vira mais 1 calada.

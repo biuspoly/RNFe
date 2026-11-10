@@ -3,12 +3,14 @@
 \name{sefaz_mdfe_encerrar}
 \alias{sefaz_mdfe_encerrar}
 \alias{sefaz_mdfe_incluir_condutor}
+\alias{sefaz_mdfe_incluir_dfe}
 \title{Encerrar um MDF-e}
 \source{
 Manual de Orientação do Contribuinte do MDF-e, versão 3.00b, itens
-5 e 6 (o serviço de eventos, o encerramento e a inclusão de condutor), e os
-schemas \code{eventoMDFe_v3.00.xsd}, \code{evEncMDFe_v3.00.xsd} e
-\code{evIncCondutorMDFe_v3.00.xsd}.
+2.1.9 (o MDF-e com carregamento posterior), 5 e 6 (o serviço de eventos, o
+encerramento, a inclusão de condutor e a de DF-e), e os schemas
+\code{eventoMDFe_v3.00.xsd}, \code{evEncMDFe_v3.00.xsd},
+\code{evIncCondutorMDFe_v3.00.xsd} e \code{evInclusaoDFeMDFe_v3.00.xsd}.
 }
 \usage{
 sefaz_mdfe_encerrar(
@@ -26,6 +28,20 @@ sefaz_mdfe_incluir_condutor(
   chave,
   nome,
   cpf,
+  sequencia = 1,
+  certificado,
+  senha,
+  ambiente = "homologacao"
+)
+
+sefaz_mdfe_incluir_dfe(
+  chave,
+  protocolo,
+  municipio_carregamento,
+  nome_carregamento,
+  chaves_nfe,
+  municipios_descarregamento,
+  nomes_descarregamento,
   sequencia = 1,
   certificado,
   senha,
@@ -54,7 +70,17 @@ variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 \item{nome, cpf}{O nome e o CPF do condutor incluído.}
 
 \item{sequencia}{O número do evento para o MDF-e: 1 no primeiro condutor
-incluído (até 99).}
+(ou na primeira inclusão de DF-e), 2 no segundo, até 99. Na inclusão de
+DF-e, o MOC diz que só vale a 1, mas a SVRS registrou a 2 em homologação
+(10/11/2026): cada nova inclusão no mesmo MDF-e leva a sequência seguinte.}
+
+\item{municipio_carregamento, nome_carregamento}{O código IBGE (7 números) e
+o nome do município onde as NF-e incluídas foram carregadas.}
+
+\item{chaves_nfe}{As chaves das NF-e incluídas no MDF-e.}
+
+\item{municipios_descarregamento, nomes_descarregamento}{O código IBGE e o
+nome do município de descarregamento de cada NF-e (um só vale para todas).}
 }
 \value{
 Um \code{data.frame} com uma linha, como o de \code{\link[=sefaz_cancelar]{sefaz_cancelar()}}: a
@@ -66,7 +92,13 @@ Registra o encerramento do MDF-e (o evento 110112): a viagem acabou, no
 município e na data informados. Sem o encerramento, a SVRS não deixa emitir
 outro MDF-e para o mesmo veículo e a mesma UF de carregamento.
 \code{sefaz_mdfe_incluir_condutor()} acrescenta um condutor ao MDF-e rodoviário
-(o evento 110114).
+(o evento 110114). \code{sefaz_mdfe_incluir_dfe()} inclui NF-e no MDF-e emitido
+com carregamento posterior (\code{indCarregaPosterior} 1, o MDF-e de carga
+própria em operação dentro da UF, quando o emitente, no início da viagem,
+não tem acesso aos documentos fiscais transportados): o evento 110115, com o município onde as notas foram carregadas e o
+de descarregamento de cada uma. O MDF-e sem carregamento posterior é
+recusado pela SEFAZ (708), e o com carregamento posterior só se encerra
+depois de uma inclusão (715).
 }
 \details{
 O autor do evento é o emitente da chave (o CNPJ ou, nas séries 920 a 969, o

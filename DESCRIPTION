@@ -51,7 +51,8 @@ Description: Confere e desmonta a chave de acesso de 44 posições dos documento
     só em homologação, autoriza a NF-e e a NFC-e (com o QR-Code da NFC-e),
     registra o cancelamento, a carta de correção e a manifestação do
     destinatário, registra o desacordo do CT-e, autoriza o MDF-e, inclui
-    condutor e o encerra, e emite e cancela a NFS-e Nacional na Produção
+    condutor e as NF-e do carregamento posterior e o encerra, e emite e
+    cancela a NFS-e Nacional na Produção
     Restrita. Desenha em PDF o DANFE, o DANFE Simplificado (também a
     Etiqueta), o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de
     correção.

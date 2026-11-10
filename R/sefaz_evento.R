@@ -221,6 +221,20 @@ conferir_texto_do_evento = function(texto, nome, minimo, maximo) {
     stop("Informe ", nome, " com ", minimo, " a ", maximo, " caracteres, sem espa\u00e7o no come\u00e7o nem no fim.",
          call. = FALSE)
   }
+  # O TString dos schemas (NF-e, CT-e, MDF-e e NFS-e) só aceita do espaço (U+0020) ao U+00FF.
+  if (grepl("[^\\x{20}-\\x{FF}]", enc2utf8(texto), perl = TRUE)) {
+    stop("Informe ", nome, " sem quebra de linha, tabula\u00e7\u00e3o nem caractere fora do Latin-1 (como o travess\u00e3o).",
+         call. = FALSE)
+  }
+}
+
+# O número do evento (nSeqEvento) de 1 a 99, inteiro.
+conferir_sequencia_do_evento = function(sequencia) {
+  numero = suppressWarnings(as.numeric(sequencia))
+  if (length(numero) != 1 || is.na(numero) || numero != round(numero) || numero < 1 || numero > 99) {
+    stop("Informe a sequ\u00eancia do evento: de 1 a 99.", call. = FALSE)
+  }
+  as.integer(numero)
 }
 
 # Monta o evento, assina, manda e lê a resposta. O autor é o emitente da chave ou, na manifestação, o destinatário (o
