@@ -12,11 +12,12 @@
 source("ferramentas/schemas.R", encoding = "UTF-8")
 
 NOME_DO_PORTAL = c(nfe = "portal da NF-e", cte = "portal do CT-e", mdfe = "portal do MDF-e", nfse = "portal da NFS-e Nacional")
-# O texto da issue tem limite (65.536 caracteres); a lista de campos para antes.
-TAMANHO_MAXIMO_DO_AVISO = 60000
+# O texto da issue tem limite (65.536 caracteres); a lista de campos para antes, deixando lugar para a seção da troca,
+# que o robô acrescenta depois (até uns 12.000).
+TAMANHO_MAXIMO_DO_AVISO = 50000
 
 listar_todos_os_portais = function(pasta_temporaria) {
-  publicacoes = data.frame(documento = character(), titulo = character(), endereco = character())
+  publicacoes = data.frame(documento = character(), titulo = character(), endereco = character(), pagina = character())
   portais_com_erro = character()
   for (documento in names(PAGINA_DOS_SCHEMAS)) {
     publicacoes_do_portal = tryCatch(listar_publicacoes(documento, pasta_temporaria), error = function(erro) erro)
@@ -80,7 +81,36 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
     paste0("O RNFe segue hoje: ", pacote_usado$titulo, "."),
     ""
   )
-  pasta_do_pacote_novo = tryCatch(baixar_pacote(publicacao$documento, publicacao$endereco, pasta_temporaria), error = function(erro) erro)
+  # O pacote fica na pasta dos avisos (o tempdir() some quando o R fecha): o passo seguinte do robô põe os arquivos
+  # dele no lugar dos de inst/schemas, num ramo, e confere (ferramentas/preparar_troca_de_schemas.R).
+  pasta_do_pacote = file.path(pasta_dos_avisos, "pacotes", sprintf("%03d", numero_do_aviso))
+  dir.create(pasta_do_pacote, showWarnings = FALSE, recursive = TRUE)
+  pasta_do_pacote_novo = tryCatch(baixar_pacote(publicacao$documento, publicacao$endereco, pasta_do_pacote), error = function(erro) erro)
+  troca_conferida = !inherits(pasta_do_pacote_novo, "error") && !is.na(pasta_do_pacote_novo)
+  if (troca_conferida) {
+    # Para a validação dos exemplos com o pacote novo: cada linha de schemas_usados.csv do portal cujo arquivo
+    # principal a publicação traz, com a pasta dele (nfe=<pasta>, nfe_eventos=<pasta>). Os exemplos da NFS-e são da
+    # produção: o pacote das outras páginas (a Produção Restrita, a Reforma Tributária) não os valida.
+    pacotes_do_portal = ler_csv(SCHEMAS_USADOS)
+    pacotes_do_portal = pacotes_do_portal[sub("_.*$", "", pacotes_do_portal$documento) == publicacao$documento, ]
+    if (publicacao$documento == "nfse" && !grepl("documentacao-atual", publicacao$pagina, fixed = TRUE)) {
+      pacotes_do_portal = pacotes_do_portal[0, ]
+    }
+    argumentos_da_validacao = character()
+    for (numero_da_linha in seq_len(nrow(pacotes_do_portal))) {
+      pasta_do_principal = pasta_do_arquivo(pasta_do_pacote_novo, pacotes_do_portal$arquivo_principal[numero_da_linha])
+      if (!is.na(pasta_do_principal)) {
+        argumentos_da_validacao = c(argumentos_da_validacao,
+                                    paste0(pacotes_do_portal$documento[numero_da_linha], "=", normalizePath(pasta_do_principal)))
+      }
+    }
+    # O arquivo da troca: o portal, a pasta do pacote aberto, o endereço, a página e, da quinta linha em diante, os
+    # argumentos da validação.
+    conexao_da_troca = file(file.path(pasta_dos_avisos, sprintf("%03d.troca", numero_do_aviso)), "w", encoding = "UTF-8")
+    writeLines(c(publicacao$documento, normalizePath(pasta_do_pacote_novo), publicacao$endereco, publicacao$pagina,
+                 argumentos_da_validacao), conexao_da_troca)
+    close(conexao_da_troca)
+  }
   if (inherits(pasta_do_pacote_novo, "error")) {
     linhas_do_aviso = c(linhas_do_aviso, paste0("Não deu para baixar o arquivo: ", conditionMessage(pasta_do_pacote_novo)))
   } else if (is.na(pasta_do_pacote_novo)) {
@@ -105,13 +135,22 @@ escrever_aviso = function(publicacao, pacote_usado, campos_do_pacote_usado, past
     "`ferramentas/schemas_usados.csv`, validar com `ferramentas/validar_exemplos.R` e rodar ",
     "`Rscript ferramentas/vigiar_schemas.R --registrar`. Se a publicação não muda nada no RNFe, só o último passo."
   ))
-  # A pré-conferência (nfe_conferir) valida a NF-e contra os schemas que vão no pacote.
-  if (publicacao$documento == "nfe") {
-    linhas_do_aviso = c(linhas_do_aviso, "", paste0(
-      "Na NF-e, a pré-conferência valida contra os `.xsd` da pasta `NFe` do pacote de liberação, copiados em ",
-      "`inst/schemas/nfe`: se a publicação traz o `nfe_v4.00.xsd`, copie os cinco arquivos dela para lá."
-    ))
+  # A montagem e a pré-conferência usam os schemas de inst/schemas: o robô confere se a publicação troca algum deles e
+  # acrescenta a seção do resultado a este aviso (com a troca pronta num ramo, quando troca).
+  if (troca_conferida) {
+    texto_da_troca = paste0(
+      "A montagem (`nfe_montar()`, `cte_montar()`, `mdfe_montar()`, `nfse_dps_montar()`), os eventos e a ",
+      "pré-conferência seguem os schemas de `inst/schemas`. O robô confere se a publicação troca algum deles e põe o ",
+      "resultado na seção abaixo (quando troca, com a troca pronta num ramo e os testes). Sem a seção, o passo do robô ",
+      "que confere falhou: veja a execução em Actions."
+    )
+  } else {
+    texto_da_troca = paste0(
+      "A montagem, os eventos e a pré-conferência seguem os schemas de `inst/schemas`. Sem o arquivo, o robô não ",
+      "conferiu se a publicação troca algum deles: confira à mão."
+    )
   }
+  linhas_do_aviso = c(linhas_do_aviso, "", texto_da_troca)
   linhas_do_aviso = cortar_texto(linhas_do_aviso)
   arquivo_do_aviso = file.path(pasta_dos_avisos, sprintf("%03d.md", numero_do_aviso))
   conexao_com_o_arquivo = file(arquivo_do_aviso, "w", encoding = "UTF-8")
@@ -135,7 +174,7 @@ if (sys.nframe() == 0) {
     if (length(listagem_dos_portais$portais_com_erro) > 0) {
       stop("Algum portal não respondeu, nada foi gravado: ", paste(listagem_dos_portais$portais_com_erro, collapse = "; "), call. = FALSE)
     }
-    gravar_csv(listagem_dos_portais$publicacoes, SCHEMAS_VISTOS)
+    gravar_csv(listagem_dos_portais$publicacoes[, c("documento", "titulo", "endereco")], SCHEMAS_VISTOS)
     cat(nrow(listagem_dos_portais$publicacoes), "publicações gravadas em", SCHEMAS_VISTOS, "\n")
   } else {
     pasta_dos_avisos = argumentos[1]

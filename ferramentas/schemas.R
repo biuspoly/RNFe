@@ -17,8 +17,10 @@ DOWNLOAD_DO_PORTAL_DO_MDFE = "https://dfe-portal.svrs.rs.gov.br/MDFE/DownloadArq
 
 # O pacote de schemas que cada leitor do RNFe segue, o arquivo principal dele e o que é comparado quando sai
 # um pacote novo: tipos (TNFe...) e elementos soltos (o modal rodoviário, que o infModal não confere). As linhas
-# nfe_eventos, nfe_cancelamento, nfe_carta_correcao e nfe_distribuicao são os pacotes à parte dos eventos da NF-e,
-# que só o validador dos exemplos usa: o vigia compara as publicações com a linha do documento (nfe).
+# que começam por nfe_ são os pacotes à parte dos eventos da NF-e e da Distribuição: os do validador dos exemplos e
+# os de onde vêm os arquivos de inst/schemas/nfe_eventos (a parte geral do 010d v1.03, os tipos básicos do 010g e o
+# detEvento do pacote de cada evento; a data de cada arquivo está em datas_dos_schemas.csv). O vigia compara as
+# publicações com a linha do documento (nfe).
 SCHEMAS_USADOS = "ferramentas/schemas_usados.csv"
 SCHEMAS_VISTOS = "ferramentas/schemas_vistos.csv"
 O_QUE_COMPARAR = list(
@@ -84,9 +86,10 @@ links_dos_portais_da_nfe_e_do_cte = function(pagina_da_lista, endereco_da_pagina
   list(links = links_de_download, enderecos = paste0(comeco_do_endereco, codigos_dos_arquivos))
 }
 
-# Uma linha por publicação das páginas do portal: documento, título (o texto do link) e endereço para baixar.
+# Uma linha por publicação das páginas do portal: documento, título (o texto do link), endereço para baixar e a página
+# em que ela está (na NFS-e, a página diz se o pacote é o da produção ou o da Produção Restrita).
 listar_publicacoes = function(documento, pasta_temporaria) {
-  publicacoes = data.frame(documento = character(), titulo = character(), endereco = character())
+  publicacoes = data.frame(documento = character(), titulo = character(), endereco = character(), pagina = character())
   for (endereco_da_pagina in PAGINA_DOS_SCHEMAS[[documento]]) {
     pagina_da_lista = abrir_pagina(documento, endereco_da_pagina, pasta_temporaria)
     if (documento == "mdfe") {
@@ -101,12 +104,13 @@ listar_publicacoes = function(documento, pasta_temporaria) {
     }
     titulos_das_publicacoes = gsub("\\s+", " ", trimws(xml2::xml_text(links_da_pagina$links)))
     publicacoes = rbind(publicacoes, data.frame(documento = documento, titulo = titulos_das_publicacoes,
-                                                endereco = unname(links_da_pagina$enderecos)))
+                                                endereco = unname(links_da_pagina$enderecos), pagina = endereco_da_pagina))
   }
   publicacoes[!duplicated(publicacoes$endereco), ]
 }
 
-# Baixa o pacote e o abre numa pasta. Devolve a pasta, ou NA quando o arquivo não é um zip.
+# Baixa o pacote e o abre numa pasta. Devolve a pasta, ou NA quando o arquivo não é um zip. Cada arquivo aberto fica com
+# a data que tem no zip (setTimes), que o preparar_troca_de_schemas.R compara com a do arquivo em uso.
 baixar_pacote = function(documento, endereco, pasta_temporaria) {
   abrir_pagina(documento, PAGINA_DOS_SCHEMAS[[documento]][1], pasta_temporaria)
   arquivo_zip = tempfile(tmpdir = pasta_temporaria, fileext = ".zip")
@@ -115,7 +119,7 @@ baixar_pacote = function(documento, endereco, pasta_temporaria) {
   pedido_do_arquivo = httr2::req_timeout(pedido_do_arquivo, 300)
   httr2::req_perform(pedido_do_arquivo, path = arquivo_zip)
   pasta_do_pacote = sub("\\.zip$", "", arquivo_zip)
-  arquivos_abertos = tryCatch(utils::unzip(arquivo_zip, exdir = pasta_do_pacote),
+  arquivos_abertos = tryCatch(utils::unzip(arquivo_zip, exdir = pasta_do_pacote, setTimes = TRUE),
                               error = function(erro) character(), warning = function(aviso) character())
   if (length(arquivos_abertos) == 0) {
     return(NA_character_)
@@ -123,7 +127,7 @@ baixar_pacote = function(documento, endereco, pasta_temporaria) {
   # Alguns pacotes guardam os schemas em zips dentro do zip (o 010d da NF-e traz o PL_Evento.zip): cada um é
   # aberto numa pasta com o nome dele.
   for (zip_de_dentro in arquivos_abertos[grepl("\\.zip$", arquivos_abertos, ignore.case = TRUE)]) {
-    tryCatch(utils::unzip(zip_de_dentro, exdir = sub("\\.zip$", "", zip_de_dentro, ignore.case = TRUE)),
+    tryCatch(utils::unzip(zip_de_dentro, exdir = sub("\\.zip$", "", zip_de_dentro, ignore.case = TRUE), setTimes = TRUE),
              error = function(erro) character(), warning = function(aviso) character())
   }
   pasta_do_pacote

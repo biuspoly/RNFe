@@ -3,3 +3,6 @@
 *.csv text eol=lf
 # A EFD de exemplo fica como o leiaute pede: Latin-1 e CR LF no fim de cada linha, sem conversão.
 inst/exemplos/*.txt -text
+# Os schemas oficiais ficam byte a byte como os portais publicam, para o robô comparar o pacote novo com o que está
+# aqui sem diferença falsa de fim de linha.
+inst/schemas/** -text

@@ -31,8 +31,9 @@ lida$itens        # uma linha por item: produto, CFOP, NCM e os impostos princip
 | Página | O que tem |
 |---|---|
 | [Ler os documentos](https://github.com/biuspoly/RNFe/blob/main/guia/ler.md) | A chave de acesso (também achada num PDF ou numa foto) e o XML da NF-e, da NFC-e, do CT-e, do CT-e OS, do CT-e simplificado, da GTV-e, do MDF-e, da NFS-e Nacional, da NFS-e de prefeitura e dos eventos, em tabelas |
+| [Montar os documentos](https://github.com/biuspoly/RNFe/blob/main/guia/montar.md) | A NF-e, a NFC-e, o CT-e (o OS, a GTV-e e o simplificado), o MDF-e e a DPS da NFS-e Nacional a partir de uma lista com os campos do leiaute, na ordem e no formato do schema oficial, e qualquer documento passado de volta para essa lista |
 | [Certificado digital e SEFAZ](https://github.com/biuspoly/RNFe/blob/main/guia/sefaz.md) | O certificado A1, o status do serviço, a consulta pela chave, os MDF-e não encerrados, o cadastro de contribuintes, a Distribuição de DF-e, a NFS-e Nacional e a situação do CNPJ na Receita |
-| [Assinar, enviar e registrar eventos](https://github.com/biuspoly/RNFe/blob/main/guia/emitir.md) | A assinatura, a autorização da NF-e e da NFC-e (com o QR-Code), o cancelamento, a carta de correção, a manifestação, o desacordo do CT-e, o MDF-e e a NFS-e Nacional |
+| [Assinar, enviar e registrar eventos](https://github.com/biuspoly/RNFe/blob/main/guia/emitir.md) | A assinatura, a autorização da NF-e, da NFC-e (com o QR-Code) e do CT-e (o OS, a GTV-e e o simplificado), o cancelamento, a carta de correção, a manifestação, o comprovante e o insucesso de entrega, o ator interessado, o EPEC, o desacordo do CT-e, o MDF-e e a NFS-e Nacional (também a consulta pela DPS) |
 | [Os documentos auxiliares em PDF](https://github.com/biuspoly/RNFe/blob/main/guia/pdf.md) | O DANFE, o DANFE Simplificado e a Etiqueta, o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de correção |
 | [A pré-conferência da NF-e](https://github.com/biuspoly/RNFe/blob/main/guia/conferir.md) | O schema e as regras de validação do Manual de Orientação do Contribuinte, antes de enviar |
 | [IBS e CBS](https://github.com/biuspoly/RNFe/blob/main/guia/reforma.md) | A conferência pelas regras da NT 2025.002, como a SEFAZ as aplicava no dia da emissão, e o cálculo de cada item, também para simular outro ano |
@@ -50,9 +51,12 @@ XMLs segue os schemas oficiais do Portal da NF-e, do
 [portal da NFS-e Nacional](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica), e não consulta a
 SEFAZ. Cada página diz as fontes da parte dela.
 
-A pré-conferência usa os schemas do pacote de liberação 010g (versão 1.03) do Portal da NF-e, que vão no pacote em
-`inst/schemas/nfe`, e as regras de validação do Anexo I do MOC 7.0 com as notas técnicas que as mudaram depois; a
-regra, o código, a mensagem e a fonte de cada uma estão em `inst/extdata/regras_nfe.csv`.
+A montagem e a pré-conferência usam os schemas oficiais que vão no pacote em `inst/schemas`: o pacote de liberação
+010g (versão 1.03) da NF-e; os eventos da NF-e (a parte geral do 010d v1.03, a do CNPJ alfanumérico, os tipos
+básicos do 010g e o pacote de cada evento); o CT-e da NT 2026.005; o MDF-e da NT 2025.001; e a NFS-e Nacional de produção (1.01) e da Produção
+Restrita (a da NT 009, que a montagem da DPS segue). A pré-conferência usa também as regras de validação do Anexo I
+do MOC 7.0 com as notas técnicas que as mudaram depois; a regra, o código, a mensagem e a fonte de cada uma estão em
+`inst/extdata/regras_nfe.csv`.
 
 Nos exemplos e nos testes, só CNPJs e CPFs fictícios; o 12.ABC.345/01DE-35 é o exemplo da Receita Federal.
 
@@ -64,6 +68,9 @@ O RNFe se apoia no trabalho de muita gente.
   é a principal referência deste pacote. O plano do RNFe parte do que ele faz (consulta à SEFAZ, distribuição
   de documentos, emissão, eventos), e a assinatura digital do RNFe foi conferida com a dele: o mesmo XML sai
   assinado igual, byte a byte (o PyNFe tira os acentos antes de assinar; o RNFe não). Obrigado a quem mantém o PyNFe e a todos que contribuíram com ele.
+- O **[nfelib](https://github.com/akretion/nfelib)** (Akretion, MIT), que gera as classes da NF-e, do CT-e, do MDF-e
+  e da NFS-e a partir dos schemas oficiais, é a outra régua do RNFe, ao lado do PyNFe: dele veio a ideia de deixar o
+  schema decidir a montagem dos documentos (o RNFe lê o schema na hora, em vez de gerar código).
 - O **[brans-nfe](https://github.com/badbrans/brans-nfe)** (MIT), cliente Python da NFS-e Nacional, e o
   **[BrazilFiscalReport](https://github.com/Engenere/BrazilFiscalReport)** (Engenere, LGPL-3.0), que gera o
   DANFE, o DACTE, o DAMDFE, a DACCe e o DANFSe, mostraram o que mais o RNFe precisa cobrir.

@@ -20,7 +20,7 @@ nfse_cancelar(
 )
 }
 \arguments{
-\item{chave}{A chave de acesso da NFS-e (50 números).}
+\item{chave}{A chave de acesso da NFS-e (50 posições).}
 
 \item{motivo}{\code{"erro_na_emissao"}, \code{"servico_nao_prestado"} ou \code{"outros"}.}
 

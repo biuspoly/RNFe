@@ -2,22 +2,26 @@
 # oficiais que os leitores seguem (ferramentas/schemas_usados.csv). Uso, na raiz do repositório:
 #   Rscript ferramentas/validar_exemplos.R
 #   Rscript ferramentas/validar_exemplos.R nfe=<pasta> cte=<pasta> mdfe=<pasta> nfse=<pasta> nfe_eventos=<pasta> ...
-# Sem argumentos, baixa os pacotes dos portais (ferramentas/baixar_schemas.R). Com eles, usa as pastas dadas, uma
-# para cada linha de schemas_usados.csv: a pasta que tem o arquivo principal daquele pacote (na NFS-e, a do
-# NFSe_v1.01.xsd; a pasta da versão 1.00 fica ao lado dela, no mesmo pacote).
+# Os pacotes que não vierem nos argumentos são baixados dos portais (ferramentas/baixar_schemas.R): sem argumentos,
+# todos; com o de um documento só (o pacote novo que o robô baixou), os outros. A pasta de cada linha de
+# schemas_usados.csv é a que tem o arquivo principal daquele pacote (na NFS-e, a do NFSe_v1.01.xsd; a pasta da versão
+# 1.00 fica ao lado dela, no mesmo pacote).
 # Todo documento nessa pasta tem de passar: documento com defeito de propósito vai como texto dentro do teste.
 
 source("ferramentas/schemas.R", encoding = "UTF-8")
 
 argumentos = commandArgs(trailingOnly = TRUE)
-if (length(argumentos) == 0) {
-  source("ferramentas/baixar_schemas.R", encoding = "UTF-8")
-  pasta_de_cada_pacote = baixar_schemas_usados(file.path(tempdir(), "schemas"))
-} else {
+pacotes_usados = ler_csv(SCHEMAS_USADOS)
+pasta_de_cada_pacote = character()
+if (length(argumentos) > 0) {
   pasta_de_cada_pacote = sub("^[^=]*=", "", argumentos)
   names(pasta_de_cada_pacote) = sub("=.*$", "", argumentos)
 }
-pacotes_usados = ler_csv(SCHEMAS_USADOS)
+faltam_baixar = setdiff(pacotes_usados$documento, names(pasta_de_cada_pacote))
+if (length(faltam_baixar) > 0) {
+  source("ferramentas/baixar_schemas.R", encoding = "UTF-8")
+  pasta_de_cada_pacote = c(pasta_de_cada_pacote, baixar_schemas_usados(file.path(tempdir(), "schemas"), faltam_baixar))
+}
 for (numero_do_pacote in seq_len(nrow(pacotes_usados))) {
   pacote_usado = pacotes_usados[numero_do_pacote, ]
   pasta_do_pacote = pasta_de_cada_pacote[pacote_usado$documento]
@@ -180,8 +184,18 @@ validar_evento_da_nfe = function(arquivo_de_exemplo, documento_lido, schema_do_e
 arquivos_de_exemplo = list.files("inst/exemplos", pattern = "\\.xml$", full.names = TRUE)
 todos_passaram = TRUE
 for (arquivo_de_exemplo in arquivos_de_exemplo) {
+  # As NFS-e de prefeitura (o leiaute de São Paulo e o ABRASF) não têm schema no pacote: os testes as leem, sem passar
+  # por aqui.
+  if (startsWith(basename(arquivo_de_exemplo), "nfse_prefeitura_")) {
+    cat("pulado  ", basename(arquivo_de_exemplo), "(NFS-e de prefeitura, sem schema no pacote)\n")
+    next
+  }
   documento_lido = xml2::read_xml(arquivo_de_exemplo)
-  namespace_do_documento = xml2::xml_ns(documento_lido)[["d1"]]
+  namespaces_do_documento = xml2::xml_ns(documento_lido)
+  namespace_do_documento = NA_character_
+  if ("d1" %in% names(namespaces_do_documento)) {
+    namespace_do_documento = namespaces_do_documento[["d1"]]
+  }
   raiz_do_documento = xml2::xml_name(xml2::xml_root(documento_lido))
   if (identical(namespace_do_documento, "http://www.portalfiscal.inf.br/nfe")) {
     if (raiz_do_documento == "procEventoNFe") {

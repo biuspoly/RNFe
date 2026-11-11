@@ -67,6 +67,9 @@ sefaz_cte_cancelar_desacordo = function(chave, protocolo_do_desacordo, certifica
   registrar_evento_do_cte(chave, "610111", sequencia, detalhe, certificado, senha, ambiente, tomador)
 }
 
+# O schema do detalhe de cada evento do CT-e (em inst/schemas/cte), que a mensagem assinada segue antes de ir à SEFAZ.
+SCHEMA_DO_DETALHE_DO_EVENTO_DO_CTE = c("610110" = "evPrestDesacordo_v4.00.xsd", "610111" = "evCancPrestDesacordo_v4.00.xsd")
+
 registrar_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
                                    tomador = NULL) {
   exigir_pacotes(c("httr2", "curl", "openssl"))
@@ -121,6 +124,7 @@ montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, c
     '</nSeqEvento><detEvento versaoEvento="4.00">', detalhe, "</detEvento></infEvento></eventoCTe>"
   )
   evento_assinado = sub("^<\\?xml[^>]*\\?>\\s*", "", xml_assinar(evento, certificado, senha))
+  conferir_o_evento_no_schema(evento_assinado, "cte", "eventoCTe_v4.00.xsd", SCHEMA_DO_DETALHE_DO_EVENTO_DO_CTE[[codigo_do_evento]])
   list(linha = linha, evento_assinado = evento_assinado,
        pedido = montar_pedido(servico$endereco, "CTeRecepcaoEventoV4", "cteRecepcaoEvento", evento_assinado,
                               familia = "cte"))
@@ -141,6 +145,10 @@ completar_evento_do_cte = function(linha, resposta_lida, evento_assinado, ambien
   chave_do_retorno = texto_do_retorno(informacao, "chCTe")
   if (!is.na(chave_do_retorno) && !identical(chave_do_retorno, linha$chave)) {
     linha$problema = "a SEFAZ respondeu sobre outra chave"
+    return(linha)
+  }
+  if (retorno_de_outro_evento(informacao, linha)) {
+    linha$problema = PROBLEMA_DO_RETORNO_DE_OUTRO_EVENTO
     return(linha)
   }
   linha$situacao = as.integer(texto_do_retorno(informacao, "cStat"))

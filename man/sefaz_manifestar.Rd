@@ -4,9 +4,9 @@
 \alias{sefaz_manifestar}
 \title{Manifestar o destinatário sobre uma NF-e}
 \source{
-Manual de Orientação do Contribuinte da NF-e e a NT 2012.002
-(a manifestação do destinatário, eventos 210200, 210210, 210220 e 210240,
-no Ambiente Nacional, órgão 91).
+NT 2020.001 v1.60 (a manifestação do destinatário, eventos 210200,
+210210, 210220 e 210240, no Ambiente Nacional, órgão 91; a retificação,
+regra H02); os schemas \code{e210200_v1.00.xsd} a \code{e210240_v1.00.xsd}.
 }
 \usage{
 sefaz_manifestar(
@@ -16,7 +16,8 @@ sefaz_manifestar(
   certificado,
   senha,
   ambiente = "homologacao",
-  destinatario = NULL
+  destinatario = NULL,
+  sequencia = 1
 )
 }
 \arguments{
@@ -37,6 +38,9 @@ variável de ambiente com \code{\link[=Sys.getenv]{Sys.getenv()}}.}
 
 \item{destinatario}{Opcional: o CNPJ (ou o CPF) do destinatário da nota,
 quando não é o do certificado (o mesmo CNPJ-base).}
+
+\item{sequencia}{1 na primeira manifestação do tipo; 2 na segunda do mesmo
+tipo (só na conclusiva).}
 }
 \value{
 Um \code{data.frame} com uma linha: \code{chave}, \code{evento} (o código),
@@ -54,6 +58,12 @@ desconhecimento (\code{"desconhecimento"}) ou a operação não realizada
 (\code{"nao_realizada"}, que pede a justificativa).
 }
 \details{
+Cada manifestação conclusiva (confirmação, desconhecimento ou operação não
+realizada) pode ser registrada até duas vezes na nota, e vale a última
+registrada: confirmar, depois desconhecer e confirmar de novo (a segunda
+confirmação com \code{sequencia = 2}). A sequência conta por tipo: a primeira de
+cada um é a 1. A ciência vai uma vez só, antes da manifestação conclusiva.
+
 O autor do evento é o destinatário da nota, e o certificado tem de ter o
 CNPJ-base (ou o CPF) dele. Sem \code{destinatario}, o autor é o CNPJ do
 certificado; quando a nota foi emitida para uma filial e o certificado é o

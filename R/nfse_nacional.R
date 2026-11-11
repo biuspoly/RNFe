@@ -17,6 +17,12 @@ homologacao ; https://sefin.producaorestrita.nfse.gov.br/SefinNacional ; https:/
 # A Sefin diz o ambiente pelo número (o tpAmb, 2 na homologação); o ADN, pelo nome.
 AMBIENTE_NA_RESPOSTA_DO_ADN = c(homologacao = "HOMOLOGACAO")
 
+# A chave da NFS-e: o município (7), o ambiente gerador (1), o tipo de inscrição (1), a inscrição (14), o número (13), o
+# ano e mês (4), o código (9) e o dígito (1). Com o CNPJ alfanumérico (tipo 2), a inscrição tem letras: assim nos
+# identificadores do evento e do pedido de registro (TSIdEvento, TSIdPedRegEvt) da Produção Restrita. O TSChaveNFSe de
+# lá põe as letras nas posições 7 a 20, fora da regra de formação: vale a regra.
+FORMATO_DA_CHAVE_DA_NFSE = "^[0-9]{8}(1[0-9]{14}|2[0-9A-Z]{14})[0-9]{27}$"
+
 # Os erros do ADN que querem dizer só "não há documento" (a tabela de mensagens da especificação do ADN Contribuintes).
 # Outro erro com a mesma situação, como o E2241 (a nota não cita quem pergunta), é problema: os eventos não foram vistos.
 CODIGOS_DE_NENHUM_DOCUMENTO = c("E2220", "E2230", "E2240")
@@ -24,7 +30,7 @@ CODIGOS_DE_NENHUM_DOCUMENTO = c("E2220", "E2230", "E2240")
 #' Situação de NFS-e Nacional, pela chave
 #'
 #' Pergunta ao Sistema Nacional NFS-e cada nota pela chave de acesso (50
-#' números) e devolve uma lista com `situacoes` (uma linha por chave: se a nota
+#' posições) e devolve uma lista com `situacoes` (uma linha por chave: se a nota
 #' foi achada, e o XML dela) e `eventos` (os eventos de cada nota, como o
 #' cancelamento, lidos por [eventos_ler()]). A nota vem da Sefin Nacional
 #' (`GET /nfse/<chave>`) e os eventos, do ADN, o Ambiente de Dados Nacional
@@ -37,15 +43,16 @@ CODIGOS_DE_NENHUM_DOCUMENTO = c("E2220", "E2230", "E2240")
 #' eventos (o cancelamento é o 101101).
 #'
 #' Só quem aparece na nota (prestador, tomador ou intermediário) consegue
-#' consultá-la; para os outros, a Sefin responde 403. Chave que não tem 50
-#' números nem é enviada: o motivo fica em `problema`.
+#' consultá-la; para os outros, a Sefin responde 403. Chave que não tem o
+#' formato (50 posições: números e, com o CNPJ alfanumérico, letras no lugar
+#' do CNPJ) nem é enviada: o motivo fica em `problema`.
 #'
 #' Por enquanto só a **Produção Restrita**, que é a homologação da NFS-e
 #' Nacional (`ambiente = "homologacao"`); a produção é recusada. A conexão é a
 #' mesma do [sefaz_status()] (o certificado A1 e, no Windows, o processo
 #' separado). As respostas vêm em JSON: precisa também do pacote `jsonlite`.
 #'
-#' @param chaves As chaves de acesso de 50 números: um texto ou um vetor (por
+#' @param chaves As chaves de acesso de 50 posições: um texto ou um vetor (por
 #'   exemplo, a coluna `chave` de [nfse_ler()]). Espaços, pontos e o prefixo
 #'   `NFS` do `Id` do XML são ignorados.
 #' @inheritParams sefaz_status
@@ -132,16 +139,200 @@ nfse_situacao = function(chaves, certificado, senha, ambiente = "homologacao") {
   list(situacoes = situacoes, eventos = eventos)
 }
 
-# A linha da chave, com o endereço da consulta na Sefin, ou com o problema quando a chave não tem 50 números.
+#' Situação de NFS-e Nacional, pela DPS
+#'
+#' Pergunta à Sefin Nacional se a DPS (pelo identificador dela, o `Id` do
+#' `infDPS`) já gerou uma NFS-e e, quando gerou, traz a chave e o XML da nota.
+#' Serve quando a emissão ficou sem resposta ([nfse_emitir()] com `problema`,
+#' a conexão que caiu): antes de mandar a mesma DPS de novo, veja se ela já
+#' virou nota. A consulta é a `GET /dps/<Id>` da Sefin, e a nota vem pela
+#' `GET /nfse/<chave>`, como no [nfse_situacao()].
+#'
+#' Por enquanto só a **Produção Restrita**, que é a homologação da NFS-e
+#' Nacional (`ambiente = "homologacao"`); a produção é recusada. A conexão é a
+#' mesma do [sefaz_status()]; precisa também do pacote `jsonlite`.
+#'
+#' @param dps O identificador de cada DPS (`"DPS"` seguido de 42 posições: o
+#'   município, o tipo e a inscrição do emitente, a série e o número), um
+#'   vetor deles, ou o XML da DPS (o caminho do arquivo ou o texto), como o
+#'   [nfse_dps_montar()] devolve. Espaços são ignorados.
+#' @inheritParams sefaz_status
+#' @return Um `data.frame` com uma linha por DPS: `dps` (o identificador),
+#'   `ambiente`, `encontrada` (`TRUE` quando a DPS gerou uma NFS-e),
+#'   `situacao_http` (200 quando gerou, 404 quando não), `codigo` e `motivo` (o
+#'   erro da Sefin), `processamento` (data e hora da resposta, no horário de
+#'   Brasília), `versao_aplicativo`, `chave` (a da NFS-e gerada), `xml` (o XML
+#'   da NFS-e), `endereco` e `problema` (por que a consulta não deu certo,
+#'   como o erro da Sefin que não diz se a DPS gerou nota: o limite de
+#'   consultas, a Sefin fora do ar; vazio quando deu, inclusive quando a DPS
+#'   não gerou nota, o 404). Com `problema`, não mande a DPS de novo antes de
+#'   consultar outra vez.
+#' @seealso [nfse_emitir()], [nfse_situacao()], [nfse_dps_montar()]
+#' @source A especificação OpenAPI da Sefin Nacional (v1) na Produção Restrita
+#'   (`GET /dps/{id}`: o `DpsGetResponse`, com o `idDps` e a `chaveAcesso`, e o
+#'   `ResponseErro`; o 404 quando a DPS não gerou nota), lida em 04/11/2026; o
+#'   tipo `TSIdDPS` do schema da DPS (v1.01).
+#' @examples
+#' \dontrun{
+#' nfse_situacao_da_dps("DPS355030821122233300018100001000000000000123", "empresa.pfx",
+#'                      Sys.getenv("SENHA_DO_CERTIFICADO"))
+#' }
+#' @export
+nfse_situacao_da_dps = function(dps, certificado, senha, ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  exigir_pacotes(c("httr2", "curl", "openssl", "jsonlite"))
+  identificadores = identificadores_das_dps(dps)
+  conferir_certificado(certificado, senha)
+  enderecos = ENDERECOS_DA_NFSE_NACIONAL[ENDERECOS_DA_NFSE_NACIONAL$ambiente == ambiente, ]
+  pasta_temporaria = tempfile("rnfe_")
+  dir.create(pasta_temporaria)
+  on.exit(unlink(pasta_temporaria, recursive = TRUE), add = TRUE)
+  conexao = preparar_conexao(certificado, senha, pasta_temporaria)
+  primeira_posicao = match(identificadores, identificadores)
+  linhas = list()
+  pedidos = list()
+  posicoes_pedidas = integer()
+  for (posicao in seq_along(identificadores)) {
+    if (primeira_posicao[posicao] != posicao) {
+      next
+    }
+    linhas[[posicao]] = comeco_da_situacao_da_dps(identificadores[posicao], ambiente, enderecos$sefin)
+    if (is.na(linhas[[posicao]]$problema)) {
+      pedidos[[length(pedidos) + 1]] = pedido_da_nfse_nacional(linhas[[posicao]]$endereco)
+      posicoes_pedidas = c(posicoes_pedidas, posicao)
+    }
+  }
+  respostas = enviar_pedidos(pedidos, conexao)
+  # As DPS que geraram nota: a nota de cada uma, num segundo pedido à Sefin.
+  pedidos_das_notas = list()
+  posicoes_das_notas = integer()
+  for (numero in seq_along(posicoes_pedidas)) {
+    posicao = posicoes_pedidas[numero]
+    linhas[[posicao]] = completar_situacao_da_dps(linhas[[posicao]], ler_resposta_em_json(respostas[[numero]]), ambiente)
+    if (linhas[[posicao]]$encontrada) {
+      pedidos_das_notas[[length(pedidos_das_notas) + 1]] = pedido_da_nfse_nacional(paste0(enderecos$sefin, "/nfse/",
+                                                                                          linhas[[posicao]]$chave))
+      posicoes_das_notas = c(posicoes_das_notas, posicao)
+    }
+  }
+  respostas_das_notas = enviar_pedidos(pedidos_das_notas, conexao)
+  for (numero in seq_along(posicoes_das_notas)) {
+    posicao = posicoes_das_notas[numero]
+    da_nota = comeco_da_situacao_da_nfse(linhas[[posicao]]$chave, ambiente, enderecos$sefin)
+    da_nota = completar_situacao_da_nfse(da_nota, ler_resposta_em_json(respostas_das_notas[[numero]]), ambiente)
+    linhas[[posicao]]$xml = da_nota$xml
+    if (!da_nota$encontrada) {
+      motivo = da_nota$problema
+      if (is.na(motivo)) {
+        motivo = paste0("HTTP ", da_nota$situacao_http, " ", da_nota$codigo, " ", da_nota$motivo)
+      }
+      linhas[[posicao]]$problema = paste("a DPS gerou a nota, mas a nota n\u00e3o veio:", trimws(motivo))
+    }
+  }
+  for (posicao in seq_along(identificadores)) {
+    if (primeira_posicao[posicao] != posicao) {
+      linhas[[posicao]] = linhas[[primeira_posicao[posicao]]]
+    }
+  }
+  situacoes = do.call(rbind, linhas)
+  attr(situacoes$processamento, "tzone") = "America/Sao_Paulo"
+  situacoes
+}
+
+# O identificador de cada DPS informada: o texto ("DPS" e as 42 posições, também sem o "DPS") ou o Id do infDPS do XML.
+identificadores_das_dps = function(dps) {
+  if (!is.character(dps) || length(dps) == 0) {
+    stop("Informe o identificador de cada DPS (o Id do infDPS) ou o XML da DPS.", call. = FALSE)
+  }
+  if (length(dps) == 1 && !is.na(dps) && (grepl("^\\s*<", dps) || (grepl("\\.xml$", dps, ignore.case = TRUE) &&
+                                                                       file.exists(dps)))) {
+    documento = ler_o_xml_para_assinar(dps)
+    informacoes = xml2::xml_find_all(documento, "//*[local-name()='infDPS']")
+    if (length(informacoes) == 0) {
+      stop("O XML n\u00e3o tem a DPS (o grupo infDPS).", call. = FALSE)
+    }
+    return(xml2::xml_attr(informacoes, "Id"))
+  }
+  identificadores = toupper(gsub("\\s", "", dps))
+  sem_prefixo = !is.na(identificadores) & !startsWith(identificadores, "DPS")
+  identificadores[sem_prefixo] = paste0("DPS", identificadores[sem_prefixo])
+  identificadores
+}
+
+# A linha da DPS, com o endereço da consulta na Sefin, ou com o problema quando o identificador não tem o formato do
+# TSIdDPS.
+comeco_da_situacao_da_dps = function(identificador, ambiente, endereco_da_sefin) {
+  linha = data.frame(
+    dps = identificador, ambiente = ambiente, encontrada = FALSE, situacao_http = NA_integer_, codigo = NA_character_,
+    motivo = NA_character_, processamento = as.POSIXct(NA), versao_aplicativo = NA_character_, chave = NA_character_,
+    xml = NA_character_, endereco = NA_character_, problema = NA_character_
+  )
+  if (is.na(identificador) || !grepl("^DPS[0-9]{7}(1[0-9]{14}|2[0-9A-Z]{14})[0-9]{20}$", identificador)) {
+    linha$problema = paste("identificador inv\u00e1lido: o da DPS \u00e9 \"DPS\", o munic\u00edpio (7), o tipo e a inscri\u00e7\u00e3o",
+                           "do emitente (1 e 14), a s\u00e9rie (5) e o n\u00famero (15)")
+    return(linha)
+  }
+  linha$endereco = paste0(endereco_da_sefin, "/dps/", identificador)
+  linha
+}
+
+# A resposta da Sefin à consulta da DPS: a chave da nota gerada, ou o erro. Só a DPS que não gerou nota (404) é
+# resposta; os outros erros (o pedido recusado, o limite de consultas, a Sefin fora do ar) não dizem se ela gerou, e
+# vão para o problema.
+completar_situacao_da_dps = function(linha, resposta_lida, ambiente) {
+  if (!is.na(resposta_lida$problema)) {
+    linha$problema = resposta_lida$problema
+    return(linha)
+  }
+  json = resposta_lida$json
+  linha$situacao_http = resposta_lida$situacao_http
+  if (is.null(valor_no_json(json, "tipoAmbiente"))) {
+    linha$problema = resposta_fora_do_formato(resposta_lida, "da Sefin Nacional")
+    return(linha)
+  }
+  linha$processamento = data_hora_da_consulta(texto_do_json(valor_no_json(json, "dataHoraProcessamento")))
+  linha$versao_aplicativo = texto_do_json(valor_no_json(json, "versaoAplicativo"))
+  linha$codigo = texto_do_json(valor_no_json(json, "erro", "codigo"))
+  linha$motivo = texto_do_json(valor_no_json(json, "erro", "descricao"))
+  complemento = texto_do_json(valor_no_json(json, "erro", "complemento"))
+  if (!is.na(complemento) && nzchar(complemento)) {
+    linha$motivo = paste0(linha$motivo, " (", complemento, ")")
+  }
+  if (!identical(texto_do_json(valor_no_json(json, "tipoAmbiente")), as.character(AMBIENTES_LIBERADOS[[ambiente]]))) {
+    linha$problema = "a NFS-e Nacional respondeu de outro ambiente"
+    return(linha)
+  }
+  if (identical(linha$situacao_http, 404L)) {
+    return(linha)
+  }
+  if (!identical(linha$situacao_http, 200L)) {
+    linha$problema = paste0("a Sefin respondeu com erro (HTTP ", linha$situacao_http, "): a consulta n\u00e3o diz se a DPS ",
+                            "gerou a nota")
+    return(linha)
+  }
+  if (!identical(texto_do_json(valor_no_json(json, "idDps")), linha$dps)) {
+    linha$problema = "a Sefin respondeu sobre outra DPS"
+    return(linha)
+  }
+  chave = texto_do_json(valor_no_json(json, "chaveAcesso"))
+  if (is.na(chave) || !grepl(FORMATO_DA_CHAVE_DA_NFSE, chave)) {
+    linha$problema = "a Sefin respondeu sem a chave da nota (50 posi\u00e7\u00f5es)"
+    return(linha)
+  }
+  linha$chave = chave
+  linha$encontrada = TRUE
+  linha
+}
+
+# A linha da chave, com o endereço da consulta na Sefin, ou com o problema quando a chave não tem o formato.
 comeco_da_situacao_da_nfse = function(chave, ambiente, endereco_da_sefin) {
   linha = data.frame(
     chave = chave, ambiente = ambiente, encontrada = FALSE, situacao_http = NA_integer_, codigo = NA_character_,
     motivo = NA_character_, processamento = as.POSIXct(NA), versao_aplicativo = NA_character_, xml = NA_character_,
     endereco = NA_character_, problema = NA_character_
   )
-  # O schema da NFS-e (TSChaveNFSe) só aceita 50 números.
-  if (is.na(chave) || !grepl("^[0-9]{50}$", chave)) {
-    linha$problema = "chave inv\u00e1lida: a da NFS-e Nacional tem 50 n\u00fameros"
+  if (is.na(chave) || !grepl(FORMATO_DA_CHAVE_DA_NFSE, chave)) {
+    linha$problema = "chave inv\u00e1lida: a da NFS-e Nacional tem 50 posi\u00e7\u00f5es"
     return(linha)
   }
   linha$endereco = paste0(endereco_da_sefin, "/nfse/", chave)

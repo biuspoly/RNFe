@@ -945,7 +945,11 @@ baixar_servicos_do_cte = function(endereco_da_pagina, ambiente) {
     autorizador = sub("^[^(]*\\(([^)]*)\\).*$", "\\1", legenda)
     for (linha in xml2::xml_find_all(tabela_do_autorizador, ".//tr[td]")) {
       celulas = trimws(xml2::xml_text(xml2::xml_find_all(linha, "td")))
-      if (length(celulas) == 3 && startsWith(celulas[3], "https://")) {
+      # O endereço do QR-Code não é um serviço web: é o que vai no QR-Code impresso no DACTE, e MS e PR o publicam com
+      # http:// (sem a exceção, esses dois ficavam sem QR-Code).
+      endereco_aceito = length(celulas) == 3 &&
+        (startsWith(celulas[3], "https://") || (celulas[1] == "qrcode" && startsWith(celulas[3], "http://")))
+      if (endereco_aceito) {
         servicos = rbind(servicos, data.frame(documento = "CT-e", ambiente = ambiente, autorizador = autorizador,
                                               servico = celulas[1], versao = celulas[2], endereco = celulas[3]))
       }

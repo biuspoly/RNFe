@@ -14,7 +14,7 @@ utilização das APIs do ADN" (v1.0, 12/02/2026). Lidos em 04/11/2026.
 nfse_situacao(chaves, certificado, senha, ambiente = "homologacao")
 }
 \arguments{
-\item{chaves}{As chaves de acesso de 50 números: um texto ou um vetor (por
+\item{chaves}{As chaves de acesso de 50 posições: um texto ou um vetor (por
 exemplo, a coluna \code{chave} de \code{\link[=nfse_ler]{nfse_ler()}}). Espaços, pontos e o prefixo
 \code{NFS} do \code{Id} do XML são ignorados.}
 
@@ -42,7 +42,7 @@ ADN tem de cada nota, ligados pela \code{chave}, sem a coluna \code{arquivo}.
 }
 \description{
 Pergunta ao Sistema Nacional NFS-e cada nota pela chave de acesso (50
-números) e devolve uma lista com \code{situacoes} (uma linha por chave: se a nota
+posições) e devolve uma lista com \code{situacoes} (uma linha por chave: se a nota
 foi achada, e o XML dela) e \code{eventos} (os eventos de cada nota, como o
 cancelamento, lidos por \code{\link[=eventos_ler]{eventos_ler()}}). A nota vem da Sefin Nacional
 (\verb{GET /nfse/<chave>}) e os eventos, do ADN, o Ambiente de Dados Nacional
@@ -56,8 +56,9 @@ registrado em eventos, ligados a ela. Para saber se foi cancelada, veja os
 eventos (o cancelamento é o 101101).
 
 Só quem aparece na nota (prestador, tomador ou intermediário) consegue
-consultá-la; para os outros, a Sefin responde 403. Chave que não tem 50
-números nem é enviada: o motivo fica em \code{problema}.
+consultá-la; para os outros, a Sefin responde 403. Chave que não tem o
+formato (50 posições: números e, com o CNPJ alfanumérico, letras no lugar
+do CNPJ) nem é enviada: o motivo fica em \code{problema}.
 
 Por enquanto só a \strong{Produção Restrita}, que é a homologação da NFS-e
 Nacional (\code{ambiente = "homologacao"}); a produção é recusada. A conexão é a

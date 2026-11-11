@@ -1,12 +1,17 @@
 # Toda segunda-feira, olha as listas de schemas dos portais da NF-e, do CT-e, do MDF-e e da NFS-e Nacional
 # (ferramentas/vigiar_schemas.R). Cada publicação que ainda não está em ferramentas/schemas_vistos.csv vira
 # um aviso (issue), com os campos que entraram, saíram e mudaram quando ela traz o schema principal do
-# documento. Olha também as notas técnicas dos mesmos quatro portais (ferramentas/vigiar_notas_tecnicas.R; no
-# do MDF-e, também os manuais, e no da NFS-e, os manuais das APIs e os anexos do leiaute): cada publicação que
-# não está em ferramentas/notas_tecnicas_vistas.csv vira um aviso, para conferir regras, campos e serviços.
+# documento. O robô confere também se a publicação troca arquivos que o RNFe usa na montagem, nos eventos e na
+# pré-conferência (inst/schemas): quando troca, deixa a troca pronta num ramo "schemas/...", com a validação dos
+# exemplos e os testes do pacote, e o aviso traz o resultado e o endereço para comparar com o main (o repositório
+# não deixa o robô abrir o pull request: quem decide abre). Olha também as notas técnicas dos mesmos quatro portais
+# (ferramentas/vigiar_notas_tecnicas.R; no do MDF-e, também os manuais, e no da NFS-e, os manuais das APIs e os
+# anexos do leiaute): cada publicação que não está em ferramentas/notas_tecnicas_vistas.csv vira um aviso, para
+# conferir regras, campos e serviços.
 # Um aviso por publicação, e nunca dois com o mesmo título, aberto ou fechado: atualizar os
-# leitores é trabalho de uma pessoa. Se algum portal não responder, o robô termina com erro (e o GitHub
-# avisa por e-mail), depois de abrir os avisos dos outros.
+# leitores é trabalho de uma pessoa. Uma falha na troca de uma publicação vai no aviso dela e não segura os outros
+# avisos. Se algum portal não responder ou algum aviso não abrir, o robô termina com erro (e o GitHub avisa por
+# e-mail), depois de abrir os outros.
 
 name: Vigiar os schemas oficiais
 
@@ -16,7 +21,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 jobs:
@@ -24,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -40,13 +47,161 @@ jobs:
           # As notas técnicas: uma versão nova pode mudar as regras, os campos e os serviços que o RNFe segue.
           Rscript ferramentas/vigiar_notas_tecnicas.R "$RUNNER_TEMP/avisos" || falhou=sim
           echo "falhou=$falhou" >> "$GITHUB_OUTPUT"
+          if ls "$RUNNER_TEMP"/avisos/*.troca > /dev/null 2>&1; then
+            echo "trocas=sim" >> "$GITHUB_OUTPUT"
+          else
+            echo "trocas=nao" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Os pacotes do RNFe (os de Imports e Suggests), para os testes da troca: só quando há troca. Se não instalarem,
+      # o passo seguinte diz isso em cada aviso.
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        id: dependencias
+        if: steps.vigia.outputs.trocas == 'sim'
+        continue-on-error: true
+        with:
+          extra-packages: any::pkgload, any::testthat
+
+      - name: Conferir cada troca e deixar pronta num ramo
+        if: steps.vigia.outputs.trocas == 'sim'
+        env:
+          DEPENDENCIAS: ${{ steps.dependencias.outcome }}
+        run: |
+          # Sem o "-e": uma falha numa publicação vai no aviso dela, e o laço segue para as outras.
+          set +e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Corta um arquivo de texto num tamanho (em caracteres), avisando o corte.
+          cortar() {
+            python3 - "$1" "$2" <<'FIM'
+          import sys
+          caminho, tamanho = sys.argv[1], int(sys.argv[2])
+          texto = open(caminho, encoding="utf-8", errors="replace").read()
+          if len(texto) > tamanho:
+              texto = texto[:tamanho] + "\n\n(cortado aqui: o resto está na execução, em Actions)\n"
+              open(caminho, "w", encoding="utf-8").write(texto)
+          FIM
+          }
+          for troca in "$RUNNER_TEMP"/avisos/*.troca; do
+            numero=$(basename "$troca" .troca)
+            aviso="$RUNNER_TEMP/avisos/$numero.md"
+            secao="$RUNNER_TEMP/secao.md"
+            rm -f "$RUNNER_TEMP/troca.md" "$RUNNER_TEMP/testes.md" "$RUNNER_TEMP/validacao.txt" "$RUNNER_TEMP/preparo.txt" \
+                  "$RUNNER_TEMP/testes.txt" "$secao"
+            documento=$(sed -n 1p "$troca")
+            pasta=$(sed -n 2p "$troca")
+            endereco=$(sed -n 3p "$troca")
+            pagina=$(sed -n 4p "$troca")
+            # Um ramo por publicação (o nome vem do endereço): a mesma publicação, numa semana seguinte, acha o ramo pronto.
+            ramo="schemas/$documento-$(printf '%s' "$endereco" | md5sum | cut -c1-10)"
+            comparar="https://github.com/$GITHUB_REPOSITORY/compare/main...$ramo?expand=1"
+            printf '\n## Os schemas de inst/schemas\n\n' > "$secao"
+            if [ "$DEPENDENCIAS" != "success" ]; then
+              echo "Os pacotes do R para os testes não instalaram: a troca não foi conferida (veja a execução em Actions)." >> "$secao"
+              cat "$secao" >> "$aviso"
+              continue
+            fi
+            if git ls-remote --exit-code --heads origin "$ramo" > /dev/null; then
+              echo "A troca desta publicação já está pronta no ramo \`$ramo\`, de uma execução anterior: $comparar" >> "$secao"
+              cat "$secao" >> "$aviso"
+              continue
+            fi
+            git switch --quiet --force main
+            git reset --quiet --hard origin/main
+            git clean -fdq -- inst/schemas ferramentas
+            Rscript ferramentas/preparar_troca_de_schemas.R "$documento" "$pasta" "$pagina" "$RUNNER_TEMP/troca.md" \
+              > "$RUNNER_TEMP/preparo.txt" 2>&1
+            situacao=$?
+            if [ "$situacao" = "2" ]; then
+              echo "A publicação não troca nenhum dos schemas que a montagem, os eventos e a pré-conferência usam." >> "$secao"
+              if [ -s "$RUNNER_TEMP/troca.md" ]; then
+                echo "" >> "$secao"
+                cat "$RUNNER_TEMP/troca.md" >> "$secao"
+              fi
+              cortar "$secao" 12000
+              cat "$secao" >> "$aviso"
+              continue
+            fi
+            if [ "$situacao" != "0" ] && [ "$situacao" != "3" ]; then
+              {
+                echo "A conferência da troca parou com erro (situação $situacao): nada foi trocado."
+                echo ""
+                echo '```'
+                tail -n 30 "$RUNNER_TEMP/preparo.txt"
+                echo '```'
+              } >> "$secao"
+              cortar "$secao" 12000
+              cat "$secao" >> "$aviso"
+              continue
+            fi
+            # A validação dos exemplos com o pacote novo nas linhas de schemas_usados.csv cujo arquivo principal ele
+            # traz (da linha 5 do .troca em diante; os outros pacotes vêm dos portais) e os testes do pacote.
+            mapfile -t argumentos_da_validacao < <(tail -n +5 "$troca")
+            validacao="nao_se_aplica"
+            if [ "${#argumentos_da_validacao[@]}" -gt 0 ]; then
+              Rscript ferramentas/validar_exemplos.R "${argumentos_da_validacao[@]}" > "$RUNNER_TEMP/validacao.txt" 2>&1
+              validacao=$?
+            fi
+            Rscript ferramentas/testar_para_o_aviso.R "$RUNNER_TEMP/testes.md" > "$RUNNER_TEMP/testes.txt" 2>&1
+            testes=$?
+            publicado=nao
+            git switch --quiet -c "$ramo"
+            git add inst/schemas ferramentas/datas_dos_schemas.csv
+            if ! git diff --cached --quiet; then
+              git commit --quiet -m "schemas: a troca do pacote novo do $documento (aviso $numero), feita pelo robô" &&
+                git push --quiet origin "$ramo" && publicado=sim
+            fi
+            {
+              if [ "$publicado" = "sim" ]; then
+                echo "A troca está pronta no ramo \`$ramo\`. Comparar com o main e abrir o pull request: $comparar"
+              else
+                echo "**A troca foi conferida, mas não ficou num ramo** (o commit ou o push falhou: veja a execução em Actions)."
+              fi
+              echo ""
+              if [ -s "$RUNNER_TEMP/troca.md" ]; then
+                cat "$RUNNER_TEMP/troca.md"
+              fi
+              if [ "$situacao" = "3" ]; then
+                echo "**Atenção: algum schema não abre depois da troca (a lista acima).**"
+                echo ""
+              fi
+              if [ "$validacao" = "nao_se_aplica" ]; then
+                echo "**Validação dos exemplos:** não se aplica (o pacote não traz o arquivo principal de uma linha de \`ferramentas/schemas_usados.csv\` que tenha exemplos)."
+              elif [ "$validacao" = "0" ]; then
+                echo "**Validação dos exemplos** (\`ferramentas/validar_exemplos.R\`, com o pacote novo): todos passaram."
+              else
+                echo "**Validação dos exemplos** (\`ferramentas/validar_exemplos.R\`, com o pacote novo): algum falhou (situação $validacao)."
+                echo ""
+                echo '```'
+                grep -E "^(FALHOU|  |Erro|Error)" "$RUNNER_TEMP/validacao.txt" | head -n 40
+                echo '```'
+              fi
+              echo ""
+              if [ -s "$RUNNER_TEMP/testes.md" ]; then
+                cat "$RUNNER_TEMP/testes.md"
+              else
+                echo "**Testes do pacote:** não rodaram (situação $testes)."
+                echo ""
+                echo '```'
+                tail -n 20 "$RUNNER_TEMP/testes.txt"
+                echo '```'
+              fi
+            } >> "$secao"
+            cortar "$secao" 12000
+            cat "$secao" >> "$aviso"
+          done
+          git switch --quiet --force main
+          exit 0
 
       - name: Abrir um aviso para cada publicação nova
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set +e
           mkdir -p "$RUNNER_TEMP/avisos"
-          gh issue list --state all --limit 1000 --json title --jq '.[].title' > "$RUNNER_TEMP/titulos.txt"
+          gh issue list --state all --limit 1000 --json title --jq '.[].title' > "$RUNNER_TEMP/titulos.txt" || exit 1
+          falhou=nao
           for aviso in "$RUNNER_TEMP"/avisos/*.md; do
             [ -e "$aviso" ] || continue
             titulo=$(head -n 1 "$aviso")
@@ -55,8 +210,20 @@ jobs:
               continue
             fi
             tail -n +2 "$aviso" > "$RUNNER_TEMP/corpo.md"
-            gh issue create --title "$titulo" --body-file "$RUNNER_TEMP/corpo.md"
+            # O GitHub aceita até 65.536 caracteres no texto.
+            python3 - "$RUNNER_TEMP/corpo.md" <<'FIM'
+          import sys
+          caminho = sys.argv[1]
+          texto = open(caminho, encoding="utf-8", errors="replace").read()
+          if len(texto) > 65000:
+              texto = texto[:64000] + "\n\n(o aviso foi cortado no limite do GitHub: o resto está na execução, em Actions)\n"
+              open(caminho, "w", encoding="utf-8").write(texto)
+          FIM
+            gh issue create --title "$titulo" --body-file "$RUNNER_TEMP/corpo.md" || falhou=sim
           done
+          if [ "$falhou" = "sim" ]; then
+            exit 1
+          fi
 
       - name: Terminar com erro se algum portal não respondeu
         if: steps.vigia.outputs.falhou == 'sim'

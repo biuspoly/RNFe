@@ -61,13 +61,20 @@ test_that("o cancelamento do desacordo leva o protocolo dele", {
 
 test_that("o autor do desacordo \u00e9 o tomador: o informado (uma filial) ou o do certificado", {
   skip_if_not_installed("openssl")
-  da_filial = montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste", "homologacao",
-                                     tomador = "11222333000262")
+  desacordo = paste0("<evPrestDesacordo><descEvento>Prestacao do Servico em Desacordo</descEvento>",
+                     "<indDesacordoOper>1</indDesacordoOper><xObs>FRETE COBRADO EM DUPLICIDADE</xObs></evPrestDesacordo>")
+  da_filial = montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, desacordo, CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
+                                     "homologacao", tomador = "11222333000262")
   expect_match(da_filial$evento_assinado, "<CNPJ>11222333000262</CNPJ>", fixed = TRUE)
-  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
+  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, desacordo, CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
                                       "homologacao", tomador = "11444777000161"), "CNPJ-base")
-  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
+  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, desacordo, CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
                                       "homologacao", tomador = "11222333000100"), "d\u00edgitos")
+  # O evento que não passa no schema oficial (o detalhe vazio, o detalhe de outro evento) para antes de ir à SEFAZ.
+  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "", CERTIFICADO_DO_EVENTO_DO_CTE, "teste",
+                                      "homologacao"), "schema oficial")
+  expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "<evPrestDesacordo><descEvento>Outro</descEvento></evPrestDesacordo>",
+                                      CERTIFICADO_DO_EVENTO_DO_CTE, "teste", "homologacao"), "schema oficial")
 })
 
 test_that("os erros antes de qualquer conex\u00e3o", {

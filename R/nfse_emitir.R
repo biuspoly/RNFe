@@ -75,7 +75,7 @@ nfse_emitir = function(dps, certificado, senha, ambiente = "homologacao") {
 #' Por enquanto só a **Produção Restrita**, que é a homologação da NFS-e
 #' Nacional.
 #'
-#' @param chave A chave de acesso da NFS-e (50 números).
+#' @param chave A chave de acesso da NFS-e (50 posições).
 #' @param motivo `"erro_na_emissao"`, `"servico_nao_prestado"` ou `"outros"`.
 #' @param justificativa O motivo por extenso, de 15 a 255 caracteres.
 #' @inheritParams sefaz_status
@@ -103,8 +103,8 @@ nfse_cancelar = function(chave, motivo, justificativa, certificado, senha, ambie
   }
   conferir_texto_do_evento(justificativa, "justificativa", 15, 255)
   chave_limpa = limpar_chaves(chave)
-  if (length(chave_limpa) != 1 || is.na(chave_limpa) || !grepl("^[0-9]{50}$", chave_limpa)) {
-    stop("Informe a chave de acesso da NFS-e (50 n\u00fameros).", call. = FALSE)
+  if (length(chave_limpa) != 1 || is.na(chave_limpa) || !grepl(FORMATO_DA_CHAVE_DA_NFSE, chave_limpa)) {
+    stop("Informe a chave de acesso da NFS-e (50 posi\u00e7\u00f5es).", call. = FALSE)
   }
   exigir_pacotes(c("httr2", "curl", "openssl", "jsonlite"))
   conferir_certificado(certificado, senha)

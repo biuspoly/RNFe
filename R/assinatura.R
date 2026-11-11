@@ -12,7 +12,7 @@ ALGORITMO_DA_CANONICALIZACAO = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
 ALGORITMO_DA_TRANSFORMACAO = "http://www.w3.org/2000/09/xmldsig#enveloped-signature"
 # Os documentos assinados e o elemento assinado de cada um (o que tem o atributo Id).
 ELEMENTOS_ASSINADOS = c(NFe = "infNFe", evento = "infEvento", MDFe = "infMDFe", CTe = "infCte", CTeOS = "infCte",
-                        GTVe = "infCte", DPS = "infDPS", inutNFe = "infInut", eventoCTe = "infEvento",
+                        GTVe = "infCte", CTeSimp = "infCte", DPS = "infDPS", inutNFe = "infInut", eventoCTe = "infEvento",
                         eventoMDFe = "infEvento", pedRegEvento = "infPedReg")
 # O SHA-1 é o que os manuais da NF-e, do CT-e e do MDF-e pedem. Na NFS-e Nacional, a Sefin aceita os dois (no acervo,
 # há DPS e pedidos de evento assinados com cada um): o RNFe usa o SHA-256.

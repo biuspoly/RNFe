@@ -6,10 +6,13 @@
 source("ferramentas/schemas.R", encoding = "UTF-8")
 
 # Devolve a pasta de cada linha de schemas_usados.csv (nfe, cte, mdfe, nfse e os pacotes dos eventos da NF-e), a
-# que tem o arquivo principal do pacote.
-baixar_schemas_usados = function(pasta_dos_schemas) {
+# que tem o arquivo principal do pacote; com `documentos`, só as dessas linhas.
+baixar_schemas_usados = function(pasta_dos_schemas, documentos = NULL) {
   dir.create(pasta_dos_schemas, showWarnings = FALSE, recursive = TRUE)
   pacotes_usados = ler_csv(SCHEMAS_USADOS)
+  if (!is.null(documentos)) {
+    pacotes_usados = pacotes_usados[pacotes_usados$documento %in% documentos, ]
+  }
   pasta_de_cada_documento = character()
   for (numero_do_pacote in seq_len(nrow(pacotes_usados))) {
     pacote_usado = pacotes_usados[numero_do_pacote, ]

@@ -281,6 +281,10 @@ conferir_municipio_do_evento = function(municipio, de_que) {
   }
 }
 
+# O schema do detalhe de cada evento do MDF-e (em inst/schemas/mdfe), que a mensagem assinada segue antes de ir à SEFAZ.
+SCHEMA_DO_DETALHE_DO_EVENTO_DO_MDFE = c("110112" = "evEncMDFe_v3.00.xsd", "110114" = "evIncCondutorMDFe_v3.00.xsd",
+                                         "110115" = "evInclusaoDFeMDFe_v3.00.xsd")
+
 registrar_evento_do_mdfe = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente) {
   exigir_pacotes(c("httr2", "curl", "openssl"))
   chave_limpa = limpar_chaves(chave)
@@ -312,6 +316,7 @@ registrar_evento_do_mdfe = function(chave, codigo_do_evento, sequencia, detalhe,
     '</nSeqEvento><detEvento versaoEvento="3.00">', detalhe, "</detEvento></infEvento></eventoMDFe>"
   )
   evento_assinado = sub("^<\\?xml[^>]*\\?>\\s*", "", xml_assinar(evento, certificado, senha))
+  conferir_o_evento_no_schema(evento_assinado, "mdfe", "eventoMDFe_v3.00.xsd", SCHEMA_DO_DETALHE_DO_EVENTO_DO_MDFE[[codigo_do_evento]])
   pedido = montar_pedido(servico$endereco, "MDFeRecepcaoEvento", "mdfeRecepcaoEvento", evento_assinado, familia = "mdfe")
   pasta_temporaria = tempfile("rnfe_")
   dir.create(pasta_temporaria)
@@ -338,6 +343,10 @@ completar_evento_do_mdfe = function(linha, resposta_lida, evento_assinado, ambie
   chave_do_retorno = texto_do_retorno(informacao, "chMDFe")
   if (!is.na(chave_do_retorno) && !identical(chave_do_retorno, linha$chave)) {
     linha$problema = "a SEFAZ respondeu sobre outra chave"
+    return(linha)
+  }
+  if (retorno_de_outro_evento(informacao, linha)) {
+    linha$problema = PROBLEMA_DO_RETORNO_DE_OUTRO_EVENTO
     return(linha)
   }
   linha$situacao = as.integer(texto_do_retorno(informacao, "cStat"))

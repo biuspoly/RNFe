@@ -5,9 +5,9 @@
 \title{Cancelar uma NF-e}
 \source{
 Manual de Orientação do Contribuinte da NF-e (o serviço de eventos e
-o cancelamento); os schemas \code{envEvento}, \code{retEnvEvento} e \code{procEventoNFe}
-do evento de cancelamento (\code{e110111_v1.00.xsd}); o WSDL do
-NFeRecepcaoEvento4 (operação \code{nfeRecepcaoEvento}).
+o cancelamento); os schemas \code{envEvento_v1.00.xsd} (pacote 010d v1.03) e
+\code{e110111_v1.00.xsd}; o WSDL do NFeRecepcaoEvento4 (operação
+\code{nfeRecepcaoEvento}).
 }
 \usage{
 sefaz_cancelar(
@@ -22,7 +22,9 @@ sefaz_cancelar(
 \arguments{
 \item{chave}{A chave de acesso da nota (44 posições).}
 
-\item{protocolo}{O número do protocolo de autorização da nota.}
+\item{protocolo}{O número do protocolo de autorização da nota (15
+algarismos; 17 no protocolo do provedor de assinatura e autorização, o
+PAA da NT 2026.001).}
 
 \item{justificativa}{O motivo do cancelamento, de 15 a 255 caracteres.}
 
@@ -51,7 +53,9 @@ NFC-e); fora dele, a SEFAZ rejeita ou registra como fora de prazo (155).
 O autor do evento é o emitente da chave (o CNPJ ou, nas séries do emitente
 pessoa física, o CPF), e o certificado pode ser o dele ou o de outro
 estabelecimento da empresa (o mesmo CNPJ-base): a nota de uma filial pode
-ser cancelada com o certificado da matriz. Por enquanto só o ambiente de
+ser cancelada com o certificado da matriz. O detalhe do evento é montado e
+conferido pelo schema oficial dele, e a mensagem inteira, já assinada, pelo
+schema geral dos eventos, antes de ir à SEFAZ. Por enquanto só o ambiente de
 \strong{homologação}.
 }
 \examples{

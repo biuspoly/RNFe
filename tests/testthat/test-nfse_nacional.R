@@ -98,7 +98,7 @@ test_that("situa\u00e7\u00e3o: a nota que n\u00e3o existe (resposta real), os pe
   expect_identical(situacoes$endereco[1], paste0(ENDERECO_DA_SEFIN, "/nfse/", CHAVE_DA_NFSE_INVENTADA))
   # A nota que não existe é resposta, não problema; nem a falta de eventos (E2240).
   expect_true(is.na(situacoes$problema[1]))
-  expect_match(situacoes$problema[2], "50 n\u00fameros")
+  expect_match(situacoes$problema[2], "50 posi\u00e7\u00f5es")
   expect_identical(nrow(consulta$eventos), 0L)
   # Dois GET por chave que vai, pedindo JSON: a nota na Sefin e os eventos no ADN. A chave curta nem vai.
   expect_length(pedidos, 2)
@@ -322,4 +322,126 @@ test_that("distribui\u00e7\u00e3o: NSU nulo, NSU maior que 2^53, erro sem c\u00f
   expect_error(nsu_do_adn(1.5), "inteiro")
   expect_error(nsu_do_adn("9999999999999999999"), "64 bits")
   expect_identical(nsu_do_adn("9223372036854775807"), "9223372036854775807")
+})
+
+test_that("a situa\u00e7\u00e3o pela DPS: a chave da nota gerada e o XML dela; a DPS sem nota \u00e9 resposta, n\u00e3o problema", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  dps_da_nota = "DPS355030821122233300018100001000000000000123"
+  dps_sem_nota = "DPS355030821122233300018100001000000000000124"
+  pedidos = character()
+  httr2::local_mocked_responses(function(req) {
+    pedidos <<- c(pedidos, req$url)
+    if (req$url == paste0(ENDERECO_DA_SEFIN, "/dps/", dps_da_nota)) {
+      return(resposta_em_json(200, paste0('{"tipoAmbiente":2,"versaoAplicativo":"TESTE","dataHoraProcessamento":',
+                                          '"2026-11-11T10:00:00.123-03:00","idDps":"', dps_da_nota, '","chaveAcesso":"',
+                                          CHAVE_DA_NFSE_DE_EXEMPLO, '"}')))
+    }
+    if (req$url == paste0(ENDERECO_DA_SEFIN, "/nfse/", CHAVE_DA_NFSE_DE_EXEMPLO)) {
+      return(nota_achada_na_sefin())
+    }
+    resposta_em_json(404, paste0('{"tipoAmbiente":2,"versaoAplicativo":"TESTE","dataHoraProcessamento":',
+                                 '"2026-11-11T10:00:00-03:00","erro":{"codigo":"E0001","descricao":"DPS n\u00e3o encontrada"}}'))
+  })
+  # O XML da DPS (a nota de exemplo traz a DPS dentro) vale como o identificador.
+  pelo_xml = nfse_situacao_da_dps(system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe"), CERTIFICADO_DA_NFSE, "teste")
+  expect_identical(pelo_xml$dps, dps_da_nota)
+  expect_true(pelo_xml$encontrada)
+  expect_identical(pelo_xml$chave, CHAVE_DA_NFSE_DE_EXEMPLO)
+  expect_identical(nfse_ler(pelo_xml$xml)$nfses$chave, CHAVE_DA_NFSE_DE_EXEMPLO)
+  expect_true(is.na(pelo_xml$problema))
+  pedidos = character()
+  consulta = nfse_situacao_da_dps(c(dps_da_nota, " dps355030821122233300018100001000000000000124 ", dps_da_nota, "DPS123"),
+                                  CERTIFICADO_DA_NFSE, "teste")
+  expect_identical(consulta$encontrada, c(TRUE, FALSE, TRUE, FALSE))
+  expect_identical(consulta$situacao_http, c(200L, 404L, 200L, NA))
+  expect_identical(consulta$codigo[2], "E0001")
+  expect_true(is.na(consulta$problema[2]))
+  expect_match(consulta$problema[4], "identificador inv\u00e1lido")
+  # A DPS repetida vai uma vez só; a inválida nem vai.
+  expect_identical(pedidos, c(paste0(ENDERECO_DA_SEFIN, "/dps/", dps_da_nota), paste0(ENDERECO_DA_SEFIN, "/dps/", dps_sem_nota),
+                              paste0(ENDERECO_DA_SEFIN, "/nfse/", CHAVE_DA_NFSE_DE_EXEMPLO)))
+  expect_identical(format(consulta$processamento[1], "%Y-%m-%d %H:%M:%S"), "2026-11-11 10:00:00")
+  expect_error(nfse_situacao_da_dps(123, CERTIFICADO_DA_NFSE, "teste"), "identificador")
+  expect_error(nfse_situacao_da_dps(dps_da_nota, CERTIFICADO_DA_NFSE, "teste", ambiente = "producao"), "homologa\u00e7\u00e3o")
+})
+
+test_that("a situa\u00e7\u00e3o pela DPS: a resposta sobre outra DPS e a nota que n\u00e3o vem s\u00e3o problema", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  dps_da_nota = "DPS355030821122233300018100001000000000000123"
+  httr2::local_mocked_responses(function(req) {
+    if (grepl("/dps/", req$url, fixed = TRUE)) {
+      return(resposta_em_json(200, paste0('{"tipoAmbiente":2,"versaoAplicativo":"TESTE","dataHoraProcessamento":',
+                                          '"2026-11-11T10:00:00-03:00","idDps":"DPS355030821122233300018100001000000000000999",',
+                                          '"chaveAcesso":"', CHAVE_DA_NFSE_DE_EXEMPLO, '"}')))
+    }
+    resposta_em_json(500, "fora do ar")
+  })
+  outra = nfse_situacao_da_dps(dps_da_nota, CERTIFICADO_DA_NFSE, "teste")
+  expect_false(outra$encontrada)
+  expect_identical(outra$problema, "a Sefin respondeu sobre outra DPS")
+  httr2::local_mocked_responses(function(req) {
+    if (grepl("/dps/", req$url, fixed = TRUE)) {
+      return(resposta_em_json(200, paste0('{"tipoAmbiente":2,"versaoAplicativo":"TESTE","dataHoraProcessamento":',
+                                          '"2026-11-11T10:00:00-03:00","idDps":"', dps_da_nota, '","chaveAcesso":"',
+                                          CHAVE_DA_NFSE_DE_EXEMPLO, '"}')))
+    }
+    resposta_em_json(500, "fora do ar")
+  })
+  sem_a_nota = nfse_situacao_da_dps(dps_da_nota, CERTIFICADO_DA_NFSE, "teste")
+  expect_true(sem_a_nota$encontrada)
+  expect_true(is.na(sem_a_nota$xml))
+  expect_match(sem_a_nota$problema, "a DPS gerou a nota, mas a nota n\u00e3o veio")
+})
+
+test_that("a situa\u00e7\u00e3o pela DPS: s\u00f3 o 404 diz que a DPS n\u00e3o gerou nota; os outros erros da Sefin s\u00e3o problema", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  dps_da_nota = "DPS355030821122233300018100001000000000000123"
+  for (situacao_http in c(400L, 401L, 403L, 429L, 500L, 503L)) {
+    httr2::local_mocked_responses(function(req) {
+      resposta_em_json(situacao_http, paste0('{"tipoAmbiente":2,"versaoAplicativo":"TESTE","dataHoraProcessamento":',
+                                             '"2026-11-11T10:00:00-03:00","erro":{"codigo":"E9999","descricao":"Erro"}}'))
+    })
+    consulta = nfse_situacao_da_dps(dps_da_nota, CERTIFICADO_DA_NFSE, "teste")
+    expect_false(consulta$encontrada, info = situacao_http)
+    expect_identical(consulta$situacao_http, situacao_http, info = situacao_http)
+    expect_identical(consulta$codigo, "E9999", info = situacao_http)
+    expect_match(consulta$problema, paste0("HTTP ", situacao_http, "\\): a consulta n\u00e3o diz se a DPS gerou a nota"),
+                 info = situacao_http)
+  }
+})
+
+test_that("a chave da NFS-e com letras no lugar do CNPJ (o alfanum\u00e9rico) vale na consulta", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  skip_if_not_installed("jsonlite")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  # O CNPJ 12ABC34501DE35 nas posições 10 a 23, como diz a regra de formação da chave.
+  chave_com_letras = "35503082212ABC34501DE35000000000012326101234567898"
+  expect_true(grepl(FORMATO_DA_CHAVE_DA_NFSE, chave_com_letras))
+  expect_false(grepl(FORMATO_DA_CHAVE_DA_NFSE, "AB503082211222333000181000000000012326101234567898"))
+  expect_false(grepl(FORMATO_DA_CHAVE_DA_NFSE, "355030822112223330001810000000000123261012345678ZZ"))
+  # Letras só no CNPJ (o tipo de inscrição 2); no CPF (o 1), não.
+  expect_false(grepl(FORMATO_DA_CHAVE_DA_NFSE, "35503082112ABC34501DE35000000000012326101234567898"))
+  expect_true(grepl(FORMATO_DA_CHAVE_DA_NFSE, CHAVE_DA_NFSE_DE_EXEMPLO))
+  pedidos = character()
+  httr2::local_mocked_responses(function(req) {
+    pedidos <<- c(pedidos, req$url)
+    if (startsWith(req$url, ENDERECO_DO_ADN)) {
+      return(resposta_gravada(404, "nfse_eventos_homologacao_adn.json"))
+    }
+    resposta_gravada(404, "nfse_consulta_homologacao_sefin.json")
+  })
+  consulta = nfse_situacao(chave_com_letras, CERTIFICADO_DA_NFSE, "teste")$situacoes
+  expect_true(is.na(consulta$problema))
+  expect_identical(consulta$situacao_http, 404L)
+  expect_identical(pedidos[1], paste0(ENDERECO_DA_SEFIN, "/nfse/", chave_com_letras))
 })
