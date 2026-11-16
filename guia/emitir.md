@@ -22,6 +22,7 @@ sefaz_epec("nota_em_contingencia.xml", "empresa.pfx", senha)   # a NF-e com tpEm
 sefaz_cte_desacordo(chave_do_cte, "FRETE COBRADO EM DUPLICIDADE", "empresa.pfx", senha)   # o tomador do CT-e
 
 cte = sefaz_cte_autorizar(xml_assinar(cte_montar(lista_do_cte), "empresa.pfx", senha), "empresa.pfx", senha)
+sefaz_cte_cancelar(cte$chave, cte$protocolo, "FRETE EMITIDO PARA O TOMADOR ERRADO", "empresa.pfx", senha)
 nfse_situacao_da_dps("DPS355030821122233300018100001000000000000123", "empresa.pfx", senha)   # a DPS já virou nota?
 
 mdfe = sefaz_mdfe_autorizar(xml_assinar("mdfe.xml", "empresa.pfx", senha), "empresa.pfx", senha)   # o MDF-e
@@ -78,13 +79,17 @@ Ambiente Nacional (o comprovante de entrega, o ator interessado) pode voltar "Ch
 nota do EPEC mandada logo depois dele, "NF-e com Tipo Emissão = 4, sem EPEC correspondente" (468). É esperar e mandar
 de novo. Testado na homologação em 11/11/2026, com uma NF-e montada pelo `nfe_montar()`: o comprovante de entrega e o
 cancelamento dele, o insucesso na entrega e o cancelamento dele e o cancelamento da nota foram registrados (135); o
-ator interessado chegou à regra do cadastro (371: o CNPJ autorizado do teste não é emitente de CT-e); o EPEC foi
-registrado (136), e a nota dele, autorizada (100) depois de 5 minutos e cancelada (135).
+EPEC foi registrado (136), e a nota dele, autorizada (100) depois de 5 minutos e cancelada (135). O ator interessado
+pede um autorizado que seja emitente de CT-e (com um CNPJ que não é, volta 371): com uma transportadora de verdade, foi
+registrado (135) em 16/11/2026.
 
 O CT-e, o CT-e OS, a GTV-e e o CT-e simplificado vão compactados ao autorizador da UF, pelo serviço de cada um, e são
 autorizados na hora; o QR-Code entra sozinho quando falta (na contingência off-line do CT-e, do CT-e OS e do
 simplificado, com a chave assinada, o parâmetro `sign`; na GTV-e fora da emissão normal, cuja regra a NT não traz, o
-QR-Code tem de vir pronto). O documento da SVC (`tpEmis` 7 ou 8) não é enviado por enquanto. A consulta pela DPS
+QR-Code tem de vir pronto). O documento da SVC (`tpEmis` 7 ou 8) não é enviado por enquanto. O emitente cancela o
+CT-e e o CT-e OS com o `sefaz_cte_cancelar()` (o evento 110111, com o protocolo e a justificativa). Testado na SVRS de
+homologação em 16/11/2026 com o certificado de uma transportadora: um CT-e dela, montado de novo pelo `cte_montar()`
+como teste (com o IBS e a CBS, que a homologação já exige), foi autorizado (100) e cancelado (135). A consulta pela DPS
 (`nfse_situacao_da_dps()`) diz se uma DPS já gerou a NFS-e, com a chave e o XML dela: serve quando a emissão ficou sem
 resposta, antes de mandar a DPS de novo. Só o 404 diz que ela não gerou; o outro erro da Sefin (o limite de consultas,
 a Sefin fora do ar) vai para o `problema`, e aí é consultar de novo antes de reenviar.

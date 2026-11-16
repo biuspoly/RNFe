@@ -1,11 +1,54 @@
-# Os eventos do tomador do CT-e (CTeRecepcaoEventoV4): a prestação do serviço em desacordo (610110) e o cancelamento
-# dela (610111). Pelo MOC do CT-e 4.00, o evento vai sozinho (sem lote e sem compactação) ao autorizador do CT-e, e o
-# retorno é o retEventoCTe. Só o ambiente de homologação.
+# Os eventos do CT-e (CTeRecepcaoEventoV4): o cancelamento do CT-e pelo emitente (110111) e, do tomador, a prestação do
+# serviço em desacordo (610110) e o cancelamento dela (610111). Pelo MOC do CT-e 4.00, o evento vai sozinho (sem lote e
+# sem compactação) ao autorizador do CT-e, e o retorno é o retEventoCTe. Só o ambiente de homologação.
 
 #' @include sefaz.R assinatura.R sefaz_evento.R
 NULL
 
 NAMESPACE_DO_CTE = "http://www.portalfiscal.inf.br/cte"
+
+#' Cancelar um CT-e
+#'
+#' Registra no autorizador da UF da chave o cancelamento de um CT-e (também o
+#' simplificado) ou de um CT-e OS autorizado (o evento 110111), com o
+#' protocolo da autorização e a justificativa. O prazo e o que impede o
+#' cancelamento (um evento registrado depois da autorização, por exemplo) são
+#' conferidos pela SEFAZ, que responde com o motivo.
+#'
+#' O autor é o emitente da chave, e o certificado pode ser o de outro
+#' estabelecimento da empresa (o mesmo CNPJ-base); no CT-e de emitente
+#' pessoa física, o certificado é o do CPF dele. Por enquanto só o ambiente
+#' de **homologação**.
+#'
+#' @param chave A chave de acesso do CT-e (modelo 57) ou do CT-e OS (67).
+#' @param protocolo O protocolo de autorização do CT-e (15 algarismos), como o
+#'   [sefaz_cte_autorizar()] devolve.
+#' @param justificativa O motivo do cancelamento, de 15 a 255 caracteres.
+#' @inheritParams sefaz_cancelar
+#' @return Um `data.frame` com uma linha, como o de [sefaz_cancelar()]: a
+#'   situação 135 é o cancelamento registrado, e `xml_evento` traz o
+#'   `procEventoCTe`, que o [eventos_ler()] lê.
+#' @seealso [sefaz_cte_autorizar()], [sefaz_situacao()]
+#' @source Os schemas `eventoCTe_v4.00.xsd` e `evCancCTe_v4.00.xsd` (pacote
+#'   PL_CTe_400, NT 2026.005); o Manual de Orientação do Contribuinte do CT-e
+#'   4.00 (Recepção de Evento). Testado na SVRS de homologação em 16/11/2026.
+#' @examples
+#' \dontrun{
+#' cte = sefaz_cte_autorizar("cte_assinado.xml", "empresa.pfx", Sys.getenv("SENHA_DO_CERTIFICADO"))
+#' sefaz_cte_cancelar(cte$chave, cte$protocolo, "FRETE EMITIDO PARA O TOMADOR ERRADO", "empresa.pfx",
+#'                    Sys.getenv("SENHA_DO_CERTIFICADO"))
+#' }
+#' @export
+sefaz_cte_cancelar = function(chave, protocolo, justificativa, certificado, senha, ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  if (length(protocolo) != 1 || is.na(protocolo) || !grepl("^[0-9]{15}$", protocolo)) {
+    stop("Informe o protocolo de autoriza\u00e7\u00e3o do CT-e (15 algarismos).", call. = FALSE)
+  }
+  conferir_texto_do_evento(justificativa, "justificativa", 15, 255)
+  detalhe = paste0("<evCancCTe><descEvento>Cancelamento</descEvento><nProt>", protocolo, "</nProt><xJust>",
+                   escapar_texto_canonico(justificativa), "</xJust></evCancCTe>")
+  registrar_evento_do_cte(chave, "110111", 1, detalhe, certificado, senha, ambiente, autor = "emitente")
+}
 
 #' Registrar a prestação do serviço em desacordo (CT-e)
 #'
@@ -68,16 +111,19 @@ sefaz_cte_cancelar_desacordo = function(chave, protocolo_do_desacordo, certifica
 }
 
 # O schema do detalhe de cada evento do CT-e (em inst/schemas/cte), que a mensagem assinada segue antes de ir à SEFAZ.
-SCHEMA_DO_DETALHE_DO_EVENTO_DO_CTE = c("610110" = "evPrestDesacordo_v4.00.xsd", "610111" = "evCancPrestDesacordo_v4.00.xsd")
+SCHEMA_DO_DETALHE_DO_EVENTO_DO_CTE = c("110111" = "evCancCTe_v4.00.xsd", "610110" = "evPrestDesacordo_v4.00.xsd",
+                                       "610111" = "evCancPrestDesacordo_v4.00.xsd")
 
+# `autor` diz quem registra: o tomador (o informado ou o do certificado) ou o emitente da chave.
 registrar_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
-                                   tomador = NULL) {
+                                   tomador = NULL, autor = "tomador") {
   exigir_pacotes(c("httr2", "curl", "openssl"))
   sequencia = suppressWarnings(as.integer(sequencia))
   if (length(sequencia) != 1 || is.na(sequencia) || sequencia < 1 || sequencia > 20) {
     stop("Informe a sequ\u00eancia do evento: de 1 a 20.", call. = FALSE)
   }
-  montado = montar_o_evento_do_cte(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente, tomador)
+  montado = montar_o_evento_do_cte(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente, tomador,
+                                   autor)
   if (is.null(montado$pedido)) {
     return(montado$linha)
   }
@@ -92,16 +138,20 @@ registrar_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, 
 }
 
 # A linha do evento, o evento assinado e o pedido, sem mandar nada. O autor é o tomador (o informado ou o do
-# certificado); o órgão, a UF da chave, cujo autorizador recebe o evento.
+# certificado) ou o emitente da chave; o órgão, a UF da chave, cujo autorizador recebe o evento.
 montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente,
-                                  tomador = NULL) {
+                                  tomador = NULL, autor = "tomador") {
   chave_limpa = limpar_chaves(chave)
   partes = chave_decompor(chave_limpa)
   if (length(chave_limpa) != 1 || !partes$valida || !(partes$modelo %in% c("57", "67"))) {
     stop("Informe a chave de um CT-e ou CT-e OS (44 posi\u00e7\u00f5es, com o d\u00edgito certo).", call. = FALSE)
   }
   conferir_certificado(certificado, senha)
-  autor = autor_informado_ou_do_certificado(tomador, certificado, senha, "tomador")
+  if (autor == "emitente") {
+    autor_do_evento = autor_emitente_do_cte(partes, certificado, senha)
+  } else {
+    autor_do_evento = autor_informado_ou_do_certificado(tomador, certificado, senha, "tomador")
+  }
   linha = data.frame(
     chave = chave_limpa, evento = codigo_do_evento, sequencia = sequencia, ambiente = ambiente,
     situacao_lote = NA_integer_, motivo_lote = NA_character_, situacao = NA_integer_, motivo = NA_character_,
@@ -114,12 +164,12 @@ montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, c
     return(list(linha = linha, pedido = NULL))
   }
   linha$endereco = servico$endereco
-  campo_do_autor = if (autor$tipo_documento == "CPF") "CPF" else "CNPJ"
+  campo_do_autor = if (autor_do_evento$tipo_documento == "CPF") "CPF" else "CNPJ"
   identificador = paste0("ID", codigo_do_evento, chave_limpa, sprintf("%03d", sequencia))
   evento = paste0(
     '<eventoCTe xmlns="', NAMESPACE_DO_CTE, '" versao="4.00"><infEvento Id="', identificador, '"><cOrgao>',
     partes$codigo_uf, "</cOrgao><tpAmb>", AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><", campo_do_autor, ">",
-    autor$documento, "</", campo_do_autor, "><chCTe>", chave_limpa, "</chCTe><dhEvento>", data_hora_do_evento(Sys.time()),
+    autor_do_evento$documento, "</", campo_do_autor, "><chCTe>", chave_limpa, "</chCTe><dhEvento>", data_hora_do_evento(Sys.time()),
     "</dhEvento><tpEvento>", codigo_do_evento, "</tpEvento><nSeqEvento>", sequencia,
     '</nSeqEvento><detEvento versaoEvento="4.00">', detalhe, "</detEvento></infEvento></eventoCTe>"
   )
@@ -128,6 +178,18 @@ montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, c
   list(linha = linha, evento_assinado = evento_assinado,
        pedido = montar_pedido(servico$endereco, "CTeRecepcaoEventoV4", "cteRecepcaoEvento", evento_assinado,
                               familia = "cte"))
+}
+
+# O autor do evento do emitente do CT-e: o documento da chave (o CNPJ, ou o CPF do emitente pessoa física, que o
+# chave_decompor() reconhece pelos dígitos), com o certificado do mesmo CNPJ-base ou do mesmo CPF.
+autor_emitente_do_cte = function(partes, certificado, senha) {
+  if (identical(partes$tipo_documento, "CPF")) {
+    autor = list(tipo_documento = "CPF", documento = substr(partes$documento_emitente, 4, 14))
+  } else {
+    autor = list(tipo_documento = "CNPJ", documento = partes$documento_emitente)
+  }
+  conferir_o_certificado_do_autor(autor, certificado, senha, "o emitente da chave")
+  autor
 }
 
 # O retorno do evento (sem lote: a situação vem só no infEvento); o evento registrado ganha o procEventoCTe.

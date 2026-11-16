@@ -2143,3 +2143,10 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   sem a espera, a nota daquele EPEC não ficou guardada: **um EPEC de teste ficou pendente de conciliação na
   homologação** (só lá; depois de 7 dias, a homologação bloqueia novos EPEC desse emitente até a conciliação ou a
   liberação pela SEFAZ). O roteiro guarda tudo desde então.
+- **Com uma transportadora (16/11/2026; o usuário: "certificado de emitente de cte, pode ver a veroli / cnpj tambem /
+  use como teste"):** um CT-e de produção dela (de 10/2026) lido pelo `xml_para_lista()` e montado de novo pelo
+  `cte_montar()` como teste (o tpAmb 2, uma série que a versão de teste do app Fiscal não usa, os nomes de homologação e
+  o IBS e a CBS, que a homologação, já na NT 2026.004, exige) foi autorizado na SVRS (100) e cancelado (135) pelo
+  `sefaz_cte_cancelar()`, que entrou agora: o RNFe autorizava o CT-e e não o cancelava. O ator interessado, numa NF-e
+  de teste autorizada (100), com a transportadora como autorizada (emitente de CT-e), foi registrado no Ambiente
+  Nacional (135) na terceira tentativa (o 494 até a sincronia), e a nota, cancelada (135).

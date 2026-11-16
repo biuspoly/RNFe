@@ -4,12 +4,12 @@
 CERTIFICADO_DO_EVENTO_DO_CTE = test_path("certificados", "pessoa_juridica.pfx")
 CHAVE_DO_CTE_DE_SP = "35261012ABC34501DE35570010000005551876543210"
 
-retorno_do_evento_do_cte = function(situacao, motivo, evento) {
+retorno_do_evento_do_cte = function(situacao, motivo, evento, chave = CHAVE_DO_CTE_DE_SP) {
   texto = paste0(
     '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body>',
     '<cteRecepcaoEventoResult xmlns="http://www.portalfiscal.inf.br/cte/wsdl/CTeRecepcaoEventoV4"><retEventoCTe ',
     'versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte"><infEvento><tpAmb>2</tpAmb><verAplic>SP-CTe</verAplic>',
-    "<cOrgao>35</cOrgao><cStat>", situacao, "</cStat><xMotivo>", motivo, "</xMotivo><chCTe>", CHAVE_DO_CTE_DE_SP,
+    "<cOrgao>35</cOrgao><cStat>", situacao, "</cStat><xMotivo>", motivo, "</xMotivo><chCTe>", chave,
     "</chCTe><tpEvento>", evento, "</tpEvento><xEvento>Prestacao do Servico em Desacordo</xEvento><nSeqEvento>1",
     "</nSeqEvento><dhRegEvento>2026-11-05T16:21:00-03:00</dhRegEvento><nProt>135260000077777</nProt></infEvento>",
     "</retEventoCTe></cteRecepcaoEventoResult></soap:Body></soap:Envelope>"
@@ -75,6 +75,52 @@ test_that("o autor do desacordo \u00e9 o tomador: o informado (uma filial) ou o 
                                       "homologacao"), "schema oficial")
   expect_error(montar_o_evento_do_cte(CHAVE_DO_CTE_DE_SP, "610110", 1L, "<evPrestDesacordo><descEvento>Outro</descEvento></evPrestDesacordo>",
                                       CERTIFICADO_DO_EVENTO_DO_CTE, "teste", "homologacao"), "schema oficial")
+})
+
+test_that("o cancelamento do CT-e: o emitente da chave \u00e9 o autor, com o protocolo e a justificativa", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  # Um CT-e emitido pelo CNPJ do certificado de teste (o da matriz) e outro pela filial (o mesmo CNPJ-base).
+  sem_digito = "3526101122233300018157001000000555187654321"
+  chave_da_matriz = paste0(sem_digito, chave_digito(sem_digito))
+  sem_digito_da_filial = "3526101122233300026257001000000555187654321"
+  chave_da_filial = paste0(sem_digito_da_filial, chave_digito(sem_digito_da_filial))
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    chave = if (length(pedidos) == 1) chave_da_matriz else chave_da_filial
+    retorno_do_evento_do_cte(135, "Evento registrado e vinculado a CT-e", "110111", chave = chave)
+  })
+  cancelado = sefaz_cte_cancelar(chave_da_matriz, "135260000012345", "FRETE EMITIDO PARA O TOMADOR ERRADO",
+                                 CERTIFICADO_DO_EVENTO_DO_CTE, "teste")
+  expect_identical(cancelado$situacao, 135L)
+  expect_identical(cancelado$evento, "110111")
+  expect_true(is.na(cancelado$problema))
+  corpo = rawToChar(pedidos[[1]]$body$data)
+  expect_match(corpo, paste0('<infEvento Id="ID110111', chave_da_matriz, '001"><cOrgao>35</cOrgao><tpAmb>2</tpAmb>',
+                             "<CNPJ>11222333000181</CNPJ><chCTe>", chave_da_matriz, "</chCTe>"), fixed = TRUE)
+  expect_match(corpo, paste0("<evCancCTe><descEvento>Cancelamento</descEvento><nProt>135260000012345</nProt>",
+                             "<xJust>FRETE EMITIDO PARA O TOMADOR ERRADO</xJust></evCancCTe>"), fixed = TRUE)
+  lido = eventos_ler(cancelado$xml_evento)$eventos
+  expect_identical(lido$tipo, "110111")
+  # O CT-e da filial com o certificado da matriz: o autor é a filial.
+  sefaz_cte_cancelar(chave_da_filial, "135260000012345", "FRETE EMITIDO PARA O TOMADOR ERRADO",
+                     CERTIFICADO_DO_EVENTO_DO_CTE, "teste")
+  expect_match(rawToChar(pedidos[[2]]$body$data), "<CNPJ>11222333000262</CNPJ>", fixed = TRUE)
+  # O CT-e de outra empresa (o CNPJ-base da chave não é o do certificado), o protocolo errado, a justificativa curta e a
+  # chave de NF-e param antes de qualquer conexão.
+  expect_error(sefaz_cte_cancelar(CHAVE_DO_CTE_DE_SP, "135260000012345", "FRETE EMITIDO PARA O TOMADOR ERRADO",
+                                  CERTIFICADO_DO_EVENTO_DO_CTE, "teste"), "CNPJ-base")
+  expect_error(sefaz_cte_cancelar(chave_da_matriz, "1352600000", "FRETE EMITIDO PARA O TOMADOR ERRADO",
+                                  CERTIFICADO_DO_EVENTO_DO_CTE, "teste"), "15 algarismos")
+  expect_error(sefaz_cte_cancelar(chave_da_matriz, "135260000012345", "CURTA", CERTIFICADO_DO_EVENTO_DO_CTE, "teste"),
+               "15 a 255")
+  expect_error(sefaz_cte_cancelar("35261011222333000181550010000010011123456785", "135260000012345",
+                                  "FRETE EMITIDO PARA O TOMADOR ERRADO", CERTIFICADO_DO_EVENTO_DO_CTE, "teste"), "CT-e")
+  expect_error(sefaz_cte_cancelar(chave_da_matriz, "135260000012345", "FRETE EMITIDO PARA O TOMADOR ERRADO",
+                                  CERTIFICADO_DO_EVENTO_DO_CTE, "teste", ambiente = "producao"), "homologa\u00e7\u00e3o")
+  expect_length(pedidos, 2)
 })
 
 test_that("os erros antes de qualquer conex\u00e3o", {
