@@ -1,0 +1,4 @@
+O teste de regressão de 262 itens da calculadora oficial da Receita (Teste_Varios_Itens.json, a entrada e a saída),
+do repositório github.com/ReceitaFederal/calculadora-rtc-regime-regular, sob a licença MIT do arquivo LICENSE.
+Commit da calculadora: 150cccbe414d4a5edea703e4f7a424af5aa222c7 (2026-10-22)
+Gerado por ferramentas/gerar_regua_da_calculadora.R.

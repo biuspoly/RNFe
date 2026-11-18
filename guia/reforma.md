@@ -66,25 +66,36 @@ a soma da regra UB16-10 da NT (produto, frete, seguro, outras despesas, II e Imp
 tributos que não entram), e cada componente só entra no ano, na natureza e no modelo em que a calculadora oficial o
 aceita: o PIS e a COFINS só em 2026, o ICMS e o ISSQN até 2032, o Imposto Seletivo a partir de 2027, o II e o ICMS
 só no bem, o ISSQN só no serviço, o II, o ICMS da UF de destino e o FCP dele só na NF-e. A alíquota é a do ano, com a redução da
-classificação; o diferimento e a tributação regular (a suspensão) entram com o que a nota informa. Para simular
+classificação; o diferimento e a tributação regular (a suspensão) entram com o que a nota informa. A alíquota uniforme
+nacional (CST 011) é a de referência, a do ano. A setorial (CST 010) é a do ano até 2026, como na calculadora
+oficial; de 2027 em diante é a da lei de cada regime específico, que as tabelas não têm: só com a que você passa em
+`aliquotas`. Na
+redução da base (CST 222, o transporte internacional de passageiros com ida e volta vendidas juntas), a base é a
+metade do valor cobrado (art. 12, § 8º da LC 214/2025). Para simular
 outro ano, passe a data e, enquanto a alíquota do ano não for publicada (a CBS de 2027 em diante, o IBS de 2029 em
 diante), a estimativa dela em `aliquotas`. Só `nfe_ler()$itens` não serve: a data, a finalidade e a compra
 governamental estão nas notas, e a função pede a lista inteira.
 
 Conferido com a calculadora oficial da Receita (o piloto da Reforma) em 51 itens inventados, de 11 classificações
-(uma de cada caso que o cálculo cobre), em 2026, 2027 e 2030: a base, as alíquotas, a redução, o diferimento, a
-tributação regular e o valor de cada parte saíram iguais, até o meio centavo, que vai para o par como lá. Em dois
-pontos o RNFe segue a NT, que é o que a SEFAZ confere: o IBS do item é a soma do da UF e do município (a calculadora
-arredonda o total à parte) e a classificação do CST 200 com tributação regular traz o grupo de redução. No acervo de
+(uma de cada caso que o cálculo cobre), em 2026, 2027 e 2030, e com o teste de 262 itens, de 128 classificações, que
+vem com o código aberto dela (github.com/ReceitaFederal/calculadora-rtc-regime-regular, em 2027; o teste do pacote
+roda os mesmos itens): a base, as alíquotas, a redução, o diferimento, a tributação regular e o valor de cada parte
+saíram iguais em 260 dos 262, até o meio centavo, que vai para o par como lá. Os outros 2 são a 221001, em que a
+calculadora usa uma alíquota que ela mesma chama de fictícia. Em três pontos o RNFe segue a NT, que é o que a SEFAZ
+confere: o IBS do item é a soma do da UF e do município (a calculadora arredonda o total à parte), a classificação
+do CST 200 com tributação regular traz o grupo de redução, e o valor sai da base que vai no XML (na redução da base
+com o valor cobrado de centavo ímpar, a calculadora multiplica a metade com 8 casas e pode dar 0,01 a mais). No
+acervo de
 notas reais, com a base da própria nota, o IBS e a CBS calculados bateram (até 0,01) com os da nota em todos os
 15.816 itens calculados com o grupo e as alíquotas de 2026, menos um (a CBS de uma nota que a conferência também
 acusa).
 
 Fica sem calcular, com o motivo: a nota que não é normal (a devolução, a complementar, a de ajuste e as de crédito e
 de débito, que dependem da operação original), o monofásico (CST 620), a transferência de crédito e os ajustes (CST
-800 a 820), a exclusão da base (CST 830, que a calculadora oficial também não trata), as alíquotas fixas e uniformes,
-a compra governamental, o item com crédito presumido ou com valor de devolução de tributos, a base negativa e o Imposto
-Seletivo.
+800 a 820), a exclusão da base (CST 830, que a calculadora oficial também não trata), as alíquotas fixas (CST 220 e
+221), a alíquota setorial de 2027 em diante sem a que você informa, a compra governamental (a calculadora usa um
+redutor zero provisório), o item com crédito presumido ou com valor de devolução de tributos, a base negativa e o
+Imposto Seletivo.
 
 ---
 

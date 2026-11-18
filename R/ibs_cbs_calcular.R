@@ -30,10 +30,22 @@ valor_icms_monofasico imposto/ICMS/*/vICMSMono        -1    inicio_do_calculo   
 valor_issqn           imposto/ISSQN/vISSQN            -1    inicio_do_calculo              fim_do_icms_e_do_issqn_na_base servico  55/65
 ")
 
-# Os CSTs que o cálculo cobre: com o grupo do IBS e da CBS, a tributação integral (000), a redução (200), o diferimento
-# (510 e 515) e a suspensão com a tributação regular (550); sem o grupo, a isenção (400) e a imunidade (410).
-CST_CALCULADOS = c("000", "200", "510", "515", "550")
+# Os CSTs que o cálculo cobre: com o grupo do IBS e da CBS, a tributação integral (000), as alíquotas uniformes (010 e
+# 011), a redução (200), a redução da base (222), o diferimento (510 e 515) e a suspensão com a tributação regular
+# (550); sem o grupo, a isenção (400) e a imunidade (410).
+CST_CALCULADOS = c("000", "010", "011", "200", "222", "510", "515", "550")
 CST_SEM_O_GRUPO = c("400", "410")
+
+# A parte da base que fica, em percentual, na classificação do CST com redução da base (redutor_base_calculo na tabela
+# do CST): no transporte internacional de passageiros com a ida e a volta vendidas juntas, a metade do valor cobrado
+# (LC 214/2025, art. 12, § 8º; a calculadora oficial faz o mesmo). A classificação que não estiver aqui fica sem calcular.
+PARTE_DA_BASE_NA_CLASSIFICACAO = c("222001" = 50)
+
+# Os tipos de alíquota da classificação (tipo_aliquota na tabela) que só são as do ano até o marco
+# aliquota_setorial_pela_tabela_ate: depois, são as da lei de cada regime específico, que as tabelas não têm. A
+# calculadora oficial também separa a alíquota pelo tipo: a setorial numa tabela própria (as de 2027 em diante, que ela
+# tinha, foram apagadas); a uniforme nacional (CST 011) é a de referência, a mesma do ano, e segue a tabela.
+TIPOS_DE_ALIQUOTA_DA_LEI_DO_REGIME = c("Uniforme setorial")
 
 # O resto do item, a partir do det, e o da nota, a partir do infNFe. Os nomes são os de nfe_ler()$itens.
 CAMPOS_DO_ITEM_PARA_CALCULAR = ler_campos("
@@ -89,39 +101,56 @@ PARTES_DO_CALCULO = c("ibs_uf", "ibs_municipio", "cbs")
 #'   alíquotas de 2026; a calculadora não calcula 2025). Essas datas vêm de
 #'   `tabela_fiscal("marcos_ibs_cbs")`, não do código. O PIS e a COFINS por
 #'   substituição tributária não entram (a calculadora não tem esses campos, e
-#'   a UB16-10 ainda é implementação futura). A base pode vir pronta, na coluna
-#'   `base`;
+#'   a UB16-10 ainda é implementação futura). Na redução da base (CST 222), a
+#'   base é a parte que a classificação deixa: a metade no transporte
+#'   internacional de passageiros com a ida e a volta vendidas juntas (222001,
+#'   art. 12, § 8º), no centavo com o meio indo para o par, como a
+#'   calculadora mostra. A base pode vir pronta, na coluna `base` (já reduzida,
+#'   no CST 222);
 #' - a alíquota é a do ano (veja `tabela_fiscal("aliquotas_ibs_cbs")`), ou a que
 #'   você passar em `aliquotas`; a da classificação com tributação regular é
-#'   zero;
-#' - com a redução (CST 200 e 515), a alíquota efetiva é a alíquota menos o
-#'   percentual da classificação, em 4 casas;
+#'   zero. A alíquota uniforme nacional (CST 011) é a de referência, a do ano.
+#'   A uniforme setorial (CST 010) é a do ano até 2026, como na calculadora
+#'   oficial; a partir de 2027 é a da lei de cada regime específico, que as
+#'   tabelas não têm: só com a que você passar em `aliquotas` (que vale para
+#'   todos os itens; calcule esses itens à parte dos outros);
+#' - com a redução (CST 011, 200 e 515), a alíquota efetiva é a alíquota menos
+#'   o percentual da classificação, em 4 casas;
 #' - com o diferimento (CST 510 e 515), o valor diferido é a base vezes a
 #'   alíquota vezes o percentual, que vem da nota ou de você (a tabela da
 #'   classificação não traz o percentual);
 #' - o valor é a base vezes a alíquota, menos o diferido, em 2 casas, com o
 #'   meio centavo indo para o par (0,125 vai a 0,12), como a calculadora
 #'   oficial (a NT não diz e aceita 0,01 de diferença); o IBS do item é o da UF
-#'   mais o do município (UB54a-10);
+#'   mais o do município (UB54a-10). A base é a que vai no XML, em 2 casas: na
+#'   redução da base com o valor cobrado de centavo ímpar, a calculadora
+#'   multiplica a metade com 8 casas e o valor pode sair 0,01 diferente;
 #' - na tributação regular (a suspensão, CST 550, e as classificações que a
 #'   pedem), o grupo `gTribRegular` com a alíquota e o valor da classificação
 #'   regular informada.
 #'
-#' Conferido com a calculadora oficial da Receita em 51 itens inventados, de 11
-#' classificações (uma de cada caso acima), em 2026, 2027 e 2030: tudo igual,
-#' menos em dois pontos em que o RNFe segue a NT, que é o que a SEFAZ confere: o
-#' IBS do item é a soma da UF e do município (a calculadora arredonda o total à
-#' parte, e em 3 itens ele saiu 0,01 diferente da soma), e a classificação com
-#' tributação regular no CST 200 traz a redução (a UB26-20 exige o grupo; a
-#' calculadora não o traz).
+#' Conferido com a calculadora oficial da Receita: em 51 itens inventados, de 11
+#' classificações (uma de cada caso acima), em 2026, 2027 e 2030; e no teste de
+#' 262 itens que vem com o código aberto dela
+#' (github.com/ReceitaFederal/calculadora-rtc-regime-regular), em 2027. Tudo
+#' igual, menos em três pontos em que o RNFe segue a NT, que é o que a SEFAZ
+#' confere: o IBS do item é a soma da UF e do município (a calculadora
+#' arredonda o total à parte, e às vezes ele sai 0,01 diferente da soma); a
+#' classificação com tributação regular no CST 200 traz a redução (a UB26-20
+#' exige o grupo; a calculadora não o traz); e o valor sai da base que vai no
+#' XML (na redução da base com o valor cobrado de centavo ímpar, a calculadora
+#' multiplica a metade com 8 casas).
 #'
 #' Fica sem calcular, com o motivo em `observacao`: a nota que não é normal
 #' (a complementar, a de ajuste, a devolução e as notas de crédito e de débito,
 #' que dependem da operação original: na devolução, a base é a dela, pelo art.
 #' 12, § 7º); o monofásico (CST 620), a transferência de crédito, os ajustes e a
 #' tributação em documento específico (CST 800 a 820), a exclusão da base (CST
-#' 830, que a calculadora oficial também ainda não trata), as alíquotas fixas e
-#' uniformes (CST 010, 011, 220, 221 e 222); o item com crédito presumido da
+#' 830, que a calculadora oficial também ainda não trata), as alíquotas fixas
+#' (CST 220 e 221: a calculadora também não calcula o 220 e o 221 que não é o
+#' 221001, e para este usa uma alíquota que ela mesma chama de fictícia, sem
+#' lei); a classificação nova do CST 222, enquanto a parte da base dela não
+#' estiver no RNFe (a não ser com a base pronta); o item com crédito presumido da
 #' operação ou com valor de devolução de tributos (o grupo com zero não muda a
 #' conta e é calculado); a compra governamental (o redutor de
 #' cada ente e ano não está nas tabelas); a base negativa (a calculadora a
@@ -423,6 +452,12 @@ aliquotas_nas_datas = function(datas, aliquotas_pedidas) {
   aliquotas
 }
 
+# Os itens de alíquota setorial (CST 010) a partir do marco: a alíquota do ano não vale para eles.
+setorial_fora_das_aliquotas_do_ano = function(tipos_de_aliquota, datas) {
+  depois_do_marco = (datas >= marco_da_reforma("aliquota_setorial_pela_tabela_ate")) %in% TRUE
+  tipos_de_aliquota %in% TIPOS_DE_ALIQUOTA_DA_LEI_DO_REGIME & depois_do_marco
+}
+
 # A base (em reais) vezes a alíquota (em %) vezes o percentual (em %), no centavo, com o meio centavo indo para o par,
 # como a calculadora oficial (0,125 vai a 0,12; a NT não diz e aceita 0,01 de diferença). A base vai em centavos e os
 # percentuais em décimos de milésimo, todos inteiros, e o produto é feito em pedaços de 6 dígitos: a conta fica exata
@@ -456,6 +491,11 @@ motivo_para_nao_calcular = function(itens, datas, base, cst_da_tabela, classific
   cst_fora = !(itens$cst_ibs_cbs %in% c(CST_CALCULADOS, CST_SEM_O_GRUPO))
   motivo[cst_fora] = paste0("O CST ", itens$cst_ibs_cbs[cst_fora], " (", cst_da_tabela$descricao[cst_fora],
                             ") n\u00e3o entra no c\u00e1lculo.")
+  reducao_da_base_desconhecida = cst_da_tabela$redutor_base_calculo %in% 1 & is.na(itens$base) &
+    !(itens$classificacao_ibs_cbs %in% names(PARTE_DA_BASE_NA_CLASSIFICACAO))
+  motivo[reducao_da_base_desconhecida] = paste(
+    "A redu\u00e7\u00e3o da base desta classifica\u00e7\u00e3o n\u00e3o est\u00e1 no RNFe (informe a base j\u00e1 reduzida, em base)."
+  )
   classificacao_desconhecida = is.na(classificacao_da_tabela$codigo)
   classificacao_de_outro_cst = (!classificacao_desconhecida & classificacao_da_tabela$cst != itens$cst_ibs_cbs) %in% TRUE
   motivo[classificacao_de_outro_cst] = "A classifica\u00e7\u00e3o n\u00e3o \u00e9 do CST informado."
@@ -498,7 +538,14 @@ calcular_os_itens = function(itens, aliquotas_pedidas) {
   classificacao_da_tabela = tabela_da_classificacao[match(itens$classificacao_ibs_cbs, tabela_da_classificacao$codigo), ]
   regular_da_tabela = tabela_da_classificacao[match(itens$classificacao_regular, tabela_da_classificacao$codigo), ]
   cst_regular_da_tabela = tabela_do_cst[match(itens$cst_regular, tabela_do_cst$codigo), ]
-  base = ifelse(!is.na(itens$base), arredondar_no_centavo(itens$base), base_pelos_componentes(itens, itens$data_emissao))
+  base_dos_componentes = base_pelos_componentes(itens, itens$data_emissao)
+  # Na redução da base (CST 222), a parte da classificação, no centavo com o meio indo para o par, como a calculadora a
+  # mostra (ela guarda 8 casas e multiplica a alíquota por elas; o RNFe, pela base que vai no XML, como na NT).
+  parte_da_base = unname(PARTE_DA_BASE_NA_CLASSIFICACAO[itens$classificacao_ibs_cbs])
+  com_parte_da_base = !is.na(parte_da_base)
+  base_dos_componentes[com_parte_da_base] = valor_no_centavo_ao_par(base_dos_componentes[com_parte_da_base], 100,
+                                                                    parte_da_base[com_parte_da_base])
+  base = ifelse(!is.na(itens$base), arredondar_no_centavo(itens$base), base_dos_componentes)
   motivo = motivo_para_nao_calcular(itens, itens$data_emissao, base, cst_da_tabela, classificacao_da_tabela)
   da_para_calcular = is.na(motivo)
   com_o_grupo = da_para_calcular & !(itens$cst_ibs_cbs %in% CST_SEM_O_GRUPO)
@@ -506,6 +553,8 @@ calcular_os_itens = function(itens, aliquotas_pedidas) {
   com_reducao = cst_da_tabela$grupo_reducao %in% 1
   com_diferimento = cst_da_tabela$grupo_diferimento %in% 1
   aliquotas_do_ano = aliquotas_nas_datas(itens$data_emissao, aliquotas_pedidas)
+  setorial_fora_do_ano = setorial_fora_das_aliquotas_do_ano(classificacao_da_tabela$tipo_aliquota, itens$data_emissao)
+  regular_setorial_fora_do_ano = setorial_fora_das_aliquotas_do_ano(regular_da_tabela$tipo_aliquota, itens$data_emissao)
   calculados = data.frame(chave = itens$chave, item = itens$item, data_calculo = itens$data_emissao,
                           cst_ibs_cbs = itens$cst_ibs_cbs, classificacao_ibs_cbs = itens$classificacao_ibs_cbs,
                           servico = itens$servico, base = ifelse(com_o_grupo, base, NA_real_))
@@ -513,7 +562,9 @@ calcular_os_itens = function(itens, aliquotas_pedidas) {
   valor_ibs = rep(0, quantidade)
   for (parte in PARTES_DO_CALCULO) {
     reducao_da_classificacao = if (parte == "cbs") classificacao_da_tabela$reducao_cbs else classificacao_da_tabela$reducao_ibs
-    aliquota = ifelse(tributacao_regular, 0, aliquotas_do_ano[[parte]])
+    sem_a_pedida = is.na(aliquotas_pedidas[[parte]])
+    aliquota_do_item = ifelse(setorial_fora_do_ano & sem_a_pedida, NA_real_, aliquotas_do_ano[[parte]])
+    aliquota = ifelse(tributacao_regular, 0, aliquota_do_item)
     reducao = ifelse(com_reducao, reducao_da_classificacao, NA_real_)
     aliquota_efetiva = arredondar_em_quatro_casas(aliquota * (1 - reducao / 100))
     aliquota_usada = ifelse(is.na(reducao), aliquota, aliquota_efetiva)
@@ -529,7 +580,8 @@ calcular_os_itens = function(itens, aliquotas_pedidas) {
     calculados[[paste0("valor_", parte)]] = ifelse(com_o_grupo, valor, NA_real_)
     nome_da_parte = switch(parte, ibs_uf = "do IBS da UF", ibs_municipio = "do IBS do munic\u00edpio", cbs = "da CBS")
     observacoes[[length(observacoes) + 1]] = ifelse(
-      com_o_grupo & is.na(aliquota), paste0("Sem a al\u00edquota ", nome_da_parte, " do ano (informe em aliquotas)."), NA)
+      com_o_grupo & is.na(aliquota) & !setorial_fora_do_ano,
+      paste0("Sem a al\u00edquota ", nome_da_parte, " do ano (informe em aliquotas)."), NA)
     observacoes[[length(observacoes) + 1]] = ifelse(
       com_o_grupo & com_diferimento & is.na(diferimento),
       paste0("Sem o percentual do diferimento ", nome_da_parte, " (a tabela da classifica\u00e7\u00e3o n\u00e3o o traz)."), NA)
@@ -538,6 +590,12 @@ calcular_os_itens = function(itens, aliquotas_pedidas) {
     }
   }
   calculados$valor_ibs = valor_ibs
+  setorial_sem_aliquota = com_o_grupo & setorial_fora_do_ano &
+    (is.na(calculados$aliquota_ibs_uf) | is.na(calculados$aliquota_ibs_municipio) | is.na(calculados$aliquota_cbs))
+  observacoes[[length(observacoes) + 1]] = ifelse(setorial_sem_aliquota, paste0(
+    "Sem as al\u00edquotas do regime espec\u00edfico: a al\u00edquota uniforme setorial (CST 010), ",
+    texto_a_partir_do_marco("aliquota_setorial_pela_tabela_ate"), ", \u00e9 a da lei do regime, que as tabelas do RNFe n\u00e3o ",
+    "t\u00eam (informe em aliquotas)."), NA)
   # A tributação regular: a base vezes a alíquota do ano com a redução da classificação regular.
   pede_regular = com_o_grupo & tributacao_regular
   calculados$cst_regular = ifelse(pede_regular, itens$cst_regular, NA_character_)
@@ -546,7 +604,9 @@ calcular_os_itens = function(itens, aliquotas_pedidas) {
   for (parte in PARTES_DO_CALCULO) {
     reducao_regular = if (parte == "cbs") regular_da_tabela$reducao_cbs else regular_da_tabela$reducao_ibs
     reducao_regular = ifelse(cst_regular_da_tabela$grupo_reducao %in% 1, reducao_regular, 0)
-    aliquota_regular = arredondar_em_quatro_casas(aliquotas_do_ano[[parte]] * (1 - reducao_regular / 100))
+    sem_a_pedida = is.na(aliquotas_pedidas[[parte]])
+    aliquota_do_ano_regular = ifelse(regular_setorial_fora_do_ano & sem_a_pedida, NA_real_, aliquotas_do_ano[[parte]])
+    aliquota_regular = arredondar_em_quatro_casas(aliquota_do_ano_regular * (1 - reducao_regular / 100))
     calculados[[paste0("aliquota_regular_", parte)]] = ifelse(pede_regular & regular_conhecida, aliquota_regular, NA_real_)
     calculados[[paste0("valor_regular_", parte)]] = ifelse(pede_regular & regular_conhecida,
                                                            valor_no_centavo_ao_par(base, aliquota_regular), NA_real_)

@@ -75,40 +75,57 @@ dele só na NF-e. Em 2025 vale a regra de 2026 (a NT aceita em 2025 as
 alíquotas de 2026; a calculadora não calcula 2025). Essas datas vêm de
 \code{tabela_fiscal("marcos_ibs_cbs")}, não do código. O PIS e a COFINS por
 substituição tributária não entram (a calculadora não tem esses campos, e
-a UB16-10 ainda é implementação futura). A base pode vir pronta, na coluna
-\code{base};
+a UB16-10 ainda é implementação futura). Na redução da base (CST 222), a
+base é a parte que a classificação deixa: a metade no transporte
+internacional de passageiros com a ida e a volta vendidas juntas (222001,
+art. 12, § 8º), no centavo com o meio indo para o par, como a
+calculadora mostra. A base pode vir pronta, na coluna \code{base} (já reduzida,
+no CST 222);
 \item a alíquota é a do ano (veja \code{tabela_fiscal("aliquotas_ibs_cbs")}), ou a que
 você passar em \code{aliquotas}; a da classificação com tributação regular é
-zero;
-\item com a redução (CST 200 e 515), a alíquota efetiva é a alíquota menos o
-percentual da classificação, em 4 casas;
+zero. A alíquota uniforme nacional (CST 011) é a de referência, a do ano.
+A uniforme setorial (CST 010) é a do ano até 2026, como na calculadora
+oficial; a partir de 2027 é a da lei de cada regime específico, que as
+tabelas não têm: só com a que você passar em \code{aliquotas} (que vale para
+todos os itens; calcule esses itens à parte dos outros);
+\item com a redução (CST 011, 200 e 515), a alíquota efetiva é a alíquota menos
+o percentual da classificação, em 4 casas;
 \item com o diferimento (CST 510 e 515), o valor diferido é a base vezes a
 alíquota vezes o percentual, que vem da nota ou de você (a tabela da
 classificação não traz o percentual);
 \item o valor é a base vezes a alíquota, menos o diferido, em 2 casas, com o
 meio centavo indo para o par (0,125 vai a 0,12), como a calculadora
 oficial (a NT não diz e aceita 0,01 de diferença); o IBS do item é o da UF
-mais o do município (UB54a-10);
+mais o do município (UB54a-10). A base é a que vai no XML, em 2 casas: na
+redução da base com o valor cobrado de centavo ímpar, a calculadora
+multiplica a metade com 8 casas e o valor pode sair 0,01 diferente;
 \item na tributação regular (a suspensão, CST 550, e as classificações que a
 pedem), o grupo \code{gTribRegular} com a alíquota e o valor da classificação
 regular informada.
 }
 
-Conferido com a calculadora oficial da Receita em 51 itens inventados, de 11
-classificações (uma de cada caso acima), em 2026, 2027 e 2030: tudo igual,
-menos em dois pontos em que o RNFe segue a NT, que é o que a SEFAZ confere: o
-IBS do item é a soma da UF e do município (a calculadora arredonda o total à
-parte, e em 3 itens ele saiu 0,01 diferente da soma), e a classificação com
-tributação regular no CST 200 traz a redução (a UB26-20 exige o grupo; a
-calculadora não o traz).
+Conferido com a calculadora oficial da Receita: em 51 itens inventados, de 11
+classificações (uma de cada caso acima), em 2026, 2027 e 2030; e no teste de
+262 itens que vem com o código aberto dela
+(github.com/ReceitaFederal/calculadora-rtc-regime-regular), em 2027. Tudo
+igual, menos em três pontos em que o RNFe segue a NT, que é o que a SEFAZ
+confere: o IBS do item é a soma da UF e do município (a calculadora
+arredonda o total à parte, e às vezes ele sai 0,01 diferente da soma); a
+classificação com tributação regular no CST 200 traz a redução (a UB26-20
+exige o grupo; a calculadora não o traz); e o valor sai da base que vai no
+XML (na redução da base com o valor cobrado de centavo ímpar, a calculadora
+multiplica a metade com 8 casas).
 
 Fica sem calcular, com o motivo em \code{observacao}: a nota que não é normal
 (a complementar, a de ajuste, a devolução e as notas de crédito e de débito,
 que dependem da operação original: na devolução, a base é a dela, pelo art.
 12, § 7º); o monofásico (CST 620), a transferência de crédito, os ajustes e a
 tributação em documento específico (CST 800 a 820), a exclusão da base (CST
-830, que a calculadora oficial também ainda não trata), as alíquotas fixas e
-uniformes (CST 010, 011, 220, 221 e 222); o item com crédito presumido da
+830, que a calculadora oficial também ainda não trata), as alíquotas fixas
+(CST 220 e 221: a calculadora também não calcula o 220 e o 221 que não é o
+221001, e para este usa uma alíquota que ela mesma chama de fictícia, sem
+lei); a classificação nova do CST 222, enquanto a parte da base dela não
+estiver no RNFe (a não ser com a base pronta); o item com crédito presumido da
 operação ou com valor de devolução de tributos (o grupo com zero não muda a
 conta e é calculado); a compra governamental (o redutor de
 cada ente e ano não está nas tabelas); a base negativa (a calculadora a

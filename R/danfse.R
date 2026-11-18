@@ -2,7 +2,8 @@
 # NFS-e com o QR-Code da consulta pública, o prestador, o tomador, o destinatário, o intermediário, o serviço, a
 # tributação municipal, a federal e a do IBS e da CBS, os totais, as informações complementares e o canhoto, na
 # disposição do Anexo I (as posições do item 2.4.5). O bloco que a nota não tem vira uma linha com a frase da NT, e o
-# espaço que sobra vai para as informações complementares.
+# espaço que sobra vai para as informações complementares. Conferido em 18/11/2026 com o gerador oficial da Receita
+# (calculadora-rtc-gerador-danfse, no GitHub): onde ele diverge da NT, vale a NT.
 
 #' @include pdf_comum.R danfe.R nfse_ler.R
 NULL
@@ -11,6 +12,10 @@ ENDERECO_DA_CONSULTA_DA_NFSE = "https://www.nfse.gov.br/ConsultaPublica/?tpc=1&c
 COLUNAS_DO_DANFSE = c(0.30, 5.41, 10.51, 15.62)
 LARGURA_DA_COLUNA_DO_DANFSE = 5.09
 CINZA_DO_DANFSE = grDevices::gray(0.95)
+# A marca d'água da NFS-e cancelada ou substituída (itens 2.5.1 e 2.5.2): na diagonal, com 50 pontos no mínimo, em cinza
+# K35. Vai por cima do resto, com metade da opacidade de um cinza mais escuro, que no papel branco dá o K35.
+MARCAS_DO_DANFSE = c(normal = NA, cancelada = "CANCELADA", substituida = "SUBSTITU\u00cdDA")
+COR_DA_MARCA_DO_DANFSE = grDevices::rgb(0.3, 0.3, 0.3, alpha = 0.5)
 TIPOS_DE_IMUNIDADE_DO_ISSQN = c(
   "0" = "Imunidade (tipo n\u00e3o informado na nota de origem)",
   "1" = "Patrim\u00f4nio, renda ou servi\u00e7os, uns dos outros",
@@ -35,17 +40,28 @@ BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da
 #' municipal, a federal (o PIS e a COFINS próprios até a competência de 2026,
 #' pela data em `tabela_fiscal("marcos_ibs_cbs")`) e
 #' a do IBS e da CBS, os totais, as informações complementares (com os totais
-#' aproximados dos tributos) e o canhoto. O campo sem informação leva um traço.
-#' A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e".
+#' aproximados dos tributos) e o canhoto, com a logomarca oficial da NFS-e no
+#' cabeçalho. O campo sem informação leva um traço; o texto que passa do
+#' tamanho que a NT sugere leva reticências. As datas e as horas saem como
+#' estão no XML. Na NFS-e com o PIS e a COFINS retidos (`tpRetPisCofins` 1), as
+#' contribuições sociais retidas somam a CSLL, o PIS e a COFINS, e o PIS e a
+#' COFINS de apuração própria saem zerados (a versão 1.02 da NT).
+#'
+#' A NFS-e cancelada ou substituída leva a marca d'água "CANCELADA" ou
+#' "SUBSTITUÍDA": o XML da nota não diz isso (o cancelamento é um evento), e a
+#' situação vai em `situacao` (os eventos da nota vêm em [nfse_situacao()]).
 #'
 #' Precisa do pacote `qrcode`.
 #'
 #' @param xml A NFS-e Nacional: o caminho do arquivo ou o texto do XML.
 #' @param arquivo O PDF a gravar.
+#' @param situacao `"normal"`, `"cancelada"` ou `"substituida"` (a marca d'água
+#'   dos itens 2.5.1 e 2.5.2 da NT).
 #' @return O caminho do PDF, invisível.
-#' @seealso [nfse_ler()], [nfse_emitir()]
-#' @source Nota Técnica SE/CGNFS-e 008/2026 (o DANFSe v2.0, 05/05/2026), itens 2.1
-#'   a 2.5 e o Anexo I; na nota do leiaute novo, a Nota Técnica SE/CGNFS-e 009,
+#' @seealso [nfse_ler()], [nfse_emitir()], [nfse_situacao()]
+#' @source Nota Técnica SE/CGNFS-e 008/2026, versão 1.02 (o DANFSe v2.0,
+#'   14/07/2026), itens 2.1 a 2.5 e o Anexo I, e a logomarca da NFS-e no endereço
+#'   que ela dá; na nota do leiaute novo, a Nota Técnica SE/CGNFS-e 009,
 #'   versão 1.01 (item 2.3, a dedução do ISSQN, e 2.11, o destinatário), e o schema
 #'   dela na Produção Restrita (NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020: o
 #'   destinatário no `IBSCBS` e a inscrição imobiliária em cada unidade do imóvel).
@@ -57,7 +73,10 @@ BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da
 #' }
 #' }
 #' @export
-danfse_pdf = function(xml, arquivo) {
+danfse_pdf = function(xml, arquivo, situacao = "normal") {
+  if (length(situacao) != 1 || !(situacao %in% names(MARCAS_DO_DANFSE))) {
+    stop("Informe a situa\u00e7\u00e3o: ", paste0("\"", names(MARCAS_DO_DANFSE), "\"", collapse = ", "), ".", call. = FALSE)
+  }
   exigir_pacotes("qrcode")
   lida = nfse_ler(xml)
   if (nrow(lida$nfses) == 0) {
@@ -70,10 +89,15 @@ danfse_pdf = function(xml, arquivo) {
   abrir_o_pdf(arquivo, LARGURA_DO_A4, ALTURA_DO_A4, familia = "Helvetica")
   on.exit(grDevices::dev.off(), add = TRUE)
   grid::grid.newpage()
-  grid::grid.rect(x = grid::unit(0.30, "cm"), y = grid::unit(ALTURA_DO_A4 - 0.30, "cm"), width = grid::unit(20.40, "cm"),
-                  height = grid::unit(ALTURA_DO_A4 - 0.60, "cm"), just = c("left", "top"), gp = grid::gpar(fill = NA, lwd = 1))
+  # A borda da página, de 1 ponto, com o lado de fora a 0,15 cm da beirada (itens 2.2.2 e 2.2.3: a margem tem no mínimo
+  # 0,15 cm, e o traço é desenhado centrado no caminho); os blocos começam a 0,30 cm (o Anexo I).
+  distancia_do_caminho = 0.15 + METADE_DO_PONTO_EM_CM
+  grid::grid.rect(x = grid::unit(distancia_do_caminho, "cm"), y = grid::unit(ALTURA_DO_A4 - distancia_do_caminho, "cm"),
+                  width = grid::unit(LARGURA_DO_A4 - 2 * distancia_do_caminho, "cm"),
+                  height = grid::unit(ALTURA_DO_A4 - 2 * distancia_do_caminho, "cm"), just = c("left", "top"),
+                  gp = grid::gpar(fill = NA, lwd = ESPESSURA_DE_UM_PONTO))
   desenhar_cabecalho_do_danfse(nota)
-  y = desenhar_dados_da_nfse(nota)
+  y = desenhar_dados_da_nfse(nota, informacao, dps)
   tomador = pessoa_do_danfse(dps, "toma")
   destinatario = pessoa_do_danfse(dps, "IBSCBS/dest")
   if (is.null(destinatario)) {
@@ -100,19 +124,45 @@ danfse_pdf = function(xml, arquivo) {
   y = desenhar_totais_do_danfse(nota, y)
   desenhar_informacoes_do_danfse(nota, dps, y)
   desenhar_canhoto_do_danfse(nota)
+  if (!is.na(MARCAS_DO_DANFSE[[situacao]])) {
+    grid::grid.text(texto_para_o_pdf(MARCAS_DO_DANFSE[[situacao]]), x = grid::unit(0.5, "npc"), y = grid::unit(0.5, "npc"),
+                    rot = 55, gp = grid::gpar(fontsize = 80, col = COR_DA_MARCA_DO_DANFSE))
+  }
   invisible(arquivo)
 }
 
-# O conteúdo do campo: o texto, ou um traço quando a nota não tem (a nota 12 da NT); corta com reticências no limite.
-conteudo_do_danfse = function(texto, limite = NA) {
+# O conteúdo do campo: o texto, ou um traço quando a nota não tem (a nota 12 da NT). No campo em que o item 2.4.5 diz
+# "caso a descrição supere 37 caracteres", o texto maior fica com os 37 e as reticências (`supere`); no que só traz o
+# tamanho do campo, o texto inteiro, com as reticências, cabe nele (`tamanho`).
+conteudo_do_danfse = function(texto, supere = NA, tamanho = NA) {
   if (length(texto) == 0 || is.na(texto) || texto == "") {
     return("-")
   }
   texto = as.character(texto)
-  if (!is.na(limite) && nchar(texto) > limite) {
-    texto = paste0(substr(texto, 1, limite - 3), "...")
+  if (!is.na(supere) && nchar(texto) > supere) {
+    texto = paste0(substr(texto, 1, supere), "...")
+  }
+  if (!is.na(tamanho) && nchar(texto) > tamanho) {
+    texto = paste0(substr(texto, 1, tamanho - 3), "...")
   }
   texto
+}
+
+# O texto numa linha da largura (em centímetros): o que não cabe sai, com reticências no lugar (item 2.1).
+texto_na_largura = function(texto, largura, tamanho) {
+  while (nchar(texto) > 4 && largura_do_texto(texto, tamanho) > largura) {
+    texto = paste0(substr(texto, 1, nchar(texto) - 4), "...")
+  }
+  texto
+}
+
+# A data e a hora de um instante do XML (dd/mm/aaaa hh:mm:ss), como estão nele, no fuso dele (item 2.1: o campo
+# representa o conteúdo da tag).
+data_e_hora_do_danfse = function(texto) {
+  if (is.na(texto)) {
+    return(NA_character_)
+  }
+  paste(data_do_xml(texto), hora_do_xml(texto))
 }
 
 reais_do_danfse = function(valor) {
@@ -131,17 +181,13 @@ campo_do_danfse = function(esquerda, superior, largura, altura, titulo, conteudo
   }
   desenhar_texto(titulo, esquerda + 0.1, superior + 0.06, tamanho = tamanho_do_titulo, negrito = TRUE)
   if (!is.null(conteudo)) {
-    texto = conteudo
-    while (nchar(texto) > 4 && largura_do_texto(texto, 7) > largura - 0.15) {
-      texto = paste0(substr(texto, 1, nchar(texto) - 4), "...")
-    }
-    desenhar_texto(texto, esquerda + 0.1, superior + 0.33, tamanho = 7)
+    desenhar_texto(texto_na_largura(conteudo, largura - 0.15, 7), esquerda + 0.1, superior + 0.33, tamanho = 7)
   }
 }
 
 # O título de um bloco (7 pontos, caixa alta, sombreado) na primeira coluna da primeira linha, e a linha de cima.
 titulo_do_bloco_do_danfse = function(titulo, superior, altura = 0.63) {
-  desenhar_linha(0.30, superior, 20.70, superior)
+  desenhar_linha(0.30, superior, 20.70, superior, espessura = ESPESSURA_DE_MEIO_PONTO)
   grid::grid.rect(x = grid::unit(0.30, "cm"), y = grid::unit(ALTURA_DO_A4 - superior, "cm"), width = grid::unit(5.09, "cm"),
                   height = grid::unit(altura, "cm"), just = c("left", "top"), gp = grid::gpar(fill = CINZA_DO_DANFSE, col = NA))
   desenhar_texto(titulo, 0.40, superior + 0.12, tamanho = 7, negrito = TRUE)
@@ -149,7 +195,7 @@ titulo_do_bloco_do_danfse = function(titulo, superior, altura = 0.63) {
 
 # O bloco que a nota não tem: uma linha de 0,32 cm com a frase da NT (as notas 2, 3 e 4).
 desenhar_linha_unica_do_danfse = function(frase, y) {
-  desenhar_linha(0.30, y, 20.70, y)
+  desenhar_linha(0.30, y, 20.70, y, espessura = ESPESSURA_DE_MEIO_PONTO)
   grid::grid.rect(x = grid::unit(0.30, "cm"), y = grid::unit(ALTURA_DO_A4 - y, "cm"), width = grid::unit(20.40, "cm"),
                   height = grid::unit(0.32, "cm"), just = c("left", "top"), gp = grid::gpar(fill = CINZA_DO_DANFSE, col = NA))
   desenhar_texto(frase, 0.40, y + 0.06, tamanho = 7, negrito = TRUE)
@@ -158,8 +204,15 @@ desenhar_linha_unica_do_danfse = function(frase, y) {
 
 desenhar_cabecalho_do_danfse = function(nota) {
   grid::grid.rect(x = grid::unit(0.30, "cm"), y = grid::unit(ALTURA_DO_A4 - 0.30, "cm"), width = grid::unit(20.40, "cm"),
-                  height = grid::unit(1.16, "cm"), just = c("left", "top"), gp = grid::gpar(fill = CINZA_DO_DANFSE, lwd = 0.5))
-  desenhar_texto("NFS-e", 0.49, 0.50, tamanho = 16, negrito = TRUE)
+                  height = grid::unit(1.16, "cm"), just = c("left", "top"),
+                  gp = grid::gpar(fill = CINZA_DO_DANFSE, lwd = ESPESSURA_DE_MEIO_PONTO))
+  # A logomarca da NFS-e a 0,49 cm da esquerda e 0,44 cm do alto, sem deformar. O 4,00 cm por 0,85 cm do Anexo I é o
+  # tamanho mínimo (a coluna "Tamanhos Mínimos" do item 2.4.5): a altura é a menor que deixa os dois lados nele ou acima.
+  logomarca = readRDS(system.file("extdata", "logo_nfse.rds", package = "RNFe"))
+  altura_da_logomarca = max(0.85, 4.00 * nrow(logomarca) / ncol(logomarca))
+  grid::grid.raster(logomarca, x = grid::unit(0.49, "cm"), y = grid::unit(ALTURA_DO_A4 - 0.44, "cm"),
+                    width = grid::unit(altura_da_logomarca * ncol(logomarca) / nrow(logomarca), "cm"),
+                    height = grid::unit(altura_da_logomarca, "cm"), just = c("left", "top"))
   desenhar_texto("DANFSe v2.0", 10.50, 0.40, tamanho = 9, negrito = TRUE, alinhamento = "centre")
   desenhar_texto("Documento Auxiliar da NFS-e", 10.50, 0.75, tamanho = 9, negrito = TRUE, alinhamento = "centre")
   if (identical(as.character(nota$ambiente), "2")) {
@@ -174,21 +227,21 @@ desenhar_cabecalho_do_danfse = function(nota) {
   desenhar_texto(paste("Tipo de Ambiente:", conteudo_do_danfse(nota$ambiente_descricao)), 15.72, 1.22, tamanho = 6)
 }
 
-desenhar_dados_da_nfse = function(nota) {
+desenhar_dados_da_nfse = function(nota, informacao, dps) {
   campo_do_danfse(0.30, 1.48, 15.30, 0.77, "CHAVE DE ACESSO DA NFS-E", nota$chave, tamanho_do_titulo = 7)
   campo_do_danfse(0.30, 2.27, 5.09, 0.67, "N\u00daMERO DA NFS-E", conteudo_do_danfse(nota$numero), tamanho_do_titulo = 7)
   campo_do_danfse(5.41, 2.27, 5.09, 0.67, "COMPET\u00caNCIA DA NFS-E", conteudo_do_danfse(format(nota$competencia, "%d/%m/%Y")),
                   tamanho_do_titulo = 7)
   campo_do_danfse(10.51, 2.27, 5.09, 0.67, "DATA E HORA DA EMISS\u00c3O DA NFS-E",
-                  conteudo_do_danfse(format(nota$processamento, "%d/%m/%Y %H:%M:%S", tz = "America/Sao_Paulo")), tamanho_do_titulo = 7)
+                  conteudo_do_danfse(data_e_hora_do_danfse(texto_pelo_caminho(informacao, "dhProc"))), tamanho_do_titulo = 7)
   campo_do_danfse(0.30, 2.96, 5.09, 0.67, "N\u00daMERO DA DPS", conteudo_do_danfse(nota$numero_dps), tamanho_do_titulo = 7)
   campo_do_danfse(5.41, 2.96, 5.09, 0.67, "S\u00c9RIE DA DPS", conteudo_do_danfse(nota$serie_dps), tamanho_do_titulo = 7)
   campo_do_danfse(10.51, 2.96, 5.09, 0.67, "DATA E HORA DA EMISS\u00c3O DA DPS",
-                  conteudo_do_danfse(format(nota$emissao, "%d/%m/%Y %H:%M:%S", tz = "America/Sao_Paulo")), tamanho_do_titulo = 7)
+                  conteudo_do_danfse(data_e_hora_do_danfse(texto_pelo_caminho(dps, "dhEmi"))), tamanho_do_titulo = 7)
   campo_do_danfse(0.30, 3.65, 5.09, 0.67, "EMITENTE DA NFS-E", conteudo_do_danfse(nota$tipo_emitente_descricao), sombreado = TRUE,
                   tamanho_do_titulo = 7)
-  campo_do_danfse(5.41, 3.65, 5.09, 0.67, "SITUA\u00c7\u00c3O DA NFS-E", conteudo_do_danfse(nota$situacao_descricao, 40), tamanho_do_titulo = 7)
-  campo_do_danfse(10.51, 3.65, 5.09, 0.67, "FINALIDADE", conteudo_do_danfse(nota$finalidade_descricao, 40), tamanho_do_titulo = 7)
+  campo_do_danfse(5.41, 3.65, 5.09, 0.67, "SITUA\u00c7\u00c3O DA NFS-E", conteudo_do_danfse(nota$situacao_descricao, 37), tamanho_do_titulo = 7)
+  campo_do_danfse(10.51, 3.65, 5.09, 0.67, "FINALIDADE", conteudo_do_danfse(nota$finalidade_descricao, 37), tamanho_do_titulo = 7)
   desenhar_qrcode(paste0(ENDERECO_DA_CONSULTA_DA_NFSE, nota$chave), 17.48, 1.67, 1.52)
   complemento = c("A autenticidade desta NFS-e pode ser verificada", "pela leitura deste c\u00f3digo QR ou pela consulta da",
                   "chave de acesso no portal nacional da NFS-e")
@@ -250,16 +303,17 @@ desenhar_pessoa_do_danfse = function(titulo, pessoa, y, frase_sem_pessoa, com_in
     campo_do_danfse(10.51, y, 5.09, 0.63, "Indicador Municipal (Inscri\u00e7\u00e3o)", conteudo_do_danfse(pessoa$inscricao))
   }
   campo_do_danfse(15.62, y, 5.09, 0.63, "Telefone", conteudo_do_danfse(pessoa$telefone))
-  campo_do_danfse(0.30, y + 0.64, 10.19, 0.63, "Nome / Nome Empresarial", conteudo_do_danfse(pessoa$nome, 80))
-  campo_do_danfse(10.51, y + 0.64, 5.09, 0.63, "Munic\u00edpio / Sigla UF", conteudo_do_danfse(pessoa$municipio, 37))
+  campo_do_danfse(0.30, y + 0.64, 10.19, 0.63, "Nome / Nome Empresarial", conteudo_do_danfse(pessoa$nome, 77))
+  campo_do_danfse(10.51, y + 0.64, 5.09, 0.63, "Munic\u00edpio / Sigla UF", conteudo_do_danfse(pessoa$municipio, tamanho = 37))
   campo_do_danfse(15.62, y + 0.64, 5.09, 0.63, "C\u00f3digo IBGE / CEP", conteudo_do_danfse(pessoa$codigo_e_cep))
-  campo_do_danfse(0.30, y + 1.30, 10.19, 0.63, "Endere\u00e7o", conteudo_do_danfse(pessoa$endereco, 80))
-  campo_do_danfse(10.51, y + 1.30, 10.19, 0.63, "E-mail", conteudo_do_danfse(pessoa$email, 80))
+  campo_do_danfse(0.30, y + 1.30, 10.19, 0.63, "Endere\u00e7o", conteudo_do_danfse(pessoa$endereco, 77))
+  campo_do_danfse(10.51, y + 1.30, 10.19, 0.63, "E-mail", conteudo_do_danfse(pessoa$email, 77))
   if (com_simples) {
+    # As duas posições do Anexo I: o Simples na primeira coluna e o regime de apuração na terceira, com duas de largura.
     campo_do_danfse(0.30, y + 1.94, 5.09, 0.63, "Simples Nacional na Data de Compet\u00eancia",
-                    conteudo_do_danfse(nota$prestador_simples_nacional_descricao, 40))
-    campo_do_danfse(5.41, y + 1.94, 15.29, 0.63, "Regime de Apura\u00e7\u00e3o Tribut\u00e1ria pelo SN",
-                    conteudo_do_danfse(nota$prestador_regime_apuracao_simples_descricao, 80))
+                    conteudo_do_danfse(nota$prestador_simples_nacional_descricao, 37))
+    campo_do_danfse(10.51, y + 1.94, 10.19, 0.63, "Regime de Apura\u00e7\u00e3o Tribut\u00e1ria pelo SN",
+                    conteudo_do_danfse(nota$prestador_regime_apuracao_simples_descricao, 77))
     return(y + 2.58)
   }
   y + 1.94
@@ -282,15 +336,36 @@ desenhar_servico_do_danfse = function(nota, y) {
   if (!is.na(nota$prestacao_pais)) {
     local = paste(c(local[!is.na(local)], nota$prestacao_pais), collapse = " / ")
   }
-  campo_do_danfse(15.62, y, 5.09, 0.63, "Local da Presta\u00e7\u00e3o / Sigla UF / Pa\u00eds", conteudo_do_danfse(local, 42))
+  campo_do_danfse(15.62, y, 5.09, 0.63, "Local da Presta\u00e7\u00e3o / Sigla UF / Pa\u00eds", conteudo_do_danfse(local, tamanho = 42))
+  # A descrição da tributação nacional ou municipal: 7 pontos (o mínimo do item 2.4.4), até 167 caracteres e na largura
+  # do quadro, com reticências no que não cabe.
   descricao_do_codigo = if (!is.na(nota$tributacao_municipal)) nota$tributacao_municipal else nota$tributacao_nacional
-  desenhar_texto(conteudo_do_danfse(descricao_do_codigo, 170), 0.40, y + 0.70, tamanho = 6)
-  linhas = quebrar_texto(conteudo_do_danfse(nota$descricao_servico, 1300), 20.2, 7)
+  desenhar_texto(texto_na_largura(conteudo_do_danfse(descricao_do_codigo, 167), 20.2, 7), 0.40, y + 0.70, tamanho = 7)
+  linhas = linhas_com_reticencias(quebrar_texto(conteudo_do_danfse(nota$descricao_servico, 1297), 20.2, 7),
+                                  LINHAS_DA_DESCRICAO_DO_SERVICO, 20.2)
   desenhar_texto("Descri\u00e7\u00e3o do Servi\u00e7o", 0.40, y + 1.05, tamanho = 6, negrito = TRUE)
-  for (posicao in seq_along(utils::head(linhas, 12))) {
+  for (posicao in seq_along(linhas)) {
     desenhar_texto(linhas[posicao], 0.40, y + 1.30 + (posicao - 1) * 0.29, tamanho = 7)
   }
-  y + 1.35 + max(1, min(12, length(linhas))) * 0.29 + 0.1
+  y + 1.35 + max(1, length(linhas)) * 0.29 + 0.1
+}
+
+LINHAS_DA_DESCRICAO_DO_SERVICO = 12
+
+# As primeiras `maximo` linhas do texto; quando sobra texto, a última termina em reticências (item 2.1), na largura.
+linhas_com_reticencias = function(linhas, maximo, largura) {
+  if (length(linhas) <= maximo) {
+    return(linhas)
+  }
+  if (maximo <= 0) {
+    return(character())
+  }
+  linhas = linhas[seq_len(maximo)]
+  linhas[maximo] = texto_na_largura(paste0(linhas[maximo], "..."), largura, 7)
+  if (!endsWith(linhas[maximo], "...")) {
+    linhas[maximo] = paste0(linhas[maximo], "...")
+  }
+  linhas
 }
 
 desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
@@ -308,18 +383,18 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
   if (!is.na(pais_do_resultado)) {
     incidencia = paste(c(incidencia[!is.na(incidencia)], pais_do_resultado), collapse = " / ")
   }
-  campo_do_danfse(10.51, y, 10.19, 0.63, "Munic\u00edpio / Sigla UF / Pa\u00eds de Incid\u00eancia do ISSQN", conteudo_do_danfse(incidencia, 42))
+  campo_do_danfse(10.51, y, 10.19, 0.63, "Munic\u00edpio / Sigla UF / Pa\u00eds de Incid\u00eancia do ISSQN", conteudo_do_danfse(incidencia, tamanho = 42))
   y = y + 0.64
   imunidade = texto_pelo_caminho(dps, "valores/trib/tribMun/tpImunidade")
   suspensao = texto_pelo_caminho(dps, "valores/trib/tribMun/exigSusp/tpSusp")
   processo = texto_pelo_caminho(dps, "valores/trib/tribMun/exigSusp/nProcesso")
   if (!all(is.na(c(nota$prestador_regime_especial_descricao, imunidade, suspensao, processo)))) {
     campo_do_danfse(0.30, y, 5.09, 0.63, "Regime Especial de Tributa\u00e7\u00e3o do ISSQN",
-                    conteudo_do_danfse(nota$prestador_regime_especial_descricao, 27))
+                    conteudo_do_danfse(nota$prestador_regime_especial_descricao, tamanho = 27))
     campo_do_danfse(5.41, y, 5.09, 0.63, "Tipo de Imunidade do ISSQN",
-                    conteudo_do_danfse(if (is.na(imunidade)) NA else TIPOS_DE_IMUNIDADE_DO_ISSQN[[imunidade]], 40))
+                    conteudo_do_danfse(if (is.na(imunidade)) NA else TIPOS_DE_IMUNIDADE_DO_ISSQN[[imunidade]], 37))
     campo_do_danfse(10.51, y, 5.09, 0.63, "Suspens\u00e3o da Exigibilidade do ISSQN",
-                    conteudo_do_danfse(if (is.na(suspensao)) NA else SUSPENSOES_DO_ISSQN[[suspensao]], 40))
+                    conteudo_do_danfse(if (is.na(suspensao)) NA else SUSPENSOES_DO_ISSQN[[suspensao]], 37))
     campo_do_danfse(15.62, y, 5.09, 0.63, "N\u00famero Processo Suspens\u00e3o", conteudo_do_danfse(processo))
     y = y + 0.64
   }
@@ -358,14 +433,27 @@ desenhar_tributacao_federal_do_danfse = function(nota, y) {
   titulo_do_bloco_do_danfse("TRIBUTA\u00c7\u00c3O FEDERAL (EXCETO CBS)", y)
   campo_do_danfse(5.41, y, 5.09, 0.63, "IRRF", reais_do_danfse(nota$valor_retido_irrf))
   campo_do_danfse(10.51, y, 5.09, 0.63, "Contribui\u00e7\u00e3o Previdenci\u00e1ria - Retida", reais_do_danfse(nota$valor_retido_cp))
-  campo_do_danfse(15.62, y, 5.09, 0.63, "Contribui\u00e7\u00f5es Sociais - Retidas", reais_do_danfse(nota$valor_retido_csll))
+  # Com o PIS e a COFINS retidos (tpRetPisCofins 1), as contribuições retidas somam a CSLL, o PIS e a COFINS, e o PIS e a
+  # COFINS de apuração própria saem zerados (a versão 1.02 da NT). A NT diz "= 1" e, "nos demais casos", o valor
+  # informado, mesmo nos códigos de retenção do leiaute novo (3 a 9), que ela lista na mesma tabela: vale o texto dela.
+  pis_cofins_retidos = identical(as.character(nota$retencao_pis_cofins), "1")
+  retidas = nota$valor_retido_csll
+  pis_proprio = nota$valor_pis
+  cofins_propria = nota$valor_cofins
+  if (pis_cofins_retidos) {
+    parcelas = c(nota$valor_retido_csll, nota$valor_pis, nota$valor_cofins)
+    retidas = if (all(is.na(parcelas))) NA else sum(parcelas, na.rm = TRUE)
+    pis_proprio = 0
+    cofins_propria = 0
+  }
+  campo_do_danfse(15.62, y, 5.09, 0.63, "Contribui\u00e7\u00f5es Sociais - Retidas", reais_do_danfse(retidas))
   y = y + 0.64
   # A nota 6: o PIS e a COFINS próprios só até a competência de 2026 (a data vem da tabela dos marcos).
   if (!is.na(nota$competencia) && nota$competencia < marco_da_reforma("danfse_sem_pis_e_cofins_proprios_desde")) {
-    campo_do_danfse(0.30, y, 5.09, 0.63, "PIS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(nota$valor_pis))
-    campo_do_danfse(5.41, y, 5.09, 0.63, "COFINS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(nota$valor_cofins))
+    campo_do_danfse(0.30, y, 5.09, 0.63, "PIS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(pis_proprio))
+    campo_do_danfse(5.41, y, 5.09, 0.63, "COFINS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(cofins_propria))
     campo_do_danfse(10.51, y, 10.19, 0.63, "Descri\u00e7\u00e3o Contrib. Sociais - Retidas",
-                    conteudo_do_danfse(nota$retencao_pis_cofins_descricao, 35))
+                    conteudo_do_danfse(nota$retencao_pis_cofins_descricao, tamanho = 35))
     y = y + 0.64
   }
   y
@@ -380,7 +468,7 @@ desenhar_ibs_cbs_do_danfse = function(nota, dps, informacao, y) {
   partes = c(nota$indicador_operacao, nota$incidencia_ibs_cbs_codigo_municipio, nota$incidencia_ibs_cbs_municipio, uf_da_incidencia)
   campo_do_danfse(10.51, y, 10.19, 0.63,
                   "Indicador de Opera\u00e7\u00e3o / C\u00f3digo IBGE Incid\u00eancia / Munic\u00edpio Incid\u00eancia / Sigla UF",
-                  conteudo_do_danfse(if (all(is.na(partes))) NA else paste(partes[!is.na(partes)], collapse = " / "), 56))
+                  conteudo_do_danfse(if (all(is.na(partes))) NA else paste(partes[!is.na(partes)], collapse = " / "), tamanho = 56))
   y = y + 0.64
   # O reembolso, repasse ou ressarcimento (vCalcReeRepRes, do leiaute 1.01) virou, no leiaute da NT 009, os dois ajustes
   # da base (vCalcAjusteBCLocImoveis e vCalcAjusteBCIBSCBS); entra o que a nota tiver.
@@ -454,16 +542,35 @@ desenhar_informacoes_do_danfse = function(nota, dps, y) {
     rotulo_do_danfse("Cod. Evt.:", texto_pelo_caminho(dps, "serv/atvEvento/idAtvEvt")),
     rotulo_do_danfse("Doc. Tec.:", texto_pelo_caminho(dps, "serv/infoCompl/idDocTec")),
     rotulo_do_danfse("N\u00fam. Ped.:", texto_pelo_caminho(dps, "serv/infoCompl/xPed")),
-    rotulo_do_danfse("Item Ped.:", texto_pelo_caminho(dps, "serv/infoCompl/gItemPed/xItemPed")),
+    rotulo_do_danfse("Item Ped.:", itens_do_pedido_do_danfse(dps)),
     rotulo_do_danfse("Inf. A. T. Mun.:", nota$outras_informacoes)
   )
   texto = paste(partes[!is.na(partes)], collapse = " | ")
-  linhas = quebrar_texto(texto, 20.2, 7)
+  totais = texto_dos_tributos_aproximados(dps)
+  # A descrição vai até 1997 caracteres, com reticências no que passa, "sem prejuízo à linha de Totais Aproximados dos
+  # Tributos, que é fixa" (o item 2.4.5): a linha dos totais vem inteira, depois dela.
+  if (nchar(texto) > LIMITE_DAS_INFORMACOES_COMPLEMENTARES) {
+    texto = paste0(substr(texto, 1, LIMITE_DAS_INFORMACOES_COMPLEMENTARES), "...")
+  }
   limite = floor((28.10 - 0.1 - (y + 0.45) - 0.35) / 0.29)
-  for (posicao in seq_along(utils::head(linhas, max(0, limite)))) {
+  linhas = linhas_com_reticencias(quebrar_texto(texto, 20.2, 7), max(0, limite), 20.2)
+  for (posicao in seq_along(linhas)) {
     desenhar_texto(linhas[posicao], 0.40, y + 0.45 + (posicao - 1) * 0.29, tamanho = 7)
   }
-  desenhar_texto(texto_dos_tributos_aproximados(dps), 0.40, y + 0.45 + max(0, min(length(linhas), limite)) * 0.29, tamanho = 7)
+  desenhar_texto(totais, 0.40, y + 0.45 + length(linhas) * 0.29, tamanho = 7)
+}
+
+LIMITE_DAS_INFORMACOES_COMPLEMENTARES = 1997
+
+# Os itens do pedido (o gItemPed traz até 99 xItemPed): todos, separados por vírgula.
+itens_do_pedido_do_danfse = function(dps) {
+  caminho = paste0("./*[local-name()='serv']/*[local-name()='infoCompl']/*[local-name()='gItemPed']",
+                   "/*[local-name()='xItemPed']")
+  itens = xml2::xml_text(xml2::xml_find_all(dps, caminho))
+  if (length(itens) == 0) {
+    return(NA_character_)
+  }
+  paste(itens, collapse = ", ")
 }
 
 rotulo_do_danfse = function(rotulo, valor) {
@@ -485,7 +592,7 @@ texto_dos_tributos_aproximados = function(dps) {
 }
 
 desenhar_canhoto_do_danfse = function(nota) {
-  desenhar_linha(0.30, 28.10, 20.70, 28.10)
+  desenhar_linha(0.30, 28.10, 20.70, 28.10, espessura = ESPESSURA_DE_MEIO_PONTO)
   campo_do_danfse(0.30, 28.10, 5.09, 0.67, "DATA CIENTIFICA\u00c7\u00c3O:", NULL, tamanho_do_titulo = 7)
   campo_do_danfse(5.41, 28.10, 5.09, 0.67, "IDENTIFICA\u00c7\u00c3O E ASSINATURA", NULL, tamanho_do_titulo = 7)
   campo_do_danfse(10.51, 28.10, 10.19, 0.67, "N\u00ba NFS-e / CHAVE NFS-e", paste(nota$numero, "/", nota$chave), tamanho_do_titulo = 7)

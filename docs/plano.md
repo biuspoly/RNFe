@@ -2167,3 +2167,58 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
 - **A biblioteca de teste do R** (`scratchpad/rlib`, na pasta temporária do Windows) perdeu os arquivos de novo: a
   limpeza automática da pasta temporária apaga os arquivos e deixa as pastas, e os testes do PDF e do OCR passavam a
   ser pulados. Os pacotes sugeridos e o roxygen2 foram para a biblioteca do usuário do R, fora da pasta temporária.
+
+## O código aberto da calculadora oficial como régua (18/11/2026)
+
+A Receita publicou no GitHub (organização ReceitaFederal, licença MIT) três repositórios: a calculadora do regime
+regular, a do Simples Nacional e o gerador do DANFSe. O usuário: "faça os ajustes com base nisso da calculadora". Não
+deu para rodar a calculadora aqui (o pedido de compilar o Java foi negado pela permissão da máquina, e não foi
+contornado): a régua é o código e os testes dela, lidos.
+
+- **O teste de 262 itens (`Teste_Varios_Itens.json`, 128 classificações, 2027):** antes, o RNFe calculava 240 e
+  batia em todos, menos nas duas escolhas da NT (o IBS do item como a soma da UF e do município, UB54a-10; o grupo da
+  redução na classificação com tributação regular do CST 200, UB26-20). Os 22 de fora eram os CSTs 010, 011, 221 e
+  222 e o 515 sem o percentual do diferimento. Agora calcula 260, todos iguais, com as mesmas duas escolhas; os 2 de
+  fora são a 221001, em que a calculadora usa uma alíquota que ela mesma chama de fictícia (migração V0056). O teste
+  do pacote roda os mesmos itens (`tests/testthat/calculadora_oficial`, com a licença e o commit de origem; gerado por
+  `ferramentas/gerar_regua_da_calculadora.R`) e falha se aparecer qualquer outra diferença.
+- **A alíquota uniforme (CST 010 e 011):** a calculadora escolhe a alíquota pelo tipo da classificação (Padrão,
+  Uniforme nacional, Uniforme setorial, Fixa). A uniforme nacional (011) é a de referência, a mesma tabela em que a
+  padrão se apoia (nos dados originais dela, 2027 igual ao 000): o RNFe usa a do ano, com a redução da classificação.
+  A setorial (010) tem tabela própria: em 2026 igual à do ano (0,9% e 0,1%, migração V0056); as de 2027 em diante,
+  que ela tinha (1% e 10,85% de CBS, V0009), foram apagadas (V0053). O RNFe usa a do ano até o marco
+  `aliquota_setorial_pela_tabela_ate` e depois só a informada, pela coluna `tipo_aliquota` da tabela das
+  classificações; sem ela, o item fica sem calcular, com o motivo. A alíquota informada vale para a chamada inteira (a
+  calculadora recebe uma por item): os itens do 010 se calculam à parte.
+- **A redução da base (CST 222):** a 222001 (o transporte internacional de passageiros com ida e volta vendidas
+  juntas) tem a base na metade do valor cobrado (art. 12, § 8º da LC 214/2025), no centavo com o meio indo para o
+  par, como a calculadora a mostra (200 vira 100). A calculadora guarda a metade com 8 casas e multiplica a alíquota
+  por ela; o RNFe multiplica a base que vai no XML, a fórmula da NT: com o valor cobrado de centavo ímpar, o valor
+  pode sair 0,01 diferente (18,89 dá 9,44 de base e 0,08 de CBS em 2026; na calculadora, 0,09). É a terceira escolha
+  documentada. A classificação nova do CST 222 fica sem calcular até a parte da base dela entrar no código; com a base
+  pronta, calcula.
+- **A revisão independente (18/11)** achou, além da 222001 e do 011 acima: a mudança do "caso supere" valendo também
+  nos campos do DANFSe que só trazem o tamanho (5 campos passavam do tamanho; agora o texto com as reticências cabe
+  nele), a borda a 0,132 cm da beirada (o traço é centrado no caminho; agora o lado de fora fica a 0,15 cm), a
+  logomarca tratada como tamanho máximo (a coluna da NT é "Tamanhos Mínimos": agora 4,20 cm por 0,85 cm) e os 1.997
+  caracteres das informações complementares descontando a linha dos totais (a NT diz "sem prejuízo" dela: agora os
+  1.997 são só do texto). E testes que não pegavam o que diziam (datas no mesmo fuso de Brasília, o nome cortado pela
+  largura antes dos 77, a descrição entre 50 e 100 repetições): refeitos. Ficou como a NT diz, e com a dúvida
+  levada ao usuário: o PIS e a COFINS retidos só no código 1 do `tpRetPisCofins` (a NT diz "= 1" e "nos demais
+  casos", o valor informado, mesmo listando na mesma tabela os códigos 3 a 9 do leiaute novo, que também retêm). A
+  régua da calculadora compara as alíquotas, a redução, o diferimento e os valores; a base vai pronta (a da
+  calculadora, porque o RNFe não calcula o Imposto Seletivo), menos no CST 222.
+- **Ficou de fora, de propósito:** a 221001 (a alíquota fictícia), as 220 e as outras 221 (a calculadora também não
+  as calcula) e a compra governamental (a calculadora usa um redutor zero "para facilitar a implementação", V0023, sem
+  lei).
+- **O DANFSe pela NT SE/CGNFS-e 008 versão 1.02 (14/07/2026):** a revisão contra o gerador oficial mostrou que o
+  gerador diverge da NT em vários pontos, e o RNFe segue a NT. O que mudou no RNFe, pela NT: a logomarca oficial no
+  cabeçalho, no tamanho mínimo do quadro (baixada do endereço da NT por `ferramentas/gerar_logo_do_danfse.R`), a
+  borda de 1 ponto com o lado de fora a 0,15 cm da beirada e as linhas de meio ponto, as datas e as horas como estão
+  no XML, as reticências pelos tamanhos da NT ("caso supere" 37, 77, 167, 1.297 e 1.997 caracteres; nos campos que
+  só trazem o tamanho, o texto com as reticências cabe nele), todos os itens do pedido, a marca d'água da nota
+  cancelada ou substituída (o novo argumento `situacao`) e, com o PIS e a COFINS retidos, as retidas somando os dois
+  e os próprios zerados.
+- **O Simples Nacional:** a calculadora do Simples parte das alíquotas que recebe; liga-se ao grupo novo do pacote
+  010h da NF-e (`gTribSN`), que o robô dos schemas já deixou pronto num ramo (aviso #11). Fica para quando o usuário
+  pedir a troca desse pacote.

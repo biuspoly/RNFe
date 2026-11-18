@@ -123,6 +123,144 @@ test_that("2027 com a CBS que voc\u00ea informa, sem o PIS e a COFINS na base", 
   expect_match(em_2030$observacao[1], "Sem a al\u00edquota do IBS da UF do ano")
 })
 
+test_that("a al\u00edquota uniforme: a nacional (011) \u00e9 a do ano; a setorial (010), a do ano at\u00e9 2026, depois a informada", {
+  itens = data.frame(cst_ibs_cbs = c("010", "011", "000"), classificacao_ibs_cbs = c("010002", "011002", "000001"),
+                     base = 1000)
+  em_2026 = ibs_cbs_calcular(itens, data = "2026-11-04")$itens
+  expect_true(all(em_2026$calculado))
+  expect_equal(em_2026$aliquota_cbs, c(0.9, 0.9, 0.9))
+  # O 011 leva a redução da classificação (60% nos planos de saúde).
+  expect_equal(em_2026$reducao_cbs, c(NA, 60, NA))
+  expect_equal(em_2026$aliquota_efetiva_cbs[2], 0.36)
+  expect_equal(em_2026$valor_cbs, c(9, 3.6, 9))
+  expect_equal(em_2026$valor_ibs_uf, c(1, 0.4, 1))
+  # De 2027 em diante a setorial é a da lei do regime: sem a que você informa, fica sem calcular. A nacional (a de
+  # referência) segue a tabela, como o 000: o IBS sai e a CBS, ainda sem publicar, fica vazia.
+  em_2027 = ibs_cbs_calcular(itens, data = "2027-03-10")$itens
+  expect_identical(em_2027$calculado, c(FALSE, FALSE, FALSE))
+  expect_match(em_2027$observacao[1], "regime espec\u00edfico")
+  expect_equal(em_2027$aliquota_ibs_uf, c(NA, 0.05, 0.05))
+  expect_equal(em_2027$valor_ibs_uf, c(NA, 0.2, 0.5))
+  expect_match(em_2027$observacao[2:3], "Sem a al\u00edquota da CBS do ano")
+  expect_no_match(em_2027$observacao[2:3], "regime espec\u00edfico")
+  # Com as alíquotas informadas, calcula, como a calculadora oficial.
+  informadas = ibs_cbs_calcular(itens[1:2, ], data = "2027-03-10",
+                                aliquotas = c(ibs_uf = 0, ibs_municipio = 0, cbs = 10.85))$itens
+  expect_true(all(informadas$calculado))
+  expect_equal(informadas$valor_cbs, c(108.5, 43.4))
+})
+
+# Troca, na memória da sessão, a tabela das classificações que o cálculo lê.
+usar_estas_classificacoes = function(classificacoes) {
+  tabelas_ja_lidas[["classificacao_ibs_cbs"]] = classificacoes
+}
+
+test_that("a redu\u00e7\u00e3o da base (CST 222): a metade do valor cobrado, com o meio centavo para o par", {
+  itens = item_solto("222", "222001", valor_produto = c(200, 200.01, 200.03))
+  calculado = ibs_cbs_calcular(itens, data = "2026-11-04")$itens
+  expect_equal(calculado$base, c(100, 100, 100.02))
+  expect_equal(calculado$valor_cbs, c(0.9, 0.9, 0.9))
+  expect_equal(calculado$valor_ibs_uf, c(0.1, 0.1, 0.1))
+  expect_true(all(calculado$calculado))
+  # O valor sai da base que vai no XML (9,44 vezes 0,9%), como a NT confere; a calculadora multiplica a metade com 8
+  # casas (9,445) e daria 0,09.
+  centavo_impar = ibs_cbs_calcular(item_solto("222", "222001", valor_produto = 18.89), data = "2026-11-04")$itens
+  expect_equal(c(centavo_impar$base, centavo_impar$valor_cbs), c(9.44, 0.08))
+  # A base pronta já é a reduzida.
+  pronta = ibs_cbs_calcular(item_solto("222", "222001", base = 100), data = "2026-11-04")$itens
+  expect_equal(pronta$base, 100)
+  # A classificação nova do CST 222, sem a parte da base no RNFe, fica sem calcular, a não ser com a base pronta.
+  classificacoes = tabela_fiscal("classificacao_ibs_cbs")
+  nova = classificacoes[classificacoes$codigo == "222001", ]
+  nova$codigo = "222999"
+  usar_estas_classificacoes(rbind(classificacoes, nova))
+  sem_a_parte = tryCatch(ibs_cbs_calcular(item_solto("222", "222999", valor_produto = 200), data = "2026-11-04")$itens,
+                         finally = usar_estas_classificacoes(classificacoes))
+  expect_false(sem_a_parte$calculado)
+  expect_match(sem_a_parte$observacao, "redu\u00e7\u00e3o da base desta classifica\u00e7\u00e3o")
+  usar_estas_classificacoes(rbind(classificacoes, nova))
+  com_a_base = tryCatch(ibs_cbs_calcular(item_solto("222", "222999", base = 80), data = "2026-11-04")$itens,
+                        finally = usar_estas_classificacoes(classificacoes))
+  expect_true(com_a_base$calculado)
+  expect_equal(com_a_base$valor_cbs, 0.72)
+})
+
+# Os campos que a régua da calculadora oficial compara.
+campos_da_regua = function() {
+  campos = c("base", "valor_ibs")
+  for (comeco in c("aliquota_", "reducao_", "aliquota_efetiva_", "diferimento_", "valor_diferido_", "valor_",
+                   "aliquota_regular_", "valor_regular_")) {
+    campos = c(campos, paste0(comeco, PARTES_DO_CALCULO))
+  }
+  campos
+}
+
+test_that("o teste de 262 itens da calculadora oficial: tudo igual, menos as duas escolhas da NT", {
+  regua = utils::read.csv(test_path("calculadora_oficial", "teste_varios_itens.csv"), encoding = "UTF-8",
+                          colClasses = c(cst_ibs_cbs = "character", classificacao_ibs_cbs = "character",
+                                         cst_regular = "character", classificacao_regular = "character"))
+  expect_identical(nrow(regua), 262L)
+  # A calculadora recebe as alíquotas nominais por item; o RNFe, por chamada: um cálculo para cada grupo.
+  grupos = paste(regua$aliquota_nominal_ibs_uf, regua$aliquota_nominal_ibs_municipio, regua$aliquota_nominal_cbs)
+  calculados = list()
+  for (grupo in unique(grupos)) {
+    do_grupo = regua[grupos == grupo, ]
+    aliquotas = c(ibs_uf = do_grupo$aliquota_nominal_ibs_uf[1], ibs_municipio = do_grupo$aliquota_nominal_ibs_municipio[1],
+                  cbs = do_grupo$aliquota_nominal_cbs[1])
+    aliquotas = aliquotas[!is.na(aliquotas)]
+    if (length(aliquotas) == 0) {
+      aliquotas = NULL
+    }
+    entrada = data.frame(item = do_grupo$item, cst_ibs_cbs = do_grupo$cst_ibs_cbs,
+                         classificacao_ibs_cbs = do_grupo$classificacao_ibs_cbs, cst_regular = do_grupo$cst_regular,
+                         classificacao_regular = do_grupo$classificacao_regular, base = do_grupo$base,
+                         valor_produto = do_grupo$valor_produto, diferimento_ibs_uf = do_grupo$diferimento,
+                         diferimento_ibs_municipio = do_grupo$diferimento, diferimento_cbs = do_grupo$diferimento)
+    calculados[[length(calculados) + 1]] = ibs_cbs_calcular(entrada, data = "2027-01-01", aliquotas = aliquotas)$itens
+  }
+  calculados = do.call(rbind, calculados)
+  calculados = calculados[order(calculados$item), ]
+  # Só a 221001 fica de fora: nela a calculadora usa uma alíquota que ela mesma chama de fictícia.
+  expect_identical(sum(calculados$calculado), 260L)
+  expect_identical(unique(calculados$classificacao_ibs_cbs[!calculados$calculado]), "221001")
+  # A base da redução da base (CST 222) saiu dos componentes: a metade dos 200,00 cobrados, como na calculadora.
+  expect_equal(calculados$base[calculados$cst_ibs_cbs == "222"], c(100, 100))
+
+  colunas_oficiais = c("item", grep("^oficial_", names(regua), value = TRUE))
+  comparados = merge(calculados[calculados$calculado, ], regua[, colunas_oficiais], by = "item")
+  tabela_da_classificacao = tabela_fiscal("classificacao_ibs_cbs")
+  com_tributacao_regular = tabela_da_classificacao$codigo[tabela_da_classificacao$grupo_tributacao_regular %in% 1]
+  regular_no_200 = comparados$cst_ibs_cbs == "200" & comparados$classificacao_ibs_cbs %in% com_tributacao_regular
+  campos_do_grupo_de_reducao = c(paste0("reducao_", PARTES_DO_CALCULO), paste0("aliquota_efetiva_", PARTES_DO_CALCULO))
+  escolha_da_ub26_20 = 0
+  escolha_da_ub54a_10 = 0
+  outras_diferencas = character()
+  for (campo in campos_da_regua()) {
+    do_rnfe = comparados[[campo]]
+    oficial = comparados[[paste0("oficial_", campo)]]
+    igual = (is.na(do_rnfe) & is.na(oficial)) | (!is.na(do_rnfe) & !is.na(oficial) & abs(do_rnfe - oficial) < 1e-9)
+    for (posicao in which(!igual)) {
+      # A UB26-20 exige o grupo da redução na classificação com tributação regular do CST 200; a calculadora não o traz.
+      pela_ub26_20 = campo %in% campos_do_grupo_de_reducao & regular_no_200[posicao] & is.na(oficial[posicao])
+      # A UB54a-10: o IBS do item é a soma da UF e do município; a calculadora arredonda o total à parte.
+      soma_das_partes = comparados$valor_ibs_uf[posicao] + comparados$valor_ibs_municipio[posicao]
+      pela_ub54a_10 = campo == "valor_ibs" & abs(do_rnfe[posicao] - soma_das_partes) < 1e-9 &
+        abs(do_rnfe[posicao] - oficial[posicao]) < 0.01 + 1e-9
+      if (pela_ub26_20) {
+        escolha_da_ub26_20 = escolha_da_ub26_20 + 1
+      } else if (pela_ub54a_10) {
+        escolha_da_ub54a_10 = escolha_da_ub54a_10 + 1
+      } else {
+        outras_diferencas = c(outras_diferencas, paste("item", comparados$item[posicao], campo, do_rnfe[posicao],
+                                                       oficial[posicao]))
+      }
+    }
+  }
+  expect_identical(outras_diferencas, character())
+  expect_identical(escolha_da_ub26_20, 24)
+  expect_identical(escolha_da_ub54a_10, 11)
+})
+
 test_that("o que fica sem calcular vem com o motivo", {
   itens = data.frame(cst_ibs_cbs = c("620", "830", "510", "550", "000", NA, "000", "000"),
                      classificacao_ibs_cbs = c("620001", "830001", "510001", "550001", "200047", NA, "000001", "000001"),

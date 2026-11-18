@@ -4,19 +4,23 @@
 \alias{danfse_pdf}
 \title{DANFSe em PDF}
 \source{
-Nota Técnica SE/CGNFS-e 008/2026 (o DANFSe v2.0, 05/05/2026), itens 2.1
-a 2.5 e o Anexo I; na nota do leiaute novo, a Nota Técnica SE/CGNFS-e 009,
+Nota Técnica SE/CGNFS-e 008/2026, versão 1.02 (o DANFSe v2.0,
+14/07/2026), itens 2.1 a 2.5 e o Anexo I, e a logomarca da NFS-e no endereço
+que ela dá; na nota do leiaute novo, a Nota Técnica SE/CGNFS-e 009,
 versão 1.01 (item 2.3, a dedução do ISSQN, e 2.11, o destinatário), e o schema
 dela na Produção Restrita (NFSe-ESQUEMAS_XSD-PRODREST-v1.01-20261020: o
 destinatário no \code{IBSCBS} e a inscrição imobiliária em cada unidade do imóvel).
 }
 \usage{
-danfse_pdf(xml, arquivo)
+danfse_pdf(xml, arquivo, situacao = "normal")
 }
 \arguments{
 \item{xml}{A NFS-e Nacional: o caminho do arquivo ou o texto do XML.}
 
 \item{arquivo}{O PDF a gravar.}
+
+\item{situacao}{\code{"normal"}, \code{"cancelada"} ou \code{"substituida"} (a marca d'água
+dos itens 2.5.1 e 2.5.2 da NT).}
 }
 \value{
 O caminho do PDF, invisível.
@@ -30,10 +34,18 @@ consulta pública, o prestador, o tomador, o destinatário e o intermediário
 municipal, a federal (o PIS e a COFINS próprios até a competência de 2026,
 pela data em \code{tabela_fiscal("marcos_ibs_cbs")}) e
 a do IBS e da CBS, os totais, as informações complementares (com os totais
-aproximados dos tributos) e o canhoto. O campo sem informação leva um traço.
-A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e".
+aproximados dos tributos) e o canhoto, com a logomarca oficial da NFS-e no
+cabeçalho. O campo sem informação leva um traço; o texto que passa do
+tamanho que a NT sugere leva reticências. As datas e as horas saem como
+estão no XML. Na NFS-e com o PIS e a COFINS retidos (\code{tpRetPisCofins} 1), as
+contribuições sociais retidas somam a CSLL, o PIS e a COFINS, e o PIS e a
+COFINS de apuração própria saem zerados (a versão 1.02 da NT).
 }
 \details{
+A NFS-e cancelada ou substituída leva a marca d'água "CANCELADA" ou
+"SUBSTITUÍDA": o XML da nota não diz isso (o cancelamento é um evento), e a
+situação vai em \code{situacao} (os eventos da nota vêm em \code{\link[=nfse_situacao]{nfse_situacao()}}).
+
 Precisa do pacote \code{qrcode}.
 }
 \examples{
@@ -45,5 +57,5 @@ if (requireNamespace("qrcode", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=nfse_ler]{nfse_ler()}}, \code{\link[=nfse_emitir]{nfse_emitir()}}
+\code{\link[=nfse_ler]{nfse_ler()}}, \code{\link[=nfse_emitir]{nfse_emitir()}}, \code{\link[=nfse_situacao]{nfse_situacao()}}
 }

@@ -10,6 +10,7 @@ danfce_pdf("nfce_autorizada.xml", "danfce.pdf")      # a bobina de 80 mm, com o 
 dacte_pdf("cte_autorizado.xml", "dacte.pdf")         # o CT-e e o CT-e OS
 damdfe_pdf("mdfe_autorizado.xml", "damdfe.pdf")      # o MDF-e (o modal rodoviário completo)
 danfse_pdf("nfse.xml", "danfse.pdf")                 # o DANFSe v2.0 da NFS-e Nacional
+danfse_pdf("nfse.xml", "danfse.pdf", situacao = "cancelada")   # com a marca d'água (ou "substituida")
 dacce_pdf("carta_de_correcao.xml", "carta.pdf")      # a carta de correção da NF-e ou do CT-e
 ```
 
@@ -21,11 +22,15 @@ em papel de 10 cm, para a chave com o CNPJ alfanumérico caber com o módulo mí
 DANFE Simplificado Tipo 2 da NT 2026.002 não entrou: a nota técnica não traz o leiaute dele. O DANFE NFC-e segue o
 Manual de Padrões Técnicos do DANFE NFC-e e QR Code (as divisões da bobina, a contingência e o consumidor); o DACTE, o
 do CT-e 4.00 (também o DACTE OS); o DAMDFE, o Anexo II do Manual do MDF-e; e o DANFSe, a Nota Técnica SE/CGNFS-e
-008/2026 (a versão 2.0, com os blocos do IBS e da CBS e as linhas únicas de quando a nota não tem tomador,
-destinatário, intermediário ou ISSQN); na nota do leiaute da NT SE/CGNFS-e 009, o destinatário vem do `IBSCBS`
-(como no schema oficial dela) ou do `infDPS` (como no texto do item 2.11), a inscrição imobiliária vem de cada unidade
-do imóvel (todas, separadas por vírgula) e a dedução do ISSQN soma o ajuste informado e o calculado, como a fórmula da
-base (item 2.3). A logomarca da NFS-e não vai: no lugar dela, o texto "NFS-e". A carta de
+008/2026, versão 1.02 (o DANFSe 2.0, com os blocos do IBS e da CBS e as linhas únicas de quando a nota não tem tomador,
+destinatário, intermediário ou ISSQN): a logomarca oficial da NFS-e no cabeçalho, a borda de 1 ponto e as linhas de
+meio ponto, as datas e as horas como estão no XML, as reticências no texto que passa do tamanho da NT (77 caracteres
+no nome, 1.297 na descrição do serviço, 1.997 nas informações complementares), todos os itens do pedido, a marca
+d'água da nota cancelada ou substituída (o XML não diz isso: a situação vai em `situacao`) e, com o PIS e a COFINS
+retidos, as contribuições retidas somando os dois e os de apuração própria zerados. Na nota do leiaute da NT
+SE/CGNFS-e 009, o destinatário vem do `IBSCBS` (como no schema oficial dela) ou do `infDPS` (como no texto do item
+2.11), a inscrição imobiliária vem de cada unidade do imóvel (todas, separadas por vírgula) e a dedução do ISSQN soma
+o ajuste informado e o calculado, como a fórmula da base (item 2.3). A carta de
 correção não tem modelo oficial: o desenho é o do RNFe, com a chave em código de barras, o registro na SEFAZ, a
 correção e as condições de uso. Os documentos de homologação saem com a marca de sem valor fiscal (no DANFSe, "NFS-e
 SEM VALIDADE JURÍDICA"). Na contingência, o DANFE com formulário de segurança leva o segundo código de barras "Dados da

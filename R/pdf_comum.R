@@ -162,12 +162,19 @@ desenhar_texto = function(texto, esquerda, superior, tamanho = 8, negrito = FALS
                   just = c(alinhamento, "top"), gp = grid::gpar(fontsize = tamanho, fontface = if (negrito) "bold" else "plain"))
 }
 
-# Uma linha (posições em centímetros, do canto de cima).
-desenhar_linha = function(x_inicial, y_inicial, x_final, y_final, tracejada = FALSE) {
+# Uma linha (posições em centímetros, do canto de cima). A espessura vai no `lwd` do R, que no PDF é 1/96 de polegada
+# (0,75 ponto) por unidade: a linha de 0,5 ponto é o lwd ESPESSURA_DE_MEIO_PONTO.
+desenhar_linha = function(x_inicial, y_inicial, x_final, y_final, tracejada = FALSE, espessura = 0.5) {
   altura = altura_da_folha()
   grid::grid.lines(x = grid::unit(c(x_inicial, x_final), "cm"), y = grid::unit(altura - c(y_inicial, y_final), "cm"),
-                   gp = grid::gpar(lwd = 0.5, lty = if (tracejada) "dashed" else "solid"))
+                   gp = grid::gpar(lwd = espessura, lty = if (tracejada) "dashed" else "solid"))
 }
+
+# O lwd do R para a linha de meio ponto e de um ponto (o lwd 1 é 1/96 de polegada; o ponto, 1/72).
+ESPESSURA_DE_MEIO_PONTO = 0.5 * 96 / 72
+ESPESSURA_DE_UM_PONTO = 96 / 72
+# Metade de um ponto, em centímetros: o quanto a linha de um ponto passa, para cada lado, do caminho em que é desenhada.
+METADE_DO_PONTO_EM_CM = 2.54 / 72 / 2
 
 # A largura de um texto, em centímetros, na fonte aberta e no tamanho pedido.
 largura_do_texto = function(textos, tamanho, negrito = FALSE) {
