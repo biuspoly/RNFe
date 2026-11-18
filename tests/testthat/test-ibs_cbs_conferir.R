@@ -33,15 +33,79 @@ test_that("o exemplo certo confere em todas as regras", {
   expect_identical(nrow(todas$conferencias), todas$notas$regras_conferidas)
   expect_true(all(todas$conferencias$confere))
   expect_false(anyNA(todas$conferencias$codigo_sefaz))
-  # Toda regra da conferência está na lista das regras, com o código e a data de produção (só as de implementação
-  # futura, que a conferência ainda não usa, ficam sem a data).
+  # Toda regra da conferência está na lista das regras, com o código e a data de produção ou, a que só vale na
+  # homologação (a UB12-10, nesta nota de tpAmb 2), a de homologação. As de implementação futura, que a conferência
+  # ainda não usa, ficam sem as duas.
   regras = regras_do_ibs_cbs()
   expect_true(all(todas$conferencias$regra %in% regras$regra))
-  expect_false(anyNA(regras$em_producao_desde[regras$regra %in% todas$conferencias$regra]))
+  usadas = regras[regras$regra %in% todas$conferencias$regra, ]
+  expect_false(any(is.na(usadas$em_producao_desde) & is.na(usadas$em_homologacao_desde)))
+  expect_true("UB12-10" %in% todas$conferencias$regra)
   expect_true(all(grepl("mplementa\u00e7\u00e3o futura", regras$observacao[is.na(regras$em_producao_desde)])))
   valor_da_cbs = linha_da_regra(todas$conferencias, "UB67-10")
   expect_identical(c(valor_da_cbs$no_documento, valor_da_cbs$esperado), c("0.45", "0.45"))
   expect_identical(valor_da_cbs$mensagem, "Valor da CBS difere do calculado")
+})
+
+test_that("o grupo IBSCBS exigido em cada item (UB12-10): na homologa\u00e7\u00e3o, no regime normal, tamb\u00e9m na nota sem ele", {
+  sem_o_grupo_no_item_1 = sub("(?s)<IBSCBS>.*?</IBSCBS>", "", texto_do_exemplo(), perl = TRUE)
+  conferida = ibs_cbs_conferir(sem_o_grupo_no_item_1, todas_as_regras = TRUE)$conferencias
+  exigencia = conferida[conferida$regra == "UB12-10", ]
+  expect_identical(exigencia$item, 1:2)
+  expect_identical(exigencia$confere, c(FALSE, TRUE))
+  expect_identical(exigencia$codigo_sefaz[1], "1115")
+  expect_identical(exigencia$mensagem[1], "Grupo IBSCBS n\u00e3o informado")
+  # A nota sem nenhum tributo novo também é conferida nesta regra (e só nela).
+  sem_nenhum = gsub("(?s)<IBSCBS>.*?</IBSCBS>", "", texto_do_exemplo(), perl = TRUE)
+  sem_nenhum = sub("(?s)<IBSCBSTot>.*?</IBSCBSTot>", "", sem_nenhum, perl = TRUE)
+  so_a_exigencia = ibs_cbs_conferir(sem_nenhum)
+  expect_identical(unique(so_a_exigencia$conferencias$regra), "UB12-10")
+  expect_identical(so_a_exigencia$conferencias$confere, c(FALSE, FALSE))
+  expect_identical(so_a_exigencia$notas$regras_erradas, 2L)
+  # Fora dela: a nota de produção (a regra ainda não tem data lá), a do Simples Nacional e a emitida antes de 01/07/2026.
+  nenhuma_linha = function(texto) {
+    conferencias = ibs_cbs_conferir(texto, todas_as_regras = TRUE)$conferencias
+    !("UB12-10" %in% conferencias$regra)
+  }
+  expect_true(nenhuma_linha(trocar_no_xml(sem_nenhum, "<tpAmb>2</tpAmb>", "<tpAmb>1</tpAmb>")))
+  expect_true(nenhuma_linha(trocar_no_xml(sem_nenhum, "<CRT>3</CRT>", "<CRT>1</CRT>")))
+  expect_true(nenhuma_linha(com_emissao_em(sem_nenhum, "2026-06-30")))
+})
+
+test_that("as exce\u00e7\u00f5es da UB12-10: a devolu\u00e7\u00e3o de NF-e de antes de 2027 e o combust\u00edvel do ICMS monof\u00e1sico", {
+  sem_nenhum = gsub("(?s)<IBSCBS>.*?</IBSCBS>", "", texto_do_exemplo(), perl = TRUE)
+  sem_nenhum = sub("(?s)<IBSCBSTot>.*?</IBSCBSTot>", "", sem_nenhum, perl = TRUE)
+  exigencia = function(texto) {
+    conferencias = ibs_cbs_conferir(texto, todas_as_regras = TRUE)$conferencias
+    conferencias[conferencias$regra == "UB12-10", ]
+  }
+  devolucao = trocar_no_xml(sem_nenhum, "<finNFe>1</finNFe>", "<finNFe>4</finNFe>")
+  referenciando = function(texto, chave) {
+    trocar_no_xml(texto, "</ide>", paste0("<NFref><refNFe>", chave, "</refNFe></NFref></ide>"))
+  }
+  # A devolução de uma NF-e de 2026 (no cabeçalho) não exige o grupo; a de uma NF-e de 2027, sim.
+  expect_identical(nrow(exigencia(referenciando(devolucao, "35261011222333000181550010000010011123456785"))), 0L)
+  de_2027 = exigencia(referenciando(devolucao, "35270111222333000181550010000010011123456785"))
+  expect_identical(de_2027$confere, c(FALSE, FALSE))
+  # A complementar também; a nota normal que referencia uma de 2026, não.
+  complementar = trocar_no_xml(sem_nenhum, "<finNFe>1</finNFe>", "<finNFe>2</finNFe>")
+  expect_identical(nrow(exigencia(referenciando(complementar, "35261011222333000181550010000010011123456785"))), 0L)
+  normal = exigencia(referenciando(sem_nenhum, "35261011222333000181550010000010011123456785"))
+  expect_identical(normal$confere, c(FALSE, FALSE))
+  # A NFC-e de 2026 referenciada: a NT fala de NF-e, e o item fica sem conferir, com o motivo.
+  de_nfce = exigencia(referenciando(devolucao, "23261011444777000161650030000000779135724686"))
+  expect_identical(de_nfce$confere, c(NA, NA))
+  expect_match(de_nfce$observacao[1], "NFC-e emitida antes de 2027")
+  # A referência no item (DFeReferenciado) vale para o item dela.
+  no_item = trocar_no_xml(devolucao, "</imposto>", paste0(
+    "</imposto><DFeReferenciado><chaveAcesso>35261011222333000181550010000010011123456785</chaveAcesso>",
+    "</DFeReferenciado>"))
+  expect_identical(exigencia(no_item)$item, 2L)
+  # O combustível da tabela do ICMS monofásico (o GLP, 210203001) não exige o grupo.
+  com_glp = trocar_no_xml(sem_nenhum, "</prod>", "<comb><cProdANP>210203001</cProdANP></comb></prod>")
+  expect_identical(exigencia(com_glp)$item, 2L)
+  com_outro_codigo = trocar_no_xml(sem_nenhum, "</prod>", "<comb><cProdANP>999999999</cProdANP></comb></prod>")
+  expect_identical(exigencia(com_outro_codigo)$item, 1:2)
 })
 
 test_that("os erros de al\u00edquota, de conta e de total, com o c\u00f3digo da rejei\u00e7\u00e3o", {

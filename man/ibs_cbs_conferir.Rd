@@ -90,7 +90,13 @@ nos totais.
 }
 
 Como na NT, as regras só valem para o documento com o IBS, a CBS ou o
-Imposto Seletivo preenchidos: a nota sem eles não é conferida.
+Imposto Seletivo preenchidos: a nota sem eles não é conferida. A exceção é
+a regra que exige o grupo \code{IBSCBS} em cada item (UB12-10), que vale também
+na nota sem ele: hoje, pela NT, só na homologação, para a nota do emitente
+do regime normal (CRT 3) emitida desde 01/07/2026, e por isso o RNFe a
+confere só na nota de homologação (\code{tpAmb} 2), com as duas exceções da
+regra (a devolução e a complementar de NF-e emitida antes de 2027, e o
+combustível da tabela do ICMS monofásico).
 
 As datas de produção de cada regra estão em
 \code{tabela_fiscal("regras_ibs_cbs")}, e as datas da Reforma que as regras
@@ -103,7 +109,9 @@ Cada regra vale como a SEFAZ a aplicava no dia da emissão (\code{dhEmi}):
 \item a regra só é conferida na nota emitida depois de ela entrar em produção
 (pelo cronograma da NT: 10/11/2025 para a maioria, 02/02/2026 e
 03/08/2026 para as que entraram depois, e 16/11/2026 para o monofásico
-da versão 1.50 e as mudanças da devolução da versão 1.53);
+da versão 1.50 e as mudanças da devolução da versão 1.53); a que a NT põe
+antes na homologação, também na nota de homologação emitida desde a data
+dela (a coluna \code{em_homologacao_desde} de \code{tabela_fiscal("regras_ibs_cbs")});
 \item quando a regra mudou depois da emissão, ou quando a linha do CST ou da
 classificação que ela consulta mudou numa versão da tabela que talvez
 ainda não estivesse em produção (veja

@@ -39,7 +39,8 @@ ponto percentual, e fica vazia até ser publicada. A tabela vai até 2028.
 As datas da Reforma não estão no código: ficam em `tabela_fiscal("marcos_ibs_cbs")`, uma por linha, com a base
 legal (por exemplo, a CBS ad rem no monofásico a partir de 2027, a nota de crédito do tipo 02 a partir de 2029, o ICMS
 fora da base a partir de 2033). As regras de validação ficam em `tabela_fiscal("regras_ibs_cbs")`, com a data em que
-cada uma entrou em produção; as que a NT deixa para implementação futura também estão lá, sem a data. Quando a lei ou
+cada uma entrou em produção (e, na que a NT põe antes só na homologação, como a UB12-10, a data de lá); as que a NT
+deixa para implementação futura também estão lá, sem a data. Quando a lei ou
 a NT muda uma data, muda a linha da tabela, e `tabelas_atualizar()` leva a mudança a quem já tem o pacote. Conferir
 uma regra nova ainda pede o código dela, numa versão nova do pacote.
 `ferramentas/gerar_tabelas.R` baixa tudo e refaz as cópias; um robô faz isso toda semana e abre um aviso

@@ -397,7 +397,13 @@ W59d-10  gMono/vCBSMonoRet           total_cbs_monofasica_retida   monofasico_cb
 #'   nos totais.
 #'
 #' Como na NT, as regras só valem para o documento com o IBS, a CBS ou o
-#' Imposto Seletivo preenchidos: a nota sem eles não é conferida.
+#' Imposto Seletivo preenchidos: a nota sem eles não é conferida. A exceção é
+#' a regra que exige o grupo `IBSCBS` em cada item (UB12-10), que vale também
+#' na nota sem ele: hoje, pela NT, só na homologação, para a nota do emitente
+#' do regime normal (CRT 3) emitida desde 01/07/2026, e por isso o RNFe a
+#' confere só na nota de homologação (`tpAmb` 2), com as duas exceções da
+#' regra (a devolução e a complementar de NF-e emitida antes de 2027, e o
+#' combustível da tabela do ICMS monofásico).
 #'
 #' As datas de produção de cada regra estão em
 #' `tabela_fiscal("regras_ibs_cbs")`, e as datas da Reforma que as regras
@@ -409,7 +415,9 @@ W59d-10  gMono/vCBSMonoRet           total_cbs_monofasica_retida   monofasico_cb
 #' - a regra só é conferida na nota emitida depois de ela entrar em produção
 #'   (pelo cronograma da NT: 10/11/2025 para a maioria, 02/02/2026 e
 #'   03/08/2026 para as que entraram depois, e 16/11/2026 para o monofásico
-#'   da versão 1.50 e as mudanças da devolução da versão 1.53);
+#'   da versão 1.50 e as mudanças da devolução da versão 1.53); a que a NT põe
+#'   antes na homologação, também na nota de homologação emitida desde a data
+#'   dela (a coluna `em_homologacao_desde` de `tabela_fiscal("regras_ibs_cbs")`);
 #' - quando a regra mudou depois da emissão, ou quando a linha do CST ou da
 #'   classificação que ela consulta mudou numa versão da tabela que talvez
 #'   ainda não estivesse em produção (veja
@@ -534,6 +542,8 @@ colunas_da_conferencia = function(xml_lido, nome_do_arquivo, todos_os_campos, ag
   referencias = referencias_das_notas(elementos_das_notas)
   chaves_anteriores = chaves_da_compra_governamental(elementos_das_notas)
   conferencias = juntar_linhas(list(
+    # A exigência do grupo IBSCBS (UB12-10) vale também na nota sem nenhum tributo novo: é ela que exige o grupo.
+    conferir_a_exigencia_do_grupo(itens_lidos, notas, referencias),
     conferir_os_codigos(itens),
     conferir_os_grupos(itens),
     conferir_as_notas_de_debito_e_credito(itens),
@@ -636,6 +646,44 @@ ncm_sem_cbs_zero_na_area_incentivada = function(ncms) {
   capitulo = substr(ncms, 1, 2)
   capitulo %in% c("93", "24") | posicao %in% c("2203", "2204", "2205", "2206", "2207", "2208", "8703") |
     (capitulo == "33" & !(posicao %in% c("3303", "3304", "3305", "3306", "3307")))
+}
+
+# UB12-10: o item da nota do emitente do regime normal (CRT 3) tem de trazer o grupo IBSCBS. Quando ela vale está na
+# tabela da regra (em homologação, para a nota emitida desde 01/07/2026; em produção, sem data). Exceção 1: a devolução
+# e a complementar que referenciam (no cabeçalho ou no item) NF-e emitida antes do marco; a NT diz NF-e, e a NFC-e
+# referenciada antes do marco deixa o item sem conferir, com o motivo. Exceção 2: o combustível (cProdANP) da tabela do
+# ICMS monofásico.
+conferir_a_exigencia_do_grupo = function(itens_lidos, notas, referencias) {
+  da_nota = match(itens_lidos$chave, notas$chave)
+  marco = marco_da_reforma("grupo_ibs_cbs_na_devolucao_desde")
+  antiga = referencias$tipo %in% c("refNFe", "refNFeSig") & (data_da_chave(referencias$chave_referenciada) < marco) %in% TRUE
+  referencias_antigas = referencias[antiga, ]
+  nota_com_nfe_antiga = itens_lidos$chave %in% referencias_antigas$chave[referencias_antigas$modelo %in% "55"]
+  nota_com_nfce_antiga = itens_lidos$chave %in% referencias_antigas$chave[referencias_antigas$modelo %in% "65"]
+  item_antigo = (data_da_chave(itens_lidos$referenciado_chave) < marco) %in% TRUE
+  modelo_do_item = substr(itens_lidos$referenciado_chave, 21, 22)
+  devolucao_ou_complementar = notas$finalidade[da_nota] %in% c("2", "4")
+  de_nfe_antiga = devolucao_ou_complementar & (nota_com_nfe_antiga | (item_antigo & modelo_do_item %in% "55"))
+  de_nfce_antiga = devolucao_ou_complementar & !de_nfe_antiga &
+    (nota_com_nfce_antiga | (item_antigo & modelo_do_item %in% "65"))
+  combustivel_monofasico = !is.na(itens_lidos$produto_anp) &
+    itens_lidos$produto_anp %in% tabela_fiscal("combustiveis_monofasicos")$codigo
+  confere = itens_lidos$tem_ibs_cbs
+  confere[de_nfce_antiga & !itens_lidos$tem_ibs_cbs] = NA
+  observacao = ifelse(de_nfce_antiga & !itens_lidos$tem_ibs_cbs,
+                      paste0("A nota referencia uma NFC-e emitida antes de ", format(marco, "%Y"), ": a exce\u00e7\u00e3o 1 da regra ",
+                             "fala da NF-e, e n\u00e3o d\u00e1 para saber se vale para a NFC-e."), NA_character_)
+  linhas_da_regra("UB12-10", itens_lidos, aplica = notas$regime_tributario[da_nota] %in% "3" & !de_nfe_antiga &
+                    !combustivel_monofasico,
+                  confere = confere, campo = "IBSCBS", no_documento = texto_da_presenca(itens_lidos$tem_ibs_cbs),
+                  esperado = "informado", observacao = observacao)
+}
+
+# O primeiro dia do mês de emissão que a chave de acesso traz (o AAMM); NA na chave sem o formato.
+data_da_chave = function(chaves) {
+  ano_e_mes = ifelse(!is.na(chaves) & grepl("^[0-9]{6}", chaves), substr(chaves, 3, 6), NA_character_)
+  as.Date(ifelse(is.na(ano_e_mes), NA_character_, paste0("20", substr(ano_e_mes, 1, 2), "-", substr(ano_e_mes, 3, 4), "-01")),
+          optional = TRUE)
 }
 
 conferir_os_codigos = function(itens) {
@@ -1173,8 +1221,8 @@ juntar_linhas = function(lista_de_linhas) {
 }
 
 # O código e a mensagem de cada regra, o filtro pelo modelo (algumas regras são só da NF-e ou só da NFC-e; a regra sem
-# modelo não vale para nenhum) e pela data (a regra só vale para a nota emitida depois de entrar em produção; sem a
-# data de emissão, valem todas as que têm data; a sem data, nunca), o que não confere hoje mas pode ter conferido na
+# modelo não vale para nenhum) e pela data (a regra só vale para a nota emitida depois de entrar em produção, ou na
+# homologação, para a de homologação; sem a data de emissão, valem todas as que têm data; a sem data, nunca), o que não confere hoje mas pode ter conferido na
 # emissão e a observação da regra quando a linha não tem uma própria.
 completar_com_as_regras = function(conferencias, notas, itens) {
   regras = regras_do_ibs_cbs()
@@ -1188,9 +1236,17 @@ completar_com_as_regras = function(conferencias, notas, itens) {
   em_producao_desde = regras$em_producao_desde[da_regra]
   # A regra sem data (implementação futura) nunca vale, nem na nota sem a data de emissão.
   em_producao = !is.na(em_producao_desde) & (is.na(emissao) | emissao >= em_producao_desde)
+  # A regra que a NT põe na homologação antes da produção vale também na nota de homologação (tpAmb 2) emitida desde a
+  # data dela.
+  ambiente = rep(NA_character_, length(da_nota))
+  if (!is.null(notas$ambiente)) {
+    ambiente = notas$ambiente[da_nota]
+  }
+  em_homologacao_desde = regras$em_homologacao_desde[da_regra]
+  em_homologacao = ambiente %in% "2" & !is.na(em_homologacao_desde) & (is.na(emissao) | emissao >= em_homologacao_desde)
   conferencias$codigo_sefaz = regras$codigo_sefaz[da_regra]
   conferencias$mensagem = regras$mensagem[da_regra]
-  conferencias = conferencias[do_modelo & em_producao, ]
+  conferencias = conferencias[do_modelo & (em_producao | em_homologacao), ]
   conferencias = sem_conferir_pela_mudanca_da_regra(conferencias, notas)
   conferencias = sem_conferir_pela_mudanca_das_tabelas(conferencias, notas, itens)
   sem_observacao = is.na(conferencias$observacao)

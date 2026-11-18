@@ -25,8 +25,11 @@ biocombustível pela mistura obrigatória da data e os totais. E o resto da nota
 entrega, os documentos referenciados, o tipo da nota de débito e de crédito, o local da operação (`cIndOp`), a
 compra governamental e as chaves dos documentos anteriores, a inscrição na Suframa (com o dígito), os tributos de
 cada item na nota de débito e de crédito, o CFOP da devolução, o ICMS monofásico, o item de outro documento citado
-no item e o total dos produtos. Como na NT, só a nota com IBS, CBS ou Imposto Seletivo é conferida. Cada
-conferência traz a
+no item e o total dos produtos. Como na NT, só a nota com IBS, CBS ou Imposto Seletivo é conferida, menos na regra
+que exige o grupo `IBSCBS` em cada item (UB12-10): pela NT, ela vale por enquanto só na homologação, para a nota do
+emitente do regime normal (CRT 3) emitida desde 01/07/2026, e é conferida na nota de homologação (`tpAmb` 2), também
+na que não traz o grupo em item nenhum; ficam fora dela a devolução e a complementar de NF-e emitida antes de 2027 e o
+combustível da tabela do ICMS monofásico. Cada conferência traz a
 regra (`UB35-10`), o código e a mensagem que a SEFAZ daria (`1041`, "Valor do IBS da UF difere do calculado") e, nas
 contas, a diferença. O valor calculado vai a 2 casas antes da tolerância de 0,01, porque a SEFAZ autoriza assim.
 
@@ -40,8 +43,8 @@ conhecido: a SEFAZ autorizou NF-e com a 200001, que a 1.40 tirou da NF-e, um mê
 Essas mudanças estão em `tabela_fiscal("mudancas_ibs_cbs")`, montada pelo robô das tabelas comparando as versões
 publicadas desde 03/10/2025.
 
-Ficam de fora as regras que a NT deixa para implementação futura (as do Imposto Seletivo entre elas; as 31 da v1.53
-estão em `tabela_fiscal("regras_ibs_cbs")`, sem a data de produção) e as quatro
+Ficam de fora as regras que a NT deixa para implementação futura (as do Imposto Seletivo entre elas; as 30 da v1.53
+estão em `tabela_fiscal("regras_ibs_cbs")`, sem a data de produção nem a de homologação) e as quatro
 que a SEFAZ confere no documento guardado na base dela (BB05-170, BB05-190, BB05-200 e VC02-50). Duas contas do
 monofásico ficam sempre sem conferir, com o motivo: o valor ad valorem que não bate com a alíquota lida como
 percentual (a NT não diz a unidade) e o valor da diferença do biocombustível (a tabela que ele usa ainda não foi

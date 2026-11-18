@@ -71,10 +71,15 @@ test_that("nenhum ano da Reforma escrito no c\u00f3digo, e todo marco usado est\
 
 test_that("as regras de implementa\u00e7\u00e3o futura est\u00e3o na tabela sem data, e o c\u00f3digo ainda n\u00e3o as usa", {
   regras = tabela_fiscal("regras_ibs_cbs")
-  futuras = regras[is.na(regras$em_producao_desde), ]
-  expect_identical(nrow(futuras), 31L)
+  expect_s3_class(regras$em_homologacao_desde, "Date")
+  sem_producao = regras[is.na(regras$em_producao_desde), ]
+  expect_identical(nrow(sem_producao), 31L)
+  expect_true(all(grepl("mplementa\u00e7\u00e3o futura", sem_producao$observacao)))
+  # A UB12-10 já vale na homologação (a nota de tpAmb 2); as outras 30 nem lá.
+  expect_identical(regras$regra[!is.na(regras$em_homologacao_desde)], "UB12-10")
+  futuras = sem_producao[is.na(sem_producao$em_homologacao_desde), ]
+  expect_identical(nrow(futuras), 30L)
   expect_true(all(c("UB01-10", "UB16-10", "UB13-40", "W60-10", "11BC01-30") %in% futuras$regra))
-  expect_true(all(grepl("mplementa\u00e7\u00e3o futura", futuras$observacao)))
   expect_false(any(duplicated(regras$regra)))
   # Sem a data, ela não sai na conferência, nem na nota sem a data de emissão (a UB16-10 tem o modelo: só a data a
   # tira). A regra com data, na mesma nota, sai.
@@ -86,8 +91,27 @@ test_that("as regras de implementa\u00e7\u00e3o futura est\u00e3o na tabela sem 
   skip_if(length(linhas) == 0, "o c\u00f3digo-fonte n\u00e3o est\u00e1 \u00e0 m\u00e3o (pacote instalado)")
   texto_do_codigo = paste(linhas, collapse = "\n")
   usadas = futuras$regra[vapply(paste0("\"", futuras$regra, "\""), grepl, logical(1), x = texto_do_codigo, fixed = TRUE)]
-  # Quem passar a conferir uma regra futura põe também a data de produção dela na tabela.
+  # Quem passar a conferir uma regra futura põe também a data de produção (ou a de homologação) dela na tabela.
   expect_identical(usadas, character())
+})
+
+test_that("a regra que s\u00f3 vale na homologa\u00e7\u00e3o sai s\u00f3 na nota de homologa\u00e7\u00e3o emitida desde a data dela", {
+  de_homologacao = data.frame(chave = "x", modelo = "55", ambiente = "2", data_emissao = as.Date("2026-11-04"))
+  expect_identical(nrow(completar_com_as_regras(uma_conferencia("UB12-10"), de_homologacao, data.frame())), 1L)
+  de_producao = de_homologacao
+  de_producao$ambiente = "1"
+  expect_identical(nrow(completar_com_as_regras(uma_conferencia("UB12-10"), de_producao, data.frame())), 0L)
+  de_antes_da_data = de_homologacao
+  de_antes_da_data$data_emissao = as.Date("2026-06-30")
+  expect_identical(nrow(completar_com_as_regras(uma_conferencia("UB12-10"), de_antes_da_data, data.frame())), 0L)
+  # Quando a NT der a data de produção, ela entra na tabela e a regra passa a valer também na nota de produção.
+  regras_do_pacote = tabela_fiscal("regras_ibs_cbs")
+  regras_com_producao = regras_do_pacote
+  regras_com_producao$em_producao_desde[regras_com_producao$regra == "UB12-10"] = as.Date("2026-10-01")
+  usar_estas_regras(regras_com_producao)
+  linhas_em_producao = tryCatch(nrow(completar_com_as_regras(uma_conferencia("UB12-10"), de_producao, data.frame())),
+                                finally = usar_estas_regras(regras_do_pacote))
+  expect_identical(linhas_em_producao, 1L)
 })
 
 test_that("a regra sem modelo na tabela n\u00e3o vale para nenhum", {

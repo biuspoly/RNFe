@@ -8,7 +8,8 @@ NOMES_DAS_TABELAS = c(
   "municipios", "codigos_dos_campos", "leiaute_efd_icms_ipi", "fontes"
 )
 COLUNAS_DE_DATA = c("inicio", "fim", "data_da_versao", "baixada_em", "publicada_em", "em_producao_ate", "inicio_cbs",
-                    "fim_cbs", "inicio_ibs", "fim_ibs", "em_producao_desde", "mudou_em_producao_em")
+                    "fim_cbs", "inicio_ibs", "fim_ibs", "em_producao_desde", "em_homologacao_desde",
+                    "mudou_em_producao_em")
 COLUNAS_DE_INDICADOR = c(
   "comunicacao", "transporte", "devolucao", "retorno", "anulacao", "remessa", "combustivel", "exclusivo_ibs_cbs",
   # O CST do IBS e da CBS: 1 = o grupo é exigido, 0 = não é permitido.
@@ -162,7 +163,9 @@ COLUNAS_DA_CONFERENCIA = c("tabela", "linhas", "md5", "versao_do_conjunto")
 #' - `"regras_ibs_cbs"`: as regras de validação da NT 2025.002 que a
 #'   conferência usa: a `regra`, os `modelos`, o `codigo_sefaz` e a
 #'   `mensagem` da rejeição, desde quando está em produção
-#'   (`em_producao_desde`), a versão da NT e a data de produção da última
+#'   (`em_producao_desde`), desde quando vale só na homologação, para a nota
+#'   emitida a partir da data, quando a NT a põe lá antes da produção
+#'   (`em_homologacao_desde`; vazio quando ela entra junto), a versão da NT e a data de produção da última
 #'   mudança que pode ter aceitado antes o que hoje não aceita
 #'   (`mudou_na_versao` e `mudou_em_producao_em`) e a `observacao`. As regras
 #'   que a NT deixa para implementação futura também estão aqui, com

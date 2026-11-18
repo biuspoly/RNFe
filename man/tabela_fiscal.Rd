@@ -180,7 +180,9 @@ linha, e \code{\link[=tabelas_atualizar]{tabelas_atualizar()}} leva a mudança a
 \item \code{"regras_ibs_cbs"}: as regras de validação da NT 2025.002 que a
 conferência usa: a \code{regra}, os \code{modelos}, o \code{codigo_sefaz} e a
 \code{mensagem} da rejeição, desde quando está em produção
-(\code{em_producao_desde}), a versão da NT e a data de produção da última
+(\code{em_producao_desde}), desde quando vale só na homologação, para a nota
+emitida a partir da data, quando a NT a põe lá antes da produção
+(\code{em_homologacao_desde}; vazio quando ela entra junto), a versão da NT e a data de produção da última
 mudança que pode ter aceitado antes o que hoje não aceita
 (\code{mudou_na_versao} e \code{mudou_em_producao_em}) e a \code{observacao}. As regras
 que a NT deixa para implementação futura também estão aqui, com

@@ -2150,3 +2150,20 @@ Pedido do usuário ("é bom deixar de um jeito que seja fácil pra caso algo pas
   `sefaz_cte_cancelar()`, que entrou agora: o RNFe autorizava o CT-e e não o cancelava. O ator interessado, numa NF-e
   de teste autorizada (100), com a transportadora como autorizada (emitente de CT-e), foi registrado no Ambiente
   Nacional (135) na terceira tentativa (o 494 até a sincronia), e a nota, cancelada (135).
+
+## Depois da etapa 6: as decisões de 16 a 18/11/2026
+
+- **A UB12-10 na pré-conferência (o usuário: "siga com 1"):** a regra que exige o grupo `IBSCBS` em cada item
+  (rejeição 1115), que pela NT 2025.002 v1.53 vale só na homologação, para a NF-e emitida desde 01/07/2026 por emitente
+  do regime normal (CRT 3), e em produção é implementação futura. A SVRS a aplicou à NF-e de teste de 11/11, e o
+  `nfe_conferir()` a deixava passar. A tabela das regras ganhou a coluna `em_homologacao_desde` (a regra vale na nota
+  de `tpAmb` 2 emitida desde a data; quando a NT der a data de produção, ela entra em `em_producao_desde`), e a
+  conferência confere a UB12-10 também na nota sem nenhum tributo novo (as outras regras, como diz a NT, só na nota
+  com eles). As exceções da regra: a devolução e a complementar que referenciam NF-e emitida antes de 2027 (o marco
+  `grupo_ibs_cbs_na_devolucao_desde`), no cabeçalho ou no item; a NFC-e referenciada antes de 2027 deixa o item sem
+  conferir, porque a NT fala de NF-e; e o combustível da tabela do ICMS monofásico. Conferido no caso real: a mesma
+  nota de teste, montada de novo sem o grupo, sai com a UB12-10 errada nos 11 itens (1115) e nada mais.
+- **A NFS-e Via (a nota do pedágio):** nenhuma nas 13.948 NFS-e do acervo; fica de fora até haver uma.
+- **A biblioteca de teste do R** (`scratchpad/rlib`, na pasta temporária do Windows) perdeu os arquivos de novo: a
+  limpeza automática da pasta temporária apaga os arquivos e deixa as pastas, e os testes do PDF e do OCR passavam a
+  ser pulados. Os pacotes sugeridos e o roxygen2 foram para a biblioteca do usuário do R, fora da pasta temporária.
