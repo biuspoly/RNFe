@@ -360,7 +360,7 @@ test_that("os itens sem nItem s\u00e3o numerados na ordem, e um item s\u00f3 pod
   expect_length(xml2::xml_find_all(xml2::read_xml(nfe_montar(um_item)), "//*[local-name()='det']"), 1)
 })
 
-test_that("a nota montada passa no schema, na pr\u00e9-confer\u00eancia e na assinatura", {
+test_that("a nota montada e assinada passa no schema", {
   skip_if_not_installed("openssl")
   nota = xml_para_lista(EXEMPLO_DA_NFE)
   nota$ide$nNF = 1002
@@ -368,9 +368,7 @@ test_that("a nota montada passa no schema, na pr\u00e9-confer\u00eancia e na ass
   nota$Id = NULL
   montada = nfe_montar(nota)
   assinada = xml_assinar(montada, test_path("certificados", "pessoa_juridica.pfx"), "teste")
-  conferida = nfe_conferir(assinada)
-  expect_true(conferida$notas$assinada)
-  expect_true(conferida$notas$schema_valido)
+  expect_length(erros_do_schema_da_nfe(assinada), 0)
   lida = nfe_ler(assinada)
   expect_identical(lida$notas$numero, 1002L)
   expect_equal(nrow(lida$itens), 2)
@@ -531,7 +529,6 @@ test_that("a NFC-e montada recebe o QR-Code da conting\u00eancia e passa no sche
   com_qrcode = nfce_qrcode(montada, "https://www.sefaz.exemplo/nfce/qrcode", "https://www.sefaz.exemplo/nfce/consulta",
                            certificado, "teste")
   assinada = xml_assinar(com_qrcode, certificado, "teste")
-  conferida = nfe_conferir(assinada)
-  expect_true(conferida$notas$schema_valido)
+  expect_length(erros_do_schema_da_nfe(assinada), 0)
   expect_match(assinada, "<infNFeSupl[^>]*><qrCode>https://www.sefaz.exemplo/nfce/qrcode")
 })

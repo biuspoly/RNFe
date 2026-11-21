@@ -49,14 +49,8 @@ protocolo de autorização (\code{cteSimpProc} ou só \code{CTeSimp}), de um arq
 de vários de uma vez ou do próprio texto do XML. Um arquivo que não dá para
 ler não interrompe os outros: fica em \code{arquivos}, com o motivo.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-dizer: o nome do CFOP e do CST e da classificação tributária do IBS e da
-CBS, pela tabela fiscal na data do CT-e, e o significado dos outros códigos
-(tipo do CT-e, serviço, modal, papel do tomador, unidade e tipo da medida
-da carga, prestação total ou parcial...) numa coluna \verb{*_descricao}, pela
-documentação do schema oficial (veja \code{tabela_fiscal("codigos_dos_campos")},
-documento \code{"CT-e"}). Campo que o CT-e não tem fica \code{NA}.
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+códigos ficam como estão no XML. Campo que o CT-e não tem fica \code{NA}.
 }
 \section{ctes}{
 
@@ -73,19 +67,14 @@ As colunas \code{tomador_} trazem os dados do próprio grupo \code{toma}; o
 recebedor, destinatário ou terceiro). Os valores, o IBS e a CBS são os
 totais do CT-e (grupo \code{total}); os de cada entrega estão em \code{entregas}. O
 ICMS é um só, do CT-e inteiro, lido como no \code{\link[=cte_ler]{cte_ler()}}: o \code{*} é o grupo do
-ICMS que o CT-e tiver, e \code{grupo_icms} diz qual. Ao lado do CFOP vem o nome
-dele (\code{cfop_titulo}); o significado do CST do ICMS (\code{cst_icms_descricao})
-segue o leiaute do CT-e, pelo grupo.
+ICMS que o CT-e tiver, e \code{grupo_icms} diz qual.
 }
 
 \section{entregas}{
 
 Uma linha por entrega (grupo \code{det}): \code{chave},
 \code{entrega} (\verb{@nItem}), \code{inicio_codigo_municipio} (\code{cMunIni}), \code{inicio_municipio} (\code{xMunIni}), \code{fim_codigo_municipio} (\code{cMunFim}), \code{fim_municipio} (\code{xMunFim}), \code{valor_prestacao} (\code{vPrest}), \code{valor_prestacao_sem_tributos} (\code{vPrestLiq}), \code{valor_receber} (\code{vRec}), \code{cst_ibs_cbs} (\code{IBSCBS/CST}), \code{classificacao_ibs_cbs} (\code{IBSCBS/cClassTrib}), \code{base_ibs_cbs} (\code{IBSCBS/gIBSCBS/vBC}), \code{aliquota_ibs_uf} (\code{IBSCBS/gIBSCBS/gIBSUF/pIBSUF}), \code{valor_ibs_uf} (\code{IBSCBS/gIBSCBS/gIBSUF/vIBSUF}), \code{aliquota_ibs_municipio} (\code{IBSCBS/gIBSCBS/gIBSMun/pIBSMun}), \code{valor_ibs_municipio} (\code{IBSCBS/gIBSCBS/gIBSMun/vIBSMun}), \code{valor_ibs} (\code{IBSCBS/gIBSCBS/vIBS}), \code{aliquota_cbs} (\code{IBSCBS/gIBSCBS/gCBS/pCBS}), \code{valor_cbs} (\code{IBSCBS/gIBSCBS/gCBS/vCBS}), \code{aliquota_ibs_simples_nacional} (\code{IBSCBS/gTribSN/gIBSSN/pIBSSN}), \code{valor_ibs_simples_nacional} (\code{IBSCBS/gTribSN/gIBSSN/vIBSSN}), \code{aliquota_cbs_simples_nacional} (\code{IBSCBS/gTribSN/gCBSSN/pCBSSN}), \code{valor_cbs_simples_nacional} (\code{IBSCBS/gTribSN/gCBSSN/vCBSSN}). \code{entrega} é o número dela no
-CT-e e liga a ela as linhas de \code{componentes}, \code{documentos} e \code{impostos}. Ao
-lado do CST e da classificação tributária do IBS e da CBS vêm
-\code{cst_ibs_cbs_descricao} e \code{classificacao_ibs_cbs_nome}, como a tabela
-fiscal registrava na data de emissão do CT-e.
+CT-e e liga a ela as linhas de \code{componentes}, \code{documentos} e \code{impostos}.
 }
 
 \section{componentes}{
@@ -122,7 +111,7 @@ anterior, que vem em \code{cte_anterior_chave};
 As quantidades da carga, uma por linha (o mesmo CT-e pode trazer o peso e o
 número de caixas, por exemplo): \code{chave},
 \code{unidade} (\code{cUnid}), \code{tipo_medida} (\code{tpMed}), \code{quantidade} (\code{qCarga}). Aqui o \code{tipo_medida} é um código
-(peso bruto da NF-e, caixas, paletes...), com o significado ao lado; no
+(peso bruto da NF-e, caixas, paletes...); no
 CT-e ele é texto livre.
 }
 

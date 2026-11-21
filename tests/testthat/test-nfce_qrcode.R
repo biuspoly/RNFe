@@ -22,9 +22,7 @@ test_that("na conting\u00eancia off-line, os sete par\u00e2metros e a assinatura
   # O grupo antigo sai, e o novo fica entre o infNFe e a assinatura, no padrão do schema.
   nota = xml2::xml_find_first(xml2::read_xml(com_qrcode), "//*[local-name()='NFe']")
   expect_identical(xml2::xml_name(xml2::xml_children(nota)), c("infNFe", "infNFeSupl", "Signature"))
-  conferida = nfe_conferir(com_qrcode)
-  expect_true(conferida$notas$schema_valido)
-  expect_equal(nrow(conferida$schema), 0)
+  expect_length(erros_do_schema_da_nfe(com_qrcode), 0)
 })
 
 test_that("o destinat\u00e1rio entra no QR-Code da conting\u00eancia: 1 e o CNPJ, 2 e o CPF, 3 e vazio", {

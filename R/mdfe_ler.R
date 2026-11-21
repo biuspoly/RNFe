@@ -49,47 +49,6 @@ informacoes_fisco            infAdic/infAdFisco                 texto
 informacoes_complementares   infAdic/infCpl                     texto
 ")
 
-# O nome do NCM do produto predominante, como a tabela registrava na data de emissão do MDF-e.
-DESCRICOES_DO_MDFE = ler_campos("
-coluna_do_codigo coluna_nova            tabela texto
-produto_ncm      produto_ncm_descricao  ncm    descricao_completa
-")
-
-# O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
-# ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
-SIGNIFICADOS_DO_MDFE = ler_campos("
-coluna_do_codigo        campo               coluna_do_contexto
-modelo                  mod                 -
-tipo_emitente           tpEmit              -
-tipo_transportador      tpTransp            -
-modal                   modal               -
-forma_emissao           tpEmis              -
-ambiente                tpAmb               -
-processo_emissao        procEmi             -
-canal_verde             indCanalVerde       -
-carregamento_posterior  indCarregaPosterior -
-unidade_peso            cUnid               -
-tipo_carga              tpCarga             -
-")
-
-SIGNIFICADOS_DO_DOCUMENTO_DO_MDFE = ler_campos("
-coluna_do_codigo   campo               coluna_do_contexto
-reentrega          indReentrega        -
-prestacao_parcial  indPrestacaoParcial -
-")
-
-SIGNIFICADOS_DO_VEICULO = ler_campos("
-coluna_do_codigo   campo  coluna_do_contexto
-tipo_rodado        tpRod  -
-tipo_carroceria    tpCar  -
-proprietario_tipo  tpProp -
-")
-
-SIGNIFICADOS_DO_SEGURO = ler_campos("
-coluna_do_codigo campo   coluna_do_contexto
-responsavel      respSeg -
-")
-
 # Os municípios de carregamento, as UFs do percurso e os municípios de descarregamento, nessa ordem.
 CAMINHO_DOS_LOCAIS = "ide/infMunCarrega|ide/infPercurso|infDoc/infMunDescarga"
 
@@ -175,11 +134,8 @@ averbacao              self::nAver                                              
 #' em `arquivos`, com o motivo. Para saber se o MDF-e foi encerrado ou
 #' cancelado, leia os eventos dele com [eventos_ler()].
 #'
-#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-#' códigos (modal, tipo de emitente, tipo de carga, rodado, carroceria...)
-#' ficam como estão no XML, e ao lado de cada um vem o que ele quer dizer, numa
-#' coluna `*_descricao`, pela documentação do schema oficial (veja
-#' `tabela_fiscal("codigos_dos_campos")`). Campo que o MDF-e não tem fica `NA`. Nenhum campo se perde: o que
+#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+#' códigos ficam como estão no XML. Campo que o MDF-e não tem fica `NA`. Nenhum campo se perde: o que
 #' não tem coluna própria está na tabela `campos`.
 #'
 #' @section mdfes:
@@ -189,9 +145,7 @@ averbacao              self::nAver                                              
 #' `r documentar_campos(CAMPOS_DO_PROTOCOLO)`;
 #' e `arquivo`. `emissao`, `inicio_viagem` e `autorizacao` são data e hora
 #' (mostradas no horário de Brasília); `data_emissao` é a data como está no
-#' MDF-e. Ao lado do NCM do produto predominante vem a descrição dele, como a
-#' tabela registrava na data de emissão (`produto_ncm_descricao`, veja
-#' [tabela_fiscal()]).
+#' MDF-e.
 #'
 #' @section locais:
 #' Os lugares da viagem, na ordem do XML: `chave`,
@@ -267,11 +221,6 @@ mdfe_ler = function(arquivos, todos_os_campos = TRUE) {
   }
   tabelas_do_mdfe$arquivos = resumo_dos_arquivos(arquivos_lidos, "mdfes", "mdfes")
   tabelas_do_mdfe$mdfes = converter_datas(tabelas_do_mdfe$mdfes, rbind(CAMPOS_DO_MDFE, CAMPOS_DO_PROTOCOLO))
-  tabelas_do_mdfe$mdfes = acrescentar_descricoes(tabelas_do_mdfe$mdfes, tabelas_do_mdfe$mdfes$data_emissao, DESCRICOES_DO_MDFE)
-  tabelas_do_mdfe$mdfes = acrescentar_significados(tabelas_do_mdfe$mdfes, "MDF-e", SIGNIFICADOS_DO_MDFE)
-  tabelas_do_mdfe$documentos = acrescentar_significados(tabelas_do_mdfe$documentos, "MDF-e", SIGNIFICADOS_DO_DOCUMENTO_DO_MDFE)
-  tabelas_do_mdfe$veiculos = acrescentar_significados(tabelas_do_mdfe$veiculos, "MDF-e", SIGNIFICADOS_DO_VEICULO)
-  tabelas_do_mdfe$seguros = acrescentar_significados(tabelas_do_mdfe$seguros, "MDF-e", SIGNIFICADOS_DO_SEGURO)
   tabelas_do_mdfe
 }
 

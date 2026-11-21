@@ -87,50 +87,12 @@ test_that("os itens, com os impostos em colunas", {
   expect_equal(itens$valor_cbs, c(0.45, 0.54))
 })
 
-test_that("ao lado de cada c\u00f3digo do item, o nome dele na data da nota", {
-  itens = nfe_ler(c(NOTA_SP, NOTA_CE))$itens
-  expect_identical(match("cfop_titulo", names(itens)), match("cfop", names(itens)) + 1L)
-  expect_identical(itens$cfop_titulo[2], "Venda de mercadoria sujeita ao regime de substitui\u00e7\u00e3o tribut\u00e1ria, cujo imposto j\u00e1 tenha sido retido anteriormente.")
-  expect_match(itens$cfop_titulo[3], "^Venda de mercadoria adquirida ou recebida de terceiros")
-  expect_identical(itens$origem_descricao[1], "Nacional, exceto as indicadas nos c\u00f3digos 3 a 5")
-  expect_identical(itens$cst_icms_descricao, c("Tributada integralmente", "ICMS cobrado anteriormente por substitui\u00e7\u00e3o tribut\u00e1ria", NA))
-  expect_identical(itens$csosn_descricao, c(NA, NA, "Tributada pelo Simples Nacional sem permiss\u00e3o de cr\u00e9dito"))
-  expect_identical(itens$cst_ipi_descricao, c("Sa\u00edda tributada", NA, NA))
-  expect_identical(itens$cst_pis_descricao, c("Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota B\u00e1sica", "Opera\u00e7\u00e3o Tribut\u00e1vel Monof\u00e1sica - Revenda a Al\u00edquota Zero", "Outras Opera\u00e7\u00f5es"))
-  expect_identical(itens$cst_cofins_descricao, itens$cst_pis_descricao)
-  expect_match(itens$ncm_descricao[1], "- \u00c1guas minerais e \u00e1guas gaseificadas$")
-  expect_match(itens$ncm_descricao[2], "^\u00c1guas, incluindo as \u00e1guas minerais e as \u00e1guas gaseificadas, adicionadas de a\u00e7\u00facar")
-  expect_identical(itens$cst_ibs_cbs_descricao, c("Tributa\u00e7\u00e3o integral", "Tributa\u00e7\u00e3o integral", NA))
-  expect_identical(itens$classificacao_ibs_cbs_nome[1], "Situa\u00e7\u00f5es tributadas integralmente pelo IBS e CBS.")
-  expect_true(is.na(itens$classificacao_ibs_cbs_nome[3]))
-})
-
-test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
-  lida = nfe_ler(c(NOTA_SP, NOTA_CE, NFCE_CE))
-  notas = lida$notas
-  expect_identical(match("forma_emissao_descricao", names(notas)), match("forma_emissao", names(notas)) + 1L)
-  expect_identical(notas$forma_emissao_descricao,
-                   c("Normal", "Normal", "Conting\u00eancia off-line da NFC-e e da NF-e com DANFE Simplificado Tipo 2"))
-  expect_identical(notas$emitente_regime_descricao, c("Regime Normal", "Simples Nacional", "Simples Nacional"))
-  expect_identical(notas$formato_danfe_descricao[3], "DANFE NFC-e")
-  expect_identical(notas$ambiente_descricao, rep("Homologa\u00e7\u00e3o", 3))
-  expect_identical(notas$modelo_descricao, c("NF-e", "NF-e", "NFC-e"))
-  expect_identical(lida$itens$compoe_total_descricao[1], "O valor do item comp\u00f5e o total da NF-e")
-  # A forma de pagamento e o meio do pagamento vinculado pela tabela de meios de pagamento, na data da nota.
-  expect_identical(lida$pagamentos$indicador_descricao[lida$pagamentos$chave == CHAVE_SP], "Pagamento a prazo")
-  expect_identical(lida$pagamentos$forma_descricao,
-                   c("Boleto Banc\u00e1rio", "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico", "Dinheiro"))
-  expect_identical(lida$pagamentos_vinculados$meio_pagamento_descricao, "Boleto Banc\u00e1rio")
-})
-
-test_that("a bandeira do cart\u00e3o, pela tabela de bandeiras", {
+test_that("a bandeira do cart\u00e3o", {
   texto_da_nfce = paste(readLines(NFCE_CE, encoding = "UTF-8"), collapse = "\n")
   texto_da_nfce = sub("<tPag>01</tPag>", "<tPag>03</tPag>", texto_da_nfce, fixed = TRUE)
   texto_da_nfce = sub("<vPag>50.00</vPag>", "<vPag>50.00</vPag><card><tpIntegra>2</tpIntegra><tBand>06</tBand></card>", texto_da_nfce, fixed = TRUE)
   pagamentos = nfe_ler(texto_da_nfce)$pagamentos
-  expect_identical(pagamentos$forma_descricao, "Cart\u00e3o de Cr\u00e9dito")
   expect_identical(pagamentos$bandeira, "06")
-  expect_identical(pagamentos$bandeira_descricao, "Elo")
 })
 
 test_that("os itens somam os totais da nota", {
@@ -152,16 +114,12 @@ test_that("os valores l\u00edquidos (sem tributos) do pacote 010g", {
   expect_true(all(is.na(lida$itens$valor_icms_previsto)))
 })
 
-test_that("o CEST do item, com a descri\u00e7\u00e3o da tabela do SPED na data da nota", {
+test_that("o CEST do item", {
   nota = paste(readLines(NOTA_SP, encoding = "UTF-8"), collapse = "\n")
   com_cest = sub("<NCM>22011000</NCM>", "<NCM>22011000</NCM><CEST>0100100</CEST>", nota, fixed = TRUE)
   com_cest = sub("<NCM>22021000</NCM>", "<NCM>22021000</NCM><CEST>0300100</CEST>", com_cest, fixed = TRUE)
   itens = nfe_ler(com_cest)$itens
   expect_identical(itens$cest, c("0100100", "0300100"))
-  expect_identical(match("cest_descricao", names(itens)), match("cest", names(itens)) + 1L)
-  # A nota de 2026: o SPED só diz para conferir o Convênio ICMS 142/18; o 0300100 acabou em 31/05/2021.
-  expect_match(itens$cest_descricao[1], "Conv\u00eanio ICMS 142/18", fixed = TRUE)
-  expect_true(is.na(itens$cest_descricao[2]))
 })
 
 test_that("o pagamento vinculado da Reforma (gPgtoVinc)", {
@@ -201,16 +159,11 @@ test_that("os campos da Reforma na identifica\u00e7\u00e3o, no emitente, no dest
   lida = nfe_ler(texto)
   notas = lida$notas
   expect_identical(notas$previsao_entrega, as.Date("2026-10-20"))
-  expect_identical(notas$finalidade_descricao, "Nota de cr\u00e9dito")
   expect_true(is.na(notas$tipo_nota_debito))
   expect_identical(notas$tipo_nota_credito, "04")
-  expect_identical(notas$tipo_nota_credito_descricao, "Redu\u00e7\u00e3o de valores")
-  expect_identical(match("tipo_nota_credito_descricao", names(notas)), match("tipo_nota_credito", names(notas)) + 1L)
   expect_identical(notas$local_operacao, "010104")
   expect_identical(notas$municipio_fato_gerador_ibs, "3550308")
-  expect_identical(notas$compra_governamental_ente_descricao, "Munic\u00edpios")
   expect_equal(notas$compra_governamental_redutor, 10)
-  expect_identical(notas$compra_governamental_operacao_descricao, "Fornecimento com pagamento posterior")
   expect_identical(notas$emitente_inscricao_suframa, "123456789")
   expect_identical(notas$destinatario_inscricao_suframa, "200123457")
   expect_equal(notas$valor_ibs_monofasico, 1.23)
@@ -218,7 +171,6 @@ test_that("os campos da Reforma na identifica\u00e7\u00e3o, no emitente, no dest
   itens = lida$itens
   expect_identical(itens$credito_presumido_zfm_tipo, c("1", NA))
   expect_identical(itens$bem_movel_usado, c("1", NA))
-  expect_identical(itens$bem_movel_usado_descricao, c("Bem M\u00f3vel Usado", NA))
   expect_equal(itens$valor_item, c(51.1, NA))
   expect_identical(itens$referenciado_chave, c(CHAVE_SP, NA))
   expect_identical(itens$referenciado_item, c(2L, NA))
@@ -228,7 +180,6 @@ test_that("os campos da Reforma na identifica\u00e7\u00e3o, no emitente, no dest
   # Sem os campos da Reforma, as colunas ficam NA.
   sem_reforma = nfe_ler(NOTA_SP)
   expect_true(is.na(sem_reforma$notas$previsao_entrega))
-  expect_true(is.na(sem_reforma$notas$tipo_nota_credito_descricao))
   expect_true(all(is.na(sem_reforma$itens$referenciado_chave)))
 })
 
@@ -378,13 +329,11 @@ test_that("o resumo da NF-e (resNFe) vira uma linha em resumos, com o que a nota
   expect_identical(resumo$emissao, nota$emissao)
   expect_identical(resumo$data_emissao, nota$data_emissao)
   expect_identical(resumo$tipo_operacao, 1L)
-  expect_identical(resumo$tipo_operacao_descricao, "Sa\u00edda")
   expect_identical(resumo$valor_nota, nota$valor_nota)
   expect_identical(resumo$digest_value, "AAAAAAAAAAAAAAAAAAAAAAAAAAA=")
   expect_identical(resumo$autorizacao, nota$autorizacao)
   expect_identical(resumo$protocolo, nota$protocolo)
   expect_identical(resumo$situacao_nfe, 1L)
-  expect_identical(resumo$situacao_nfe_descricao, "Uso autorizado")
   expect_identical(resumo$arquivo, RESUMO_SP)
   expect_identical(lida$arquivos$notas, c(0L, 1L))
   expect_identical(lida$arquivos$resumos, c(1L, 0L))
@@ -398,7 +347,6 @@ test_that("o resumo da nota cancelada, da denegada e do emitente com CPF", {
   denegada_com_cpf = sub("<CNPJ>11222333000181</CNPJ>", "<CPF>12345678909</CPF>", denegada)
   resumos = nfe_ler(c(cancelada, denegada_com_cpf))$resumos
   expect_identical(resumos$situacao_nfe, c(3L, 2L))
-  expect_identical(resumos$situacao_nfe_descricao, c("NF-e Cancelada", "Uso denegado"))
   expect_identical(resumos$emitente_documento, c("11222333000181", "12345678909"))
   expect_identical(resumos$arquivo, c("(texto 1)", "(texto 2)"))
 })

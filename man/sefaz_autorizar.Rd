@@ -48,9 +48,6 @@ o RNFe consulta o recibo até a resposta chegar.
 Por enquanto o RNFe só fala com o ambiente de \strong{homologação}: a nota tem
 de vir com \code{tpAmb} 2, e a de produção é recusada antes de qualquer conexão.
 A conexão é a mesma do \code{\link[=sefaz_status]{sefaz_status()}}.
-
-Antes de enviar, confira a nota com \code{\link[=nfe_conferir]{nfe_conferir()}}: a rejeição da SEFAZ
-gasta a numeração do lote e, em excesso, vira consumo indevido.
 }
 \examples{
 \dontrun{
@@ -61,6 +58,6 @@ writeLines(resposta$xml_autorizado, "nota_autorizada.xml", useBytes = TRUE)
 }
 }
 \seealso{
-\code{\link[=xml_assinar]{xml_assinar()}}, \code{\link[=nfe_conferir]{nfe_conferir()}}, \code{\link[=sefaz_situacao]{sefaz_situacao()}} para
+\code{\link[=xml_assinar]{xml_assinar()}}, \code{\link[=sefaz_situacao]{sefaz_situacao()}} para
 consultar depois.
 }

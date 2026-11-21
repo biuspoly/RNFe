@@ -1,7 +1,7 @@
 # A montagem da NF-e e da NFC-e pelo schema do leiaute (o pacote de liberação em inst/schemas/nfe), com o que o RNFe
 # completa sozinho: o ambiente, o número de cada item, o código numérico, o dígito e o Id da chave de acesso.
 
-#' @include montar.R nfe_conferir.R nfe_conferir_regras.R
+#' @include montar.R
 NULL
 
 #' Montar uma NF-e ou NFC-e
@@ -41,8 +41,7 @@ NULL
 #' de acesso (na NF-e avulsa, com o CNPJ do órgão do grupo `avulsa`), a versão
 #' do leiaute e o campo obrigatório que só aceita um valor (como o `CST` do
 #' `ICMS00`). Quando o `cDV` ou o `Id` vêm, eles têm de conferir com os
-#' campos da nota; o `cNF` informado vai como veio (o [nfe_conferir()] confere
-#' a regra B03-10, dos códigos que a SEFAZ recusa).
+#' campos da nota; o `cNF` informado vai como veio.
 #'
 #' Cada grupo é uma lista com os campos dele; o grupo que aparece mais de uma
 #' vez (os itens, as duplicatas, as formas de pagamento) é uma lista de
@@ -50,9 +49,8 @@ NULL
 #' [xml_para_lista()] devolve, então uma nota que já existe pode servir de
 #' ponto de partida.
 #'
-#' A montagem não confere as regras de negócio da SEFAZ (os totais, o CFOP do
-#' destino, o texto do destinatário em homologação): para isso, passe o
-#' resultado no [nfe_conferir()] antes de enviar.
+#' A montagem confere o XML pelo schema, mas não as regras de negócio da SEFAZ
+#' (os totais, o CFOP do destino, o texto do destinatário em homologação).
 #'
 #' Por enquanto, como o resto da conversa com a SEFAZ, só para o ambiente de
 #' **homologação**: a nota com o `tpAmb` 1 é recusada.
@@ -63,7 +61,7 @@ NULL
 #' @param ambiente Por enquanto só `"homologacao"`.
 #' @return O XML da NF-e (o elemento `NFe`, ainda sem a assinatura), num
 #'   texto: pronto para [xml_assinar()].
-#' @seealso [xml_para_lista()], [nfe_conferir()], [xml_assinar()],
+#' @seealso [xml_para_lista()], [xml_assinar()],
 #'   [sefaz_autorizar()], [nfce_qrcode()] para o QR-Code da NFC-e.
 #' @source Os schemas da NF-e e da NFC-e, pacote de liberação 010g, versão
 #'   1.03 (Portal Nacional da NF-e, `nfe_v4.00.xsd` e `leiauteNFe_v4.00.xsd`);

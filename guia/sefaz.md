@@ -86,28 +86,10 @@ Restrita em 10/11/2026 com documentos de verdade (a NFS-e gerada e cancelada no 
 com o XML descompactado lido pelo `nfse_ler()` e pelo `eventos_ler()`, a chave certa e a data de geração a menos de
 um minuto da nota e do evento.
 
-```r
-# a situação do CNPJ na Receita Federal (sem certificado)
-cnpj_situacao(c("11.222.333/0001-81", "11.444.777/0001-61"))
-# cnpj, encontrado, situacao (ATIVA, BAIXADA...), data_situacao, motivo_situacao, razao_social, nome_fantasia,
-# atualizado_em, fonte (a que respondeu), fontes_fora_do_ar e problema
-```
-
-A situação vem da BrasilAPI e, quando ela está fora do ar, do Minha Receita, da CNPJá, da ReceitaWS e da CNPJ.ws,
-uma depois da outra: todas públicas, republicando o cadastro da Receita. Fora do ar é sem resposta, limite de
-consultas (429), erro do servidor ou resposta fora do formato. O CNPJ que uma fonte não tem também é procurado na
-próxima (o aberto há pouco pode não estar ainda nos dados abertos que a BrasilAPI usa). Só conta como "não achou"
-a resposta no formato de cada fonte para o CNPJ que não existe; outra (o 404 de um proxy, um erro de consulta)
-conta como fora do ar. A BrasilAPI e o Minha Receita são a mesma base: quando uma responde, a outra não é
-perguntada. `encontrado` fica `FALSE` quando as que responderam não acharam e todas as seguintes responderam; se
-alguma ficou fora do ar depois de um "não achou", ele fica `NA`, com o motivo em `problema`, porque ela poderia ter
-achado. A ReceitaWS e a CNPJ.ws aceitam poucas consultas por minuto (3, em 04/11/2026), e por isso vêm por último;
-dá para escolher as fontes e a ordem com `fontes`.
-
 Por enquanto o RNFe só fala com o ambiente de **homologação** da SEFAZ: a produção é recusada antes de qualquer
 conexão. O CNPJ do certificado vem do campo que a ICP-Brasil reserva para ele (DOC-ICP-04). O endereço de cada
 serviço e o autorizador de cada UF (a própria SEFAZ ou uma SEFAZ virtual) vêm das Relações de Serviços Web dos
-portais de cada documento (e da página da SEFAZ-MG, na NFC-e), que o robô das tabelas confere toda semana.
+portais de cada documento (e da página da SEFAZ-MG, na NFC-e).
 
 Não é preciso configurar nada, nem no Windows. Testado em 30/10/2026: as 27 UFs responderam numa sessão comum do R
 no Windows. Lá o curl do R usa o motor de conexão segura do próprio Windows (Schannel), que não conecta com BA, MA,

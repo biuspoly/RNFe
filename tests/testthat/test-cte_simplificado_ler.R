@@ -9,31 +9,20 @@ test_that("o CT-e simplificado com protocolo: cabe\u00e7alho, emitente, totais e
   expect_true(chave_valida(cte$chave))
   expect_identical(cte$versao, "4.00")
   expect_identical(cte$modelo, "57")
-  expect_identical(cte$modelo_descricao, "CT-e")
   expect_identical(cte$serie, 1L)
   expect_identical(cte$numero, 777L)
   expect_identical(cte$data_emissao, as.Date("2026-10-22"))
   expect_equal(as.numeric(cte$emissao), as.numeric(as.POSIXct("2026-10-22 12:00:00", tz = "UTC")))
   expect_identical(cte$cfop, "6353")
-  expect_match(cte$cfop_titulo, "^Presta\u00e7\u00e3o de servi\u00e7o de transporte")
   expect_identical(cte$tipo_cte, 5L)
-  expect_identical(cte$tipo_cte_descricao, "CT-e simplificado")
-  expect_identical(cte$tipo_servico_descricao, "Normal")
-  expect_identical(cte$modal_descricao, "Rodovi\u00e1rio")
-  expect_identical(cte$forma_emissao_descricao, "Normal")
-  expect_identical(cte$ambiente_descricao, "Homologa\u00e7\u00e3o")
-  expect_identical(cte$processo_emissao_descricao, "Emiss\u00e3o com aplicativo do contribuinte")
   expect_identical(cte$inicio_uf, "SP")
   expect_identical(cte$fim_uf, "RJ")
-  expect_identical(cte$retira_descricao, "N\u00e3o")
   expect_identical(cte$emitente_documento, "12ABC34501DE35")
   expect_identical(cte$emitente_nome, "TRANSPORTADORA DE TESTE LTDA")
-  expect_identical(cte$emitente_regime_descricao, "Regime Normal")
   expect_identical(cte$valor_prestacao, 350)
   expect_identical(cte$valor_receber, 350)
   expect_true(is.na(cte$valor_prestacao_sem_tributos))
   expect_identical(cte$grupo_icms, "ICMS00")
-  expect_identical(cte$cst_icms_descricao, "Tributa\u00e7\u00e3o normal do ICMS")
   expect_identical(cte$base_icms, 350)
   expect_identical(cte$aliquota_icms, 12)
   expect_identical(cte$valor_icms, 42)
@@ -62,8 +51,6 @@ test_that("o tomador vem do pr\u00f3prio grupo, e o 4 \u00e9 o terceiro", {
   texto = paste(readLines(CTE_SIMPLIFICADO_SP, encoding = "UTF-8"), collapse = "\n")
   terceiro = cte_simplificado_ler(texto)$ctes
   expect_identical(terceiro$tomador_papel, 4L)
-  expect_identical(terceiro$tomador_papel_descricao, "Terceiro")
-  expect_identical(terceiro$tomador_indicador_ie_descricao, "Contribuinte ICMS")
   expect_identical(terceiro$tomador_documento, "11222333000181")
   expect_identical(terceiro$tomador_nome, "EMPRESA DE TESTE LTDA")
   expect_identical(terceiro$tomador_ie, "123456789012")
@@ -73,15 +60,11 @@ test_that("o tomador vem do pr\u00f3prio grupo, e o 4 \u00e9 o terceiro", {
 
   # Com outro papel, os dados continuam os do grupo toma: o CT-e simplificado não tem as outras pessoas.
   remetente = cte_simplificado_ler(sub("<toma>4</toma>", "<toma>0</toma>", texto, fixed = TRUE))$ctes
-  expect_identical(remetente$tomador_papel_descricao, "Remetente")
   expect_identical(remetente$tomador_documento, "11222333000181")
 
   # O de substituição (tipo 6) também chama o 4 de terceiro; no CT-e ele é "Outros".
   substituicao = cte_simplificado_ler(sub("<tpCTe>5</tpCTe>", "<tpCTe>6</tpCTe>", texto, fixed = TRUE))$ctes
-  expect_identical(substituicao$tipo_cte_descricao, "Substitui\u00e7\u00e3o de CT-e simplificado")
-  expect_identical(substituicao$tomador_papel_descricao, "Terceiro")
   cte_com_toma4 = cte_ler(system.file("exemplos", "cte_ce_simples_toma4.xml", package = "RNFe"))$ctes
-  expect_identical(cte_com_toma4$tomador_papel_descricao, "Outros")
 })
 
 test_that("as entregas, com o valor, o IBS e a CBS de cada uma", {
@@ -94,9 +77,7 @@ test_that("as entregas, com o valor, o IBS e a CBS de cada uma", {
   expect_identical(entregas$valor_prestacao, c(200, 150))
   expect_identical(entregas$valor_receber, c(200, 150))
   expect_identical(entregas$cst_ibs_cbs, c("000", "000"))
-  expect_false(anyNA(entregas$cst_ibs_cbs_descricao))
   expect_identical(entregas$classificacao_ibs_cbs, c("000001", "000001"))
-  expect_false(anyNA(entregas$classificacao_ibs_cbs_nome))
   expect_identical(entregas$base_ibs_cbs, c(200, 150))
   expect_identical(entregas$aliquota_ibs_uf, c(0.1, 0.1))
   expect_identical(entregas$valor_ibs_uf, c(0.2, 0.15))
@@ -125,7 +106,6 @@ test_that("os componentes e os documentos de cada entrega", {
                                                  "23261012ABC34501DE35550020000000421876543213"))
   expect_identical(documentos$previsao_entrega, as.Date(c("2026-10-24", NA, NA)))
   expect_identical(documentos$tipo_prestacao, c(NA, 2L, NA))
-  expect_identical(documentos$tipo_prestacao_descricao, c(NA, "Parcial", NA))
   expect_identical(documentos$cte_anterior_chave, c(NA, NA, "35261012ABC34501DE35570010000005551876543210"))
   expect_true(all(chave_valida(documentos$documento_chave)))
 })
@@ -141,7 +121,6 @@ test_that("o CT-e substitu\u00eddo vem em documentos, sem entrega, com a troca d
   expect_identical(documentos$documento_chave[4], substituido)
   expect_true(is.na(documentos$entrega[4]))
   expect_identical(documentos$altera_tomador, c(NA, NA, NA, 1L))
-  expect_identical(documentos$altera_tomador_descricao[4], "CT-e de altera\u00e7\u00e3o de tomador")
 })
 
 # Os grupos da Reforma no fim do ide: a compra governamental (com o documento anterior) e o pagamento antecipado.
@@ -206,9 +185,7 @@ test_that("o prefixo no namespace e o CT-e simplificado dentro de outro grupo", 
 test_that("a carga, com o tipo da medida em c\u00f3digo", {
   cargas = cte_simplificado_ler(CTE_SIMPLIFICADO_SP)$cargas
   expect_identical(cargas$unidade, c("01", "03"))
-  expect_identical(cargas$unidade_descricao, c("KG", "Unidade"))
   expect_identical(cargas$tipo_medida, c("02", "07"))
-  expect_identical(cargas$tipo_medida_descricao, c("Peso bruto da NF-e", "Caixas"))
   expect_identical(cargas$quantidade, c(320, 48))
 })
 
@@ -235,7 +212,6 @@ test_that("as parcelas, o pagamento vinculado e as observa\u00e7\u00f5es", {
   expect_identical(lido$parcelas$valor, 340)
   expect_identical(lido$pagamentos_vinculados$transacao, "TRANSACAO-DE-TESTE-3")
   expect_identical(lido$pagamentos_vinculados$meio_pagamento, "17")
-  expect_false(is.na(lido$pagamentos_vinculados$meio_pagamento_descricao))
   expect_identical(lido$observacoes$tipo, "ObsCont")
   expect_identical(lido$observacoes$campo, "ROTA")
   expect_identical(lido$observacoes$texto, "LITORAL")

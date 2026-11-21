@@ -107,7 +107,7 @@ test_that("o DANFSe da NT 008 v1.02: as datas do XML, a marca d'\u00e1gua, o PIS
                fixed = TRUE)
   # Nos outros códigos, o valor informado (a NT diz "= 1" e "nos demais casos"); a descrição, no tamanho do campo (35).
   codigo_4 = sub("<tpRetPisCofins>2</tpRetPisCofins>", "<tpRetPisCofins>4</tpRetPisCofins>", nota, fixed = TRUE)
-  descricao_do_4 = nfse_ler(codigo_4)$nfses$retencao_pis_cofins_descricao
+  descricao_do_4 = "PIS e COFINS retidos, CSLL n\u00e3o retida"
   expect_gt(nchar(descricao_do_4), 35)
   texto_do_4 = texto_do_pdf(danfse_pdf(codigo_4, tempfile(fileext = ".pdf")))
   expect_match(texto_do_4, paste("R$ 6,50 R$ 30,00", paste0(substr(descricao_do_4, 1, 32), "...")), fixed = TRUE)

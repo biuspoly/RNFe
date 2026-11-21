@@ -68,7 +68,7 @@ test_that("o tomador: pelo papel no toma3, do toma4 e do toma do CT-e OS", {
   expect_true(is.na(ctes$destinatario_documento[3]))
 })
 
-test_that("os impostos em colunas, com o nome de cada c\u00f3digo na data do CT-e", {
+test_that("os impostos em colunas", {
   ctes = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))$ctes
   expect_identical(ctes$grupo_icms, c("ICMS00", "ICMSSN", "ICMS00"))
   expect_identical(ctes$cst_icms, c("00", "90", "00"))
@@ -83,10 +83,6 @@ test_that("os impostos em colunas, com o nome de cada c\u00f3digo na data do CT-
   expect_equal(ctes$valor_ibs, c(0.35, NA, NA))
   expect_equal(ctes$aliquota_cbs, c(0.9, NA, NA))
   expect_equal(ctes$valor_cbs, c(3.15, NA, NA))
-  expect_identical(match("cfop_titulo", names(ctes)), match("cfop", names(ctes)) + 1L)
-  expect_identical(ctes$cfop_titulo[1], "Presta\u00e7\u00e3o de servi\u00e7o de transporte a estabelecimento comercial.")
-  expect_identical(ctes$cst_ibs_cbs_descricao, c("Tributa\u00e7\u00e3o integral", NA, NA))
-  expect_identical(ctes$classificacao_ibs_cbs_nome[1], "Situa\u00e7\u00f5es tributadas integralmente pelo IBS e CBS.")
 })
 
 test_that("os componentes somam o valor da presta\u00e7\u00e3o", {
@@ -212,47 +208,6 @@ test_that("a multa e juros (NT 2026.004 v1.01) e o IBS e a CBS do Simples Nacion
                  lido$ctes$aliquota_cbs_simples_nacional, lido$ctes$valor_cbs_simples_nacional), c(0.05, 0.1, 0.45, 0.9))
   expect_true(all(c("gIBSSN", "gCBSSN") %in% lido$impostos$grupo[lido$impostos$tributo == "IBSCBS"]))
   expect_true(all(is.na(cte_ler(CTE_SP)$ctes$valor_cbs_simples_nacional)))
-})
-
-test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
-  lido = cte_ler(c(CTE_SP, CTE_CE, CTE_OS))
-  ctes = lido$ctes
-  expect_identical(match("tipo_servico_descricao", names(ctes)), match("tipo_servico", names(ctes)) + 1L)
-  expect_identical(ctes$tipo_servico_descricao, c("Normal", "Subcontrata\u00e7\u00e3o", "Transporte de pessoas"))
-  expect_identical(ctes$modal_descricao, rep("Rodovi\u00e1rio", 3))
-  expect_identical(ctes$tipo_cte_descricao, rep("CT-e normal", 3))
-  expect_identical(ctes$modelo_descricao, c("CT-e", "CT-e", "CT-e OS (Outros Servi\u00e7os)"))
-  expect_identical(ctes$cst_icms_descricao, c("Tributa\u00e7\u00e3o normal do ICMS", "ICMS do Simples Nacional", "Tributa\u00e7\u00e3o normal do ICMS"))
-  expect_identical(ctes$tomador_papel_descricao, c("Remetente", "Outros", NA))
-  expect_identical(ctes$retira_descricao, c("N\u00e3o", "N\u00e3o", NA))
-  expect_identical(ctes$simples_nacional_descricao, c(NA, "Sim", NA))
-  expect_identical(lido$cargas$unidade_descricao, c("KG", "Unidade", "Unidade"))
-  expect_identical(lido$documentos$tipo_documento_descricao[lido$documentos$chave == CHAVE_CE], c("Outros", NA, "ATRE"))
-  expect_identical(lido$pagamentos_vinculados$meio_pagamento_descricao, "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico")
-})
-
-test_that("o mesmo c\u00f3digo com outro significado no CT-e OS", {
-  # procEmi 3: no CT-e, o aplicativo do SEBRAE; no CT-e OS, o aplicativo do Fisco.
-  texto_do_cte = sub("<procEmi>0</procEmi>", "<procEmi>3</procEmi>", paste(readLines(CTE_SP, encoding = "UTF-8"), collapse = "\n"), fixed = TRUE)
-  texto_do_os = sub("<procEmi>0</procEmi>", "<procEmi>3</procEmi>", paste(readLines(CTE_OS, encoding = "UTF-8"), collapse = "\n"), fixed = TRUE)
-  ctes = cte_ler(c(texto_do_cte, texto_do_os))$ctes
-  expect_identical(ctes$processo_emissao, c(3L, 3L))
-  expect_identical(ctes$processo_emissao_descricao, c("Emiss\u00e3o pelo contribuinte com aplicativo fornecido pelo SEBRAE",
-                                                      "Emiss\u00e3o pelo contribuinte com aplicativo fornecido pelo Fisco"))
-})
-
-test_that("o CST do ICMS pelo grupo: o 90 tem tr\u00eas sentidos, e o ICMS45 leva o 40, o 41 e o 51", {
-  icms = data.frame(grupo_icms = c("ICMS90", "ICMSOutraUF", "ICMSSN", "ICMS45", "ICMS45", "ICMS45", "ICMS60"),
-                    cst_icms = c("90", "90", "90", "40", "41", "51", "60"))
-  significado_do_cst = data.frame(coluna_do_codigo = "cst_icms", campo = "CST", coluna_do_contexto = "grupo_icms")
-  icms = acrescentar_significados(icms, "CT-e", significado_do_cst)
-  expect_identical(icms$cst_icms_descricao, c(
-    "ICMS outros", "ICMS devido \u00e0 UF de origem da presta\u00e7\u00e3o, quando diferente da UF do emitente", "ICMS do Simples Nacional",
-    "Isen\u00e7\u00e3o do ICMS", "N\u00e3o tributada pelo ICMS", "ICMS diferido", "ICMS cobrado por substitui\u00e7\u00e3o tribut\u00e1ria"
-  ))
-  # O CST num grupo que não é o dele fica sem significado, em vez de pegar o de outro grupo.
-  errado = acrescentar_significados(data.frame(grupo_icms = "ICMS00", cst_icms = "90"), "CT-e", significado_do_cst)
-  expect_true(is.na(errado$cst_icms_descricao))
 })
 
 test_that("CT-e sem protocolo", {

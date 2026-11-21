@@ -29,9 +29,6 @@ RECIBO_EM_PROCESSAMENTO = 105L
 #' de vir com `tpAmb` 2, e a de produção é recusada antes de qualquer conexão.
 #' A conexão é a mesma do [sefaz_status()].
 #'
-#' Antes de enviar, confira a nota com [nfe_conferir()]: a rejeição da SEFAZ
-#' gasta a numeração do lote e, em excesso, vira consumo indevido.
-#'
 #' @param xml As notas assinadas (veja [xml_assinar()]): o caminho de cada
 #'   arquivo ou o próprio texto do XML, um por nota.
 #' @inheritParams sefaz_status
@@ -44,7 +41,7 @@ RECIBO_EM_PROCESSAMENTO = 105L
 #'   `nfeProc`, na nota autorizada e na denegada, que a SEFAZ guarda com o
 #'   protocolo da denegação), `endereco` e `problema` (por que não deu para
 #'   enviar ou entender a resposta).
-#' @seealso [xml_assinar()], [nfe_conferir()], [sefaz_situacao()] para
+#' @seealso [xml_assinar()], [sefaz_situacao()] para
 #'   consultar depois.
 #' @source Manual de Orientação do Contribuinte da NF-e (o serviço de
 #'   autorização, o lote e o protocolo); os schemas `enviNFe_v4.00.xsd`,

@@ -45,13 +45,8 @@ traz os valores levados. Por isso tem leitor próprio, e não entra em
 texto do XML. Um arquivo que não dá para ler não interrompe os outros: fica
 em \code{arquivos}, com o motivo.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-dizer: o nome do CFOP, pela tabela fiscal na data da GTV-e, e o significado
-dos outros códigos (tipo, modal, forma de emissão, papel do tomador, espécie,
-numerário...) numa coluna \verb{*_descricao}, pela documentação do schema oficial
-(veja \code{tabela_fiscal("codigos_dos_campos")}, documento \code{"GTV-e"}). Campo que
-a GTV-e não tem fica \code{NA}.
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+códigos ficam como estão no XML. Campo que a GTV-e não tem fica \code{NA}.
 }
 \section{gtves}{
 
@@ -72,9 +67,7 @@ do próprio grupo.
 \section{especies}{
 
 O valor levado de cada espécie, um por linha: \code{chave},
-\code{tipo} (\code{tpEspecie}), \code{valor} (\code{vEspecie}), \code{numerario} (\code{tpNumerario}), \code{moeda_estrangeira} (\code{xMoedaEstr}). O significado do \code{tipo} (cédula,
-cheque, moeda ou outros) e do \code{numerario} (nacional ou estrangeiro) vem ao
-lado, em \verb{*_descricao}; \code{moeda_estrangeira} é o nome da moeda do numerário
+\code{tipo} (\code{tpEspecie}), \code{valor} (\code{vEspecie}), \code{numerario} (\code{tpNumerario}), \code{moeda_estrangeira} (\code{xMoedaEstr}). \code{moeda_estrangeira} é o nome da moeda do numerário
 estrangeiro. A GTV-e não tem um valor total: some o \code{valor} das espécies
 de cada \code{chave}.
 }
@@ -108,5 +101,5 @@ Uma linha por arquivo pedido: \code{arquivo}, \code{gtves} (quantas GTV-e tinha)
 gtve = system.file("exemplos", "gtve_proc_sp.xml", package = "RNFe")
 lida = gtve_ler(gtve)
 lida$gtves[, c("chave", "remetente_nome", "destinatario_nome", "quantidade_volumes")]
-lida$especies[, c("tipo_descricao", "valor", "numerario_descricao", "moeda_estrangeira")]
+lida$especies[, c("tipo", "valor", "numerario", "moeda_estrangeira")]
 }

@@ -2,66 +2,12 @@ Package: RNFe
 Title: Documentos Fiscais Eletrônicos Brasileiros (NF-e, CT-e, GTV-e, MDF-e, NFS-e)
 Version: 0.0.0.9000
 Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role = c("aut", "cre"))
-Description: Confere e desmonta a chave de acesso de 44 posições dos documentos
-    fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e, GTV-e e MDF-e), já com o
-    CNPJ alfanumérico da Nota Técnica Conjunta 2025.001. Lê o XML da NF-e e
-    da NFC-e em tabelas (notas, itens, impostos, parcelas e pagamentos, e o
-    resumo que a Distribuição de DF-e entrega ao destinatário), o
-    do CT-e e do CT-e OS (com o tomador, os componentes do frete, os
-    documentos transportados, a carga e os impostos), o do CT-e
-    simplificado (com as entregas, cada uma com o valor, o IBS e a CBS e os
-    documentos), o da GTV-e (com os
-    valores levados de cada espécie), o do MDF-e (com o
-    percurso, os documentos de cada descarregamento, os veículos, os
-    condutores e os seguros), o da NFS-e Nacional (com a DPS declarada e o
-    ISSQN, as retenções e o valor líquido calculados pelo sistema nacional) e
-    o da NFS-e de prefeitura (o leiaute de São Paulo e o padrão ABRASF),
-    já com os campos da Reforma Tributária (IBS e CBS) e o nome de cada CFOP
-    e CST como a tabela oficial registrava na data do documento. Lê também os
-    eventos de todos eles (cancelamento, carta de correção, manifestação do
-    destinatário, encerramento), com o retorno da SEFAZ ou o resumo da
-    Distribuição de DF-e. Todos os campos de cada documento podem vir também
-    um por linha, com o caminho de cada um. Traz as tabelas fiscais (CFOP,
-    NCM, origem, CST do ICMS, CSOSN, CST do IPI, do PIS e da COFINS, o CST e
-    a classificação tributária do IBS e da CBS e os municípios) copiadas do
-    Portal da NF-e, do Portal Único Siscomex, do SPED e do IBGE, com a
-    vigência de cada código. Lê o certificado digital A1 (titular, CNPJ ou
-    CPF e validade) e pergunta à SEFAZ o status do serviço da NF-e, da
-    NFC-e, do CT-e e do MDF-e, a situação de cada documento pela chave, os
-    MDF-e não encerrados, o cadastro de contribuintes e as NF-e e os CT-e
-    emitidos contra um CNPJ (Distribuição de DF-e), e pergunta ao Sistema
-    Nacional NFS-e a nota pela chave, com os eventos, e as notas de um CNPJ,
-    por enquanto só no ambiente de homologação (a Produção Restrita, na
-    NFS-e). Diz a situação cadastral do CNPJ na Receita Federal pelas fontes
-    públicas que republicam o cadastro (a BrasilAPI e, quando ela está fora
-    do ar, as outras). Acha a chave de acesso num PDF ou numa imagem,
-    pelo texto, pelo QR-Code ou por OCR. Confere o IBS e a CBS da NF-e e da
-    NFC-e pelas regras de validação da Nota Técnica 2025.002-RTC, com a
-    tributação monofásica dos combustíveis e o resto da nota que ela valida
-    (identificação, compra governamental, Suframa, documentos referenciados),
-    como a SEFAZ as aplicava no dia da emissão (com as alíquotas de cada ano e
-    o que mudou nas regras e nas tabelas de uma versão para a outra), e
-    calcula o IBS e a CBS de cada item, na data da nota ou em outra, para
-    simular como a nota seria em outro ano. Lê a EFD ICMS/IPI (o SPED
-    Fiscal) em tabelas, uma por registro, pelo leiaute do período do
-    arquivo, e a cruza com os XML das NF-e. Faz a pré-conferência da NF-e
-    e da NFC-e antes do envio: o schema do leiaute e as regras de validação
-    do Manual de Orientação do Contribuinte, cada uma pela redação da nota
-    técnica mais nova. Monta o XML da NF-e, da NFC-e, do CT-e (também o
-    CT-e OS, a GTV-e e o CT-e simplificado), do MDF-e e da DPS da NFS-e
-    Nacional a partir de uma lista com os campos do leiaute, na ordem e no
-    formato do schema oficial que vem no pacote, e passa qualquer documento
-    de volta para essa lista. Assina os XML com o certificado A1 e, por
-    enquanto só em homologação, autoriza a NF-e e a NFC-e (com o QR-Code da
-    NFC-e) e o CT-e, registra o cancelamento, a carta de correção, a
-    manifestação do destinatário, o comprovante e o insucesso de entrega, o
-    ator interessado e o EPEC (cada evento montado pelo schema oficial dele),
-    registra o desacordo do CT-e, autoriza o MDF-e, inclui
-    condutor e as NF-e do carregamento posterior e o encerra, e emite,
-    cancela e consulta pela DPS a NFS-e Nacional na Produção
-    Restrita. Desenha em PDF o DANFE, o DANFE Simplificado (também a
-    Etiqueta), o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de
-    correção.
+Description: Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e,
+    GTV-e, MDF-e e NFS-e): monta o XML pelo schema oficial, assina com o
+    certificado A1, conversa com a SEFAZ e com o Sistema Nacional NFS-e (por
+    enquanto só em homologação), lê o XML em tabelas, confere a chave de
+    acesso (já com o CNPJ alfanumérico) e desenha os documentos auxiliares em
+    PDF (DANFE, DANFE NFC-e, DACTE, DAMDFE, DANFSe e a carta de correção).
 License: MIT + file LICENSE
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues
@@ -71,7 +17,6 @@ Depends: R (>= 4.1.0)
 Imports:
     grDevices,
     grid,
-    tools,
     utils,
     xml2
 Suggests:
@@ -79,12 +24,9 @@ Suggests:
     curl,
     httr2 (>= 1.0.0),
     jsonlite,
-    magick,
-    opencv,
     openssl,
     pdftools,
     qrcode,
-    tesseract,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
@@ -95,13 +37,10 @@ Collate:
     'chave.R'
     'certificado.R'
     'assinatura.R'
-    'chave_extrair.R'
     'ler_xml.R'
-    'sefaz.R'
-    'nfse_nacional.R'
-    'cnpj.R'
     'cte_ler.R'
-    'tabelas.R'
+    'sefaz.R'
+    'utilidades.R'
     'montar.R'
     'cte_montar.R'
     'cte_simplificado_ler.R'
@@ -114,22 +53,14 @@ Collate:
     'danfe_simplificado.R'
     'nfse_ler.R'
     'danfse.R'
-    'nfe_ler.R'
-    'efd_icms_ipi_ler.R'
-    'efd_icms_ipi_cruzar_nfe.R'
     'eventos_ler.R'
     'gtve_ler.R'
-    'ibs_cbs_conferir.R'
-    'ibs_cbs_calcular.R'
-    'ibs_cbs_marcos.R'
-    'ibs_cbs_monofasico.R'
-    'ibs_cbs_regras_da_nota.R'
     'mdfe_ler.R'
     'mdfe_montar.R'
     'nfce_qrcode.R'
-    'nfe_conferir.R'
-    'nfe_conferir_regras.R'
+    'nfe_ler.R'
     'nfe_montar.R'
+    'nfse_nacional.R'
     'nfse_emitir.R'
     'nfse_dps_montar.R'
     'nfse_prefeitura_ler.R'

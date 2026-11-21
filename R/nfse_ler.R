@@ -119,36 +119,6 @@ informacoes_complementares          DPS/infDPS/serv/infoCompl/xInfComp          
 outras_informacoes                  xOutInf|valores/xOutInf                                                                     texto
 ")
 
-# O nome do CST e da classificação tributária do IBS e da CBS, como a tabela registrava na data de emissão.
-DESCRICOES_DA_NFSE = ler_campos("
-coluna_do_codigo      coluna_nova                tabela                texto
-cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
-classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
-")
-
-# O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
-# ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
-SIGNIFICADOS_DA_NFSE = ler_campos("
-coluna_do_codigo                   campo          coluna_do_contexto
-situacao                           cStat          -
-ambiente_gerador                   ambGer         -
-tipo_emissao                       tpEmis         -
-processo_emissao                   procEmi        -
-ambiente                           tpAmb          -
-tipo_emitente                      tpEmit         -
-substituicao_motivo                cMotivo        -
-prestador_simples_nacional         opSimpNac      -
-prestador_regime_apuracao_simples  regApTribSN    -
-prestador_regime_especial          regEspTrib     -
-tributacao_issqn                   tribISSQN      -
-retencao_issqn                     tpRetISSQN     -
-cst_pis_cofins                     CST            -
-retencao_pis_cofins                tpRetPisCofins -
-finalidade                         finNFSe        -
-consumo_final                      indFinal       -
-destinatario_indicador             indDest        -
-")
-
 #' Ler o XML da NFS-e Nacional
 #'
 #' Lê o XML da NFS-e do padrão nacional e devolve uma lista de tabelas
@@ -174,13 +144,8 @@ destinatario_indicador             indDest        -
 #' A NFS-e traz duas partes: a DPS, que quem emitiu declarou (prestador,
 #' tomador, serviço, valores, tributos), e o que o sistema que a autorizou gerou
 #' (número, situação, base e valor do ISSQN, valor líquido e o IBS e a CBS
-#' calculados). Os códigos ficam como estão no XML, e ao lado de cada um vem o
-#' que ele quer dizer, numa coluna `*_descricao`: a situação, o regime do
-#' Simples Nacional, a tributação e a retenção do ISSQN, o CST do PIS e da
-#' COFINS... pela documentação do schema oficial (veja
-#' `tabela_fiscal("codigos_dos_campos")`), e o nome do CST e da classificação
-#' do IBS e da CBS pela tabela fiscal na data. Campo que a NFS-e não tem fica
-#' `NA`. Nenhum campo se perde: o que não tem coluna própria está na tabela
+#' calculados). Os códigos ficam como estão no XML. Campo que a NFS-e não tem
+#' fica `NA`. Nenhum campo se perde: o que não tem coluna própria está na tabela
 #' `campos`.
 #'
 #' O RNFe não confere o dígito da chave da NFS-e: a regra do cálculo não está
@@ -190,10 +155,7 @@ destinatario_indicador             indDest        -
 #' Uma linha por NFS-e: `chave`, `versao` (do leiaute),
 #' `r documentar_campos(CAMPOS_DA_NFSE)`;
 #' e `arquivo`. `processamento` e `emissao` são data e hora (mostradas no
-#' horário de Brasília); `data_emissao` e `competencia` são datas. Ao lado do
-#' CST e da classificação tributária do IBS e da CBS vem o nome de cada um,
-#' como a tabela registrava na data de emissão (`cst_ibs_cbs_descricao` e
-#' `classificacao_ibs_cbs_nome`, veja [tabela_fiscal()]).
+#' horário de Brasília); `data_emissao` e `competencia` são datas.
 #'
 #' @section campos:
 #' Com `todos_os_campos = TRUE`, o padrão. Todos os campos da NFS-e, menos os
@@ -237,8 +199,6 @@ nfse_ler = function(arquivos, todos_os_campos = TRUE) {
   }
   tabelas_da_nfse$arquivos = resumo_dos_arquivos(arquivos_lidos, "nfses", "nfses")
   tabelas_da_nfse$nfses = converter_datas(tabelas_da_nfse$nfses, CAMPOS_DA_NFSE)
-  tabelas_da_nfse$nfses = acrescentar_descricoes(tabelas_da_nfse$nfses, tabelas_da_nfse$nfses$data_emissao, DESCRICOES_DA_NFSE)
-  tabelas_da_nfse$nfses = acrescentar_significados(tabelas_da_nfse$nfses, "NFS-e", SIGNIFICADOS_DA_NFSE)
   tabelas_da_nfse
 }
 

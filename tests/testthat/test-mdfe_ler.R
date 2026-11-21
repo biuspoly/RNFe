@@ -44,13 +44,6 @@ test_that("o MDF-e com protocolo: cabe\u00e7alho, emitente, totais e autoriza\u0
   expect_identical(mdfe$arquivo, MDFE_SP)
 })
 
-test_that("ao lado do NCM do produto predominante, a descri\u00e7\u00e3o dele na data do MDF-e", {
-  mdfes = mdfe_ler(c(MDFE_SP, MDFE_CE))$mdfes
-  expect_identical(match("produto_ncm_descricao", names(mdfes)), match("produto_ncm", names(mdfes)) + 1L)
-  expect_match(mdfes$produto_ncm_descricao[1], "- \u00c1guas minerais e \u00e1guas gaseificadas$")
-  expect_true(is.na(mdfes$produto_ncm_descricao[2]))
-})
-
 test_that("MDF-e de carga pr\u00f3pria, sem protocolo", {
   mdfe = mdfe_ler(MDFE_CE)$mdfes
   expect_identical(mdfe$chave, CHAVE_CE)
@@ -121,29 +114,6 @@ test_that("os seguros: uma linha por averba\u00e7\u00e3o, e uma para o seguro se
   expect_identical(seguros$seguradora_nome, c("SEGURADORA DE TESTE", "SEGURADORA DE TESTE", "SEGURADORA DE TESTE", NA))
   expect_identical(seguros$apolice, c("APOLICE-001", "APOLICE-001", "APOLICE-777", NA))
   expect_identical(seguros$averbacao, c("AVERBACAO-001", "AVERBACAO-002", NA, "AVERBACAO-999"))
-})
-
-test_that("ao lado de cada c\u00f3digo do leiaute, o significado dele", {
-  lido = mdfe_ler(c(MDFE_SP, MDFE_CE))
-  mdfes = lido$mdfes
-  expect_identical(match("tipo_emitente_descricao", names(mdfes)), match("tipo_emitente", names(mdfes)) + 1L)
-  expect_identical(mdfes$tipo_emitente_descricao, c("Prestador de servi\u00e7o de transporte", "Transportador de carga pr\u00f3pria"))
-  expect_identical(mdfes$modal_descricao, rep("Rodovi\u00e1rio", 2))
-  expect_identical(mdfes$modelo_descricao, rep("MDF-e", 2))
-  expect_identical(mdfes$unidade_peso_descricao, c("KG", "TON"))
-  expect_identical(mdfes$tipo_carga_descricao[1], "Carga geral")
-  expect_identical(lido$documentos$reentrega_descricao, c(NA, "Reentrega"))
-  veiculos = lido$veiculos
-  expect_identical(veiculos$tipo_rodado_descricao, c("Truck", "Cavalo mec\u00e2nico", NA))
-  expect_identical(veiculos$tipo_carroceria_descricao, c("Fechada/Ba\u00fa", "N\u00e3o aplic\u00e1vel", "Sider"))
-  expect_identical(veiculos$proprietario_tipo_descricao, c(NA, "TAC Independente", NA))
-  emitente = "Emitente do MDF-e"
-  contratante = "Respons\u00e1vel pela contrata\u00e7\u00e3o do servi\u00e7o de transporte (contratante)"
-  expect_identical(lido$seguros$responsavel_descricao, c(emitente, emitente, contratante, emitente))
-  # O tipo de transportador pelo nome da Lei 11.442/2007, art. 2º (o schema só traz a sigla).
-  texto_do_mdfe = sub("</tpEmit>", "</tpEmit><tpTransp>1</tpTransp>", paste(readLines(MDFE_SP, encoding = "UTF-8"), collapse = "\n"), fixed = TRUE)
-  expect_true(is.na(mdfes$tipo_transportador_descricao[1]))
-  expect_identical(mdfe_ler(texto_do_mdfe)$mdfes$tipo_transportador_descricao, "ETC: Empresa de Transporte Rodovi\u00e1rio de Cargas")
 })
 
 test_that("a tabela campos tem todos os campos do MDF-e, com o caminho", {

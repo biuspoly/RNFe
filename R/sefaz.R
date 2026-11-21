@@ -551,13 +551,6 @@ municipio              ender/xMun    texto
 cep                    ender/CEP     texto
 ")
 
-SIGNIFICADOS_DO_CADASTRO = ler_campos("
-coluna_do_codigo   campo      coluna_do_contexto
-situacao_cadastral cSit       -
-credenciado_nfe    indCredNFe -
-credenciado_cte    indCredCTe -
-")
-
 # O MA não tem a consulta por web service: a SVAN, que o atende na NF-e, não tem o serviço, a SVRS respondeu 410 ("UF não
 # é atendida", homologação, 03/11/2026) e os endereços da própria SEFAZ-MA devolvem 404 e 405 (30/10/2026).
 MOTIVO_DO_MA_SEM_CADASTRO = paste("o MA n\u00e3o oferece a consulta de cadastro por web service (a SVAN n\u00e3o tem o servi\u00e7o",
@@ -621,9 +614,7 @@ FORMATO_DO_DOCUMENTO_CONSULTADO = c(CNPJ = "^[0-9A-Z]{12}[0-9]{2}$", CPF = "^[0-
 #'     `versao_aplicativo`, `endereco` e `problema` (por que a consulta não deu
 #'     certo; vazio quando deu);
 #'   - `cadastros`: `documento` (o consultado, para ligar com `consultas`) e
-#'     `r documentar_campos(CAMPOS_DO_CADASTRO)`. `situacao_cadastral`,
-#'     `credenciado_nfe` e `credenciado_cte` vêm com o significado ao lado,
-#'     em `*_descricao`, pela documentação do schema.
+#'     `r documentar_campos(CAMPOS_DO_CADASTRO)`.
 #' @seealso [sefaz_status()], [sefaz_situacao()]
 #' @source Relação de Serviços Web do Portal da NF-e (endereços de
 #'   homologação); o schema `leiauteConsultaCadastro_v2.00.xsd` do pacote de
@@ -635,7 +626,7 @@ FORMATO_DO_DOCUMENTO_CONSULTADO = c(CNPJ = "^[0-9A-Z]{12}[0-9]{2}$", CPF = "^[0-
 #' cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx",
 #'                           Sys.getenv("SENHA_DO_CERTIFICADO"))
 #' cadastro$consultas[, c("documento", "uf", "situacao", "motivo")]
-#' cadastro$cadastros[, c("ie", "nome", "situacao_cadastral_descricao", "municipio")]
+#' cadastro$cadastros[, c("ie", "nome", "situacao_cadastral", "municipio")]
 #' }
 #' @export
 sefaz_cadastro = function(documentos, ufs, certificado, senha, tipo = "CNPJ", ambiente = "homologacao") {
@@ -684,7 +675,6 @@ sefaz_cadastro = function(documentos, ufs, certificado, senha, tipo = "CNPJ", am
   # Juntar as linhas tira o fuso das datas: volta o de Brasília.
   attr(consultas$consulta, "tzone") = "America/Sao_Paulo"
   cadastros = do.call(rbind, c(list(colunas_do_cadastro(list(), character())), cadastros_de_cada_resposta))
-  cadastros = acrescentar_significados(cadastros, "NF-e", SIGNIFICADOS_DO_CADASTRO)
   list(consultas = consultas, cadastros = cadastros)
 }
 
@@ -1125,14 +1115,6 @@ servico_da_uf = function(uf, servico, ambiente, documento = "NF-e") {
     return(NULL)
   }
   list(autorizador = da_uf$autorizador[1], endereco = do_autorizador$endereco[1])
-}
-
-# As tabelas do pacote que não são tabelas fiscais (os endereços da SEFAZ), lidas uma vez por sessão.
-tabela_interna = function(nome_da_tabela) {
-  if (is.null(tabelas_ja_lidas[[nome_da_tabela]])) {
-    tabelas_ja_lidas[[nome_da_tabela]] = ler_tabela_do_pacote(nome_da_tabela)
-  }
-  tabelas_ja_lidas[[nome_da_tabela]]
 }
 
 # O motor de conexão segura que o curl está usando ("Schannel", "OpenSSL"...). O curl_version() mostra entre

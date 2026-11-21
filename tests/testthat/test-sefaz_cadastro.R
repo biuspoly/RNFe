@@ -75,7 +75,7 @@ test_that("o MT recebe o nfeDadosMsg dentro de consultaCadastro e responde com u
   expect_true(is.na(consulta$problema))
 })
 
-test_that("o cadastro encontrado: uma linha por inscri\u00e7\u00e3o, com o significado dos c\u00f3digos", {
+test_that("o cadastro encontrado: uma linha por inscri\u00e7\u00e3o", {
   skip_if_not_installed("httr2")
   skip_if_not_installed("openssl")
   local_mocked_bindings(usar_processo_separado = function() FALSE)
@@ -91,10 +91,6 @@ test_that("o cadastro encontrado: uma linha por inscri\u00e7\u00e3o, com o signi
   expect_identical(inscricoes$ie, c("0012345678901", "0012345678902"))
   expect_identical(inscricoes$contribuinte_documento, rep(CNPJ_DE_EXEMPLO, 2))
   expect_identical(inscricoes$situacao_cadastral, c(1L, 0L))
-  expect_identical(inscricoes$situacao_cadastral_descricao, c("Habilitado", "N\u00e3o habilitado"))
-  expect_identical(inscricoes$credenciado_nfe_descricao,
-                   c("Credenciado com obrigatoriedade para todas opera\u00e7\u00f5es", "N\u00e3o credenciado para emiss\u00e3o da NF-e"))
-  expect_identical(inscricoes$credenciado_cte_descricao[1], "A SEFAZ n\u00e3o fornece a informa\u00e7\u00e3o")
   expect_identical(inscricoes$nome, rep("EMPRESA DE TESTE LTDA", 2))
   expect_identical(inscricoes$fantasia, c("TESTE", NA))
   expect_identical(inscricoes$regime_apuracao, c("NORMAL", NA))
@@ -145,5 +141,4 @@ test_that("sem documento nenhum, as tabelas v\u00eam vazias com as colunas certa
                                              "consulta", "contribuintes", "versao_aplicativo", "endereco", "problema"))
   expect_identical(nrow(vazio$cadastros), 0L)
   expect_identical(names(vazio$cadastros)[1:3], c("documento", "ie", "contribuinte_documento"))
-  expect_true("situacao_cadastral_descricao" %in% names(vazio$cadastros))
 })

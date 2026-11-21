@@ -141,49 +141,6 @@ observacoes_gerais              compl/xObs                                      
 PESSOA_DE_CADA_PAPEL_NO_CTE = c("remetente", "expedidor", "recebedor", "destinatario")
 DADOS_DO_TOMADOR = c("documento", "nome", "ie", "municipio", "codigo_municipio", "uf")
 
-# O nome de cada código, ao lado dele, como a tabela fiscal registrava na data de emissão do CT-e. O CST do ICMS
-# vem do leiaute do CT-e (SIGNIFICADOS_DO_CTE), porque o 90 muda de sentido com o grupo do ICMS.
-DESCRICOES_DO_CTE = ler_campos("
-coluna_do_codigo      coluna_nova                tabela                texto
-cfop                  cfop_titulo                cfop                  titulo
-cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
-classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
-")
-
-# O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
-# ("-" quando não depende). O processo de emissão 3 é o aplicativo do SEBRAE no CT-e e o do Fisco no CT-e OS; o
-# tipo de documento 10 é "dutoviário" entre os outros documentos e um conhecimento no transporte anterior; o CST
-# 90 do ICMS é "outros", "outra UF" ou "Simples Nacional", conforme o grupo.
-SIGNIFICADOS_DO_CTE = ler_campos("
-coluna_do_codigo      campo          coluna_do_contexto
-modelo                mod            -
-tipo_cte              tpCTe          -
-tipo_servico          tpServ         -
-modal                 modal          -
-forma_emissao         tpEmis         -
-ambiente              tpAmb          -
-processo_emissao      procEmi        modelo
-globalizado           indGlobalizado -
-retira                retira         -
-tomador_papel         toma           -
-tomador_indicador_ie  indIEToma      -
-emitente_regime       CRT            -
-cst_icms              CST            grupo_icms
-simples_nacional      indSN          -
-")
-
-SIGNIFICADOS_DA_CARGA = ler_campos("
-coluna_do_codigo campo coluna_do_contexto
-unidade          cUnid -
-")
-
-SIGNIFICADOS_DO_DOCUMENTO = ler_campos("
-coluna_do_codigo campo         coluna_do_contexto
-modelo           mod           -
-tipo_documento   tpDoc         tipo
-altera_tomador   indAlteraToma -
-")
-
 # A partir de cada Comp (vPrest/Comp).
 CAMPOS_DO_COMPONENTE = ler_campos("
 coluna caminho tipo
@@ -274,13 +231,8 @@ texto  xTexto   texto
 #' Para saber se o CT-e foi cancelado, leia os eventos dele com
 #' [eventos_ler()].
 #'
-#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-#' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-#' dizer: o nome do CFOP, do CST e do meio de pagamento, pela tabela fiscal na
-#' data do CT-e, e o significado dos outros códigos (tipo do CT-e, serviço,
-#' modal, forma de emissão, papel do tomador, unidade da carga...) numa coluna
-#' `*_descricao`, pela documentação do schema oficial (veja
-#' `tabela_fiscal("codigos_dos_campos")`). Campo que o CT-e não tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
+#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+#' códigos ficam como estão no XML. Campo que o CT-e não tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
 #' pedida (`todos_os_campos = TRUE`).
 #'
 #' @section ctes:
@@ -303,11 +255,7 @@ texto  xTexto   texto
 #' (`tomador_papel` 4) e no CT-e OS (grupo `toma`, sem papel), os dados vêm do
 #' próprio grupo.
 #'
-#' Ao lado do CFOP, do CST e da classificação tributária do IBS e da CBS vem o
-#' nome de cada um, como a tabela fiscal registrava na data de emissão (veja
-#' [tabela_fiscal()]): `cfop_titulo`, `cst_ibs_cbs_descricao` e
-#' `classificacao_ibs_cbs_nome`. O CST do ICMS (`cst_icms_descricao`) segue o
-#' leiaute do CT-e, pelo grupo: no `ICMS45` vão o 40, o 41 e o 51, e o 90 é
+#' O CST do ICMS (`cst_icms`) segue o leiaute do CT-e, pelo grupo: no `ICMS45` vão o 40, o 41 e o 51, e o 90 é
 #' "ICMS outros" no `ICMS90`, o ICMS devido a outra UF no `ICMSOutraUF` e o do
 #' Simples Nacional no `ICMSSN`.
 #'
@@ -410,15 +358,8 @@ cte_ler = function(arquivos, todos_os_campos = FALSE) {
   tabelas_do_cte$arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
   tabelas_do_cte$ctes = converter_datas(tabelas_do_cte$ctes, rbind(CAMPOS_DO_CTE, CAMPOS_DO_PROTOCOLO))
   tabelas_do_cte$ctes = preencher_tomador(tabelas_do_cte$ctes, PESSOA_DE_CADA_PAPEL_NO_CTE)
-  tabelas_do_cte$ctes = acrescentar_descricoes(tabelas_do_cte$ctes, tabelas_do_cte$ctes$data_emissao, DESCRICOES_DO_CTE)
   tabelas_do_cte$documentos = converter_datas(tabelas_do_cte$documentos, CAMPOS_DO_DOCUMENTO)
   tabelas_do_cte$parcelas = converter_datas(tabelas_do_cte$parcelas, CAMPOS_DA_PARCELA)
-  tabelas_do_cte$ctes = acrescentar_significados(tabelas_do_cte$ctes, "CT-e", SIGNIFICADOS_DO_CTE)
-  tabelas_do_cte$cargas = acrescentar_significados(tabelas_do_cte$cargas, "CT-e", SIGNIFICADOS_DA_CARGA)
-  tabelas_do_cte$documentos = acrescentar_significados(tabelas_do_cte$documentos, "CT-e", SIGNIFICADOS_DO_DOCUMENTO)
-  data_de_cada_vinculado = tabelas_do_cte$ctes$data_emissao[match(tabelas_do_cte$pagamentos_vinculados$chave, tabelas_do_cte$ctes$chave)]
-  tabelas_do_cte$pagamentos_vinculados = acrescentar_descricoes(tabelas_do_cte$pagamentos_vinculados, data_de_cada_vinculado,
-                                                                DESCRICOES_DO_PAGAMENTO_VINCULADO)
   tabelas_do_cte
 }
 

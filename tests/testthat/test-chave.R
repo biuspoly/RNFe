@@ -48,28 +48,14 @@ test_that("CNPJ com letras, CPF no lugar do CNPJ e os outros modelos", {
   expect_identical(partes$ano[4], 2025L)
 })
 
-test_that("o significado da forma de emiss\u00e3o vem do leiaute de cada documento", {
-  partes = chave_decompor(c(NFE_SP, NFCE_CE_CONTINGENCIA, CTE_RS_EMITENTE_CPF, MDFE_BA))
-  expect_identical(partes$forma_emissao_descricao,
-                   c("Normal", "Conting\u00eancia off-line da NFC-e e da NF-e com DANFE Simplificado Tipo 2", "Normal", "Normal"))
-  # A forma 2 é a contingência FS na NF-e e a contingência offline no CT-e.
-  sem_digito = c(paste0(substr(NFE_SP, 1, 34), "2", substr(NFE_SP, 36, 43)),
-                 paste0(substr(CTE_RS_EMITENTE_CPF, 1, 34), "2", substr(CTE_RS_EMITENTE_CPF, 36, 43)))
-  forma_2 = chave_decompor(paste0(sem_digito, chave_digito(sem_digito)))
-  expect_identical(forma_2$forma_emissao, c(2L, 2L))
-  expect_identical(forma_2$forma_emissao_descricao, c("Conting\u00eancia FS", "Conting\u00eancia offline"))
-})
-
 test_that("a GTV-e (modelo 64) tem a chave do CT-e", {
   partes = chave_decompor("CTe35261011444777000161640010000005011246813570")
   expect_true(partes$valida)
   expect_identical(partes$modelo, "64")
   expect_identical(partes$documento, "GTV-e")
   expect_identical(partes$numero, 501L)
-  expect_identical(partes$forma_emissao_descricao, "Normal")
   # A GTV-e só tem as formas 1 e 2: a 4 (EPEC no CT-e) fica sem significado.
   sem_digito = "3526101144477700016164001000000501424681357"
-  expect_true(is.na(chave_decompor(paste0(sem_digito, chave_digito(sem_digito)))$forma_emissao_descricao))
 })
 
 test_that("espa\u00e7os, min\u00fasculas e o prefixo do Id do XML s\u00e3o ignorados", {
@@ -112,7 +98,6 @@ test_that("CNPJ que n\u00e3o confere invalida a chave, mesmo com o d\u00edgito d
 test_that("vazio, NA e vetor vazio", {
   partes = chave_decompor(c(NA, ""))
   expect_identical(partes$valida, c(FALSE, FALSE))
-  expect_identical(partes$forma_emissao_descricao, c(NA_character_, NA_character_))
   expect_identical(nrow(chave_decompor(character())), 0L)
   expect_identical(chave_digito(c("123", NA)), c(NA_integer_, NA_integer_))
 })

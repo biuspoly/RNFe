@@ -30,7 +30,6 @@ nota = list(
 )
 
 montada = nfe_montar(nota)        # o XML da NF-e (ou da NFC-e, com o mod 65), ainda sem a assinatura
-nfe_conferir(montada)             # as regras da SEFAZ, antes de enviar
 assinada = xml_assinar(montada, "empresa.pfx", senha)
 resposta = sefaz_autorizar(assinada, "empresa.pfx", senha)
 
@@ -60,8 +59,7 @@ evento inteiro, com o pedido do autor dentro (`evento$pedRegEvento$infPedReg`).
 montagem tira deles a ordem dos campos, o que é atributo, as casas decimais de cada número, o formato da data, os
 zeros à esquerda e o que vai no `xs:any` (os modais do CT-e e do MDF-e, conferidos no schema deles). O código não tem a
 lista dos campos: quando a SEFAZ publica um leiaute novo, trocar os arquivos do schema basta para a montagem aceitar o
-campo novo (o robô dos schemas deixa essa troca pronta num ramo, com os testes, e só troca um arquivo pelo de data
-mais nova: o pacote antigo que o portal lista de novo não volta nada para trás). Cada valor é conferido no padrão do
+campo novo (`ferramentas/baixar_schemas.R` baixa os pacotes dos portais). Cada valor é conferido no padrão do
 tipo dele, e o XML inteiro, no schema oficial no fim.
 
 **Os valores podem vir como o R os guarda:**
@@ -86,8 +84,7 @@ tipo dele, e o XML inteiro, no schema oficial no fim.
 os repetidos e o próprio número); o dígito e o `Id` com a chave de acesso (na NF-e avulsa, com o CNPJ do órgão do grupo
 `avulsa`; na DPS, o `Id` do Anexo I, com a inscrição de quem o `tpEmit` aponta); a versão do leiaute; e o campo
 obrigatório que só aceita um valor, como o `CST` do `ICMS00`, também dentro do grupo opcional que veio. Quando o
-dígito ou o `Id` vêm, eles têm de conferir com os campos do documento. O código numérico informado vai como veio (o
-`nfe_conferir()` confere a regra B03-10).
+dígito ou o `Id` vêm, eles têm de conferir com os campos do documento. O código numérico informado vai como veio.
 
 **O vazio:** o campo com `NULL` ou `NA` fica de fora. O texto vazio (`""`) fica de fora no campo opcional e sai como
 tag vazia no obrigatório que aceita o vazio (o `cEAN`, por exemplo). Com `manter_vazios = TRUE`, o texto vazio sai
@@ -105,7 +102,7 @@ schema oficial recusa no fim (o campo obrigatório que falta). O documento de pr
 todo o RNFe por enquanto.
 
 **O que a montagem não faz:** as regras de negócio da SEFAZ (os totais, o CFOP do destino, o texto do destinatário em
-homologação) ficam no [`nfe_conferir()`](conferir.md); o QR-Code da NFC-e, no `nfce_qrcode()`, depois de montar (o do
+homologação), que só a SEFAZ confere; o QR-Code da NFC-e, no `nfce_qrcode()`, depois de montar (o do
 CT-e entra no `sefaz_cte_autorizar()`); a assinatura, no `xml_assinar()`.
 
 **Os eventos também seguem o schema:** o detalhe de cada evento da NF-e (o cancelamento, a carta de correção, a

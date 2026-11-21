@@ -98,31 +98,6 @@ observacoes_gerais              compl/xObs                                      
 qrcode                          parent::CTeSimp/infCTeSupl/qrCodCTe               texto
 ")
 
-# O nome do CFOP, ao lado dele, como a tabela fiscal registrava na data de emissão do CT-e.
-DESCRICOES_DO_CTE_SIMPLIFICADO = ler_campos("
-coluna_do_codigo coluna_nova tabela texto
-cfop             cfop_titulo cfop   titulo
-")
-
-# Os códigos são os do documento CT-e da tabela_fiscal("codigos_dos_campos"). O toma 4 é "Terceiro" no CT-e
-# simplificado (tipo 5 e 6) e "Outros" no CT-e, por isso o tipo do CT-e é o contexto dele.
-SIGNIFICADOS_DO_CTE_SIMPLIFICADO = ler_campos("
-coluna_do_codigo      campo          coluna_do_contexto
-modelo                mod            -
-tipo_cte              tpCTe          -
-tipo_servico          tpServ         -
-modal                 modal          -
-forma_emissao         tpEmis         -
-ambiente              tpAmb          -
-processo_emissao      procEmi        modelo
-retira                retira         -
-tomador_papel         toma           tipo_cte
-tomador_indicador_ie  indIEToma      -
-emitente_regime       CRT            -
-cst_icms              CST            grupo_icms
-simples_nacional      indSN          -
-")
-
 # A partir de cada det: uma entrega, com o número dela no CT-e (nItem).
 CAMPOS_DA_ENTREGA = ler_campos("
 coluna                        caminho                          tipo
@@ -148,13 +123,6 @@ aliquota_ibs_simples_nacional IBSCBS/gTribSN/gIBSSN/pIBSSN     numero
 valor_ibs_simples_nacional    IBSCBS/gTribSN/gIBSSN/vIBSSN     numero
 aliquota_cbs_simples_nacional IBSCBS/gTribSN/gCBSSN/pCBSSN     numero
 valor_cbs_simples_nacional    IBSCBS/gTribSN/gCBSSN/vCBSSN     numero
-")
-
-# O nome do CST e da classificação tributária do IBS e da CBS de cada entrega, na data de emissão do CT-e.
-DESCRICOES_DA_ENTREGA = ler_campos("
-coluna_do_codigo      coluna_nova                tabela                texto
-cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
-classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
 ")
 
 # A partir de cada Comp (det/Comp): os componentes do valor de cada entrega.
@@ -192,19 +160,6 @@ cte_anterior_chave  parent::infDocAnt/chCTe  texto
 altera_tomador      indAlteraToma            inteiro
 ")
 
-SIGNIFICADOS_DO_DOCUMENTO_DO_SIMPLIFICADO = ler_campos("
-coluna_do_codigo campo         coluna_do_contexto
-tipo_prestacao   tpPrest       -
-altera_tomador   indAlteraToma -
-")
-
-# No CT-e simplificado o tipo da medida é um código; no CT-e é texto livre.
-SIGNIFICADOS_DA_CARGA_DO_SIMPLIFICADO = ler_campos("
-coluna_do_codigo campo coluna_do_contexto
-unidade          cUnid -
-tipo_medida      tpMed -
-")
-
 #' Ler o XML do CT-e simplificado
 #'
 #' Lê o XML do CT-e simplificado (modelo 57, tipo 5, e o de substituição,
@@ -229,14 +184,8 @@ tipo_medida      tpMed -
 #' de vários de uma vez ou do próprio texto do XML. Um arquivo que não dá para
 #' ler não interrompe os outros: fica em `arquivos`, com o motivo.
 #'
-#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-#' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-#' dizer: o nome do CFOP e do CST e da classificação tributária do IBS e da
-#' CBS, pela tabela fiscal na data do CT-e, e o significado dos outros códigos
-#' (tipo do CT-e, serviço, modal, papel do tomador, unidade e tipo da medida
-#' da carga, prestação total ou parcial...) numa coluna `*_descricao`, pela
-#' documentação do schema oficial (veja `tabela_fiscal("codigos_dos_campos")`,
-#' documento `"CT-e"`). Campo que o CT-e não tem fica `NA`.
+#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+#' códigos ficam como estão no XML. Campo que o CT-e não tem fica `NA`.
 #'
 #' @section ctes:
 #' Uma linha por CT-e simplificado: `chave`, `versao`,
@@ -252,17 +201,12 @@ tipo_medida      tpMed -
 #' recebedor, destinatário ou terceiro). Os valores, o IBS e a CBS são os
 #' totais do CT-e (grupo `total`); os de cada entrega estão em `entregas`. O
 #' ICMS é um só, do CT-e inteiro, lido como no [cte_ler()]: o `*` é o grupo do
-#' ICMS que o CT-e tiver, e `grupo_icms` diz qual. Ao lado do CFOP vem o nome
-#' dele (`cfop_titulo`); o significado do CST do ICMS (`cst_icms_descricao`)
-#' segue o leiaute do CT-e, pelo grupo.
+#' ICMS que o CT-e tiver, e `grupo_icms` diz qual.
 #'
 #' @section entregas:
 #' Uma linha por entrega (grupo `det`): `chave`,
 #' `r documentar_campos(CAMPOS_DA_ENTREGA)`. `entrega` é o número dela no
-#' CT-e e liga a ela as linhas de `componentes`, `documentos` e `impostos`. Ao
-#' lado do CST e da classificação tributária do IBS e da CBS vêm
-#' `cst_ibs_cbs_descricao` e `classificacao_ibs_cbs_nome`, como a tabela
-#' fiscal registrava na data de emissão do CT-e.
+#' CT-e e liga a ela as linhas de `componentes`, `documentos` e `impostos`.
 #'
 #' @section componentes:
 #' Os componentes do valor de cada entrega (frete peso, pedágio...), um por
@@ -291,7 +235,7 @@ tipo_medida      tpMed -
 #' As quantidades da carga, uma por linha (o mesmo CT-e pode trazer o peso e o
 #' número de caixas, por exemplo): `chave`,
 #' `r documentar_campos(CAMPOS_DA_CARGA)`. Aqui o `tipo_medida` é um código
-#' (peso bruto da NF-e, caixas, paletes...), com o significado ao lado; no
+#' (peso bruto da NF-e, caixas, paletes...); no
 #' CT-e ele é texto livre.
 #'
 #' @section impostos:
@@ -369,24 +313,10 @@ cte_simplificado_ler = function(arquivos, todos_os_campos = FALSE) {
     tabelas_do_simplificado$campos = juntar_tabela(arquivos_lidos, "campos", colunas_vazias$campos)
   }
   tabelas_do_simplificado$arquivos = resumo_dos_arquivos(arquivos_lidos, "ctes", "ctes")
-
-  ctes = converter_datas(tabelas_do_simplificado$ctes, rbind(CAMPOS_DO_CTE_SIMPLIFICADO, CAMPOS_DO_PROTOCOLO))
-  ctes = acrescentar_descricoes(ctes, ctes$data_emissao, DESCRICOES_DO_CTE_SIMPLIFICADO)
-  tabelas_do_simplificado$ctes = acrescentar_significados(ctes, "CT-e", SIGNIFICADOS_DO_CTE_SIMPLIFICADO)
-
-  # A entrega e o pagamento vinculado não têm data: vale a de emissão do CT-e deles.
-  data_de_cada_entrega = ctes$data_emissao[match(tabelas_do_simplificado$entregas$chave, ctes$chave)]
-  tabelas_do_simplificado$entregas = acrescentar_descricoes(tabelas_do_simplificado$entregas, data_de_cada_entrega,
-                                                            DESCRICOES_DA_ENTREGA)
-  data_de_cada_vinculado = ctes$data_emissao[match(tabelas_do_simplificado$pagamentos_vinculados$chave, ctes$chave)]
-  tabelas_do_simplificado$pagamentos_vinculados = acrescentar_descricoes(tabelas_do_simplificado$pagamentos_vinculados,
-                                                                         data_de_cada_vinculado,
-                                                                         DESCRICOES_DO_PAGAMENTO_VINCULADO)
-
-  documentos = converter_datas(tabelas_do_simplificado$documentos, CAMPOS_DO_DOCUMENTO_DO_SIMPLIFICADO)
-  tabelas_do_simplificado$documentos = acrescentar_significados(documentos, "CT-e", SIGNIFICADOS_DO_DOCUMENTO_DO_SIMPLIFICADO)
-  tabelas_do_simplificado$cargas = acrescentar_significados(tabelas_do_simplificado$cargas, "CT-e",
-                                                            SIGNIFICADOS_DA_CARGA_DO_SIMPLIFICADO)
+  tabelas_do_simplificado$ctes = converter_datas(tabelas_do_simplificado$ctes,
+                                                 rbind(CAMPOS_DO_CTE_SIMPLIFICADO, CAMPOS_DO_PROTOCOLO))
+  tabelas_do_simplificado$documentos = converter_datas(tabelas_do_simplificado$documentos,
+                                                       CAMPOS_DO_DOCUMENTO_DO_SIMPLIFICADO)
   tabelas_do_simplificado$parcelas = converter_datas(tabelas_do_simplificado$parcelas, CAMPOS_DA_PARCELA)
   tabelas_do_simplificado
 }

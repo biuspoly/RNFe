@@ -96,77 +96,6 @@ VERSOES_DA_ABRASF_COM_ALIQUOTA_EM_PERCENTUAL = c("2.02", "2.03", "2.04")
 
 LEIAUTES_DA_NFSE_DE_PREFEITURA = c(sao_paulo ="S\u00e3o Paulo", abrasf_1 = "ABRASF 1", abrasf_2 = "ABRASF 2")
 
-# O que quer dizer cada código, por leiaute, pelos manuais: o Manual de Utilização do Web Service de São Paulo (3.3.4),
-# o Modelo Conceitual da ABRASF 1.00 e o Manual de Orientação do Contribuinte da ABRASF 2.04. A opção pelo Simples de
-# São Paulo segue o schema TiposNFe_v02, que tem o 6 (o DAMSP); o manual ainda junta o DAMSP ao 0.
-SIGNIFICADOS_DA_NFSE_DE_PREFEITURA = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE,
-                                                       colClasses = "character", text = "
-leiaute   ; coluna            ; codigo ; descricao
-sao_paulo ; situacao_codigo   ; N      ; Normal
-sao_paulo ; situacao_codigo   ; C      ; Cancelada
-sao_paulo ; situacao_codigo   ; E      ; Extraviada
-sao_paulo ; rps_tipo          ; RPS    ; Recibo Provis\u00f3rio de Servi\u00e7os
-sao_paulo ; rps_tipo          ; RPS-M  ; Recibo Provis\u00f3rio de Servi\u00e7os proveniente de Nota Fiscal Conjugada (Mista)
-sao_paulo ; rps_tipo          ; RPS-C  ; Cupom
-sao_paulo ; tributacao        ; T      ; Tributado em S\u00e3o Paulo
-sao_paulo ; tributacao        ; F      ; Tributado Fora de S\u00e3o Paulo
-sao_paulo ; tributacao        ; A      ; Tributado em S\u00e3o Paulo, por\u00e9m Isento
-sao_paulo ; tributacao        ; B      ; Tributado Fora de S\u00e3o Paulo, por\u00e9m Isento
-sao_paulo ; tributacao        ; D      ; Tributado em S\u00e3o Paulo com isen\u00e7\u00e3o parcial
-sao_paulo ; tributacao        ; M      ; Tributado em S\u00e3o Paulo, por\u00e9m com indica\u00e7\u00e3o de imunidade subjetiva
-sao_paulo ; tributacao        ; N      ; Tributado Fora de S\u00e3o Paulo, por\u00e9m com indica\u00e7\u00e3o de imunidade subjetiva
-sao_paulo ; tributacao        ; R      ; Tributado em S\u00e3o Paulo, por\u00e9m com indica\u00e7\u00e3o de imunidade objetiva
-sao_paulo ; tributacao        ; S      ; Tributado fora de S\u00e3o Paulo, por\u00e9m com indica\u00e7\u00e3o de imunidade objetiva
-sao_paulo ; tributacao        ; X      ; Tributado em S\u00e3o Paulo, por\u00e9m Exigibilidade Suspensa
-sao_paulo ; tributacao        ; V      ; Tributado Fora de S\u00e3o Paulo, por\u00e9m Exigibilidade Suspensa
-sao_paulo ; tributacao        ; P      ; Exporta\u00e7\u00e3o de Servi\u00e7os
-sao_paulo ; tributacao        ; I      ; Isento/Imune (NFS-e at\u00e9 22/02/2015)
-sao_paulo ; tributacao        ; J      ; ISS Suspenso por Decis\u00e3o Judicial (NFS-e at\u00e9 22/02/2015)
-sao_paulo ; optante_simples   ; 0      ; N\u00e3o-optante pelo Simples Federal nem Municipal
-sao_paulo ; optante_simples   ; 1      ; Optante pelo Simples Federal (Al\u00edquota de 1,0%)
-sao_paulo ; optante_simples   ; 2      ; Optante pelo Simples Federal (Al\u00edquota de 0,5%)
-sao_paulo ; optante_simples   ; 3      ; Optante pelo Simples Municipal
-sao_paulo ; optante_simples   ; 4      ; Optante pelo Simples Nacional - DAS
-sao_paulo ; optante_simples   ; 6      ; Optante pelo Simples Nacional - DAMSP
-abrasf_1  ; rps_tipo          ; 1      ; Recibo Provis\u00f3rio de Servi\u00e7os
-abrasf_1  ; rps_tipo          ; 2      ; RPS Nota Fiscal Conjugada (Mista)
-abrasf_1  ; rps_tipo          ; 3      ; Cupom
-abrasf_1  ; natureza_operacao ; 1      ; Tributa\u00e7\u00e3o no munic\u00edpio
-abrasf_1  ; natureza_operacao ; 2      ; Tributa\u00e7\u00e3o fora do munic\u00edpio
-abrasf_1  ; natureza_operacao ; 3      ; Isen\u00e7\u00e3o
-abrasf_1  ; natureza_operacao ; 4      ; Imune
-abrasf_1  ; natureza_operacao ; 5      ; Exigibilidade suspensa por decis\u00e3o judicial
-abrasf_1  ; natureza_operacao ; 6      ; Exigibilidade suspensa por procedimento administrativo
-abrasf_1  ; regime_especial   ; 1      ; Microempresa Municipal
-abrasf_1  ; regime_especial   ; 2      ; Estimativa
-abrasf_1  ; regime_especial   ; 3      ; Sociedade de Profissionais
-abrasf_1  ; regime_especial   ; 4      ; Cooperativa
-abrasf_1  ; optante_simples   ; 1      ; Sim
-abrasf_1  ; optante_simples   ; 2      ; N\u00e3o
-abrasf_1  ; incentivador_cultural ; 1  ; Sim
-abrasf_1  ; incentivador_cultural ; 2  ; N\u00e3o
-abrasf_2  ; rps_tipo          ; 1      ; RPS
-abrasf_2  ; rps_tipo          ; 2      ; Nota Fiscal Conjugada (Mista)
-abrasf_2  ; rps_tipo          ; 3      ; Cupom
-abrasf_2  ; exigibilidade_iss ; 1      ; Exig\u00edvel
-abrasf_2  ; exigibilidade_iss ; 2      ; N\u00e3o incid\u00eancia
-abrasf_2  ; exigibilidade_iss ; 3      ; Isen\u00e7\u00e3o
-abrasf_2  ; exigibilidade_iss ; 4      ; Exporta\u00e7\u00e3o
-abrasf_2  ; exigibilidade_iss ; 5      ; Imunidade
-abrasf_2  ; exigibilidade_iss ; 6      ; Exigibilidade Suspensa por Decis\u00e3o Judicial
-abrasf_2  ; exigibilidade_iss ; 7      ; Exigibilidade Suspensa por Processo Administrativo
-abrasf_2  ; regime_especial   ; 1      ; Microempresa municipal
-abrasf_2  ; regime_especial   ; 2      ; Estimativa
-abrasf_2  ; regime_especial   ; 3      ; Sociedade de profissionais
-abrasf_2  ; regime_especial   ; 4      ; Cooperativa
-abrasf_2  ; regime_especial   ; 5      ; Microempres\u00e1rio Individual (MEI)
-abrasf_2  ; regime_especial   ; 6      ; Microempresa ou Empresa de Pequeno Porte (ME EPP)
-abrasf_2  ; optante_simples   ; 1      ; Sim
-abrasf_2  ; optante_simples   ; 2      ; N\u00e3o
-abrasf_2  ; incentivo_fiscal  ; 1      ; Sim
-abrasf_2  ; incentivo_fiscal  ; 2      ; N\u00e3o
-")
-
 #' Ler o XML da NFS-e de prefeitura
 #'
 #' Lê o XML da NFS-e dos padrões municipais, anteriores à NFS-e Nacional, e
@@ -210,11 +139,7 @@ abrasf_2  ; incentivo_fiscal  ; 2      ; N\u00e3o
 #' ABRASF, quando vem), as colunas
 #' `r paste0("\x60", CAMPOS_DA_NFSE_DE_PREFEITURA$coluna, "\x60", collapse = ", ")`,
 #' e ainda `situacao` (Normal, Cancelada, Substituída ou Extraviada),
-#' `iss_retido` (`TRUE` ou `FALSE`), `aliquota_percentual`, o significado de
-#' cada código numa coluna `*_descricao` ao lado dele (o tipo do RPS, a
-#' natureza da operação, a exigibilidade do ISS, a tributação, o regime
-#' especial, a opção pelo Simples, o incentivador cultural da ABRASF 1.00 e o
-#' incentivo fiscal da ABRASF 2) e `arquivo`.
+#' `iss_retido` (`TRUE` ou `FALSE`), `aliquota_percentual` e `arquivo`.
 #' `emissao` e `cancelamento` ficam como estão no XML (texto): os padrões
 #' municipais não trazem o fuso, e a hora é a do município; `data_emissao`,
 #' `competencia` e `rps_emissao` são datas (a competência em AAAAMM, como o
@@ -389,7 +314,7 @@ resumo_dos_arquivos_da_prefeitura = function(arquivos_lidos) {
   resumo_dos_arquivos(arquivos_lidos, "nfses", "nfses")
 }
 
-# As datas, a situação, o ISS retido, a alíquota em percentual e o significado de cada código.
+# As datas, a situação, o ISS retido e a alíquota em percentual.
 completar_as_nfses_de_prefeitura = function(nfses) {
   # A data e hora ficam como no XML: os padrões municipais não trazem o fuso, e a hora é a do município.
   nfses$data_emissao = data_da_nfse_de_prefeitura(nfses$data_emissao)
@@ -423,9 +348,6 @@ completar_as_nfses_de_prefeitura = function(nfses) {
     nfses$versao %in% VERSOES_DA_ABRASF_COM_ALIQUOTA_EM_PERCENTUAL
   percentual[em_percentual] = nfses$aliquota[em_percentual]
   nfses = inserir_coluna_depois(nfses, "aliquota_percentual", percentual, "aliquota")
-  for (coluna in unique(SIGNIFICADOS_DA_NFSE_DE_PREFEITURA$coluna)) {
-    nfses = inserir_coluna_depois(nfses, paste0(coluna, "_descricao"), significados_da_coluna(nfses, coluna), coluna)
-  }
   nfses
 }
 
@@ -439,11 +361,4 @@ data_da_nfse_de_prefeitura = function(textos) {
   datas[so_mes_e_ano] = as.Date(paste0(substr(textos[so_mes_e_ano], 1, 4), "-", substr(textos[so_mes_e_ano], 5, 6), "-01"),
                                 format = "%Y-%m-%d")
   datas
-}
-
-# O significado do código de cada linha, pela tabela do leiaute dela.
-significados_da_coluna = function(nfses, coluna) {
-  significados = SIGNIFICADOS_DA_NFSE_DE_PREFEITURA[SIGNIFICADOS_DA_NFSE_DE_PREFEITURA$coluna == coluna, ]
-  leiaute_de_cada = names(LEIAUTES_DA_NFSE_DE_PREFEITURA)[match(nfses$leiaute, LEIAUTES_DA_NFSE_DE_PREFEITURA)]
-  significados$descricao[match(paste(leiaute_de_cada, nfses[[coluna]]), paste(significados$leiaute, significados$codigo))]
 }

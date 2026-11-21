@@ -9,7 +9,6 @@ test_that("a GTV-e com protocolo: cabe\u00e7alho, pessoas, hor\u00e1rios e autor
   expect_true(chave_valida(gtve$chave))
   expect_identical(gtve$versao, "4.00")
   expect_identical(gtve$modelo, "64")
-  expect_identical(gtve$modelo_descricao, "GTV-e (Guia de Transporte de Valores Eletr\u00f4nica)")
   expect_identical(gtve$serie, 1L)
   expect_identical(gtve$numero, 501L)
   expect_identical(gtve$data_emissao, as.Date("2026-10-20"))
@@ -17,14 +16,7 @@ test_that("a GTV-e com protocolo: cabe\u00e7alho, pessoas, hor\u00e1rios e autor
   expect_equal(as.numeric(gtve$saida_origem), as.numeric(as.POSIXct("2026-10-20 11:30:00", tz = "UTC")))
   expect_equal(as.numeric(gtve$chegada_destino), as.numeric(as.POSIXct("2026-10-20 13:15:00", tz = "UTC")))
   expect_identical(gtve$cfop, "5353")
-  expect_identical(gtve$cfop_titulo, "Presta\u00e7\u00e3o de servi\u00e7o de transporte a estabelecimento comercial.")
   expect_identical(gtve$tipo_cte, 4L)
-  expect_identical(gtve$tipo_cte_descricao, "GTV-e")
-  expect_identical(gtve$tipo_servico_descricao, "GTV")
-  expect_identical(gtve$modal_descricao, "Rodovi\u00e1rio")
-  expect_identical(gtve$formato_dacte_descricao, "Retrato")
-  expect_identical(gtve$forma_emissao_descricao, "Normal")
-  expect_identical(gtve$ambiente_descricao, "Homologa\u00e7\u00e3o")
   expect_identical(gtve$emitente_documento, "11444777000161")
   expect_identical(gtve$emitente_nome, "TRANSPORTADORA DE VALORES DE TESTE LTDA")
   expect_identical(gtve$remetente_documento, "11222333000181")
@@ -45,14 +37,11 @@ test_that("o tomador: o remetente, o destinat\u00e1rio ou outra pessoa", {
   texto = paste(readLines(GTVE_SP, encoding = "UTF-8"), collapse = "\n")
   remetente = gtve_ler(texto)$gtves
   expect_identical(remetente$tomador_papel, 0L)
-  expect_identical(remetente$tomador_papel_descricao, "Remetente")
   expect_identical(remetente$tomador_documento, "11222333000181")
   expect_identical(remetente$tomador_nome, "EMPRESA DE TESTE LTDA")
-  expect_identical(remetente$tomador_indicador_ie_descricao, "Contribuinte ICMS")
 
   # Na GTV-e o papel 1 é o destinatário (no CT-e seria o expedidor).
   destinatario = gtve_ler(sub("<toma>0</toma>", "<toma>1</toma>", texto, fixed = TRUE))$gtves
-  expect_identical(destinatario$tomador_papel_descricao, "Destinat\u00e1rio")
   expect_identical(destinatario$tomador_documento, "12ABC34501DE35")
   expect_identical(destinatario$tomador_municipio, "CAMPINAS")
 
@@ -62,7 +51,6 @@ test_that("o tomador: o remetente, o destinat\u00e1rio ou outra pessoa", {
   texto_com_terceiro = sub("(?s)<toma>\\s*<toma>0</toma>\\s*</toma>", outra_pessoa, texto, perl = TRUE)
   terceiro = gtve_ler(texto_com_terceiro)$gtves
   expect_identical(terceiro$tomador_papel, 4L)
-  expect_identical(terceiro$tomador_papel_descricao, "Outros")
   expect_identical(terceiro$tomador_documento, "12345678909")
   expect_identical(terceiro$tomador_nome, "TOMADOR DE TESTE")
   expect_identical(terceiro$tomador_uf, "CE")
@@ -73,9 +61,7 @@ test_that("as esp\u00e9cies levadas, o ve\u00edculo e as observa\u00e7\u00f5es",
   especies = lida$especies
   expect_identical(especies$chave, rep(CHAVE_GTVE, 3))
   expect_identical(especies$tipo, c(1L, 3L, 1L))
-  expect_identical(especies$tipo_descricao, c("C\u00e9dula", "Moeda", "C\u00e9dula"))
   expect_identical(especies$valor, c(1500, 120.5, 200))
-  expect_identical(especies$numerario_descricao, c("Nacional", "Nacional", "Estrangeiro"))
   expect_identical(especies$moeda_estrangeira, c(NA, NA, "DOLAR AMERICANO"))
   expect_identical(lida$veiculos$placa, "ABC1D23")
   expect_identical(lida$veiculos$uf, "SP")

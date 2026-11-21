@@ -8,7 +8,7 @@
 # O formato de cada valor é testado contra o próprio padrão do tipo (xs:pattern, a lista de valores, o tamanho): o
 # número ganha as casas decimais e os zeros à esquerda que o padrão aceita, sem regra escrita à mão para cada tipo.
 
-#' @include tabelas.R assinatura.R chave.R sefaz.R
+#' @include utilidades.R assinatura.R chave.R sefaz.R
 NULL
 
 # As construções do XSD que guardam o modelo de conteúdo de um tipo.

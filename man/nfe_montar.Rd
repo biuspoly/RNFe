@@ -61,8 +61,7 @@ sistema, fora dos que a SEFAZ recusa), o dígito \code{cDV}, o \code{Id} com a c
 de acesso (na NF-e avulsa, com o CNPJ do órgão do grupo \code{avulsa}), a versão
 do leiaute e o campo obrigatório que só aceita um valor (como o \code{CST} do
 \code{ICMS00}). Quando o \code{cDV} ou o \code{Id} vêm, eles têm de conferir com os
-campos da nota; o \code{cNF} informado vai como veio (o \code{\link[=nfe_conferir]{nfe_conferir()}} confere
-a regra B03-10, dos códigos que a SEFAZ recusa).
+campos da nota; o \code{cNF} informado vai como veio.
 
 Cada grupo é uma lista com os campos dele; o grupo que aparece mais de uma
 vez (os itens, as duplicatas, as formas de pagamento) é uma lista de
@@ -70,9 +69,8 @@ listas; o campo que se repete é um vetor. É a mesma forma que
 \code{\link[=xml_para_lista]{xml_para_lista()}} devolve, então uma nota que já existe pode servir de
 ponto de partida.
 
-A montagem não confere as regras de negócio da SEFAZ (os totais, o CFOP do
-destino, o texto do destinatário em homologação): para isso, passe o
-resultado no \code{\link[=nfe_conferir]{nfe_conferir()}} antes de enviar.
+A montagem confere o XML pelo schema, mas não as regras de negócio da SEFAZ
+(os totais, o CFOP do destino, o texto do destinatário em homologação).
 
 Por enquanto, como o resto da conversa com a SEFAZ, só para o ambiente de
 \strong{homologação}: a nota com o \code{tpAmb} 1 é recusada.
@@ -90,6 +88,6 @@ if (requireNamespace("openssl", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=xml_para_lista]{xml_para_lista()}}, \code{\link[=nfe_conferir]{nfe_conferir()}}, \code{\link[=xml_assinar]{xml_assinar()}},
+\code{\link[=xml_para_lista]{xml_para_lista()}}, \code{\link[=xml_assinar]{xml_assinar()}},
 \code{\link[=sefaz_autorizar]{sefaz_autorizar()}}, \code{\link[=nfce_qrcode]{nfce_qrcode()}} para o QR-Code da NFC-e.
 }

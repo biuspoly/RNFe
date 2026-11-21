@@ -77,27 +77,6 @@ qrcode                        parent::GTVe/infCTeSupl/qrCodCTe            texto
 # No toma da GTV-e o tomador é o remetente (papel 0) ou o destinatário (papel 1): o 1 não é o expedidor, como no CT-e.
 PESSOA_DE_CADA_PAPEL_NA_GTVE = c("remetente", "destinatario")
 
-# O nome do CFOP, ao lado dele, como a tabela fiscal registrava na data de emissão da GTV-e.
-DESCRICOES_DA_GTVE = ler_campos("
-coluna_do_codigo coluna_nova tabela texto
-cfop             cfop_titulo cfop   titulo
-")
-
-# O que quer dizer cada código, ao lado dele, pela documentação do tipo TGTVe do schema (os textos estão em
-# tabela_fiscal("codigos_dos_campos"), documento "GTV-e").
-SIGNIFICADOS_DA_GTVE = ler_campos("
-coluna_do_codigo     campo     coluna_do_contexto
-modelo               mod       -
-tipo_cte             tpCTe     -
-tipo_servico         tpServ    -
-modal                modal     -
-formato_dacte        tpImp     -
-forma_emissao        tpEmis    -
-ambiente             tpAmb     -
-tomador_papel        toma      -
-tomador_indicador_ie indIEToma -
-")
-
 # A partir de cada infEspecie (detGTV/infEspecie): o valor levado de cada espécie.
 CAMPOS_DA_ESPECIE = ler_campos("
 coluna            caminho      tipo
@@ -105,12 +84,6 @@ tipo              tpEspecie    inteiro
 valor             vEspecie     numero
 numerario         tpNumerario  inteiro
 moeda_estrangeira xMoedaEstr   texto
-")
-
-SIGNIFICADOS_DA_ESPECIE = ler_campos("
-coluna_do_codigo campo       coluna_do_contexto
-tipo             tpEspecie   -
-numerario        tpNumerario -
 ")
 
 # A partir de cada infVeiculo (detGTV/infVeiculo).
@@ -141,13 +114,8 @@ rntrc  RNTRC   texto
 #' texto do XML. Um arquivo que não dá para ler não interrompe os outros: fica
 #' em `arquivos`, com o motivo.
 #'
-#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-#' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-#' dizer: o nome do CFOP, pela tabela fiscal na data da GTV-e, e o significado
-#' dos outros códigos (tipo, modal, forma de emissão, papel do tomador, espécie,
-#' numerário...) numa coluna `*_descricao`, pela documentação do schema oficial
-#' (veja `tabela_fiscal("codigos_dos_campos")`, documento `"GTV-e"`). Campo que
-#' a GTV-e não tem fica `NA`.
+#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+#' códigos ficam como estão no XML. Campo que a GTV-e não tem fica `NA`.
 #'
 #' @section gtves:
 #' Uma linha por GTV-e: `chave`, `versao`,
@@ -165,9 +133,7 @@ rntrc  RNTRC   texto
 #'
 #' @section especies:
 #' O valor levado de cada espécie, um por linha: `chave`,
-#' `r documentar_campos(CAMPOS_DA_ESPECIE)`. O significado do `tipo` (cédula,
-#' cheque, moeda ou outros) e do `numerario` (nacional ou estrangeiro) vem ao
-#' lado, em `*_descricao`; `moeda_estrangeira` é o nome da moeda do numerário
+#' `r documentar_campos(CAMPOS_DA_ESPECIE)`. `moeda_estrangeira` é o nome da moeda do numerário
 #' estrangeiro. A GTV-e não tem um valor total: some o `valor` das espécies
 #' de cada `chave`.
 #'
@@ -206,7 +172,7 @@ rntrc  RNTRC   texto
 #' gtve = system.file("exemplos", "gtve_proc_sp.xml", package = "RNFe")
 #' lida = gtve_ler(gtve)
 #' lida$gtves[, c("chave", "remetente_nome", "destinatario_nome", "quantidade_volumes")]
-#' lida$especies[, c("tipo_descricao", "valor", "numerario_descricao", "moeda_estrangeira")]
+#' lida$especies[, c("tipo", "valor", "numerario", "moeda_estrangeira")]
 #' @export
 gtve_ler = function(arquivos, todos_os_campos = FALSE) {
   arquivos_lidos = ler_arquivos_xml(arquivos, CAMINHO_DAS_GTVES, "uma GTV-e", colunas_da_gtve, todos_os_campos)
@@ -224,9 +190,6 @@ gtve_ler = function(arquivos, todos_os_campos = FALSE) {
   tabelas_da_gtve$arquivos = resumo_dos_arquivos(arquivos_lidos, "gtves", "gtves")
   tabelas_da_gtve$gtves = converter_datas(tabelas_da_gtve$gtves, rbind(CAMPOS_DA_GTVE, CAMPOS_DO_PROTOCOLO))
   tabelas_da_gtve$gtves = preencher_tomador(tabelas_da_gtve$gtves, PESSOA_DE_CADA_PAPEL_NA_GTVE)
-  tabelas_da_gtve$gtves = acrescentar_descricoes(tabelas_da_gtve$gtves, tabelas_da_gtve$gtves$data_emissao, DESCRICOES_DA_GTVE)
-  tabelas_da_gtve$gtves = acrescentar_significados(tabelas_da_gtve$gtves, "GTV-e", SIGNIFICADOS_DA_GTVE)
-  tabelas_da_gtve$especies = acrescentar_significados(tabelas_da_gtve$especies, "GTV-e", SIGNIFICADOS_DA_ESPECIE)
   tabelas_da_gtve
 }
 

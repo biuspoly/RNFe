@@ -41,11 +41,8 @@ texto do XML. Um arquivo que não dá para ler não interrompe os outros: fica
 em \code{arquivos}, com o motivo. Para saber se o MDF-e foi encerrado ou
 cancelado, leia os eventos dele com \code{\link[=eventos_ler]{eventos_ler()}}.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-códigos (modal, tipo de emitente, tipo de carga, rodado, carroceria...)
-ficam como estão no XML, e ao lado de cada um vem o que ele quer dizer, numa
-coluna \verb{*_descricao}, pela documentação do schema oficial (veja
-\code{tabela_fiscal("codigos_dos_campos")}). Campo que o MDF-e não tem fica \code{NA}. Nenhum campo se perde: o que
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+códigos ficam como estão no XML. Campo que o MDF-e não tem fica \code{NA}. Nenhum campo se perde: o que
 não tem coluna própria está na tabela \code{campos}.
 }
 \section{mdfes}{
@@ -56,9 +53,7 @@ do protocolo de autorização, quando vem junto:
 \code{protocolo} (\code{nProt}), \code{situacao} (\code{cStat}), \code{motivo} (\code{xMotivo}), \code{autorizacao} (\code{dhRecbto});
 e \code{arquivo}. \code{emissao}, \code{inicio_viagem} e \code{autorizacao} são data e hora
 (mostradas no horário de Brasília); \code{data_emissao} é a data como está no
-MDF-e. Ao lado do NCM do produto predominante vem a descrição dele, como a
-tabela registrava na data de emissão (\code{produto_ncm_descricao}, veja
-\code{\link[=tabela_fiscal]{tabela_fiscal()}}).
+MDF-e.
 }
 
 \section{locais}{

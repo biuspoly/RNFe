@@ -12,6 +12,44 @@ ENDERECO_DA_CONSULTA_DA_NFSE = "https://www.nfse.gov.br/ConsultaPublica/?tpc=1&c
 COLUNAS_DO_DANFSE = c(0.30, 5.41, 10.51, 15.62)
 LARGURA_DA_COLUNA_DO_DANFSE = 5.09
 CINZA_DO_DANFSE = grDevices::gray(0.95)
+# O texto de cada código que o DANFSe mostra, pela documentação do schema da NFS-e Nacional (o tribISSQN pelo
+# Anexo I do leiaute, que corrige a ordem do schema 1.00).
+TEXTOS_DOS_CODIGOS_DO_DANFSE = list(
+  ambiente_gerador = c("1" = "Prefeitura", "2" = "Sistema Nacional da NFS-e"),
+  ambiente = c("1" = "Produ\u00e7\u00e3o", "2" = "Homologa\u00e7\u00e3o"),
+  tipo_emitente = c("1" = "Prestador", "2" = "Tomador", "3" = "Intermedi\u00e1rio"),
+  situacao = c("100" = "NFS-e gerada", "101" = "NFS-e de substitui\u00e7\u00e3o gerada",
+               "102" = "NFS-e de decis\u00e3o judicial", "103" = "NFS-e avulsa", "107" = "NFS-e MEI"),
+  finalidade = c("0" = "NFS-e regular"),
+  prestador_simples_nacional = c("1" = "N\u00e3o optante", "2" = "Optante, Microempreendedor Individual (MEI)",
+                                 "3" = "Optante, Microempresa ou Empresa de Pequeno Porte (ME/EPP)"),
+  prestador_regime_apuracao_simples = c("1" = "Tributos federais e municipal apurados pelo Simples Nacional",
+                                        "2" = "Tributos federais apurados pelo Simples Nacional e ISSQN por fora dele, conforme a legisla\u00e7\u00e3o municipal",
+                                        "3" = "Tributos federais e municipal apurados por fora do Simples Nacional, conforme a legisla\u00e7\u00e3o federal e a municipal de cada tributo"),
+  prestador_regime_especial = c("0" = "Nenhum", "1" = "Ato cooperado (cooperativa)", "2" = "Estimativa",
+                                "3" = "Microempresa municipal", "4" = "Not\u00e1rio ou registrador",
+                                "5" = "Profissional aut\u00f4nomo", "6" = "Sociedade de profissionais",
+                                "9" = "Outros"),
+  tributacao_issqn = c("1" = "Opera\u00e7\u00e3o tribut\u00e1vel", "2" = "Imunidade",
+                       "3" = "Exporta\u00e7\u00e3o de servi\u00e7o", "4" = "N\u00e3o incid\u00eancia"),
+  retencao_issqn = c("1" = "N\u00e3o retido", "2" = "Retido pelo tomador",
+                     "3" = "Retido pelo intermedi\u00e1rio"),
+  retencao_pis_cofins = c("0" = "PIS, COFINS e CSLL n\u00e3o retidos", "1" = "PIS e COFINS retidos",
+                          "2" = "PIS e COFINS n\u00e3o retidos", "3" = "PIS, COFINS e CSLL retidos",
+                          "4" = "PIS e COFINS retidos, CSLL n\u00e3o retida",
+                          "5" = "PIS retido, COFINS e CSLL n\u00e3o retidos",
+                          "6" = "COFINS retida, PIS e CSLL n\u00e3o retidos",
+                          "7" = "PIS n\u00e3o retido, COFINS e CSLL retidos",
+                          "8" = "PIS e COFINS n\u00e3o retidos, CSLL retida",
+                          "9" = "COFINS n\u00e3o retida, PIS e CSLL retidos")
+)
+# A nota 6 da NT SE/CGNFS-e 008/2026 (DANFSe v2.0): o PIS e a COFINS de apuração própria só até a competência de 2026.
+DANFSE_SEM_PIS_E_COFINS_PROPRIOS_DESDE = as.Date("2027-01-01")
+
+texto_do_codigo_do_danfse = function(nota, coluna) {
+  unname(TEXTOS_DOS_CODIGOS_DO_DANFSE[[coluna]][as.character(nota[[coluna]])])
+}
+
 # A marca d'água da NFS-e cancelada ou substituída (itens 2.5.1 e 2.5.2): na diagonal, com 50 pontos no mínimo, em cinza
 # K35. Vai por cima do resto, com metade da opacidade de um cinza mais escuro, que no papel branco dá o K35.
 MARCAS_DO_DANFSE = c(normal = NA, cancelada = "CANCELADA", substituida = "SUBSTITU\u00cdDA")
@@ -37,8 +75,7 @@ BENEFICIOS_MUNICIPAIS = c("1" = "Isen\u00e7\u00e3o", "2" = "Redu\u00e7\u00e3o da
 #' VALIDADE JURÍDICA" na Produção Restrita), os dados da NFS-e, o QR-Code da
 #' consulta pública, o prestador, o tomador, o destinatário e o intermediário
 #' (ou a frase de que a nota não os identifica), o serviço, a tributação
-#' municipal, a federal (o PIS e a COFINS próprios até a competência de 2026,
-#' pela data em `tabela_fiscal("marcos_ibs_cbs")`) e
+#' municipal, a federal (o PIS e a COFINS próprios até a competência de 2026) e
 #' a do IBS e da CBS, os totais, as informações complementares (com os totais
 #' aproximados dos tributos) e o canhoto, com a logomarca oficial da NFS-e no
 #' cabeçalho. O campo sem informação leva um traço; o texto que passa do
@@ -223,8 +260,8 @@ desenhar_cabecalho_do_danfse = function(nota) {
     desenhar_texto(paste0("Munic\u00edpio: ", conteudo_do_danfse(nota$local_emissao_municipio), " / ",
                           conteudo_do_danfse(nota$emitente_uf)), 15.72, 0.40, tamanho = 8)
   }
-  desenhar_texto(paste("Ambiente Gerador:", conteudo_do_danfse(nota$ambiente_gerador_descricao)), 15.72, 0.97, tamanho = 6)
-  desenhar_texto(paste("Tipo de Ambiente:", conteudo_do_danfse(nota$ambiente_descricao)), 15.72, 1.22, tamanho = 6)
+  desenhar_texto(paste("Ambiente Gerador:", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "ambiente_gerador"))), 15.72, 0.97, tamanho = 6)
+  desenhar_texto(paste("Tipo de Ambiente:", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "ambiente"))), 15.72, 1.22, tamanho = 6)
 }
 
 desenhar_dados_da_nfse = function(nota, informacao, dps) {
@@ -238,10 +275,10 @@ desenhar_dados_da_nfse = function(nota, informacao, dps) {
   campo_do_danfse(5.41, 2.96, 5.09, 0.67, "S\u00c9RIE DA DPS", conteudo_do_danfse(nota$serie_dps), tamanho_do_titulo = 7)
   campo_do_danfse(10.51, 2.96, 5.09, 0.67, "DATA E HORA DA EMISS\u00c3O DA DPS",
                   conteudo_do_danfse(data_e_hora_do_danfse(texto_pelo_caminho(dps, "dhEmi"))), tamanho_do_titulo = 7)
-  campo_do_danfse(0.30, 3.65, 5.09, 0.67, "EMITENTE DA NFS-E", conteudo_do_danfse(nota$tipo_emitente_descricao), sombreado = TRUE,
+  campo_do_danfse(0.30, 3.65, 5.09, 0.67, "EMITENTE DA NFS-E", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "tipo_emitente")), sombreado = TRUE,
                   tamanho_do_titulo = 7)
-  campo_do_danfse(5.41, 3.65, 5.09, 0.67, "SITUA\u00c7\u00c3O DA NFS-E", conteudo_do_danfse(nota$situacao_descricao, 37), tamanho_do_titulo = 7)
-  campo_do_danfse(10.51, 3.65, 5.09, 0.67, "FINALIDADE", conteudo_do_danfse(nota$finalidade_descricao, 37), tamanho_do_titulo = 7)
+  campo_do_danfse(5.41, 3.65, 5.09, 0.67, "SITUA\u00c7\u00c3O DA NFS-E", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "situacao"), 37), tamanho_do_titulo = 7)
+  campo_do_danfse(10.51, 3.65, 5.09, 0.67, "FINALIDADE", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "finalidade"), 37), tamanho_do_titulo = 7)
   desenhar_qrcode(paste0(ENDERECO_DA_CONSULTA_DA_NFSE, nota$chave), 17.48, 1.67, 1.52)
   complemento = c("A autenticidade desta NFS-e pode ser verificada", "pela leitura deste c\u00f3digo QR ou pela consulta da",
                   "chave de acesso no portal nacional da NFS-e")
@@ -288,7 +325,7 @@ municipio_com_a_uf = function(codigo) {
   if (is.na(codigo)) {
     return(NA_character_)
   }
-  municipios = tabela_fiscal("municipios")
+  municipios = tabela_interna("municipios")
   posicao = match(codigo, municipios$codigo)
   if (is.na(posicao)) NA_character_ else paste(municipios$nome[posicao], "/", municipios$uf[posicao])
 }
@@ -311,9 +348,9 @@ desenhar_pessoa_do_danfse = function(titulo, pessoa, y, frase_sem_pessoa, com_in
   if (com_simples) {
     # As duas posições do Anexo I: o Simples na primeira coluna e o regime de apuração na terceira, com duas de largura.
     campo_do_danfse(0.30, y + 1.94, 5.09, 0.63, "Simples Nacional na Data de Compet\u00eancia",
-                    conteudo_do_danfse(nota$prestador_simples_nacional_descricao, 37))
+                    conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "prestador_simples_nacional"), 37))
     campo_do_danfse(10.51, y + 1.94, 10.19, 0.63, "Regime de Apura\u00e7\u00e3o Tribut\u00e1ria pelo SN",
-                    conteudo_do_danfse(nota$prestador_regime_apuracao_simples_descricao, 77))
+                    conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "prestador_regime_apuracao_simples"), 77))
     return(y + 2.58)
   }
   y + 1.94
@@ -374,7 +411,7 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
     return(desenhar_linha_unica_do_danfse("TRIBUTA\u00c7\u00c3O MUNICIPAL (ISSQN) - OPERA\u00c7\u00c3O N\u00c3O SUJEITA AO ISSQN", y))
   }
   titulo_do_bloco_do_danfse("TRIBUTA\u00c7\u00c3O MUNICIPAL (ISSQN)", y)
-  campo_do_danfse(5.41, y, 5.09, 0.63, "Tipo de Tributa\u00e7\u00e3o do ISSQN", conteudo_do_danfse(nota$tributacao_issqn_descricao))
+  campo_do_danfse(5.41, y, 5.09, 0.63, "Tipo de Tributa\u00e7\u00e3o do ISSQN", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "tributacao_issqn")))
   incidencia = municipio_com_a_uf(nota$incidencia_codigo_municipio)
   if (is.na(incidencia)) {
     incidencia = nota$incidencia_municipio
@@ -388,9 +425,9 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
   imunidade = texto_pelo_caminho(dps, "valores/trib/tribMun/tpImunidade")
   suspensao = texto_pelo_caminho(dps, "valores/trib/tribMun/exigSusp/tpSusp")
   processo = texto_pelo_caminho(dps, "valores/trib/tribMun/exigSusp/nProcesso")
-  if (!all(is.na(c(nota$prestador_regime_especial_descricao, imunidade, suspensao, processo)))) {
+  if (!all(is.na(c(texto_do_codigo_do_danfse(nota, "prestador_regime_especial"), imunidade, suspensao, processo)))) {
     campo_do_danfse(0.30, y, 5.09, 0.63, "Regime Especial de Tributa\u00e7\u00e3o do ISSQN",
-                    conteudo_do_danfse(nota$prestador_regime_especial_descricao, tamanho = 27))
+                    conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "prestador_regime_especial"), tamanho = 27))
     campo_do_danfse(5.41, y, 5.09, 0.63, "Tipo de Imunidade do ISSQN",
                     conteudo_do_danfse(if (is.na(imunidade)) NA else TIPOS_DE_IMUNIDADE_DO_ISSQN[[imunidade]], 37))
     campo_do_danfse(10.51, y, 5.09, 0.63, "Suspens\u00e3o da Exigibilidade do ISSQN",
@@ -424,7 +461,7 @@ desenhar_tributacao_municipal_do_danfse = function(nota, dps, informacao, y) {
   }
   campo_do_danfse(0.30, y, 5.09, 0.63, "BC ISSQN", reais_do_danfse(nota$base_issqn))
   campo_do_danfse(5.41, y, 5.09, 0.63, "Al\u00edquota Aplicada", percentual_do_danfse(nota$aliquota_issqn))
-  campo_do_danfse(10.51, y, 5.09, 0.63, "Reten\u00e7\u00e3o do ISSQN", conteudo_do_danfse(nota$retencao_issqn_descricao))
+  campo_do_danfse(10.51, y, 5.09, 0.63, "Reten\u00e7\u00e3o do ISSQN", conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "retencao_issqn")))
   campo_do_danfse(15.62, y, 5.09, 0.63, "ISSQN Apurado", reais_do_danfse(nota$valor_issqn))
   y + 0.64
 }
@@ -448,12 +485,11 @@ desenhar_tributacao_federal_do_danfse = function(nota, y) {
   }
   campo_do_danfse(15.62, y, 5.09, 0.63, "Contribui\u00e7\u00f5es Sociais - Retidas", reais_do_danfse(retidas))
   y = y + 0.64
-  # A nota 6: o PIS e a COFINS próprios só até a competência de 2026 (a data vem da tabela dos marcos).
-  if (!is.na(nota$competencia) && nota$competencia < marco_da_reforma("danfse_sem_pis_e_cofins_proprios_desde")) {
+  if (!is.na(nota$competencia) && nota$competencia < DANFSE_SEM_PIS_E_COFINS_PROPRIOS_DESDE) {
     campo_do_danfse(0.30, y, 5.09, 0.63, "PIS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(pis_proprio))
     campo_do_danfse(5.41, y, 5.09, 0.63, "COFINS - D\u00e9bito Apura\u00e7\u00e3o Pr\u00f3pria", reais_do_danfse(cofins_propria))
     campo_do_danfse(10.51, y, 10.19, 0.63, "Descri\u00e7\u00e3o Contrib. Sociais - Retidas",
-                    conteudo_do_danfse(nota$retencao_pis_cofins_descricao, tamanho = 35))
+                    conteudo_do_danfse(texto_do_codigo_do_danfse(nota, "retencao_pis_cofins"), tamanho = 35))
     y = y + 0.64
   }
   y

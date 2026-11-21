@@ -16,23 +16,10 @@ chave_digito("35261011444777000161550010000001231123456789")     # 3: o dígito 
 ```
 
 `chave_decompor()` devolve uma linha por chave e, quando algo não confere, diz o quê na coluna `problema`
-(o dígito, o CNPJ do emitente, a UF, o mês ou o formato). A forma de emissão vem com o significado dela no
-leiaute daquele documento (a 2 é "Contingência FS" na NF-e e "Contingência offline" no CT-e). Espaços e o prefixo do `Id` do XML (`NFe...`) são
+(o dígito, o CNPJ do emitente, a UF, o mês ou o formato). Espaços e o prefixo do `Id` do XML (`NFe...`) são
 ignorados. Na NF-e avulsa, emitida pelo Fisco, o CNPJ da chave é o do órgão que a emitiu, não o do emitente.
 A chave de 50 posições da NFS-e Nacional fica de fora: a regra do dígito dela não está escrita nas fontes
 oficiais.
-
-```r
-chave_extrair(c("danfe.pdf", "cupom.jpg"))   # a chave achada no PDF ou na foto
-```
-
-`chave_extrair()` acha a chave em PDFs (DANFE, DACTE, cupom da NFC-e) e em imagens (foto, digitalização): pelo texto
-do PDF, pelo QR-Code ou por OCR, nessa ordem, com os pacotes `pdftools`, `opencv` e `tesseract`, se estiverem
-instalados (as páginas de um TIFF depois da primeira, com o `magick`). Um arquivo que não abre vira uma linha com o
-motivo, sem atrapalhar os outros. Só devolve a chave que confere. O dígito verificador e o CNPJ dentro dela pegam quase toda leitura errada;
-um número com cara de chave que não confere aparece em `problema`. Os outros números do documento (valores,
-quantidades) não têm essa conferência e, lidos de uma imagem, podem vir errados sem aviso: por isso a função só
-procura a chave, e os dados da nota vêm do XML.
 
 Conferido com 135 mil chaves reais de NF-e e CT-e (que não estão no repositório): todas válidas, e as partes
 iguais às do XML de cada nota. As 135 mil são desmontadas em uns 2 segundos.
@@ -63,9 +50,8 @@ Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/202
 Tributária: na nota, o IBS, a CBS e o monofásico dos totais, a previsão de entrega, o tipo da nota de débito e de
 crédito, o local da operação, o município do fato gerador do IBS, a compra governamental e as inscrições na
 Suframa; no item, o IBS e a CBS, o monofásico, o crédito presumido da ZFM, o bem móvel usado, o valor do item e o
-item de outro documento que ele cita. Ao lado de cada código do item vem o nome dele (`cfop_titulo`, `cst_icms_descricao`...), como a
-tabela oficial registrava na data da nota. Conferido com 10 mil notas reais (que não estão no repositório):
-os campos comparados bateram em todas, e todos os códigos dos 46 mil itens acharam o nome.
+item de outro documento que ele cita. Os códigos ficam como estão no XML. Conferido com 10 mil notas reais (que não
+estão no repositório): os campos comparados bateram em todas.
 
 Na NFC-e (modelo 65) vêm também o QR-Code e a URL de consulta (`qrcode` e `url_consulta`, do grupo que fica
 fora do `infNFe`) e, na emissão em contingência, a entrada e a justificativa. A NFC-e foi conferida pelo
@@ -184,7 +170,7 @@ lida$arquivos   # o que foi lido, e o motivo de cada arquivo que não deu
 Lê a NFS-e dos padrões municipais, anteriores à NFS-e Nacional: o leiaute da Prefeitura de São Paulo (também o da
 Reforma, com a chave da nota no ambiente nacional) e o padrão ABRASF, nas versões 1.00 (também a do Ginfes, com
 prefixo no namespace) e 2.0x. As regras vêm dos schemas e dos manuais oficiais (o da Prefeitura de São Paulo, 3.3.4, e
-os da ABRASF, 1.00, 2.02, 2.03 e 2.04), com o significado de cada código ao lado dele. A alíquota vem como está no XML, e a escala
+os da ABRASF, 1.00, 2.02, 2.03 e 2.04). A alíquota vem como está no XML, e a escala
 muda: São Paulo manda a fração (0,05), a ABRASF 2 o percentual (5), e a ABRASF 1.00 não diz (no acervo, há
 municípios dos dois jeitos); `aliquota_percentual` traz o percentual onde o manual diz a escala. O código do serviço
 de São Paulo é o da tabela do município e fica em `codigo_tributacao_municipio`, como o da ABRASF; o item da lista da

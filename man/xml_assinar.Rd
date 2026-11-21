@@ -49,6 +49,5 @@ writeLines(assinada, "nota_assinada.xml", useBytes = TRUE)
 }
 }
 \seealso{
-\code{\link[=certificado_ler]{certificado_ler()}} para conferir o certificado; \code{\link[=nfe_conferir]{nfe_conferir()}}
-para conferir a nota antes de enviar.
+\code{\link[=certificado_ler]{certificado_ler()}} para conferir o certificado.
 }

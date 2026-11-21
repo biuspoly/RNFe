@@ -74,11 +74,7 @@ o código de verificação, juntos: liga a NFS-e aos \code{campos}), \code{leiau
 ABRASF, quando vem), as colunas
 \code{numero}, \code{codigo_verificacao}, \code{chave_nacional}, \code{emissao}, \code{data_emissao}, \code{competencia}, \code{situacao_codigo}, \code{cancelamento}, \code{nfse_substituida}, \code{nfse_substituidora}, \code{municipio_gerador}, \code{uf_gerador}, \code{rps_numero}, \code{rps_serie}, \code{rps_tipo}, \code{rps_emissao}, \code{prestador_documento}, \code{prestador_inscricao_municipal}, \code{prestador_nome}, \code{prestador_nome_fantasia}, \code{prestador_codigo_municipio}, \code{prestador_uf}, \code{prestador_cep}, \code{prestador_email}, \code{tomador_documento}, \code{tomador_inscricao_municipal}, \code{tomador_inscricao_estadual}, \code{tomador_nome}, \code{tomador_codigo_municipio}, \code{tomador_uf}, \code{tomador_cep}, \code{tomador_email}, \code{intermediario_documento}, \code{intermediario_inscricao_municipal}, \code{intermediario_nome}, \code{item_lista_servico}, \code{codigo_tributacao_municipio}, \code{cnae}, \code{nbs}, \code{discriminacao}, \code{municipio_prestacao}, \code{municipio_incidencia}, \code{natureza_operacao}, \code{exigibilidade_iss}, \code{tributacao}, \code{regime_especial}, \code{optante_simples}, \code{incentivador_cultural}, \code{incentivo_fiscal}, \code{valor_servicos}, \code{valor_deducoes}, \code{desconto_incondicionado}, \code{desconto_condicionado}, \code{base_calculo}, \code{aliquota}, \code{valor_iss}, \code{iss_retido_codigo}, \code{valor_iss_retido}, \code{valor_pis}, \code{valor_cofins}, \code{valor_inss}, \code{valor_ir}, \code{valor_csll}, \code{outras_retencoes}, \code{valor_liquido}, \code{valor_credito}, \code{valor_total_tributos}, \code{outras_informacoes},
 e ainda \code{situacao} (Normal, Cancelada, Substituída ou Extraviada),
-\code{iss_retido} (\code{TRUE} ou \code{FALSE}), \code{aliquota_percentual}, o significado de
-cada código numa coluna \verb{*_descricao} ao lado dele (o tipo do RPS, a
-natureza da operação, a exigibilidade do ISS, a tributação, o regime
-especial, a opção pelo Simples, o incentivador cultural da ABRASF 1.00 e o
-incentivo fiscal da ABRASF 2) e \code{arquivo}.
+\code{iss_retido} (\code{TRUE} ou \code{FALSE}), \code{aliquota_percentual} e \code{arquivo}.
 \code{emissao} e \code{cancelamento} ficam como estão no XML (texto): os padrões
 municipais não trazem o fuso, e a hora é a do município; \code{data_emissao},
 \code{competencia} e \code{rps_emissao} são datas (a competência em AAAAMM, como o

@@ -47,9 +47,7 @@ Brasília), \code{contribuintes} (quantas inscrições vieram),
 \code{versao_aplicativo}, \code{endereco} e \code{problema} (por que a consulta não deu
 certo; vazio quando deu);
 \item \code{cadastros}: \code{documento} (o consultado, para ligar com \code{consultas}) e
-\code{ie} (\code{IE}), \code{contribuinte_documento} (\code{CNPJ|CPF}), \code{uf} (\code{UF}), \code{situacao_cadastral} (\code{cSit}), \code{credenciado_nfe} (\code{indCredNFe}), \code{credenciado_cte} (\code{indCredCTe}), \code{nome} (\code{xNome}), \code{fantasia} (\code{xFant}), \code{regime_apuracao} (\code{xRegApur}), \code{cnae} (\code{CNAE}), \code{inicio_atividade} (\code{dIniAtiv}), \code{ultima_situacao} (\code{dUltSit}), \code{baixa} (\code{dBaixa}), \code{ie_unica} (\code{IEUnica}), \code{ie_atual} (\code{IEAtual}), \code{logradouro} (\code{ender/xLgr}), \code{numero} (\code{ender/nro}), \code{complemento} (\code{ender/xCpl}), \code{bairro} (\code{ender/xBairro}), \code{codigo_municipio} (\code{ender/cMun}), \code{municipio} (\code{ender/xMun}), \code{cep} (\code{ender/CEP}). \code{situacao_cadastral},
-\code{credenciado_nfe} e \code{credenciado_cte} vêm com o significado ao lado,
-em \verb{*_descricao}, pela documentação do schema.
+\code{ie} (\code{IE}), \code{contribuinte_documento} (\code{CNPJ|CPF}), \code{uf} (\code{UF}), \code{situacao_cadastral} (\code{cSit}), \code{credenciado_nfe} (\code{indCredNFe}), \code{credenciado_cte} (\code{indCredCTe}), \code{nome} (\code{xNome}), \code{fantasia} (\code{xFant}), \code{regime_apuracao} (\code{xRegApur}), \code{cnae} (\code{CNAE}), \code{inicio_atividade} (\code{dIniAtiv}), \code{ultima_situacao} (\code{dUltSit}), \code{baixa} (\code{dBaixa}), \code{ie_unica} (\code{IEUnica}), \code{ie_atual} (\code{IEAtual}), \code{logradouro} (\code{ender/xLgr}), \code{numero} (\code{ender/nro}), \code{complemento} (\code{ender/xCpl}), \code{bairro} (\code{ender/xBairro}), \code{codigo_municipio} (\code{ender/cMun}), \code{municipio} (\code{ender/xMun}), \code{cep} (\code{ender/CEP}).
 }
 }
 \description{
@@ -101,7 +99,7 @@ Na homologação, \strong{GO e AM} respondiam assim, sobre o CNPJ do certificado
 cadastro = sefaz_cadastro("11.222.333/0001-81", "SP", "empresa.pfx",
                           Sys.getenv("SENHA_DO_CERTIFICADO"))
 cadastro$consultas[, c("documento", "uf", "situacao", "motivo")]
-cadastro$cadastros[, c("ie", "nome", "situacao_cadastral_descricao", "municipio")]
+cadastro$cadastros[, c("ie", "nome", "situacao_cadastral", "municipio")]
 }
 }
 \seealso{

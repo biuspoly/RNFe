@@ -5,7 +5,6 @@
 ```r
 nota = nfe_montar(lista_com_os_campos)                      # a NF-e a partir dos dados (veja "Montar os documentos")
 assinada = xml_assinar(nota, "empresa.pfx", senha)          # ou o caminho de um arquivo: NF-e, NFC-e, CT-e, MDF-e, DPS ou evento
-nfe_conferir(assinada)                                      # confira antes de enviar
 resposta = sefaz_autorizar(assinada, "empresa.pfx", senha)  # a situação (100), o protocolo e o nfeProc
 writeLines(resposta$xml_autorizado, "nota_autorizada.xml", useBytes = TRUE)
 

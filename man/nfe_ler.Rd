@@ -43,13 +43,8 @@ ou do próprio texto do XML. Um arquivo que não dá para ler não interrompe os
 outros: fica em \code{arquivos}, com o motivo. Para saber se a nota foi
 cancelada, leia os eventos dela com \code{\link[=eventos_ler]{eventos_ler()}}.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-dizer: o nome do CFOP, do CST, da forma de pagamento e da bandeira, pela
-tabela fiscal na data da nota, e o significado dos outros códigos (forma de
-emissão, finalidade, presença, modalidade do frete...) numa coluna
-\verb{*_descricao}, pela documentação do schema oficial (veja
-\code{tabela_fiscal("codigos_dos_campos")}). Campo que a nota não tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+códigos ficam como estão no XML. Campo que a nota não tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
 pedida (\code{todos_os_campos = TRUE}).
 }
 \section{notas}{
@@ -64,8 +59,7 @@ e \code{arquivo}. \code{emissao}, \code{saida_entrada}, \code{contingencia_entra
 previsão de entrega. Os campos da Reforma na identificação da nota (o tipo
 da nota de débito e da de crédito, o local da operação, o município do fato
 gerador do IBS e a compra governamental) e as inscrições na Suframa vêm em
-colunas próprias; o tipo da nota de débito e da de crédito, o ente e a
-operação da compra governamental vêm com o significado ao lado. Na NFC-e (\code{modelo} 65), \code{qrcode}
+colunas próprias. Na NFC-e (\code{modelo} 65), \code{qrcode}
 e \code{url_consulta} vêm do grupo \code{infNFeSupl}, que fica fora do \code{infNFe}; o
 texto do QR-Code fica como está, sem desmontar.
 }
@@ -75,13 +69,7 @@ texto do QR-Code fica como está, sem desmontar.
 Uma linha por item: \code{chave}, \code{item} (\code{nItem}),
 \code{codigo} (\code{prod/cProd}), \code{gtin} (\code{prod/cEAN}), \code{descricao} (\code{prod/xProd}), \code{ncm} (\code{prod/NCM}), \code{cest} (\code{prod/CEST}), \code{beneficio_fiscal} (\code{prod/cBenef}), \code{credito_presumido_zfm_tipo} (\code{prod/tpCredPresIBSZFM}), \code{cfop} (\code{prod/CFOP}), \code{unidade} (\code{prod/uCom}), \code{quantidade} (\code{prod/qCom}), \code{valor_unitario} (\code{prod/vUnCom}), \code{valor_produto} (\code{prod/vProd}), \code{valor_unitario_liquido} (\code{prod/vUnComLiq}), \code{valor_produto_liquido} (\code{prod/vProdLiq}), \code{unidade_tributavel} (\code{prod/uTrib}), \code{quantidade_tributavel} (\code{prod/qTrib}), \code{valor_unitario_tributavel} (\code{prod/vUnTrib}), \code{valor_frete} (\code{prod/vFrete}), \code{valor_seguro} (\code{prod/vSeg}), \code{valor_desconto} (\code{prod/vDesc}), \code{valor_outros} (\code{prod/vOutro}), \code{compoe_total} (\code{prod/indTot}), \code{pedido} (\code{prod/xPed}), \code{item_pedido} (\code{prod/nItemPed}), \code{bem_movel_usado} (\code{prod/indBemMovelUsado}), \code{informacoes_adicionais} (\code{infAdProd}), \code{valor_tributos_aproximado} (\code{imposto/vTotTrib}), \code{origem} (\verb{imposto/ICMS/*/orig}), \code{cst_icms} (\verb{imposto/ICMS/*/CST}), \code{csosn} (\verb{imposto/ICMS/*/CSOSN}), \code{base_icms} (\verb{imposto/ICMS/*/vBC}), \code{aliquota_icms} (\verb{imposto/ICMS/*/pICMS}), \code{valor_icms} (\verb{imposto/ICMS/*/vICMS}), \code{base_icms_st} (\verb{imposto/ICMS/*/vBCST}), \code{aliquota_icms_st} (\verb{imposto/ICMS/*/pICMSST}), \code{valor_icms_st} (\verb{imposto/ICMS/*/vICMSST}), \code{base_icms_st_retido} (\verb{imposto/ICMS/*/vBCSTRet}), \code{valor_icms_st_retido} (\verb{imposto/ICMS/*/vICMSSTRet}), \code{valor_fcp} (\verb{imposto/ICMS/*/vFCP}), \code{valor_fcp_st} (\verb{imposto/ICMS/*/vFCPST}), \code{valor_icms_desonerado} (\verb{imposto/ICMS/*/vICMSDeson}), \code{valor_icms_previsto} (\code{imposto/ICMS/ICMSPrevistoPagtoAntecip/vICMSPrevisto}), \code{valor_icms_monofasico} (\verb{imposto/ICMS/*/vICMSMono}), \code{valor_icms_uf_destino} (\code{imposto/ICMSUFDest/vICMSUFDest}), \code{valor_fcp_uf_destino} (\code{imposto/ICMSUFDest/vFCPUFDest}), \code{valor_issqn} (\code{imposto/ISSQN/vISSQN}), \code{cst_ipi} (\verb{imposto/IPI/*/CST}), \code{valor_ipi} (\code{imposto/IPI/IPITrib/vIPI}), \code{cst_pis} (\verb{imposto/PIS/*/CST}), \code{valor_pis} (\verb{imposto/PIS/*/vPIS}), \code{cst_cofins} (\verb{imposto/COFINS/*/CST}), \code{valor_cofins} (\verb{imposto/COFINS/*/vCOFINS}), \code{valor_ii} (\code{imposto/II/vII}), \code{cst_ibs_cbs} (\code{imposto/IBSCBS/CST}), \code{classificacao_ibs_cbs} (\code{imposto/IBSCBS/cClassTrib}), \code{base_ibs_cbs} (\code{imposto/IBSCBS/gIBSCBS/vBC}), \code{aliquota_ibs_uf} (\code{imposto/IBSCBS/gIBSCBS/gIBSUF/pIBSUF}), \code{aliquota_ibs_municipio} (\code{imposto/IBSCBS/gIBSCBS/gIBSMun/pIBSMun}), \code{valor_ibs} (\code{imposto/IBSCBS/gIBSCBS/vIBS}), \code{aliquota_cbs} (\code{imposto/IBSCBS/gIBSCBS/gCBS/pCBS}), \code{valor_cbs} (\code{imposto/IBSCBS/gIBSCBS/gCBS/vCBS}), \code{diferimento_ibs_uf} (\code{imposto/IBSCBS/gIBSCBS/gIBSUF/gDif/pDif}), \code{diferimento_ibs_municipio} (\code{imposto/IBSCBS/gIBSCBS/gIBSMun/gDif/pDif}), \code{diferimento_cbs} (\code{imposto/IBSCBS/gIBSCBS/gCBS/gDif/pDif}), \code{valor_devolvido_ibs_uf} (\code{imposto/IBSCBS/gIBSCBS/gIBSUF/gDevTrib/vDevTrib}), \code{valor_devolvido_ibs_municipio} (\code{imposto/IBSCBS/gIBSCBS/gIBSMun/gDevTrib/vDevTrib}), \code{valor_devolvido_cbs} (\code{imposto/IBSCBS/gIBSCBS/gCBS/gDevTrib/vDevTrib}), \code{cst_regular} (\code{imposto/IBSCBS/gIBSCBS/gTribRegular/CSTReg}), \code{classificacao_regular} (\code{imposto/IBSCBS/gIBSCBS/gTribRegular/cClassTribReg}), \code{credito_presumido_codigo} (\code{imposto/IBSCBS/gCredPresOper/cCredPres}), \code{valor_total_ibs_monofasico} (\code{imposto/IBSCBS/gIBSCBSMono/vTotIBSMonoItem}), \code{valor_total_cbs_monofasica} (\code{imposto/IBSCBS/gIBSCBSMono/vTotCBSMonoItem}), \code{valor_is} (\code{imposto/IS/vIS}), \code{percentual_devolvido} (\code{impostoDevol/pDevol}), \code{valor_ipi_devolvido} (\code{impostoDevol/IPI/vIPIDevol}), \code{valor_item} (\code{vItem}), \code{referenciado_chave} (\code{DFeReferenciado/chaveAcesso}), \code{referenciado_item} (\code{DFeReferenciado/nItem}).
 O \code{*} é o grupo do ICMS, do IPI, do PIS ou da COFINS que o item tiver (por
-exemplo, \code{ICMS00} ou \code{ICMSSN102}). Ao lado de cada código vem o nome dele,
-como a tabela fiscal registrava na data de emissão da nota (veja
-\code{\link[=tabela_fiscal]{tabela_fiscal()}}): \code{ncm_descricao} (a descrição completa, da posição até o
-código), \code{cfop_titulo}, \code{origem_descricao}, \code{cst_icms_descricao},
-\code{csosn_descricao}, \code{cst_ipi_descricao}, \code{cst_pis_descricao},
-\code{cst_cofins_descricao}, \code{cest_descricao}, \code{cst_ibs_cbs_descricao} e
-\code{classificacao_ibs_cbs_nome}. \code{valor_total_ibs_monofasico} e
+exemplo, \code{ICMS00} ou \code{ICMSSN102}). \code{valor_total_ibs_monofasico} e
 \code{valor_total_cbs_monofasica} são os totais do monofásico do item
 (combustíveis: \code{vTotIBSMonoItem} e \code{vTotCBSMonoItem}; em \code{notas},
 \code{valor_ibs_monofasico} e \code{valor_cbs_monofasica} são outro campo, o do
@@ -90,8 +78,7 @@ próprios), \code{valor_item} é a participação do item no total da nota e
 \code{referenciado_chave} e \code{referenciado_item}, o item de outro documento que
 ele cita (nota de crédito ou de débito, devolução), todos da Reforma. Do
 IBS e da CBS vêm também o percentual do diferimento, o tributo devolvido, a
-tributação regular e o código do crédito presumido da operação, o que
-\code{\link[=ibs_cbs_calcular]{ibs_cbs_calcular()}} usa quando recebe o resultado do \code{nfe_ler()}.
+tributação regular e o código do crédito presumido da operação.
 }
 
 \section{impostos}{
@@ -124,8 +111,7 @@ numa linha, sem itens, impostos nem destinatário.
 \code{autorizacao} são data e hora (mostradas no horário de Brasília);
 \code{data_emissao} é a data como está no resumo. \code{situacao_nfe} é a situação da
 nota no momento da consulta (1 autorizada, 2 denegada, 3 cancelada, pela NT
-2014.002), e o significado dela e do \code{tipo_operacao} vem ao lado, em
-\verb{*_descricao}. Com a chave, a nota completa e os eventos dela podem ser
+2014.002). Com a chave, a nota completa e os eventos dela podem ser
 juntados depois.
 }
 

@@ -44,13 +44,8 @@ lidos aqui: têm leitor próprio, \code{\link[=cte_simplificado_ler]{cte_simplif
 Para saber se o CT-e foi cancelado, leia os eventos dele com
 \code{\link[=eventos_ler]{eventos_ler()}}.
 
-Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-dizer: o nome do CFOP, do CST e do meio de pagamento, pela tabela fiscal na
-data do CT-e, e o significado dos outros códigos (tipo do CT-e, serviço,
-modal, forma de emissão, papel do tomador, unidade da carga...) numa coluna
-\verb{*_descricao}, pela documentação do schema oficial (veja
-\code{tabela_fiscal("codigos_dos_campos")}). Campo que o CT-e não tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
+Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+códigos ficam como estão no XML. Campo que o CT-e não tem fica \code{NA}. O que não tem coluna própria vem na tabela \code{campos}, quando
 pedida (\code{todos_os_campos = TRUE}).
 }
 \section{ctes}{
@@ -74,11 +69,7 @@ destinatário, nessa ordem, e os dados são os dessa pessoa; com \code{toma4}
 (\code{tomador_papel} 4) e no CT-e OS (grupo \code{toma}, sem papel), os dados vêm do
 próprio grupo.
 
-Ao lado do CFOP, do CST e da classificação tributária do IBS e da CBS vem o
-nome de cada um, como a tabela fiscal registrava na data de emissão (veja
-\code{\link[=tabela_fiscal]{tabela_fiscal()}}): \code{cfop_titulo}, \code{cst_ibs_cbs_descricao} e
-\code{classificacao_ibs_cbs_nome}. O CST do ICMS (\code{cst_icms_descricao}) segue o
-leiaute do CT-e, pelo grupo: no \code{ICMS45} vão o 40, o 41 e o 51, e o 90 é
+O CST do ICMS (\code{cst_icms}) segue o leiaute do CT-e, pelo grupo: no \code{ICMS45} vão o 40, o 41 e o 51, e o 90 é
 "ICMS outros" no \code{ICMS90}, o ICMS devido a outra UF no \code{ICMSOutraUF} e o do
 Simples Nacional no \code{ICMSSN}.
 }

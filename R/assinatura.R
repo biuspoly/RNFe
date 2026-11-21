@@ -48,8 +48,7 @@ ALGORITMOS_DO_RESUMO = list(
 #' @param certificado O caminho do certificado A1 (`.pfx` ou `.p12`).
 #' @param senha A senha do certificado.
 #' @return O XML assinado, num texto.
-#' @seealso [certificado_ler()] para conferir o certificado; [nfe_conferir()]
-#'   para conferir a nota antes de enviar.
+#' @seealso [certificado_ler()] para conferir o certificado.
 #' @source Manual de Orientação do Contribuinte da NF-e, seção da assinatura
 #'   digital (XMLDSig com C14N, SHA-1 e RSA); W3C, "XML Signature Syntax and
 #'   Processing" e "Canonical XML Version 1.0".

@@ -186,22 +186,6 @@ referenciado_chave        DFeReferenciado/chaveAcesso                texto
 referenciado_item         DFeReferenciado/nItem                      inteiro
 ")
 
-# O nome de cada código do item, ao lado dele, como a tabela fiscal registrava na data de emissão da nota.
-DESCRICOES_DOS_ITENS = ler_campos("
-coluna_do_codigo      coluna_nova                tabela                texto
-ncm                   ncm_descricao              ncm                   descricao_completa
-cfop                  cfop_titulo                cfop                  titulo
-origem                origem_descricao           origem                descricao
-cst_icms              cst_icms_descricao         cst_icms              descricao
-csosn                 csosn_descricao            csosn                 descricao
-cst_ipi               cst_ipi_descricao          cst_ipi               descricao
-cst_pis               cst_pis_descricao          cst_pis               descricao
-cst_cofins            cst_cofins_descricao       cst_cofins            descricao
-cest                  cest_descricao             cest                  descricao
-cst_ibs_cbs           cst_ibs_cbs_descricao      cst_ibs_cbs           descricao
-classificacao_ibs_cbs classificacao_ibs_cbs_nome classificacao_ibs_cbs nome
-")
-
 # A partir do resNFe (schema resNFe_v1.01 do pacote da Distribuição de DF-e v1.04). O digVal, diz o schema, serve
 # para conferir a integridade da NF-e original.
 CAMPOS_DO_RESUMO_DA_NFE = ler_campos("
@@ -219,55 +203,6 @@ digest_value       digVal    texto
 autorizacao        dhRecbto  data_hora
 protocolo          nProt     texto
 situacao_nfe       cSitNFe   inteiro
-")
-
-# O que quer dizer cada código, ao lado dele: a coluna, o campo do leiaute e a coluna de que o significado depende
-# ("-" quando não depende). Os textos estão em tabela_fiscal("codigos_dos_campos").
-SIGNIFICADOS_DA_NOTA = ler_campos("
-coluna_do_codigo          campo     coluna_do_contexto
-modelo                    mod       -
-tipo_operacao             tpNF      -
-destino_operacao          idDest    -
-finalidade                finNFe    -
-tipo_nota_debito          tpNFDebito -
-tipo_nota_credito         tpNFCredito -
-consumidor_final          indFinal  -
-presenca                  indPres   -
-forma_emissao             tpEmis    -
-ambiente                  tpAmb     -
-processo_emissao          procEmi   -
-formato_danfe             tpImp     -
-emitente_regime           CRT       -
-destinatario_indicador_ie indIEDest -
-modalidade_frete          modFrete  -
-compra_governamental_ente tpEnteGov -
-compra_governamental_operacao tpOperGov -
-")
-
-SIGNIFICADOS_DO_ITEM = ler_campos("
-coluna_do_codigo campo            coluna_do_contexto
-compoe_total     indTot           -
-bem_movel_usado  indBemMovelUsado -
-")
-
-SIGNIFICADOS_DO_PAGAMENTO = ler_campos("
-coluna_do_codigo campo  coluna_do_contexto
-indicador        indPag -
-")
-
-# O cSitNFe não tem a lista na documentação do schema: os textos são da NT 2014.002 (v1.02d).
-SIGNIFICADOS_DO_RESUMO_DA_NFE = ler_campos("
-coluna_do_codigo campo   coluna_do_contexto
-tipo_operacao    tpNF    -
-situacao_nfe     cSitNFe -
-")
-
-# O nome da forma de pagamento e da bandeira do cartão, como as tabelas do Portal da NF-e registravam na data da
-# nota.
-DESCRICOES_DO_PAGAMENTO = ler_campos("
-coluna_do_codigo coluna_nova        tabela           texto
-forma            forma_descricao    meios_pagamento  descricao
-bandeira         bandeira_descricao bandeiras_cartao descricao
 ")
 
 # A partir de cada detPag (pag/detPag).
@@ -301,13 +236,8 @@ autorizacao      card/cAut  texto
 #' outros: fica em `arquivos`, com o motivo. Para saber se a nota foi
 #' cancelada, leia os eventos dela com [eventos_ler()].
 #'
-#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo). Os
-#' códigos ficam como estão no XML, e ao lado de cada um vem o que ele quer
-#' dizer: o nome do CFOP, do CST, da forma de pagamento e da bandeira, pela
-#' tabela fiscal na data da nota, e o significado dos outros códigos (forma de
-#' emissão, finalidade, presença, modalidade do frete...) numa coluna
-#' `*_descricao`, pela documentação do schema oficial (veja
-#' `tabela_fiscal("codigos_dos_campos")`). Campo que a nota não tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
+#' Cada coluna vem de um campo do leiaute (entre parênteses abaixo), e os
+#' códigos ficam como estão no XML. Campo que a nota não tem fica `NA`. O que não tem coluna própria vem na tabela `campos`, quando
 #' pedida (`todos_os_campos = TRUE`).
 #'
 #' @section notas:
@@ -321,8 +251,7 @@ autorizacao      card/cAut  texto
 #' previsão de entrega. Os campos da Reforma na identificação da nota (o tipo
 #' da nota de débito e da de crédito, o local da operação, o município do fato
 #' gerador do IBS e a compra governamental) e as inscrições na Suframa vêm em
-#' colunas próprias; o tipo da nota de débito e da de crédito, o ente e a
-#' operação da compra governamental vêm com o significado ao lado. Na NFC-e (`modelo` 65), `qrcode`
+#' colunas próprias. Na NFC-e (`modelo` 65), `qrcode`
 #' e `url_consulta` vêm do grupo `infNFeSupl`, que fica fora do `infNFe`; o
 #' texto do QR-Code fica como está, sem desmontar.
 #'
@@ -330,13 +259,7 @@ autorizacao      card/cAut  texto
 #' Uma linha por item: `chave`, `item` (`nItem`),
 #' `r documentar_campos(CAMPOS_DO_ITEM)`.
 #' O `*` é o grupo do ICMS, do IPI, do PIS ou da COFINS que o item tiver (por
-#' exemplo, `ICMS00` ou `ICMSSN102`). Ao lado de cada código vem o nome dele,
-#' como a tabela fiscal registrava na data de emissão da nota (veja
-#' [tabela_fiscal()]): `ncm_descricao` (a descrição completa, da posição até o
-#' código), `cfop_titulo`, `origem_descricao`, `cst_icms_descricao`,
-#' `csosn_descricao`, `cst_ipi_descricao`, `cst_pis_descricao`,
-#' `cst_cofins_descricao`, `cest_descricao`, `cst_ibs_cbs_descricao` e
-#' `classificacao_ibs_cbs_nome`. `valor_total_ibs_monofasico` e
+#' exemplo, `ICMS00` ou `ICMSSN102`). `valor_total_ibs_monofasico` e
 #' `valor_total_cbs_monofasica` são os totais do monofásico do item
 #' (combustíveis: `vTotIBSMonoItem` e `vTotCBSMonoItem`; em `notas`,
 #' `valor_ibs_monofasico` e `valor_cbs_monofasica` são outro campo, o do
@@ -345,8 +268,7 @@ autorizacao      card/cAut  texto
 #' `referenciado_chave` e `referenciado_item`, o item de outro documento que
 #' ele cita (nota de crédito ou de débito, devolução), todos da Reforma. Do
 #' IBS e da CBS vêm também o percentual do diferimento, o tributo devolvido, a
-#' tributação regular e o código do crédito presumido da operação, o que
-#' [ibs_cbs_calcular()] usa quando recebe o resultado do `nfe_ler()`.
+#' tributação regular e o código do crédito presumido da operação.
 #'
 #' @section impostos:
 #' Todos os campos dos impostos de cada item, um por linha: `chave`, `item`,
@@ -373,8 +295,7 @@ autorizacao      card/cAut  texto
 #' `autorizacao` são data e hora (mostradas no horário de Brasília);
 #' `data_emissao` é a data como está no resumo. `situacao_nfe` é a situação da
 #' nota no momento da consulta (1 autorizada, 2 denegada, 3 cancelada, pela NT
-#' 2014.002), e o significado dela e do `tipo_operacao` vem ao lado, em
-#' `*_descricao`. Com a chave, a nota completa e os eventos dela podem ser
+#' 2014.002). Com a chave, a nota completa e os eventos dela podem ser
 #' juntados depois.
 #'
 #' @section campos:
@@ -435,19 +356,8 @@ nfe_ler = function(arquivos, todos_os_campos = FALSE) {
   tabelas_da_nfe$arquivos = inserir_coluna_depois(tabelas_da_nfe$arquivos, "resumos", resumos_de_cada_arquivo, "notas")
   tabelas_da_nfe$notas = converter_datas(tabelas_da_nfe$notas, rbind(CAMPOS_DA_NOTA, CAMPOS_DO_PROTOCOLO))
   tabelas_da_nfe$resumos = converter_datas(tabelas_da_nfe$resumos, CAMPOS_DO_RESUMO_DA_NFE)
-  tabelas_da_nfe$resumos = acrescentar_significados(tabelas_da_nfe$resumos, "NF-e", SIGNIFICADOS_DO_RESUMO_DA_NFE)
   tabelas_da_nfe$parcelas = converter_datas(tabelas_da_nfe$parcelas, CAMPOS_DA_PARCELA)
   tabelas_da_nfe$pagamentos = converter_datas(tabelas_da_nfe$pagamentos, CAMPOS_DO_PAGAMENTO)
-  data_de_cada_item = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$itens$chave, tabelas_da_nfe$notas$chave)]
-  tabelas_da_nfe$itens = acrescentar_descricoes(tabelas_da_nfe$itens, data_de_cada_item, DESCRICOES_DOS_ITENS)
-  tabelas_da_nfe$notas = acrescentar_significados(tabelas_da_nfe$notas, "NF-e", SIGNIFICADOS_DA_NOTA)
-  tabelas_da_nfe$itens = acrescentar_significados(tabelas_da_nfe$itens, "NF-e", SIGNIFICADOS_DO_ITEM)
-  data_de_cada_pagamento = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$pagamentos$chave, tabelas_da_nfe$notas$chave)]
-  tabelas_da_nfe$pagamentos = acrescentar_significados(tabelas_da_nfe$pagamentos, "NF-e", SIGNIFICADOS_DO_PAGAMENTO)
-  tabelas_da_nfe$pagamentos = acrescentar_descricoes(tabelas_da_nfe$pagamentos, data_de_cada_pagamento, DESCRICOES_DO_PAGAMENTO)
-  data_de_cada_vinculado = tabelas_da_nfe$notas$data_emissao[match(tabelas_da_nfe$pagamentos_vinculados$chave, tabelas_da_nfe$notas$chave)]
-  tabelas_da_nfe$pagamentos_vinculados = acrescentar_descricoes(tabelas_da_nfe$pagamentos_vinculados, data_de_cada_vinculado,
-                                                                DESCRICOES_DO_PAGAMENTO_VINCULADO)
   tabelas_da_nfe
 }
 

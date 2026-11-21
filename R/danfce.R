@@ -69,14 +69,28 @@ danfce_pdf = function(xml, arquivo) {
   invisible(arquivo)
 }
 
-# Cada forma de pagamento com o nome do meio (da tabela dos meios de pagamento) e o valor pago.
+# O nome de cada tPag, pela tabela dos meios de pagamento do Portal da NF-e.
+MEIOS_DE_PAGAMENTO_DA_NFCE = c(
+  "01" = "Dinheiro", "02" = "Cheque", "03" = "Cart\u00e3o de Cr\u00e9dito", "04" = "Cart\u00e3o de D\u00e9bito",
+  "05" = "Cart\u00e3o da Loja (Private Label), Credi\u00e1rio Digital, Outros Credi\u00e1rios",
+  "10" = "Vale Alimenta\u00e7\u00e3o", "11" = "Vale Refei\u00e7\u00e3o", "12" = "Vale Presente",
+  "13" = "Vale Combust\u00edvel", "14" = "Duplicata Mercantil", "15" = "Boleto Banc\u00e1rio",
+  "16" = "Dep\u00f3sito Banc\u00e1rio", "17" = "Pagamento Instant\u00e2neo (PIX) - Din\u00e2mico",
+  "18" = "TED (Transfer\u00eancia Eletr\u00f4nica Dispon\u00edvel)",
+  "19" = "Programa de fidelidade, Cashback, Cr\u00e9dito Virtual",
+  "20" = "Pagamento Instant\u00e2neo (PIX) - Est\u00e1tico", "21" = "Cr\u00e9dito em Loja",
+  "22" = "Pagamento Eletr\u00f4nico n\u00e3o Informado - falha de hardware do sistema emissor",
+  "23" = "Pagamento Instant\u00e2neo (PIX) - Autom\u00e1tico", "24" = "TEF - \"Book Transfer\"",
+  "90" = "Sem Pagamento", "91" = "Pagamento Posterior", "99" = "Outros"
+)
+
+# Cada forma de pagamento com o nome do meio e o valor pago.
 pagamentos_da_nfce = function(informacao) {
-  meios = tabela_fiscal("meios_pagamento")
   pagamentos = xml2::xml_find_all(informacao, "*[local-name()='pag']/*[local-name()='detPag']")
   linhas = data.frame(meio = character(), valor = character())
   for (pagamento in pagamentos) {
     codigo = texto_pelo_caminho(pagamento, "tPag")
-    descricao = meios$descricao[match(codigo, meios$codigo)]
+    descricao = unname(MEIOS_DE_PAGAMENTO_DA_NFCE[codigo])
     if (identical(codigo, "99") && !is.na(texto_pelo_caminho(pagamento, "xPag"))) {
       descricao = texto_pelo_caminho(pagamento, "xPag")
     }
