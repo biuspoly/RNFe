@@ -46,7 +46,7 @@ Vem em `resumos`, uma linha por resumo, ligado à nota completa e aos eventos pe
 resumos reais (versões 1.00 e 1.01): todos lidos, e nos 251 que tinham a nota completa ao lado, os campos
 bateram com ela.
 
-Segue o schema oficial mais recente (pacote de liberação PL_010g, de 26/10/2026), já com os campos da Reforma
+Segue o schema oficial mais recente (pacote de liberação PL_010h, de 13/11/2026), já com os campos da Reforma
 Tributária: na nota, o IBS, a CBS e o monofásico dos totais, a previsão de entrega, o tipo da nota de débito e de
 crédito, o local da operação, o município do fato gerador do IBS, a compra governamental e as inscrições na
 Suframa; no item, o IBS e a CBS, o monofásico, o crédito presumido da ZFM, o bem móvel usado, o valor do item e o

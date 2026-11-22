@@ -46,7 +46,7 @@ XMLs segue os schemas oficiais do Portal da NF-e, do
 SEFAZ. Cada página diz as fontes da parte dela.
 
 A montagem usa os schemas oficiais que vão no pacote em `inst/schemas`, e todo XML montado é conferido com eles: o
-pacote de liberação 010g (versão 1.03) da NF-e; os eventos da NF-e (a parte geral do 010d v1.03, a do CNPJ
+pacote de liberação 010h (versão 1.03) da NF-e; os eventos da NF-e (a parte geral do 010d v1.03, a do CNPJ
 alfanumérico, os tipos básicos do 010g e o pacote de cada evento); o CT-e da NT 2026.005; o MDF-e da NT 2025.001; e a
 NFS-e Nacional de produção (1.01) e da Produção Restrita (a da NT 009, que a montagem da DPS segue).
 

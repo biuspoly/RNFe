@@ -4,7 +4,7 @@
 \alias{nfe_montar}
 \title{Montar uma NF-e ou NFC-e}
 \source{
-Os schemas da NF-e e da NFC-e, pacote de liberação 010g, versão
+Os schemas da NF-e e da NFC-e, pacote de liberação 010h, versão
 1.03 (Portal Nacional da NF-e, \code{nfe_v4.00.xsd} e \code{leiauteNFe_v4.00.xsd});
 a composição da chave de acesso e o código numérico pelo Manual de
 Orientação do Contribuinte 7.0 (Anexo I, regra B03-10, da NT 2019.001).

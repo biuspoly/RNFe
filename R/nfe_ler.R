@@ -1,5 +1,5 @@
 # Leitura do XML da NF-e e da NFC-e (leiaute 4.00) em tabelas. Os caminhos seguem o schema oficial
-# do Portal da NF-e (pacote de liberação PL_010g v1.03, de 26/10/2026, que já traz a Reforma).
+# do Portal da NF-e (pacote de liberação PL_010h v1.03, de 13/11/2026, que já traz a Reforma e o Simples Nacional nela).
 
 #' @include ler_xml.R
 NULL
@@ -52,6 +52,7 @@ emitente_municipio            emit/enderEmit/xMun                         texto
 emitente_codigo_municipio     emit/enderEmit/cMun                         texto
 emitente_uf                   emit/enderEmit/UF                           texto
 emitente_regime               emit/CRT                                    inteiro
+emitente_regime_ibs_cbs       emit/tpRegimeIBSCBS                         inteiro
 avulsa_cnpj                   avulsa/CNPJ                                 texto
 destinatario_documento        dest/CNPJ|dest/CPF|dest/idEstrangeiro       texto
 destinatario_nome             dest/xNome                                  texto
@@ -87,6 +88,8 @@ valor_ibs                     total/IBSCBSTot/gIBS/vIBS                   numero
 valor_cbs                     total/IBSCBSTot/gCBS/vCBS                   numero
 valor_ibs_monofasico          total/IBSCBSTot/gMono/vIBSMono              numero
 valor_cbs_monofasica          total/IBSCBSTot/gMono/vCBSMono              numero
+valor_ibs_simples_nacional    total/IBSCBSTot/gTribSN/vIBSSN              numero
+valor_cbs_simples_nacional    total/IBSCBSTot/gTribSN/vCBSSN              numero
 valor_is                    total/ISTot/vIS                             numero
 valor_nota_com_ibs_cbs_is     total/vNFTot                                numero
 modalidade_frete              transp/modFrete                             inteiro
@@ -131,6 +134,7 @@ compoe_total              prod/indTot                                inteiro
 pedido                    prod/xPed                                  texto
 item_pedido               prod/nItemPed                              texto
 bem_movel_usado           prod/indBemMovelUsado                      texto
+atividade_simples_nacional prod/cAtivSN                             texto
 informacoes_adicionais   infAdProd                                  texto
 valor_tributos_aproximado imposto/vTotTrib                           numero
 origem                    imposto/ICMS/*/orig                        texto
@@ -178,6 +182,10 @@ classificacao_regular     imposto/IBSCBS/gIBSCBS/gTribRegular/cClassTribReg text
 credito_presumido_codigo  imposto/IBSCBS/gCredPresOper/cCredPres     texto
 valor_total_ibs_monofasico imposto/IBSCBS/gIBSCBSMono/vTotIBSMonoItem numero
 valor_total_cbs_monofasica imposto/IBSCBS/gIBSCBSMono/vTotCBSMonoItem numero
+aliquota_ibs_simples_nacional imposto/IBSCBS/gTribSN/gIBSSN/pIBSSN   numero
+valor_ibs_simples_nacional imposto/IBSCBS/gTribSN/gIBSSN/vIBSSN      numero
+aliquota_cbs_simples_nacional imposto/IBSCBS/gTribSN/gCBSSN/pCBSSN   numero
+valor_cbs_simples_nacional imposto/IBSCBS/gTribSN/gCBSSN/vCBSSN      numero
 valor_is                  imposto/IS/vIS                             numero
 percentual_devolvido      impostoDevol/pDevol                        numero
 valor_ipi_devolvido       impostoDevol/IPI/vIPIDevol                 numero
@@ -323,7 +331,7 @@ autorizacao      card/cAut  texto
 #' @return Uma lista com os `data.frame`s `notas`, `itens`, `impostos`,
 #'   `parcelas`, `pagamentos`, `pagamentos_vinculados`, `resumos`, `campos` (só
 #'   com `todos_os_campos = TRUE`) e `arquivos`.
-#' @source Schema oficial da NF-e, pacote de liberação PL_010g v1.03 (NT
+#' @source Schema oficial da NF-e, pacote de liberação PL_010h v1.03 (NT
 #'   2026.006 e NT 2026.008), publicado no Portal Nacional da NF-e em
 #'   26/10/2026; o resumo, pelo pacote da Distribuição de DF-e v1.04
 #'   (`resNFe_v1.01.xsd`, publicado em 03/07/2026) e pela NT 2014.002 v1.02d.

@@ -63,7 +63,7 @@ NULL
 #'   texto: pronto para [xml_assinar()].
 #' @seealso [xml_para_lista()], [xml_assinar()],
 #'   [sefaz_autorizar()], [nfce_qrcode()] para o QR-Code da NFC-e.
-#' @source Os schemas da NF-e e da NFC-e, pacote de liberação 010g, versão
+#' @source Os schemas da NF-e e da NFC-e, pacote de liberação 010h, versão
 #'   1.03 (Portal Nacional da NF-e, `nfe_v4.00.xsd` e `leiauteNFe_v4.00.xsd`);
 #'   a composição da chave de acesso e o código numérico pelo Manual de
 #'   Orientação do Contribuinte 7.0 (Anexo I, regra B03-10, da NT 2019.001).

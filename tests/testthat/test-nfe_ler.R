@@ -367,3 +367,24 @@ test_that("sem arquivo nenhum, as tabelas v\u00eam vazias com as colunas certas"
                      vapply(cheia[[nome]], function(coluna) class(coluna)[1], character(1)))
   }
 })
+
+test_that("o Simples Nacional na Reforma (pacote 010h): o regime do emitente, a atividade e o gTribSN do item e do total", {
+  nota = paste(readLines(NOTA_SP, encoding = "UTF-8"), collapse = "\n")
+  nota = sub("<CRT>3</CRT>", "<CRT>3</CRT><tpRegimeIBSCBS>2</tpRegimeIBSCBS>", nota, fixed = TRUE)
+  nota = sub("<indTot>1</indTot>", "<indTot>1</indTot><cAtivSN>01</cAtivSN>", nota, fixed = TRUE)
+  nota = sub("</gIBSCBS>\n          </IBSCBS>", paste0("</gIBSCBS><gTribSN><gIBSSN><pIBSSN>0.10</pIBSSN><vIBSSN>0.05</vIBSSN>",
+             "</gIBSSN><gCBSSN><pCBSSN>0.90</pCBSSN><vCBSSN>0.45</vCBSSN></gCBSSN></gTribSN></IBSCBS>"), nota, fixed = TRUE)
+  nota = sub("</gCBS>\n        </IBSCBSTot>", "</gCBS><gTribSN><vIBSSN>0.05</vIBSSN><vCBSSN>0.45</vCBSSN></gTribSN></IBSCBSTot>",
+             nota, fixed = TRUE)
+  # O schema do pacote aceita os campos novos (o do 010g os recusava).
+  expect_length(erros_do_schema_da_nfe(nota), 0)
+  lida = nfe_ler(nota)
+  expect_identical(lida$notas$emitente_regime_ibs_cbs, 2L)
+  expect_equal(lida$notas$valor_ibs_simples_nacional, 0.05)
+  expect_equal(lida$notas$valor_cbs_simples_nacional, 0.45)
+  expect_identical(lida$itens$atividade_simples_nacional, c("01", NA))
+  expect_equal(lida$itens$aliquota_ibs_simples_nacional, c(0.1, NA))
+  expect_equal(lida$itens$valor_ibs_simples_nacional, c(0.05, NA))
+  expect_equal(lida$itens$aliquota_cbs_simples_nacional, c(0.9, NA))
+  expect_equal(lida$itens$valor_cbs_simples_nacional, c(0.45, NA))
+})

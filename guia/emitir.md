@@ -111,9 +111,9 @@ depois de `xml_assinar()`).
 
 Testado na SVRS de homologação em 05/11/2026 com o certificado de uma empresa: uma NF-e montada a partir de uma nota
 real, com o tpAmb 2, foi assinada pelo RNFe e autorizada (100); a carta de correção e o cancelamento foram registrados
-(135) e a ciência da operação, no Ambiente Nacional (136). As rejeições que vieram antes foram de regras que a
-pré-conferência acusa: o indicador do intermediador (434) e o CPF do transportador zerado (543) ela já acusava; o
-vencimento da parcela antes da emissão (900, a Y09-20) entrou nela depois desse teste. O desacordo de um CT-e
+(135) e a ciência da operação, no Ambiente Nacional (136). As rejeições que vieram antes foram de regras de negócio
+da SEFAZ, que o schema não pega: o indicador do intermediador (434), o CPF do transportador zerado (543) e o
+vencimento da parcela antes da emissão (900). O desacordo de um CT-e
 inventado voltou "CT-e não consta na base de dados" (217): o evento passou pelo schema, pela assinatura e pelo órgão
 de recepção. Um MDF-e de carga própria foi autorizado (100), ganhou um condutor e foi encerrado (135 nos dois). Na
 Produção Restrita da NFS-e Nacional, uma NFS-e foi gerada (201) a partir de uma DPS montada sobre uma nota real e
