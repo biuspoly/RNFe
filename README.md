@@ -34,6 +34,18 @@ lida$itens        # uma linha por item: produto, CFOP, NCM e os impostos princip
 | [Assinar, enviar e registrar eventos](https://github.com/biuspoly/RNFe/blob/main/guia/emitir.md) | A assinatura, a autorização da NF-e, da NFC-e (com o QR-Code) e do CT-e (o OS, a GTV-e e o simplificado), o cancelamento, a carta de correção, a manifestação, o comprovante e o insucesso de entrega, o ator interessado, o EPEC, o cancelamento e o desacordo do CT-e, o MDF-e e a NFS-e Nacional (também a consulta pela DPS) |
 | [Os documentos auxiliares em PDF](https://github.com/biuspoly/RNFe/blob/main/guia/pdf.md) | O DANFE, o DANFE Simplificado e a Etiqueta, o DANFE NFC-e, o DACTE, o DAMDFE, o DANFSe e a carta de correção |
 
+## O que vem por aí
+
+Cada parte futura tem um aviso no GitHub, com a etiqueta
+[planejado](https://github.com/biuspoly/RNFe/issues?q=is%3Aissue+is%3Aopen+label%3Aplanejado):
+
+- [a emissão em produção](https://github.com/biuspoly/RNFe/issues/21) (hoje, só homologação);
+- [o CT-e autorizado de ponta a ponta](https://github.com/biuspoly/RNFe/issues/22) na homologação;
+- [os códigos novos da NFS-e Nacional](https://github.com/biuspoly/RNFe/issues/23), quando o schema da NT 009 sair;
+- [o MDF-e e o CT-e simplificado conferidos com documentos reais](https://github.com/biuspoly/RNFe/issues/24): quem
+  tiver um acervo pode ajudar;
+- [o envio ao CRAN](https://github.com/biuspoly/RNFe/issues/25).
+
 ## De onde vêm as regras
 
 Das especificações públicas do [Portal Nacional da NF-e](https://www.nfe.fazenda.gov.br/portal/): o Manual de
