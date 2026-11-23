@@ -77,6 +77,8 @@ test_that("a inutiliza\u00e7\u00e3o: os erros antes de qualquer conex\u00e3o", {
   expect_error(inutilizar_de_teste(numero_final = 100), "menor")
   expect_error(inutilizar_de_teste(ano = 202), "ano")
   expect_error(inutilizar_de_teste(justificativa = "CURTA"), "15 a 255")
+  # A NF-e do AC, da BA e de SP não se inutiliza desde 01/11/2026 (Ajuste SINIEF 40/26).
+  expect_error(inutilizar_de_teste(uf = "SP"), "Ajuste SINIEF 40/26")
   # O CNPJ de outra empresa: o certificado não é do emitente.
   expect_error(inutilizar_de_teste(cnpj = "11444777000161"), "CNPJ-base")
 })

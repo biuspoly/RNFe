@@ -5,8 +5,10 @@
 \title{Inutilizar uma faixa de numeração (NF-e e NFC-e)}
 \source{
 Manual de Orientação do Contribuinte da NF-e (o serviço de
-inutilização de numeração) e os schemas \code{inutNFe_v4.00.xsd} e
-\code{leiauteInutNFe_v4.00.xsd}.
+inutilização de numeração), os schemas \code{inutNFe_v4.00.xsd} e
+\code{leiauteInutNFe_v4.00.xsd} e o Ajuste SINIEF 7/05, cláusula décima quarta
+(no Confaz, com a redação do Ajuste SINIEF 40/26). Testado na SVRS de
+homologação em 23/11/2026: inutilizada (102).
 }
 \usage{
 sefaz_inutilizar(
@@ -61,6 +63,12 @@ ser reenviada). A situação 102 é a inutilização homologada; o número
 inutilizado não pode mais ser usado.
 }
 \details{
+Desde 01/11/2026, o pedido de inutilização da NF-e não se aplica ao Acre, à
+Bahia e a São Paulo (o § 6º da cláusula décima quarta do Ajuste SINIEF
+7/05, pelo Ajuste SINIEF 40/26): a NF-e dessas UF é recusada antes de ir.
+Nas outras UF, a inutilização segue obrigatória até o dia 10 do mês seguinte
+à quebra da sequência.
+
 O certificado tem de ser do emitente: o mesmo CNPJ-base (o da matriz serve
 para a filial). O \code{Id} do pedido, pelo schema oficial em vigor, só aceita
 números: o CNPJ alfanumérico ainda não tem como inutilizar. Por enquanto só

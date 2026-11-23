@@ -4,12 +4,21 @@
 #' @include sefaz.R assinatura.R sefaz_evento.R
 NULL
 
+# O § 6º da cláusula décima quarta do Ajuste SINIEF 7/05 (pelo Ajuste SINIEF 40/26, efeitos a partir de 01/11/2026).
+UFS_SEM_INUTILIZACAO_DA_NFE = c("AC", "BA", "SP")
+
 #' Inutilizar uma faixa de numeração (NF-e e NFC-e)
 #'
 #' Pede ao autorizador da UF do emitente que inutilize os números de uma série
 #' que não foram nem vão ser usados (uma nota pulada, uma rejeitada que não vai
 #' ser reenviada). A situação 102 é a inutilização homologada; o número
 #' inutilizado não pode mais ser usado.
+#'
+#' Desde 01/11/2026, o pedido de inutilização da NF-e não se aplica ao Acre, à
+#' Bahia e a São Paulo (o § 6º da cláusula décima quarta do Ajuste SINIEF
+#' 7/05, pelo Ajuste SINIEF 40/26): a NF-e dessas UF é recusada antes de ir.
+#' Nas outras UF, a inutilização segue obrigatória até o dia 10 do mês seguinte
+#' à quebra da sequência.
 #'
 #' O certificado tem de ser do emitente: o mesmo CNPJ-base (o da matriz serve
 #' para a filial). O `Id` do pedido, pelo schema oficial em vigor, só aceita
@@ -33,8 +42,10 @@ NULL
 #'   a resposta).
 #' @seealso [sefaz_autorizar()], [sefaz_cancelar()]
 #' @source Manual de Orientação do Contribuinte da NF-e (o serviço de
-#'   inutilização de numeração) e os schemas `inutNFe_v4.00.xsd` e
-#'   `leiauteInutNFe_v4.00.xsd`.
+#'   inutilização de numeração), os schemas `inutNFe_v4.00.xsd` e
+#'   `leiauteInutNFe_v4.00.xsd` e o Ajuste SINIEF 7/05, cláusula décima quarta
+#'   (no Confaz, com a redação do Ajuste SINIEF 40/26). Testado na SVRS de
+#'   homologação em 23/11/2026: inutilizada (102).
 #' @examples
 #' \dontrun{
 #' sefaz_inutilizar("11222333000181", "CE", serie = 1, numero_inicial = 120, numero_final = 122,
@@ -56,6 +67,10 @@ sefaz_inutilizar = function(cnpj, uf, serie, numero_inicial, numero_final, justi
   modelo = as.character(modelo)
   if (length(modelo) != 1 || !(modelo %in% c("55", "65"))) {
     stop("Informe o modelo: \"55\" (NF-e) ou \"65\" (NFC-e).", call. = FALSE)
+  }
+  if (modelo == "55" && uf %in% UFS_SEM_INUTILIZACAO_DA_NFE) {
+    stop("Desde 01/11/2026, o pedido de inutiliza\u00e7\u00e3o da NF-e n\u00e3o se aplica ao AC, \u00e0 BA e a SP ",
+         "(Ajuste SINIEF 7/05, cl\u00e1usula d\u00e9cima quarta, \u00a7 6\u00ba, pelo Ajuste SINIEF 40/26).", call. = FALSE)
   }
   serie = numero_inteiro_na_faixa(serie, 0, 999, "a s\u00e9rie")
   numero_inicial = numero_inteiro_na_faixa(numero_inicial, 1, 999999999, "o n\u00famero inicial")

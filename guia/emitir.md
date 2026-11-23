@@ -113,7 +113,8 @@ foi autorizado (100) e cancelado (135) na SVRS de homologação em 23/11/2026.
 
 **A inutilização de numeração** (NF-e e NFC-e) vai ao autorizador da UF do emitente com a faixa da série, o ano e a
 justificativa; a homologada (102) volta com o `procInutNFe`, o pedido e o retorno, que se guarda como prova. O
-certificado tem de ter o CNPJ-base do emitente. O schema oficial em vigor só aceita números no `Id` do pedido: o CNPJ
+certificado tem de ter o CNPJ-base do emitente. Desde 01/11/2026, o pedido não se aplica à NF-e do AC, da BA e de SP
+(o § 6º da cláusula décima quarta do Ajuste SINIEF 7/05, pelo Ajuste SINIEF 40/26), e a função a recusa. O schema oficial em vigor só aceita números no `Id` do pedido: o CNPJ
 alfanumérico ainda não tem como inutilizar. Testado na SVRS de homologação em 23/11/2026: inutilizada (102).
 No MDF-e emitido com carregamento posterior (`indCarregaPosterior` 1: carga própria dentro da UF, quando o emitente,
 no início da viagem, não tem acesso aos documentos fiscais transportados), as NF-e entram depois, pela inclusão de DF-e, com o município de carregamento e o de
