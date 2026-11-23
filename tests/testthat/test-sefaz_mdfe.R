@@ -85,6 +85,27 @@ test_that("o encerramento e a inclus\u00e3o de condutor: o evento sozinho e o pr
                                                          "</CPF></condutor>"), fixed = TRUE)
 })
 
+test_that("o cancelamento: o evento 110111 com o protocolo e a justificativa", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  pedidos = list()
+  httr2::local_mocked_responses(function(req) {
+    pedidos[[length(pedidos) + 1]] <<- req
+    resposta_da_svrs("MDFeRecepcaoEvento", retorno_do_evento_do_mdfe("110111"))
+  })
+  cancelado = sefaz_mdfe_cancelar(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "VIAGEM DESISTIDA ANTES DA SAIDA",
+                                  CERTIFICADO_DO_MDFE, "teste")
+  expect_identical(cancelado$situacao, 135L)
+  expect_identical(eventos_ler(cancelado$xml_evento)$eventos$tipo, "110111")
+  expect_match(rawToChar(pedidos[[1]]$body$data), paste0(
+    '<infEvento Id="ID110111', CHAVE_DO_MDFE_DO_CERTIFICADO, '01">.*<evCancMDFe><descEvento>Cancelamento</descEvento>',
+    "<nProt>923260000012345</nProt><xJust>VIAGEM DESISTIDA ANTES DA SAIDA</xJust></evCancMDFe>"))
+  expect_error(sefaz_mdfe_cancelar(CHAVE_DO_MDFE_DO_CERTIFICADO, "923260000012345", "CURTA", CERTIFICADO_DO_MDFE, "teste"),
+               "15 a 255")
+  expect_length(pedidos, 1)
+})
+
 # Duas NF-e fictícias do emitente do certificado de teste.
 NFE_INCLUIDA_1 = "35261011222333000181550010000010011123456785"
 NFE_INCLUIDA_2 = "35261011222333000181550010000010021123456782"

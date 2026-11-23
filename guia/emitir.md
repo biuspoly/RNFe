@@ -10,6 +10,8 @@ writeLines(resposta$xml_autorizado, "nota_autorizada.xml", useBytes = TRUE)
 
 sefaz_carta_correcao(resposta$chave, "ONDE SE LE RUA 10, LEIA-SE RUA 100", 1, "empresa.pfx", senha)
 sefaz_cancelar(resposta$chave, resposta$protocolo, "PEDIDO CANCELADO PELO CLIENTE", "empresa.pfx", senha)
+sefaz_inutilizar(cnpj, "CE", serie = 1, numero_inicial = 120, numero_final = 122,
+                 justificativa = "NUMERACAO PULADA NA EMISSAO", certificado = "empresa.pfx", senha = senha)
 sefaz_manifestar(chave_recebida, "ciencia", certificado = "empresa.pfx", senha = senha)   # o destinatário
 sefaz_manifestar(chave_recebida, "confirmacao", certificado = "empresa.pfx", senha = senha,
                  sequencia = 2)                                    # a segunda confirmação (a primeira foi a 1)
@@ -29,6 +31,7 @@ sefaz_mdfe_incluir_condutor(mdfe$chave, "NOME DO MOTORISTA", cpf_do_motorista, c
 sefaz_mdfe_incluir_dfe(mdfe$chave, mdfe$protocolo, "2611606", "Recife", chaves_das_nfe, "2611606", "Recife",
                        certificado = "empresa.pfx", senha = senha)   # as NF-e do MDF-e com carregamento posterior
 sefaz_mdfe_encerrar(mdfe$chave, mdfe$protocolo, "PE", "2611606", Sys.Date(), "empresa.pfx", senha)
+sefaz_mdfe_cancelar(mdfe$chave, mdfe$protocolo, "VIAGEM DESISTIDA ANTES DA SAIDA", "empresa.pfx", senha)   # ou cancelar
 
 nfse = nfse_emitir("dps.xml", "empresa.pfx", senha)          # a NFS-e Nacional gerada a partir da DPS
 nfse_cancelar(nfse$chave, "erro_na_emissao", "VALOR DO SERVICO INFORMADO ERRADO", "empresa.pfx", senha)
@@ -104,7 +107,14 @@ off-line foi autorizado (100) pela SVRS, mas a consulta e o cancelamento dele vo
 inválido"): o serviço de consulta e de eventos da SVRS de homologação ainda não aceita a chave com o `tpEmis` 2.
 
 O MDF-e vai compactado e é autorizado na hora pela SVRS, que atende todas as UF; o QR-Code dele entra sozinho
-quando falta (no MDF-e em contingência, com a chave assinada pelo certificado, o parâmetro `sign`). Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta.
+quando falta (no MDF-e em contingência, com a chave assinada pelo certificado, o parâmetro `sign`). Depois vêm a
+inclusão de condutor e o encerramento (ou o cancelamento, o evento 110111), com o `procEventoMDFe` de volta. O MDF-e
+foi autorizado (100) e cancelado (135) na SVRS de homologação em 23/11/2026.
+
+**A inutilização de numeração** (NF-e e NFC-e) vai ao autorizador da UF do emitente com a faixa da série, o ano e a
+justificativa; a homologada (102) volta com o `procInutNFe`, o pedido e o retorno, que se guarda como prova. O
+certificado tem de ter o CNPJ-base do emitente. O schema oficial em vigor só aceita números no `Id` do pedido: o CNPJ
+alfanumérico ainda não tem como inutilizar. Testado na SVRS de homologação em 23/11/2026: inutilizada (102).
 No MDF-e emitido com carregamento posterior (`indCarregaPosterior` 1: carga própria dentro da UF, quando o emitente,
 no início da viagem, não tem acesso aos documentos fiscais transportados), as NF-e entram depois, pela inclusão de DF-e, com o município de carregamento e o de
 descarregamento de cada nota; ele só se encerra depois de uma inclusão. Testado na SVRS de homologação em 10/11/2026:

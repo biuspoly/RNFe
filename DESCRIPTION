@@ -69,3 +69,4 @@ Collate:
     'sefaz_evento_cte.R'
     'sefaz_mdfe.R'
     'sefaz_cte_autorizar.R'
+    'sefaz_inutilizar.R'

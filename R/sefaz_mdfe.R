@@ -269,6 +269,22 @@ sefaz_mdfe_incluir_dfe = function(chave, protocolo, municipio_carregamento, nome
   registrar_evento_do_mdfe(chave, "110115", sequencia, detalhe, certificado, senha, ambiente)
 }
 
+#' @rdname sefaz_mdfe_encerrar
+#' @param justificativa No cancelamento, o motivo, de 15 a 255 caracteres.
+#' @details `sefaz_mdfe_cancelar()` cancela o MDF-e autorizado (o evento
+#'   110111), com o protocolo da autorização e a justificativa. O prazo e o que
+#'   impede o cancelamento (o MDF-e já encerrado, por exemplo) são conferidos
+#'   pela SEFAZ, que responde com o motivo.
+#' @export
+sefaz_mdfe_cancelar = function(chave, protocolo, justificativa, certificado, senha, ambiente = "homologacao") {
+  conferir_ambiente(ambiente)
+  conferir_protocolo_do_mdfe(protocolo)
+  conferir_texto_do_evento(justificativa, "a justificativa", 15, 255)
+  detalhe = paste0("<evCancMDFe><descEvento>Cancelamento</descEvento><nProt>", protocolo, "</nProt><xJust>",
+                   escapar_texto_canonico(justificativa), "</xJust></evCancMDFe>")
+  registrar_evento_do_mdfe(chave, "110111", 1L, detalhe, certificado, senha, ambiente)
+}
+
 conferir_protocolo_do_mdfe = function(protocolo) {
   if (length(protocolo) != 1 || is.na(protocolo) || !grepl("^[0-9]{15}$", protocolo)) {
     stop("Informe o protocolo de autoriza\u00e7\u00e3o do MDF-e (15 algarismos).", call. = FALSE)
@@ -282,7 +298,7 @@ conferir_municipio_do_evento = function(municipio, de_que) {
 }
 
 # O schema do detalhe de cada evento do MDF-e (em inst/schemas/mdfe), que a mensagem assinada segue antes de ir à SEFAZ.
-SCHEMA_DO_DETALHE_DO_EVENTO_DO_MDFE = c("110112" = "evEncMDFe_v3.00.xsd", "110114" = "evIncCondutorMDFe_v3.00.xsd",
+SCHEMA_DO_DETALHE_DO_EVENTO_DO_MDFE = c("110111" = "evCancMDFe_v3.00.xsd", "110112" ="evEncMDFe_v3.00.xsd", "110114" = "evIncCondutorMDFe_v3.00.xsd",
                                          "110115" = "evInclusaoDFeMDFe_v3.00.xsd")
 
 registrar_evento_do_mdfe = function(chave, codigo_do_evento, sequencia, detalhe, certificado, senha, ambiente) {

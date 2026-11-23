@@ -4,6 +4,7 @@
 \alias{sefaz_mdfe_encerrar}
 \alias{sefaz_mdfe_incluir_condutor}
 \alias{sefaz_mdfe_incluir_dfe}
+\alias{sefaz_mdfe_cancelar}
 \title{Encerrar um MDF-e}
 \source{
 Manual de Orientação do Contribuinte do MDF-e, versão 3.00b, itens
@@ -47,6 +48,15 @@ sefaz_mdfe_incluir_dfe(
   senha,
   ambiente = "homologacao"
 )
+
+sefaz_mdfe_cancelar(
+  chave,
+  protocolo,
+  justificativa,
+  certificado,
+  senha,
+  ambiente = "homologacao"
+)
 }
 \arguments{
 \item{chave}{A chave de acesso do MDF-e.}
@@ -81,6 +91,8 @@ o nome do município onde as NF-e incluídas foram carregadas.}
 
 \item{municipios_descarregamento, nomes_descarregamento}{O código IBGE e o
 nome do município de descarregamento de cada NF-e (um só vale para todas).}
+
+\item{justificativa}{No cancelamento, o motivo, de 15 a 255 caracteres.}
 }
 \value{
 Um \code{data.frame} com uma linha, como o de \code{\link[=sefaz_cancelar]{sefaz_cancelar()}}: a
@@ -104,6 +116,11 @@ depois de uma inclusão (715).
 O autor do evento é o emitente da chave (o CNPJ ou, nas séries 920 a 969, o
 CPF), e o certificado pode ser o dele ou o de outro estabelecimento da
 empresa (o mesmo CNPJ-base). Por enquanto só o ambiente de \strong{homologação}.
+
+\code{sefaz_mdfe_cancelar()} cancela o MDF-e autorizado (o evento
+110111), com o protocolo da autorização e a justificativa. O prazo e o que
+impede o cancelamento (o MDF-e já encerrado, por exemplo) são conferidos
+pela SEFAZ, que responde com o motivo.
 }
 \examples{
 \dontrun{
