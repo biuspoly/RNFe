@@ -1099,7 +1099,7 @@ conferir_certificado = function(certificado, senha) {
 # atende todas as UFs dela: em homologação (03/11/2026) AL, AP, CE, DF, PA, PI, RJ, RO, RR, SE e TO responderam como as
 # da lista, e só o MA (da SVAN) voltou 410, "UF não é atendida"; em produção, o app Fiscal consulta CE, AL e PI por lá.
 #
-# O documento com o tpEmis de uma SVC (FORMA_DE_EMISSAO_DA_SVC) vai \u00e0 SVC dela, que tem de ser a da UF.
+# O documento com o tpEmis de uma SVC (FORMA_DE_EMISSAO_DA_SVC) vai à SVC dela, que tem de ser a da UF.
 servico_da_uf = function(uf, servico, ambiente, documento = "NF-e", forma_de_emissao = NA) {
   svc = FORMA_DE_EMISSAO_DA_SVC[FORMA_DE_EMISSAO_DA_SVC$lista == documento &
                                   FORMA_DE_EMISSAO_DA_SVC$forma_de_emissao == as.character(forma_de_emissao), ]

@@ -243,7 +243,7 @@ test_that("a GTV-e em conting\u00eancia sem QR-Code e o documento de outra SVC n
   expect_error(sefaz_cte_autorizar(xml_assinar(cte_montar(gtve), CERTIFICADO_DA_MONTAGEM, "teste"), CERTIFICADO_DA_MONTAGEM,
                                    "teste"), "informe o infCTeSupl")
   cte = xml_para_lista(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))
-  # O tpEmis 8 (a SVC-SP) num CT-e de SP, cuja SVC \u00e9 a SVC-RS.
+  # O tpEmis 8 (a SVC-SP) num CT-e de SP, cuja SVC é a SVC-RS.
   cte$ide$tpEmis = "8"
   cte$Id = NULL
   cte$ide$cDV = NULL
