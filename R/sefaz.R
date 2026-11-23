@@ -1283,17 +1283,20 @@ enviar_pedidos = function(pedidos, conexao) {
 enviar_os_pedidos = function(pedidos, opcoes, tempo_limite) {
   respostas = list()
   for (posicao in seq_along(pedidos)) {
-    pedido = httr2::request(pedidos[[posicao]]$endereco)
-    # O pedido sem corpo é um GET (as APIs da NFS-e Nacional), que diz o formato que aceita.
-    if (is.null(pedidos[[posicao]]$corpo)) {
-      pedido = httr2::req_headers(pedido, Accept = pedidos[[posicao]]$aceita)
-    } else {
-      pedido = httr2::req_body_raw(pedido, pedidos[[posicao]]$corpo, type = pedidos[[posicao]]$tipo_do_conteudo)
-    }
-    pedido = do.call(httr2::req_options, c(list(pedido), opcoes))
-    pedido = httr2::req_timeout(pedido, tempo_limite)
-    pedido = httr2::req_error(pedido, is_error = function(resposta) FALSE)
-    resposta = tryCatch(httr2::req_perform(pedido), error = function(erro) erro)
+    # Montar o pedido também fica no tryCatch: um erro nele vale só para este pedido, e as respostas dos outros ficam.
+    resposta = tryCatch({
+      pedido = httr2::request(pedidos[[posicao]]$endereco)
+      # O pedido sem corpo é um GET (as APIs da NFS-e Nacional), que diz o formato que aceita.
+      if (is.null(pedidos[[posicao]]$corpo)) {
+        pedido = httr2::req_headers(pedido, Accept = pedidos[[posicao]]$aceita)
+      } else {
+        pedido = httr2::req_body_raw(pedido, pedidos[[posicao]]$corpo, type = pedidos[[posicao]]$tipo_do_conteudo)
+      }
+      pedido = do.call(httr2::req_options, c(list(pedido), opcoes))
+      pedido = httr2::req_timeout(pedido, tempo_limite)
+      pedido = httr2::req_error(pedido, is_error = function(resposta) FALSE)
+      httr2::req_perform(pedido)
+    }, error = function(erro) erro)
     if (inherits(resposta, "error")) {
       respostas[[posicao]] = list(situacao_http = NA_integer_, corpo = NULL, erro = conditionMessage(resposta))
     } else {

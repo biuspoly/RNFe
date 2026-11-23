@@ -27,6 +27,8 @@ test_that("os campos podem vir em qualquer ordem: sai a ordem do schema", {
 })
 
 test_that("o n\u00famero sai com as casas do tipo do campo, e a data e hora do R com o fuso", {
+  # Sem o cNF, ele \u00e9 sorteado, e o sorteio usa o openssl.
+  skip_if_not_installed("openssl")
   nota = xml_para_lista(EXEMPLO_DA_NFE)
   nota$ide$cNF = NULL
   nota$ide$cDV = NULL
@@ -101,7 +103,7 @@ test_that("o n\u00famero que n\u00e3o diz o zero \u00e0 esquerda, o grande demai
   expect_error(nfe_montar(nota), "\"vProd\" aparece mais de uma vez em NFe/infNFe/det/prod")
   nota = xml_para_lista(EXEMPLO_DA_NFE)
   nota$ide$serie = "1a"
-  expect_no_warning(expect_error(nfe_montar(nota), "n\u00e3o formam uma chave"))
+  expect_no_warning(expect_error(nfe_montar(nota), "a s\u00e9rie \\(ide/serie"))
   nota = xml_para_lista(EXEMPLO_DA_NFE)
   nota$ide$dhEmi = c("2026-10-15T10:30:00-03:00", "2026-10-16T10:30:00-03:00")
   expect_error(nfe_montar(nota), "ide/dhEmi recebeu mais de um valor")
@@ -235,9 +237,9 @@ test_that("a mensagem do schema traz o padr\u00e3o inteiro", {
   nota$emit$CNPJ = "1122233300018"
   nota$ide$cDV = NULL
   nota$Id = NULL
-  # O CNPJ com 13 posições forma uma chave errada; o Id informado à mão passa, e o schema recusa o CNPJ.
-  expect_error(nfe_montar(nota), "n\u00e3o formam uma chave")
-  documento = xml2::read_xml('<NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe/></NFe>')
+  # O CNPJ com 13 posições não forma a chave: a mensagem diz qual parte.
+  expect_error(nfe_montar(nota), "o CNPJ ou o CPF do emitente tem de ter 14")
+  documento =xml2::read_xml('<NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe/></NFe>')
   schema = schema_para_montar("nfe", "nfe_v4.00.xsd")
   erros = erros_do_documento_montado(as.character(documento), schema, "NFe")
   expect_false(any(grepl("{http", erros, fixed = TRUE)))

@@ -29,8 +29,7 @@ com \code{todos_os_campos = TRUE}) e \code{arquivos}.
 Lê o XML de NF-e e NFC-e e devolve uma lista de tabelas (\code{data.frame}s)
 ligadas pela \code{chave}: \code{notas} (uma linha por nota: emitente, destinatário,
 totais, IBS e CBS, protocolo e, na NFC-e, o QR-Code), \code{itens} (uma linha por
-item: produto, NCM, CFOP e os impostos em colunas, com o nome de cada
-código), \code{impostos} (todos os campos de imposto, um por linha), \code{parcelas},
+item: produto, NCM, CFOP e os impostos em colunas), \code{impostos} (todos os campos de imposto, um por linha), \code{parcelas},
 \code{pagamentos}, \code{pagamentos_vinculados}, \code{resumos} (o resumo da NF-e que a
 Distribuição de DF-e entrega), \code{campos} (todos os campos, só com
 \code{todos_os_campos = TRUE}) e \code{arquivos} (o que foi lido e o motivo do que não

@@ -231,8 +231,7 @@ autorizacao      card/cAut  texto
 #' Lê o XML de NF-e e NFC-e e devolve uma lista de tabelas (`data.frame`s)
 #' ligadas pela `chave`: `notas` (uma linha por nota: emitente, destinatário,
 #' totais, IBS e CBS, protocolo e, na NFC-e, o QR-Code), `itens` (uma linha por
-#' item: produto, NCM, CFOP e os impostos em colunas, com o nome de cada
-#' código), `impostos` (todos os campos de imposto, um por linha), `parcelas`,
+#' item: produto, NCM, CFOP e os impostos em colunas), `impostos` (todos os campos de imposto, um por linha), `parcelas`,
 #' `pagamentos`, `pagamentos_vinculados`, `resumos` (o resumo da NF-e que a
 #' Distribuição de DF-e entrega), `campos` (todos os campos, só com
 #' `todos_os_campos = TRUE`) e `arquivos` (o que foi lido e o motivo do que não

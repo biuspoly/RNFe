@@ -74,3 +74,28 @@ test_that("os erros: a senha errada, o XML sem documento que se assina e o eleme
                            CERTIFICADO_DA_ASSINATURA, "teste"), "Id")
   expect_error(xml_assinar("nao_existe.xml", CERTIFICADO_DA_ASSINATURA, "teste"), "n\u00e3o encontrado")
 })
+
+test_that("o namespace com prefixo e a assinatura de fora s\u00e3o recusados", {
+  skip_if_not_installed("openssl")
+  texto = paste(readLines(system.file("exemplos", "nfe_ce_simples_cpf.xml", package = "RNFe"), encoding = "UTF-8"),
+                collapse = "\n")
+  com_xsi = sub("<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\"",
+                "<NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"",
+                texto, fixed = TRUE)
+  expect_error(xml_assinar(com_xsi, CERTIFICADO_DA_ASSINATURA, "teste"), "xmlns:xsi")
+  # A NFS-e autorizada: a assinatura da Sefin cobre a DPS.
+  expect_error(xml_assinar(system.file("exemplos", "nfse_sp_v101.xml", package = "RNFe"), CERTIFICADO_DA_ASSINATURA,
+                           "teste"), "assinatura de quem o autorizou")
+})
+
+test_that("o documento de dentro \u00e9 assinado antes do de fora", {
+  skip_if_not_installed("openssl")
+  assinado = xml2::read_xml(xml_assinar(system.file("exemplos", "evento_nfse_cancelamento.xml", package = "RNFe"),
+                                        CERTIFICADO_DA_ASSINATURA, "teste"))
+  # O resumo do evento de fora tem de ser o do infEvento como ficou, com o pedRegEvento já assinado dentro.
+  de_fora = xml2::xml_find_first(assinado, "/*/*[local-name()='Signature']")
+  informacao_de_fora = xml2::xml_find_first(assinado, "/*/*[local-name()='infEvento']")
+  resumo = xml2::xml_text(xml2::xml_find_first(de_fora, ".//*[local-name()='DigestValue']"))
+  algoritmo = xml2::xml_attr(xml2::xml_find_first(de_fora, ".//*[local-name()='DigestMethod']"), "Algorithm")
+  expect_identical(resumo, resumo_em_base64(xml_canonico(informacao_de_fora), grepl("sha256", algoritmo)))
+})

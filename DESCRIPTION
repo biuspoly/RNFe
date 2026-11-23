@@ -1,5 +1,5 @@
 Package: RNFe
-Title: Documentos Fiscais Eletrônicos Brasileiros (NF-e, CT-e, GTV-e, MDF-e, NFS-e)
+Title: Documentos Fiscais Eletrônicos Brasileiros
 Version: 0.0.0.9000
 Authors@R: person("Marlon", "Amaral", email = "marlonsouzapro@outlook.com", role = c("aut", "cre"))
 Description: Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e,
@@ -9,6 +9,7 @@ Description: Documentos fiscais eletrônicos brasileiros (NF-e, NFC-e, CT-e,
     acesso (já com o CNPJ alfanumérico) e desenha os documentos auxiliares em
     PDF (DANFE, DANFE NFC-e, DACTE, DAMDFE, DANFSe e a carta de correção).
 License: MIT + file LICENSE
+Copyright: inst/COPYRIGHTS
 URL: https://github.com/biuspoly/RNFe
 BugReports: https://github.com/biuspoly/RNFe/issues
 Encoding: UTF-8

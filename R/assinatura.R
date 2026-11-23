@@ -65,13 +65,16 @@ xml_assinar = function(xml, certificado, senha) {
     stop("A senha n\u00e3o abre o certificado, ou ele n\u00e3o \u00e9 um certificado A1 com a chave.", call. = FALSE)
   }
   documento = ler_o_xml_para_assinar(xml)
+  recusar_namespace_com_prefixo(documento)
   documentos_assinaveis = documentos_para_assinar(documento)
   if (length(documentos_assinaveis) == 0) {
     stop("O XML n\u00e3o tem um documento que se assina (NFe, CTe, MDFe, DPS ou evento com o elemento do Id).",
          call. = FALSE)
   }
-  for (documento_assinavel in documentos_assinaveis) {
-    assinar_um_documento(documento_assinavel, conteudo$cert, conteudo$key)
+  recusar_assinatura_de_fora(documento, documentos_assinaveis)
+  # Do último para o primeiro: o documento de dentro (o pedRegEvento no evento) é assinado antes do de fora, que o cobre.
+  for (posicao in rev(seq_along(documentos_assinaveis))) {
+    assinar_um_documento(documentos_assinaveis[[posicao]], conteudo$cert, conteudo$key)
   }
   # Sem a opção "format": o recuo criaria espaços que não estavam no que foi assinado.
   trimws(as.character(documento, options = character()))
@@ -89,6 +92,35 @@ ler_o_xml_para_assinar = function(xml) {
   tryCatch(xml2::read_xml(xml, options = "NOBLANKS"), error = function(erro) {
     stop("N\u00e3o \u00e9 um XML v\u00e1lido: ", conditionMessage(erro), call. = FALSE)
   })
+}
+
+# A forma canônica daqui só trata o namespace sem prefixo, o único que os leiautes usam. Um xmlns:xsi (o que alguns
+# geradores põem na raiz) entraria na forma canônica de quem confere, e a assinatura não bateria.
+recusar_namespace_com_prefixo = function(documento) {
+  declarados = regmatches(as.character(documento), gregexpr("xmlns:[A-Za-z_][A-Za-z0-9_.-]*", as.character(documento)))[[1]]
+  if (length(declarados) > 0) {
+    stop("O XML declara um namespace com prefixo (", paste(unique(declarados), collapse = ", "), "), que os leiautes ",
+         "n\u00e3o usam e a assinatura n\u00e3o trata: tire a declara\u00e7\u00e3o (e o atributo que a usa) antes de assinar.",
+         call. = FALSE)
+  }
+}
+
+# Uma assinatura que já existe por fora de um documento que vai ser assinado (a da Sefin no infNFSe, que cobre a DPS)
+# ficaria inválida: assinar de novo o de dentro muda o que ela cobre.
+recusar_assinatura_de_fora = function(documento, documentos_assinaveis) {
+  for (assinatura in xml2::xml_find_all(documento, "//*[local-name()='Signature']")) {
+    dono = xml2::xml_parent(assinatura)
+    if (xml2::xml_name(dono) %in% names(ELEMENTOS_ASSINADOS)) {
+      next
+    }
+    cobre_um_documento = length(xml2::xml_find_all(dono, paste0(
+      ".//*[", paste0("(local-name()='", names(ELEMENTOS_ASSINADOS), "' and *[local-name()='", ELEMENTOS_ASSINADOS, "'])",
+                      collapse = " or "), "]"))) > 0
+    if (cobre_um_documento) {
+      stop("O XML tem a assinatura de quem o autorizou (no ", xml2::xml_name(dono), "), que cobre o documento: ",
+           "assin\u00e1-lo de novo a deixaria inv\u00e1lida. Assine o documento antes de ele ser autorizado.", call. = FALSE)
+    }
+  }
 }
 
 # Cada documento do XML que tem o elemento assinado (pelo nome local, em qualquer namespace).

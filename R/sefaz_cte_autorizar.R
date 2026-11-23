@@ -169,6 +169,7 @@ completar_autorizacao_do_cte = function(linha, resposta_lida, texto_do_documento
   linha$motivo_envio = texto_do_retorno(retorno, "xMotivo")
   protocolo = xml2::xml_find_first(retorno, "./*[local-name()='protCTe']")
   if (inherits(protocolo, "xml_missing")) {
+    linha$problema = paste0("a SEFAZ recusou o envio (", linha$situacao_envio, ", ", linha$motivo_envio, ")")
     return(linha)
   }
   informacao = xml2::xml_find_first(protocolo, "./*[local-name()='infProt']")

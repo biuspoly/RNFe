@@ -347,8 +347,8 @@ com_a_contingencia = function(conteudo, documento, contingencia, tipo_contingenc
     }
     if (is.na(texto_do_campo(ide[["tpEmis"]], "ide/tpEmis"))) {
       ide[["tpEmis"]] = "1"
-      conteudo[["ide"]] = ide
     }
+    conteudo[["ide"]] = com_a_contingencia_da_lista(ide, documento)
     return(conteudo)
   }
   tipos = TIPOS_DE_CONTINGENCIA[TIPOS_DE_CONTINGENCIA$documento == documento, ]
@@ -375,7 +375,7 @@ com_a_contingencia = function(conteudo, documento, contingencia, tipo_contingenc
   ide[["tpEmis"]] = forma_de_emissao
   if (tipos$justificativa[tipos$tipo == tipo_contingencia] == "sim") {
     ide = com_a_justificativa(ide, justificativa)
-  } else if (!is.null(justificativa) || !is.na(texto_do_campo(ide[["xJust"]], "ide/xJust"))) {
+  } else if (!is.null(justificativa) || tem_dhcont_ou_xjust(ide)) {
     stop("Em ", documento, ", a conting\u00eancia ", tipo_contingencia, " n\u00e3o leva justificativa (nem o dhCont e o xJust): ",
          "a SEFAZ recusa o documento com ela.", call. = FALSE)
   }
@@ -383,9 +383,46 @@ com_a_contingencia = function(conteudo, documento, contingencia, tipo_contingenc
   conteudo
 }
 
+# O tpEmis que veio na própria lista (uma nota lida e montada de novo), sem contingencia = TRUE: o dhCont e o xJust
+# seguem a mesma regra. Na emissão normal (1) e no tipo que não os leva, eles não vão; no que leva, o xJust é obrigatório
+# e o dhCont, quando falta, é o dhEmi. Um tpEmis que não está na tabela fica para o schema.
+com_a_contingencia_da_lista = function(ide, documento) {
+  forma_de_emissao = texto_do_campo(ide[["tpEmis"]], "ide/tpEmis")
+  if (forma_de_emissao == "1") {
+    if (tem_dhcont_ou_xjust(ide)) {
+      stop("O ide/tpEmis \u00e9 1 (a emiss\u00e3o normal): o dhCont e o xJust s\u00f3 v\u00e3o na conting\u00eancia. Tire os dois ",
+           "da lista, ou monte com contingencia = TRUE.", call. = FALSE)
+    }
+    return(ide)
+  }
+  tipos = TIPOS_DE_CONTINGENCIA[TIPOS_DE_CONTINGENCIA$documento == documento, ]
+  formas_da_svc = FORMA_DE_EMISSAO_DA_SVC$forma_de_emissao[
+    FORMA_DE_EMISSAO_DA_SVC$lista == lista_de_servicos_do_documento(documento)]
+  do_tipo = tipos[tipos$forma_de_emissao == forma_de_emissao |
+                    (tipos$forma_de_emissao == "svc" & forma_de_emissao %in% formas_da_svc), ]
+  if (nrow(do_tipo) == 0) {
+    return(ide)
+  }
+  if (do_tipo$justificativa[1] == "sim") {
+    return(com_a_justificativa(ide, NULL))
+  }
+  if (tem_dhcont_ou_xjust(ide)) {
+    stop("Em ", documento, ", a conting\u00eancia ", do_tipo$tipo[1], " (tpEmis ", forma_de_emissao, ") n\u00e3o leva o ",
+         "dhCont nem o xJust: a SEFAZ recusa o documento com eles. Tire os dois da lista.", call. = FALSE)
+  }
+  ide
+}
+
+tem_dhcont_ou_xjust = function(ide) {
+  !is.na(texto_do_campo(ide[["dhCont"]], "ide/dhCont")) || !is.na(texto_do_campo(ide[["xJust"]], "ide/xJust"))
+}
+
 # O xJust (o da justificativa ou o que veio no ide; os dois, só se forem iguais) e o dhCont.
 com_a_justificativa = function(ide, justificativa) {
   informada = texto_do_campo(ide[["xJust"]], "ide/xJust")
+  if (!is.null(justificativa) && !is.character(justificativa)) {
+    stop("A justificativa tem de ser um texto.", call. = FALSE)
+  }
   if (is.null(justificativa)) {
     justificativa = informada
   }
@@ -520,8 +557,24 @@ chave_montada = function(uf, emissao, cnpj, cpf, modelo, serie, numero, forma_de
   } else {
     emitente = paste0("000", cpf)
   }
-  sem_digito = paste0(uf, ano_e_mes_da_emissao(emissao), emitente, modelo, com_zeros(serie, 3), com_zeros(numero, 9),
-                      forma_de_emissao, codigo_numerico)
+  partes = list(
+    list(texto = uf, tamanho = 2, nome = "o c\u00f3digo da UF (ide/cUF)"),
+    list(texto = ano_e_mes_da_emissao(emissao), tamanho = 4, nome = "o ano e o m\u00eas da emiss\u00e3o"),
+    list(texto = emitente, tamanho = 14, nome = "o CNPJ ou o CPF do emitente"),
+    list(texto = modelo, tamanho = 2, nome = "o modelo (ide/mod)"),
+    list(texto = com_zeros(serie, 3), tamanho = 3, nome = "a s\u00e9rie (ide/serie, at\u00e9 3 algarismos)"),
+    list(texto = com_zeros(numero, 9), tamanho = 9, nome = "o n\u00famero do documento (at\u00e9 9 algarismos)"),
+    list(texto = forma_de_emissao, tamanho = 1, nome = "a forma de emiss\u00e3o (ide/tpEmis)"),
+    list(texto = codigo_numerico, tamanho = 8, nome = "o c\u00f3digo num\u00e9rico (8 algarismos)")
+  )
+  sem_digito = ""
+  for (parte in partes) {
+    if (is.na(parte$texto) || nchar(parte$texto) != parte$tamanho) {
+      stop("Para a chave de acesso, ", parte$nome, " tem de ter ", parte$tamanho, " posi\u00e7\u00f5es; veio \"",
+           parte$texto, "\".", call. = FALSE)
+    }
+    sem_digito = paste0(sem_digito, parte$texto)
+  }
   digito = chave_digito(sem_digito)
   if (is.na(digito)) {
     stop("Os campos da chave de acesso n\u00e3o formam uma chave: ", sem_digito, " (a UF, o ano e o m\u00eas, o CNPJ ou o CPF ",
@@ -536,6 +589,10 @@ ano_e_mes_da_emissao = function(emissao) {
     return(format(emissao, "%y%m"))
   }
   texto = trimws(as.character(emissao))
+  if (length(texto) != 1 || is.na(texto) || !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}T", texto)) {
+    stop("A data de emiss\u00e3o (ide/dhEmi) vai como data e hora do R ou no formato do leiaute, ",
+         "AAAA-MM-DDThh:mm:ss-03:00; veio \"", paste(texto, collapse = " "), "\".", call. = FALSE)
+  }
   paste0(substr(texto, 3, 4), substr(texto, 6, 7))
 }
 

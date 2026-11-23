@@ -208,6 +208,11 @@ completar_autorizacao = function(linha, resposta_lida, texto_da_nota, ambiente) 
     linha$recibo = xml2::xml_text(recibo)
   }
   protocolo = xml2::xml_find_first(retorno, "./*[local-name()='protNFe']")
+  # Sem protocolo e sem recibo, a SEFAZ recusou o lote inteiro (o 656, o 225): a nota nem foi analisada.
+  if (inherits(protocolo, "xml_missing") && is.na(linha$recibo)) {
+    linha$problema = paste0("a SEFAZ recusou o lote (", linha$situacao_lote, ", ", linha$motivo_lote, ")")
+    return(linha)
+  }
   completar_com_o_protocolo(linha, protocolo, texto_da_nota)
 }
 
@@ -259,18 +264,25 @@ consultar_os_recibos = function(linhas, textos, conexao, ambiente) {
     }
     esperar_antes_do_recibo()
     pedidos = list()
+    consultados = integer()
     for (posicao in pendentes) {
       servico = servico_da_uf(linhas$uf[posicao], "NFeRetAutorizacao", ambiente,
                               if (linhas$modelo[posicao] == "65") "NFC-e" else "NF-e",
                               chave_decompor(linhas$chave[posicao])$forma_emissao)
+      if (is.null(servico)) {
+        linhas$problema[posicao] = paste("a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz a consulta do recibo",
+                                         "para a UF: consulte a nota pela chave (sefaz_situacao())")
+        next
+      }
+      consultados = c(consultados, posicao)
       mensagem = paste0('<consReciNFe xmlns="', NAMESPACE_DA_NFE, '" versao="4.00"><tpAmb>',
                         AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><nRec>", linhas$recibo[posicao], "</nRec></consReciNFe>")
       pedidos[[length(pedidos) + 1]] = montar_pedido(servico$endereco, "NFeRetAutorizacao4", "nfeRetAutorizacaoLote",
                                                      mensagem)
     }
     respostas = enviar_pedidos(pedidos, conexao)
-    for (numero in seq_along(pendentes)) {
-      posicao = pendentes[numero]
+    for (numero in seq_along(consultados)) {
+      posicao = consultados[numero]
       resposta_lida = ler_resposta(respostas[[numero]], "retConsReciNFe")
       if (!is.na(resposta_lida$problema)) {
         linhas$problema[posicao] = resposta_lida$problema

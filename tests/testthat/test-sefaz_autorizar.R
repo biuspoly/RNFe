@@ -150,3 +150,25 @@ test_that("o recibo que volta sem o lote (106) n\u00e3o \u00e9 consultado de nov
   expect_identical(resposta$situacao_lote, 106L)
   expect_match(resposta$problema, "106")
 })
+
+test_that("o lote recusado inteiro vai para o problema da nota", {
+  skip_if_not_installed("httr2")
+  skip_if_not_installed("openssl")
+  local_mocked_bindings(usar_processo_separado = function() FALSE)
+  httr2::local_mocked_responses(function(req) {
+    resposta_da_sefaz("NFeAutorizacao4", retorno_do_lote(656, "Rejeicao: Consumo Indevido", ""))
+  })
+  resposta = sefaz_autorizar(nota_assinada_do_ce(), CERTIFICADO_DA_AUTORIZACAO, "teste")
+  expect_identical(resposta$situacao_lote, 656L)
+  expect_true(is.na(resposta$situacao))
+  expect_match(resposta$problema, "recusou o lote \\(656, Rejeicao: Consumo Indevido\\)")
+})
+
+test_that("sem o endere\u00e7o da consulta do recibo, a nota fica com o problema e as outras seguem", {
+  linhas = data.frame(uf = "XX", modelo = "55", chave = CHAVE_DA_NOTA_DO_CE, recibo = "123456789012345",
+                      situacao = NA_integer_, problema = NA_character_, situacao_lote = NA_integer_,
+                      motivo_lote = NA_character_)
+  local_mocked_bindings(esperar_antes_do_recibo = function() NULL)
+  consultadas = consultar_os_recibos(linhas, "<NFe/>", conexao = NULL, ambiente = "homologacao")
+  expect_match(consultadas$problema, "consulta do recibo")
+})

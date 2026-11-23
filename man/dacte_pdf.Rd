@@ -33,7 +33,7 @@ adicionais. O CT-e de homologação leva "EMITIDO EM AMBIENTE DE HOMOLOGAÇÃO -
 SEM VALOR FISCAL".
 }
 \details{
-Precisa do pacote \code{qrcode}.
+Precisa do pacote \code{qrcode} quando o CT-e traz o QR-Code (o \code{infCTeSupl}).
 }
 \examples{
 \donttest{

@@ -31,7 +31,7 @@ DOCUMENTOS_NA_PRIMEIRA_FOLHA_DO_DACTE = 6
 #' adicionais. O CT-e de homologação leva "EMITIDO EM AMBIENTE DE HOMOLOGAÇÃO -
 #' SEM VALOR FISCAL".
 #'
-#' Precisa do pacote `qrcode`.
+#' Precisa do pacote `qrcode` quando o CT-e traz o QR-Code (o `infCTeSupl`).
 #'
 #' @param xml O CT-e ou o CT-e OS: o caminho do arquivo ou o texto do XML (o
 #'   `cteProc`, com o protocolo).
@@ -49,7 +49,6 @@ DOCUMENTOS_NA_PRIMEIRA_FOLHA_DO_DACTE = 6
 #' }
 #' @export
 dacte_pdf = function(xml, arquivo) {
-  exigir_pacotes("qrcode")
   documento = ler_o_xml_para_assinar(xml)
   if (!inherits(xml2::xml_find_first(documento, "//*[local-name()='CTeSimp']"), "xml_missing")) {
     stop("O CT-e simplificado (CTeSimp) ainda n\u00e3o tem DACTE no RNFe.", call. = FALSE)
@@ -65,6 +64,9 @@ dacte_pdf = function(xml, arquivo) {
     protocolo = xml2::xml_find_first(documento, "//*[local-name()='protCTe']/*[local-name()='infProt']"),
     documentos = documentos_originarios_do_dacte(informacao)
   )
+  if (!is.na(cte$qrcode)) {
+    exigir_pacotes("qrcode")
+  }
   abrir_o_pdf(arquivo, LARGURA_DO_A4, ALTURA_DO_A4)
   on.exit(grDevices::dev.off(), add = TRUE)
   grid::grid.newpage()

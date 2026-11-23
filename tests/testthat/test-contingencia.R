@@ -200,3 +200,44 @@ test_that("a consulta e os eventos da NF-e e do CT-e da SVC v\u00e3o \u00e0 SVC"
   expect_identical(pedidos[[2]]$url,
                    "https://cte-homologacao.svrs.rs.gov.br/ws/CTeRecepcaoEventoV4/CTeRecepcaoEventoV4.asmx")
 })
+
+test_that("o tpEmis que vem na lista segue a mesma regra do dhCont e do xJust", {
+  skip_if_not_installed("openssl")
+  # O CT-e da SVC com o dhCont e o xJust (a rejeição 586) é recusado na montagem, como com contingencia = TRUE.
+  cte = lista_sem_a_chave("cte_proc_sp.xml")
+  cte$ide$tpEmis = "7"
+  cte$ide$dhCont = "2026-10-15T09:00:00-03:00"
+  cte$ide$xJust = JUSTIFICATIVA_DE_TESTE
+  expect_error(cte_montar(cte), "svc \\(tpEmis 7\\) n\u00e3o leva o dhCont nem o xJust")
+  cte$ide$xJust = NULL
+  expect_error(cte_montar(cte), "n\u00e3o leva o dhCont")
+  cte$ide$dhCont = NULL
+  expect_identical(xml_para_lista(cte_montar(cte))$ide$tpEmis, "7")
+  # A NF-e da SVC sem a justificativa, e a emissão normal com ela.
+  nota = lista_sem_a_chave("nfe_proc_sp.xml")
+  nota$ide$tpEmis = "6"
+  expect_error(nfe_montar(nota), "informe a justificativa")
+  nota$ide$xJust = JUSTIFICATIVA_DE_TESTE
+  expect_identical(xml_para_lista(nfe_montar(nota))$ide$dhCont, nota$ide$dhEmi)
+  nota$ide$tpEmis = "1"
+  expect_error(nfe_montar(nota), "emiss\u00e3o normal")
+})
+
+test_that("a justificativa tem de ser texto", {
+  skip_if_not_installed("openssl")
+  nota = lista_sem_a_chave("nfe_proc_sp.xml")
+  expect_error(nfe_montar(nota, contingencia = TRUE, justificativa = 123456789012345678), "tem de ser um texto")
+})
+
+test_that("a mensagem diz qual campo da chave est\u00e1 errado", {
+  skip_if_not_installed("openssl")
+  nota = lista_sem_a_chave("nfe_proc_sp.xml")
+  nota$ide$cNF = "123456789"
+  expect_error(nfe_montar(nota), "o c\u00f3digo num\u00e9rico \\(8 algarismos\\)")
+  nota = lista_sem_a_chave("nfe_proc_sp.xml")
+  nota$ide$nNF = "1234567890"
+  expect_error(nfe_montar(nota), "o n\u00famero do documento")
+  nota = lista_sem_a_chave("nfe_proc_sp.xml")
+  nota$ide$dhEmi = "23/11/2026 10:00"
+  expect_error(nfe_montar(nota), "ide/dhEmi")
+})

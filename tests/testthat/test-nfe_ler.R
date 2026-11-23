@@ -388,3 +388,10 @@ test_that("o Simples Nacional na Reforma (pacote 010h): o regime do emitente, a 
   expect_equal(lida$itens$aliquota_cbs_simples_nacional, c(0.9, NA))
   expect_equal(lida$itens$valor_cbs_simples_nacional, c(0.45, NA))
 })
+
+test_that("o texto do XML com espa\u00e7o antes ou com a marca do UTF-8 (BOM) \u00e9 lido", {
+  texto = paste(readLines(system.file("exemplos", "nfe_proc_sp.xml", package = "RNFe"), encoding = "UTF-8"),
+                collapse = "\n")
+  expect_identical(nfe_ler(paste0("  \n", texto))$notas$chave, nfe_ler(texto)$notas$chave)
+  expect_identical(nfe_ler(paste0("\ufeff", texto))$notas$chave, nfe_ler(texto)$notas$chave)
+})

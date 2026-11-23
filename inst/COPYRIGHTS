@@ -1,0 +1,16 @@
+O RNFe (código em R/, testes e documentação) é de Marlon Amaral, sob a licença MIT (arquivo LICENSE).
+
+O pacote também traz arquivos de terceiros (os schemas e o certificado, sem alteração):
+
+- inst/schemas/nfe, nfe_eventos, cte e mdfe: os schemas XML (XSD) da NF-e, da NFC-e, dos eventos, do CT-e e do
+  MDF-e, publicados pelos portais oficiais (Portal Nacional da NF-e, Portal Nacional do CT-e e Portal do MDF-e).
+- inst/schemas/nfse e nfse_producao_restrita: os schemas XML da NFS-e Nacional, publicados no portal da NFS-e
+  (gov.br/nfse).
+- inst/schemas/*/xmldsig-core-schema*.xsd: o schema da assinatura XML, Copyright 2001 The Internet Society and
+  W3C (Massachusetts Institute of Technology, Institut National de Recherche en Informatique et en Automatique,
+  Keio University), sob a W3C Software License
+  (http://www.w3.org/Consortium/Legal/copyright-software-19980720), como diz o próprio arquivo.
+- inst/certificados/icp_brasil_raiz_v10.pem: o certificado da Autoridade Certificadora Raiz Brasileira v10,
+  publicado pelo Instituto Nacional de Tecnologia da Informação (ITI).
+- inst/extdata/logo_nfse.rds: a logomarca da NFS-e, convertida em matriz de cores a partir da imagem no endereço
+  que a Nota Técnica SE/CGNFS-e 008/2026 indica para o DANFSe.

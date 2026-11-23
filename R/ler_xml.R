@@ -62,8 +62,10 @@ ler_arquivos_xml = function(arquivos, caminho_dos_documentos, nome_do_documento,
 
 ler_um_arquivo = function(arquivo, posicao, caminho_dos_documentos, nome_do_documento, colunas_do_documento, todos_os_campos,
                           ...) {
-  e_texto_do_xml = !is.na(arquivo) && startsWith(trimws(arquivo), "<")
+  # O texto colado pode vir com espaço antes ou com a marca do UTF-8 (BOM) de um arquivo lido com readLines.
+  e_texto_do_xml = !is.na(arquivo) && startsWith(trimws(sub("^\ufeff", "", arquivo)), "<")
   if (e_texto_do_xml) {
+    arquivo = trimws(sub("^\ufeff", "", arquivo))
     nome_do_arquivo = paste0("(texto ", posicao, ")")
   } else {
     nome_do_arquivo = arquivo

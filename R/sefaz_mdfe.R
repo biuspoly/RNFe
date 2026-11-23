@@ -93,6 +93,10 @@ ler_o_mdfe_para_autorizar = function(xml, ambiente, certificado, senha) {
     servicos = tabela_interna("servicos_sefaz")
     endereco_do_qrcode = servicos$endereco[servicos$documento == "MDF-e" & servicos$ambiente == ambiente &
                                              servicos$servico == "QR Code"][1]
+    if (is.na(endereco_do_qrcode)) {
+      stop("A Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz o endere\u00e7o do QR-Code do MDF-e para o ambiente.",
+           call. = FALSE)
+    }
     qrcode = paste0(endereco_do_qrcode, "?chMDFe=", chave, "&tpAmb=", AMBIENTES_LIBERADOS[[ambiente]])
     if (identical(texto_pelo_caminho(informacao, "ide/tpEmis"), "2")) {
       qrcode = paste0(qrcode, "&sign=", assinatura_da_chave_do_mdfe(chave, certificado, senha))
@@ -127,6 +131,7 @@ completar_autorizacao_do_mdfe = function(linha, resposta_lida, texto_do_manifest
   linha$motivo_envio = texto_do_retorno(retorno, "xMotivo")
   protocolo = xml2::xml_find_first(retorno, "./*[local-name()='protMDFe']")
   if (inherits(protocolo, "xml_missing")) {
+    linha$problema = paste0("a SEFAZ recusou o envio (", linha$situacao_envio, ", ", linha$motivo_envio, ")")
     return(linha)
   }
   informacao = xml2::xml_find_first(protocolo, "./*[local-name()='infProt']")

@@ -95,7 +95,8 @@ NULL
 #'   montada = nfe_montar(nota)
 #'   substr(montada, 1, 120)
 #'   # A mesma nota em contingência: a SVC de SP é a SVC-AN (tpEmis 6).
-#'   em_contingencia = nfe_montar(nota, contingencia = TRUE, justificativa = "SEFAZ da UF fora do ar desde as 10h")
+#'   em_contingencia = nfe_montar(nota, contingencia = TRUE,
+#'                                justificativa = "SEFAZ da UF fora do ar desde as 10h")
 #'   xml_para_lista(em_contingencia)$ide$tpEmis
 #' }
 #' @export
