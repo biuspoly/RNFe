@@ -7,14 +7,19 @@
 Os schemas do CT-e 4.00, pacote da NT 2026.005 (\code{cte_v4.00.xsd},
 \code{cteOS_v4.00.xsd}, \code{GTVe_v4.00.xsd}, \code{cteSimp_v4.00.xsd} e os dos modais),
 e a composição da chave de acesso pelo Manual de Orientação do
-Contribuinte do CT-e 4.00 (item 2.1.4).
+Contribuinte do CT-e 4.00 (item 2.1.4); a SVC de cada UF pela página de
+Web Services do Portal do CT-e; a justificativa só na off-line, pela
+rejeição 586 da SVC-SP de homologação (conferida em 23/11/2026).
 }
 \usage{
 cte_montar(
   cte,
   documento = NULL,
   manter_vazios = FALSE,
-  ambiente = "homologacao"
+  ambiente = "homologacao",
+  contingencia = FALSE,
+  tipo_contingencia = NULL,
+  justificativa = NULL
 )
 }
 \arguments{
@@ -27,6 +32,17 @@ sem ele, sai do \code{mod} e do \code{tpCTe}.}
 também no campo e no grupo opcionais.}
 
 \item{ambiente}{Por enquanto só \code{"homologacao"}.}
+
+\item{contingencia}{\code{TRUE} para emitir em contingência.}
+
+\item{tipo_contingencia}{O tipo da contingência, quando não é o padrão:
+\code{"svc"} (o padrão), \code{"off-line"} (\code{tpEmis} 2) ou \code{"epec"} (4, só no CT-e
+e no CT-e simplificado, e em desativação pelo schema); na GTV-e, só
+\code{"off-line"}.}
+
+\item{justificativa}{O motivo da entrada em contingência (de 15 a 256
+caracteres), obrigatório e só aceito na contingência off-line. Pode vir
+no \code{ide$xJust} em vez daqui.}
 }
 \value{
 O XML do documento (o elemento \code{CTe}, \code{CTeOS}, \code{GTVe} ou \code{CTeSimp},
@@ -47,10 +63,18 @@ O documento sai do \code{mod} (57 é o CT-e, 67 o CT-e OS e 64 a GTV-e) e, no
 modelo 57, do \code{tpCTe} (5 e 6 são o CT-e simplificado); ou diga qual em
 \code{documento}.
 
-O RNFe completa sozinho o que não vier: o \code{tpAmb} do ambiente, o modelo, o
-código numérico \code{cCT} (sorteado, com o mesmo cuidado da NF-e), o dígito
-\code{cDV}, o \code{Id} com a chave de acesso e o campo obrigatório que só aceita um
-valor. O QR-Code (\code{infCTeSupl}) entra no \code{\link[=sefaz_cte_autorizar]{sefaz_cte_autorizar()}}.
+O RNFe completa sozinho o que não vier: o \code{tpAmb} do ambiente, o \code{tpEmis}
+(1, ou o da contingência), o modelo, o código numérico \code{cCT} (sorteado, com
+o mesmo cuidado da NF-e), o dígito \code{cDV}, o \code{Id} com a chave de acesso e o
+campo obrigatório que só aceita um valor. O QR-Code (\code{infCTeSupl}) entra
+no \code{\link[=sefaz_cte_autorizar]{sefaz_cte_autorizar()}}.
+
+Com \code{contingencia = TRUE}, o documento sai em contingência, como no
+\code{\link[=nfe_montar]{nfe_montar()}}. O padrão é a SVC, que sai pela UF do \code{cUF}: quem autoriza
+na SVRS, em MG, no PR ou no RS usa a SVC-SP (\code{tpEmis} 8); quem autoriza na
+SVSP, no MT, no MS ou em SP, a SVC-RS (7). Na GTV-e, só a off-line. Só a
+off-line leva a \code{justificativa} e o \code{dhCont} (o \code{dhEmi}, quando não vem):
+na SVC e no EPEC, a SEFAZ recusa o CT-e com eles (rejeição 586).
 }
 \examples{
 cte = xml_para_lista(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))

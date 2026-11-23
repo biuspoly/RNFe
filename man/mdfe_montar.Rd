@@ -10,7 +10,12 @@ pelo Manual de Orientação do Contribuinte do MDF-e 3.00b (itens 2.1.3 e
 2.1.5).
 }
 \usage{
-mdfe_montar(manifesto, manter_vazios = FALSE, ambiente = "homologacao")
+mdfe_montar(
+  manifesto,
+  manter_vazios = FALSE,
+  ambiente = "homologacao",
+  contingencia = FALSE
+)
 }
 \arguments{
 \item{manifesto}{Uma lista com o conteúdo do \code{infMDFe}, com os nomes do
@@ -20,6 +25,8 @@ leiaute.}
 também no campo e no grupo opcionais.}
 
 \item{ambiente}{Por enquanto só \code{"homologacao"}.}
+
+\item{contingencia}{\code{TRUE} para emitir em contingência.}
 }
 \value{
 O XML do MDF-e (o elemento \code{MDFe}, ainda sem a assinatura), num
@@ -41,6 +48,10 @@ O RNFe completa sozinho o que não vier: o \code{tpAmb} do ambiente, o modelo
 dígito \code{cDV}, o \code{Id} com a chave de acesso (o CNPJ do emitente, ou o CPF
 com zeros à esquerda) e o campo obrigatório que só aceita um valor. O
 QR-Code (\code{infMDFeSupl}) entra no \code{\link[=sefaz_mdfe_autorizar]{sefaz_mdfe_autorizar()}}.
+
+Com \code{contingencia = TRUE}, o MDF-e sai em contingência (\code{tpEmis} 2, a
+única do MDF-e), e o \code{\link[=sefaz_mdfe_autorizar]{sefaz_mdfe_autorizar()}} põe a chave assinada no
+QR-Code. O MDF-e não tem a justificativa nem o \code{dhCont}.
 }
 \examples{
 manifesto = xml_para_lista(system.file("exemplos", "mdfe_ce_carga_propria.xml", package = "RNFe"))

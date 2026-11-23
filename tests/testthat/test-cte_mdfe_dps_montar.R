@@ -229,7 +229,7 @@ test_that("o CT-e simplificado e a GTV-e montados s\u00e3o assinados e autorizad
   expect_identical(gtve_ler(da_gtve$xml_autorizado)$gtves$chave, chave_da_gtve)
 })
 
-test_that("a GTV-e em conting\u00eancia sem QR-Code e o documento da SVC n\u00e3o v\u00e3o \u00e0 SEFAZ", {
+test_that("a GTV-e em conting\u00eancia sem QR-Code e o documento de outra SVC n\u00e3o v\u00e3o \u00e0 SEFAZ", {
   skip_if_not_installed("httr2")
   skip_if_not_installed("openssl")
   local_mocked_bindings(usar_processo_separado = function() FALSE)
@@ -243,14 +243,13 @@ test_that("a GTV-e em conting\u00eancia sem QR-Code e o documento da SVC n\u00e3
   expect_error(sefaz_cte_autorizar(xml_assinar(cte_montar(gtve), CERTIFICADO_DA_MONTAGEM, "teste"), CERTIFICADO_DA_MONTAGEM,
                                    "teste"), "informe o infCTeSupl")
   cte = xml_para_lista(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))
-  cte$ide$tpEmis = "7"
-  cte$ide$dhCont = "2026-10-15T09:00:00-03:00"
-  cte$ide$xJust = "SEFAZ AUTORIZADORA FORA DO AR"
+  # O tpEmis 8 (a SVC-SP) num CT-e de SP, cuja SVC \u00e9 a SVC-RS.
+  cte$ide$tpEmis = "8"
   cte$Id = NULL
   cte$ide$cDV = NULL
   pela_svc = sefaz_cte_autorizar(xml_assinar(cte_montar(cte), CERTIFICADO_DA_MONTAGEM, "teste"), CERTIFICADO_DA_MONTAGEM,
                                  "teste")
-  expect_match(pela_svc$problema, "conting\u00eancia SVC")
+  expect_match(pela_svc$problema, "a SVC de SP \u00e9 a SVC-RS (tpEmis 7)", fixed = TRUE)
   expect_true(is.na(pela_svc$situacao))
 })
 

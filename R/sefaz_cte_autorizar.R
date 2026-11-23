@@ -23,8 +23,6 @@ SITUACOES_DO_CTE_AUTORIZADO = c(100L)
 # fala da GTV-e: nela, fora da emissão normal, o QR-Code tem de vir pronto.
 FORMAS_DE_EMISSAO_COM_A_CHAVE_ASSINADA_NO_QRCODE = c("2", "4")
 DOCUMENTOS_COM_A_REGRA_DO_SIGN = c("CTe", "CTeOS", "CTeSimp")
-# A autorização pela SVC (tpEmis 7, SVC-RS; 8, SVC-SP) vai a outro autorizador, que o RNFe ainda não usa.
-FORMAS_DE_EMISSAO_PELA_SVC_DO_CTE = c("7", "8")
 
 #' Autorizar um CT-e, CT-e OS, GTV-e ou CT-e simplificado
 #'
@@ -41,9 +39,12 @@ FORMAS_DE_EMISSAO_PELA_SVC_DO_CTE = c("7", "8")
 #' ambiente; na contingência off-line e no EPEC do CT-e, do CT-e OS e do CT-e
 #' simplificado, também a chave assinada com o certificado (o parâmetro
 #' `sign`). Na GTV-e fora da emissão normal, cuja regra a NT não traz, o
-#' QR-Code tem de vir pronto. Ele fica fora do que a assinatura cobre. O
-#' documento autorizado pela SVC (`tpEmis` 7 ou 8) não é enviado: a SVC fica
-#' para depois.
+#' QR-Code tem de vir pronto. Ele fica fora do que a assinatura cobre.
+#'
+#' O documento em contingência pela SVC (`tpEmis` 7, a SVC-RS, ou 8, a SVC-SP;
+#' veja o `contingencia` do [cte_montar()]) vai à SVC da UF dele: quem
+#' autoriza na SVRS, em MG, no PR ou no RS usa a SVC-SP; quem autoriza na SVSP,
+#' no MT, no MS ou em SP, a SVC-RS. O de outra SVC é recusado antes do envio.
 #'
 #' Assine antes com [xml_assinar()]. Por enquanto só o ambiente de
 #' **homologação**: o documento com o `tpAmb` 1 nem é enviado.
@@ -79,11 +80,13 @@ sefaz_cte_autorizar = function(xml, certificado, senha, ambiente = "homologacao"
     motivo_envio = NA_character_, situacao = NA_integer_, motivo = NA_character_, protocolo = NA_character_,
     autorizacao = as.POSIXct(NA), xml_autorizado = NA_character_, endereco = NA_character_, problema = NA_character_
   )
-  if (lido$forma_de_emissao %in% FORMAS_DE_EMISSAO_PELA_SVC_DO_CTE) {
-    linha$problema = "o documento em conting\u00eancia SVC (tpEmis 7 ou 8) vai para a SVC, que o RNFe ainda n\u00e3o usa"
+  uf = UF_PELO_CODIGO[[substr(lido$chave, 1, 2)]]
+  problema = problema_da_svc(uf, lido$forma_de_emissao, "CT-e", ambiente)
+  if (!is.na(problema)) {
+    linha$problema = problema
     return(linha)
   }
-  servico = servico_da_uf(UF_PELO_CODIGO[[substr(lido$chave, 1, 2)]], recepcao$servico, ambiente, "CT-e")
+  servico = servico_da_uf(uf, recepcao$servico, ambiente, "CT-e", lido$forma_de_emissao)
   if (is.null(servico)) {
     linha$problema = paste0("a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz o ", recepcao$servico, " para a UF")
     return(linha)

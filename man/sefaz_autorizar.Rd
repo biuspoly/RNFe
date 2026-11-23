@@ -9,7 +9,8 @@ autorização, o lote e o protocolo); os schemas \code{enviNFe_v4.00.xsd},
 \code{retEnviNFe_v4.00.xsd}, \code{consReciNFe_v4.00.xsd} e \code{procNFe_v4.00.xsd}; o
 WSDL do NFeAutorizacao4 (operação \code{nfeAutorizacaoLote}) e do
 NFeRetAutorizacao4 (\code{nfeRetAutorizacaoLote}); a NT 2023.002 v1.02 (o fim da
-autorização assíncrona).
+autorização assíncrona); a SVC de cada UF pela Relação de Serviços Web do
+Portal da NF-e.
 }
 \usage{
 sefaz_autorizar(xml, certificado, senha, ambiente = "homologacao")
@@ -45,6 +46,13 @@ exigir; quando ela responde que recebeu o lote para processar depois (103),
 o RNFe consulta o recibo até a resposta chegar.
 }
 \details{
+A nota em contingência pela SVC (\code{tpEmis} 6, a SVC-AN, ou 7, a SVC-RS; veja
+o \code{contingencia} do \code{\link[=nfe_montar]{nfe_montar()}}) vai à SVC da UF dela; a de outra SVC e
+a NFC-e com o \code{tpEmis} da SVC são recusadas antes do envio. A consulta
+(\code{\link[=sefaz_situacao]{sefaz_situacao()}}) e os eventos (\code{\link[=sefaz_cancelar]{sefaz_cancelar()}} e os outros) da nota
+da SVC também vão à SVC: logo depois da autorização, a SEFAZ da UF ainda não
+a conhece (rejeição 494, "chave de acesso inexistente", na homologação).
+
 Por enquanto o RNFe só fala com o ambiente de \strong{homologação}: a nota tem
 de vir com \code{tpAmb} 2, e a de produção é recusada antes de qualquer conexão.
 A conexão é a mesma do \code{\link[=sefaz_status]{sefaz_status()}}.

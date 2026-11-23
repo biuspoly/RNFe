@@ -158,7 +158,7 @@ montar_o_evento_do_cte = function(chave, codigo_do_evento, sequencia, detalhe, c
     protocolo = NA_character_, registro = as.POSIXct(NA), xml_evento = NA_character_, endereco = NA_character_,
     problema = NA_character_
   )
-  servico = servico_da_uf(partes$uf, "CteRecepcaoEventoV4", ambiente, "CT-e")
+  servico = servico_da_uf(partes$uf, "CteRecepcaoEventoV4", ambiente, "CT-e", partes$forma_emissao)
   if (is.null(servico)) {
     linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz o servi\u00e7o de eventos do CT-e para a UF"
     return(list(linha = linha, pedido = NULL))

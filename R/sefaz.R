@@ -382,7 +382,8 @@ comeco_da_situacao = function(chave, ambiente) {
     return(list(linha = linha, pedido = NULL))
   }
   configuracao = as.list(CONSULTA_DE_CADA_DOCUMENTO[CONSULTA_DE_CADA_DOCUMENTO$documento == partes_da_chave$documento, ])
-  servico = servico_da_uf(partes_da_chave$uf, configuracao$servico_da_lista, ambiente, configuracao$lista)
+  servico = servico_da_uf(partes_da_chave$uf, configuracao$servico_da_lista, ambiente, configuracao$lista,
+                          partes_da_chave$forma_emissao)
   if (is.null(servico)) {
     linha$problema = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz este servi\u00e7o para a UF"
     return(list(linha = linha, pedido = NULL))
@@ -1097,7 +1098,18 @@ conferir_certificado = function(certificado, senha) {
 # da lista "demais serviços". Na consulta de cadastro, a página só lista AC, ES, PB, RN e SC para a SVRS, mas a SVRS
 # atende todas as UFs dela: em homologação (03/11/2026) AL, AP, CE, DF, PA, PI, RJ, RO, RR, SE e TO responderam como as
 # da lista, e só o MA (da SVAN) voltou 410, "UF não é atendida"; em produção, o app Fiscal consulta CE, AL e PI por lá.
-servico_da_uf = function(uf, servico, ambiente, documento = "NF-e") {
+#
+# O documento com o tpEmis de uma SVC (FORMA_DE_EMISSAO_DA_SVC) vai \u00e0 SVC dela, que tem de ser a da UF.
+servico_da_uf = function(uf, servico, ambiente, documento = "NF-e", forma_de_emissao = NA) {
+  svc = FORMA_DE_EMISSAO_DA_SVC[FORMA_DE_EMISSAO_DA_SVC$lista == documento &
+                                  FORMA_DE_EMISSAO_DA_SVC$forma_de_emissao == as.character(forma_de_emissao), ]
+  if (nrow(svc) == 1) {
+    svc_usada_na_uf = svc_da_uf(uf, documento, ambiente)
+    if (is.null(svc_usada_na_uf) || svc_usada_na_uf$autorizador != svc$autorizador) {
+      return(NULL)
+    }
+    return(servico_do_autorizador(svc$autorizador, servico, ambiente, documento))
+  }
   autorizadores = tabela_interna("autorizadores_sefaz")
   usos = c("todos os servi\u00e7os", "demais servi\u00e7os")
   if (servico == "NfeConsultaCadastro") {
@@ -1115,6 +1127,56 @@ servico_da_uf = function(uf, servico, ambiente, documento = "NF-e") {
     return(NULL)
   }
   list(autorizador = da_uf$autorizador[1], endereco = do_autorizador$endereco[1])
+}
+
+# A SVC de cada lista da Relação de Serviços Web e o tpEmis do documento autorizado nela: na NF-e, a SVC-AN (6) e a
+# SVC-RS (7), pelo MOC 7.0; no CT-e, a SVC-RS (7) e a SVC-SP (8), pelos schemas do CT-e 4.00. A NFC-e não tem SVC.
+FORMA_DE_EMISSAO_DA_SVC = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE,
+                                            colClasses = "character", text = "
+lista ; autorizador ; forma_de_emissao
+NF-e  ; SVC-AN      ; 6
+NF-e  ; SVC-RS      ; 7
+CT-e  ; SVC-RS      ; 7
+CT-e  ; SVC-SP      ; 8
+")
+
+# A lista da Relação de Serviços Web de cada documento: a do CT-e serve ao CT-e OS, à GTV-e e ao CT-e simplificado.
+lista_de_servicos_do_documento = function(documento) {
+  if (documento %in% c("CT-e OS", "GTV-e", "CT-e simplificado")) {
+    return("CT-e")
+  }
+  documento
+}
+
+# A SVC que a UF usa (a lista "contingência") e o tpEmis dela; NULL quando a lista não tem SVC para a UF.
+svc_da_uf = function(uf, lista, ambiente) {
+  autorizadores = tabela_interna("autorizadores_sefaz")
+  da_uf = autorizadores[autorizadores$documento == lista & autorizadores$ambiente == ambiente & autorizadores$uf == uf &
+                          autorizadores$uso == "conting\u00eancia", ]
+  svc = FORMA_DE_EMISSAO_DA_SVC[FORMA_DE_EMISSAO_DA_SVC$lista == lista &
+                                  FORMA_DE_EMISSAO_DA_SVC$autorizador %in% da_uf$autorizador, ]
+  if (nrow(svc) != 1) {
+    return(NULL)
+  }
+  list(autorizador = svc$autorizador, forma_de_emissao = svc$forma_de_emissao)
+}
+
+# O problema do documento com o tpEmis de uma SVC que não é a da UF dele (NA quando não há).
+problema_da_svc = function(uf, forma_de_emissao, lista, ambiente) {
+  svc = FORMA_DE_EMISSAO_DA_SVC[FORMA_DE_EMISSAO_DA_SVC$lista == lista &
+                                  FORMA_DE_EMISSAO_DA_SVC$forma_de_emissao == as.character(forma_de_emissao), ]
+  if (nrow(svc) != 1) {
+    return(NA_character_)
+  }
+  svc_usada_na_uf = svc_da_uf(uf, lista, ambiente)
+  if (is.null(svc_usada_na_uf)) {
+    return(paste0("a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz a SVC de ", uf))
+  }
+  if (svc_usada_na_uf$autorizador != svc$autorizador) {
+    return(paste0("o tpEmis ", forma_de_emissao, " \u00e9 da ", svc$autorizador, ", mas a SVC de ", uf, " \u00e9 a ",
+                  svc_usada_na_uf$autorizador, " (tpEmis ", svc_usada_na_uf$forma_de_emissao, ")"))
+  }
+  NA_character_
 }
 
 # O motor de conexão segura que o curl está usando ("Schannel", "OpenSSL"...). O curl_version() mostra entre

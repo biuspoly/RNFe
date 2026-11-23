@@ -786,7 +786,7 @@ montar_o_evento = function(chave, codigo_do_evento, sequencia, campos, certifica
   documento = if (partes$modelo == "65") "NFC-e" else "NF-e"
   if (evento$recebe == "UF") {
     orgao = partes$codigo_uf
-    servico = servico_da_uf(partes$uf, "RecepcaoEvento", ambiente, documento)
+    servico = servico_da_uf(partes$uf, "RecepcaoEvento", ambiente, documento, partes$forma_emissao)
   } else {
     orgao = ORGAO_DE_QUEM_RECEBE[[evento$recebe]]
     servico = servico_do_autorizador(evento$recebe, "RecepcaoEvento", ambiente)
@@ -814,10 +814,10 @@ montar_o_evento = function(chave, codigo_do_evento, sequencia, campos, certifica
        pedido = montar_pedido(servico$endereco, "NFeRecepcaoEvento4", "nfeRecepcaoEvento", mensagem))
 }
 
-# O endereço de um serviço de um autorizador que não depende da UF (o Ambiente Nacional, a SVRS).
-servico_do_autorizador = function(autorizador, servico, ambiente) {
+# O endereço de um serviço de um autorizador que não depende da UF (o Ambiente Nacional, a SVRS, a SVC).
+servico_do_autorizador = function(autorizador, servico, ambiente, documento = "NF-e") {
   servicos = tabela_interna("servicos_sefaz")
-  do_autorizador = servicos[servicos$documento == "NF-e" & servicos$ambiente == ambiente &
+  do_autorizador = servicos[servicos$documento == documento & servicos$ambiente == ambiente &
                               servicos$autorizador == autorizador & servicos$servico == servico, ]
   if (nrow(do_autorizador) == 0) {
     return(NULL)

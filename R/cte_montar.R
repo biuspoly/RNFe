@@ -25,14 +25,29 @@ TIPOS_DO_CTE_SIMPLIFICADO = c("5", "6")
 #' modelo 57, do `tpCTe` (5 e 6 são o CT-e simplificado); ou diga qual em
 #' `documento`.
 #'
-#' O RNFe completa sozinho o que não vier: o `tpAmb` do ambiente, o modelo, o
-#' código numérico `cCT` (sorteado, com o mesmo cuidado da NF-e), o dígito
-#' `cDV`, o `Id` com a chave de acesso e o campo obrigatório que só aceita um
-#' valor. O QR-Code (`infCTeSupl`) entra no [sefaz_cte_autorizar()].
+#' O RNFe completa sozinho o que não vier: o `tpAmb` do ambiente, o `tpEmis`
+#' (1, ou o da contingência), o modelo, o código numérico `cCT` (sorteado, com
+#' o mesmo cuidado da NF-e), o dígito `cDV`, o `Id` com a chave de acesso e o
+#' campo obrigatório que só aceita um valor. O QR-Code (`infCTeSupl`) entra
+#' no [sefaz_cte_autorizar()].
+#'
+#' Com `contingencia = TRUE`, o documento sai em contingência, como no
+#' [nfe_montar()]. O padrão é a SVC, que sai pela UF do `cUF`: quem autoriza
+#' na SVRS, em MG, no PR ou no RS usa a SVC-SP (`tpEmis` 8); quem autoriza na
+#' SVSP, no MT, no MS ou em SP, a SVC-RS (7). Na GTV-e, só a off-line. Só a
+#' off-line leva a `justificativa` e o `dhCont` (o `dhEmi`, quando não vem):
+#' na SVC e no EPEC, a SEFAZ recusa o CT-e com eles (rejeição 586).
 #'
 #' @param cte Uma lista com o conteúdo do `infCte`, com os nomes do leiaute.
 #' @param documento `"CT-e"`, `"CT-e OS"`, `"GTV-e"` ou `"CT-e simplificado"`;
 #'   sem ele, sai do `mod` e do `tpCTe`.
+#' @param tipo_contingencia O tipo da contingência, quando não é o padrão:
+#'   `"svc"` (o padrão), `"off-line"` (`tpEmis` 2) ou `"epec"` (4, só no CT-e
+#'   e no CT-e simplificado, e em desativação pelo schema); na GTV-e, só
+#'   `"off-line"`.
+#' @param justificativa O motivo da entrada em contingência (de 15 a 256
+#'   caracteres), obrigatório e só aceito na contingência off-line. Pode vir
+#'   no `ide$xJust` em vez daqui.
 #' @inheritParams nfe_montar
 #' @return O XML do documento (o elemento `CTe`, `CTeOS`, `GTVe` ou `CTeSimp`,
 #'   ainda sem a assinatura), num texto: pronto para [xml_assinar()].
@@ -40,7 +55,9 @@ TIPOS_DO_CTE_SIMPLIFICADO = c("5", "6")
 #' @source Os schemas do CT-e 4.00, pacote da NT 2026.005 (`cte_v4.00.xsd`,
 #'   `cteOS_v4.00.xsd`, `GTVe_v4.00.xsd`, `cteSimp_v4.00.xsd` e os dos modais),
 #'   e a composição da chave de acesso pelo Manual de Orientação do
-#'   Contribuinte do CT-e 4.00 (item 2.1.4).
+#'   Contribuinte do CT-e 4.00 (item 2.1.4); a SVC de cada UF pela página de
+#'   Web Services do Portal do CT-e; a justificativa só na off-line, pela
+#'   rejeição 586 da SVC-SP de homologação (conferida em 23/11/2026).
 #' @examples
 #' cte = xml_para_lista(system.file("exemplos", "cte_proc_sp.xml", package = "RNFe"))
 #' cte$ide$nCT = 4568
@@ -52,12 +69,14 @@ TIPOS_DO_CTE_SIMPLIFICADO = c("5", "6")
 #'   substr(montado, 1, 120)
 #' }
 #' @export
-cte_montar = function(cte, documento = NULL, manter_vazios = FALSE, ambiente = "homologacao") {
+cte_montar = function(cte, documento = NULL, manter_vazios = FALSE, ambiente = "homologacao", contingencia = FALSE,
+                      tipo_contingencia = NULL, justificativa = NULL) {
   conferir_ambiente(ambiente)
   conferir_manter_vazios(manter_vazios)
   conferir_a_lista_do_documento(cte, "o CT-e", "do infCte (ide, emit, rem, dest, vPrest, imp, infCTeNorm...)", "infCte")
   documento = documento_do_cte(cte, documento)
   cte = com_o_ambiente(cte, ambiente, paste0("O ", documento))
+  cte = com_a_contingencia(cte, documento, contingencia, tipo_contingencia, justificativa, ambiente)
   cte = completar_a_chave(cte, "CTe", "nCT", "cCT", modelo_que_falta = MODELO_DE_CADA_DOCUMENTO_DO_CTE[[documento]])
   montar_o_documento(documento, cte, manter_vazios)
 }

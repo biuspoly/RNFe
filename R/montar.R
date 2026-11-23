@@ -304,6 +304,125 @@ com_o_ambiente = function(conteudo, ambiente, nome_do_documento) {
   conteudo
 }
 
+# Os tipos de contingência de cada documento, com a forma de emissão (o tpEmis) de cada um, pelos schemas; o primeiro
+# de cada documento é o padrão. A forma da SVC depende da UF (veja forma_de_emissao_da_svc()). A NF-e com o tpEmis 9 só
+# existe com o DANFE Simplificado Tipo 2, que o RNFe não desenha; o EPEC da NFC-e era só de SP e acabou.
+# `justificativa` diz se o tipo leva o dhCont e o xJust. Na NF-e e na NFC-e, todo tpEmis diferente de 1 leva (o schema:
+# "informar apenas para tpEmis diferente de 1"). No CT-e, só a off-line: a SVC-SP de homologação recusou o CT-e da SVC
+# com eles (586, "não devem ser informadas para tipo de emissão diferente de Contingência Offline", 23/11/2026). O MDF-e
+# não tem os campos.
+TIPOS_DE_CONTINGENCIA = utils::read.table(header = TRUE, sep = ";", strip.white = TRUE, stringsAsFactors = FALSE,
+                                          colClasses = "character", text = "
+documento         ; tipo     ; forma_de_emissao ; justificativa
+NF-e              ; svc      ; svc              ; sim
+NF-e              ; epec     ; 4                ; sim
+NF-e              ; fs-ia    ; 2                ; sim
+NF-e              ; fs-da    ; 5                ; sim
+NFC-e             ; off-line ; 9                ; sim
+CT-e              ; svc      ; svc              ; nao
+CT-e              ; off-line ; 2                ; sim
+CT-e              ; epec     ; 4                ; nao
+CT-e simplificado ; svc      ; svc              ; nao
+CT-e simplificado ; off-line ; 2                ; sim
+CT-e simplificado ; epec     ; 4                ; nao
+CT-e OS           ; svc      ; svc              ; nao
+CT-e OS           ; off-line ; 2                ; sim
+GTV-e             ; off-line ; 2                ; sim
+MDF-e             ; off-line ; 2                ; nao
+")
+# A justificativa (xJust) pelos schemas da NF-e e do CT-e.
+TAMANHO_DA_JUSTIFICATIVA = c(minimo = 15, maximo = 256)
+
+# Com contingencia = TRUE, o tpEmis do tipo pedido (ou do padrão do documento) e, no tipo que os leva, o dhCont (o
+# dhEmi, quando falta: a entrada em contingência não pode ser depois da emissão) e o xJust. Com FALSE, o tpEmis 1
+# quando falta.
+com_a_contingencia = function(conteudo, documento, contingencia, tipo_contingencia, justificativa, ambiente) {
+  if (!isTRUE(contingencia) && !isFALSE(contingencia)) {
+    stop("contingencia tem de ser TRUE ou FALSE.", call. = FALSE)
+  }
+  ide = conteudo[["ide"]]
+  if (isFALSE(contingencia)) {
+    if (!is.null(tipo_contingencia) || !is.null(justificativa)) {
+      stop("O tipo_contingencia e a justificativa s\u00f3 valem com contingencia = TRUE.", call. = FALSE)
+    }
+    if (is.na(texto_do_campo(ide[["tpEmis"]], "ide/tpEmis"))) {
+      ide[["tpEmis"]] = "1"
+      conteudo[["ide"]] = ide
+    }
+    return(conteudo)
+  }
+  tipos = TIPOS_DE_CONTINGENCIA[TIPOS_DE_CONTINGENCIA$documento == documento, ]
+  if (is.null(tipo_contingencia)) {
+    tipo_contingencia = tipos$tipo[1]
+  }
+  if (length(tipo_contingencia) != 1 || is.na(tipo_contingencia) || !(tipo_contingencia %in% tipos$tipo)) {
+    nomes = paste0("\"", tipos$tipo, "\"")
+    if (length(nomes) > 1) {
+      nomes = paste(paste(nomes[-length(nomes)], collapse = ", "), "ou", nomes[length(nomes)])
+    }
+    stop("Em ", documento, ", o tipo_contingencia \u00e9 ", nomes, ".", call. = FALSE)
+  }
+  forma_de_emissao = tipos$forma_de_emissao[tipos$tipo == tipo_contingencia]
+  if (forma_de_emissao == "svc") {
+    forma_de_emissao = forma_de_emissao_da_svc(ide, documento, ambiente)
+  }
+  # O tpEmis 1 (a emissão normal, como vem de uma nota lida) dá lugar ao da contingência; outro diferente é recusado.
+  informada = texto_do_campo(ide[["tpEmis"]], "ide/tpEmis")
+  if (!is.na(informada) && informada != "1" && informada != forma_de_emissao) {
+    stop("O ide/tpEmis informado (", informada, ") n\u00e3o \u00e9 o da conting\u00eancia ", tipo_contingencia, " (",
+         forma_de_emissao, "): tire o tpEmis da lista ou troque o tipo_contingencia.", call. = FALSE)
+  }
+  ide[["tpEmis"]] = forma_de_emissao
+  if (tipos$justificativa[tipos$tipo == tipo_contingencia] == "sim") {
+    ide = com_a_justificativa(ide, justificativa)
+  } else if (!is.null(justificativa) || !is.na(texto_do_campo(ide[["xJust"]], "ide/xJust"))) {
+    stop("Em ", documento, ", a conting\u00eancia ", tipo_contingencia, " n\u00e3o leva justificativa (nem o dhCont e o xJust): ",
+         "a SEFAZ recusa o documento com ela.", call. = FALSE)
+  }
+  conteudo[["ide"]] = ide
+  conteudo
+}
+
+# O xJust (o da justificativa ou o que veio no ide; os dois, só se forem iguais) e o dhCont.
+com_a_justificativa = function(ide, justificativa) {
+  informada = texto_do_campo(ide[["xJust"]], "ide/xJust")
+  if (is.null(justificativa)) {
+    justificativa = informada
+  }
+  if (length(justificativa) != 1 || is.na(justificativa) || trimws(justificativa) == "") {
+    stop("Na conting\u00eancia, informe a justificativa (de ", TAMANHO_DA_JUSTIFICATIVA[["minimo"]], " a ",
+         TAMANHO_DA_JUSTIFICATIVA[["maximo"]], " caracteres): a SEFAZ recusa o documento sem ela.", call. = FALSE)
+  }
+  justificativa = trimws(justificativa)
+  if (!is.na(informada) && informada != justificativa) {
+    stop("O ide/xJust informado n\u00e3o \u00e9 a justificativa: deixe s\u00f3 um dos dois.", call. = FALSE)
+  }
+  tamanho = nchar(justificativa)
+  if (tamanho < TAMANHO_DA_JUSTIFICATIVA[["minimo"]] || tamanho > TAMANHO_DA_JUSTIFICATIVA[["maximo"]]) {
+    stop("A justificativa tem ", tamanho, " caracteres: o leiaute aceita de ", TAMANHO_DA_JUSTIFICATIVA[["minimo"]],
+         " a ", TAMANHO_DA_JUSTIFICATIVA[["maximo"]], ".", call. = FALSE)
+  }
+  ide[["xJust"]] = justificativa
+  if (is.na(texto_do_campo(ide[["dhCont"]], "ide/dhCont"))) {
+    ide[["dhCont"]] = ide[["dhEmi"]]
+  }
+  ide
+}
+
+# O tpEmis da SVC da UF do documento (o ide/cUF), pela lista de contingência da Relação de Serviços Web.
+forma_de_emissao_da_svc = function(ide, documento, ambiente) {
+  codigo = texto_do_campo(ide[["cUF"]], "ide/cUF")
+  if (is.na(codigo) || !(codigo %in% names(UF_PELO_CODIGO))) {
+    stop("Para escolher a SVC, informe o ide/cUF (o c\u00f3digo da UF do emitente).", call. = FALSE)
+  }
+  lista = lista_de_servicos_do_documento(documento)
+  svc = svc_da_uf(UF_PELO_CODIGO[[codigo]], lista, ambiente)
+  if (is.null(svc)) {
+    stop("A Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz a SVC de ", UF_PELO_CODIGO[[codigo]], ".", call. = FALSE)
+  }
+  svc$forma_de_emissao
+}
+
 # O XML de um documento do DOCUMENTOS_PARA_MONTAR, conferido no schema oficial. `atributos_da_raiz` são os atributos
 # do elemento de fora (a versao da DPS), que a lista do conteúdo não traz.
 montar_o_documento = function(documento, conteudo, manter_vazios, atributos_da_raiz = list()) {

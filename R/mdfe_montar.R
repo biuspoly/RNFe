@@ -22,6 +22,10 @@ NULL
 #' com zeros à esquerda) e o campo obrigatório que só aceita um valor. O
 #' QR-Code (`infMDFeSupl`) entra no [sefaz_mdfe_autorizar()].
 #'
+#' Com `contingencia = TRUE`, o MDF-e sai em contingência (`tpEmis` 2, a
+#' única do MDF-e), e o [sefaz_mdfe_autorizar()] põe a chave assinada no
+#' QR-Code. O MDF-e não tem a justificativa nem o `dhCont`.
+#'
 #' @param manifesto Uma lista com o conteúdo do `infMDFe`, com os nomes do
 #'   leiaute.
 #' @inheritParams nfe_montar
@@ -43,11 +47,12 @@ NULL
 #'   substr(montado, 1, 120)
 #' }
 #' @export
-mdfe_montar = function(manifesto, manter_vazios = FALSE, ambiente = "homologacao") {
+mdfe_montar = function(manifesto, manter_vazios = FALSE, ambiente = "homologacao", contingencia = FALSE) {
   conferir_ambiente(ambiente)
   conferir_manter_vazios(manter_vazios)
   conferir_a_lista_do_documento(manifesto, "o MDF-e", "do infMDFe (ide, emit, infModal, infDoc, tot...)", "infMDFe")
   manifesto = com_o_ambiente(manifesto, ambiente, "O MDF-e")
+  manifesto = com_a_contingencia(manifesto, "MDF-e", contingencia, NULL, NULL, ambiente)
   manifesto = completar_a_chave(manifesto, "MDFe", "nMDF", "cMDF", modelo_que_falta = "58")
   montar_o_documento("MDF-e", manifesto, manter_vazios)
 }

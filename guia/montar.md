@@ -45,6 +45,12 @@ montada = nfe_montar(nota)
 cte_montar(xml_para_lista("cte.xml"))         # CT-e, CT-e OS, GTV-e e CT-e simplificado (pelo mod e pelo tpCTe)
 mdfe_montar(xml_para_lista("mdfe.xml"))
 nfse_dps_montar(xml_para_lista("dps.xml"))    # a DPS da NFS-e Nacional, no leiaute da Produção Restrita
+
+# Em contingência, quando a SEFAZ da UF não responde
+nfe_montar(nota, contingencia = TRUE, justificativa = "SEFAZ DA UF FORA DO AR DESDE AS 10H")   # a SVC da UF
+nfe_montar(nota, contingencia = TRUE, tipo_contingencia = "epec", justificativa = "SEFAZ DA UF FORA DO AR")
+cte_montar(cte, contingencia = TRUE)          # a SVC da UF, sem justificativa
+mdfe_montar(manifesto, contingencia = TRUE)
 ```
 
 **A lista usa os nomes do leiaute**, os mesmos do XML e dos manuais (`ide`, `emit`, `det`, `prod`, `vProd`...). Cada
@@ -79,12 +85,30 @@ tipo dele, e o XML inteiro, no schema oficial no fim.
 - o espaço nas pontas sai quando o tipo do campo não o aceita (o texto da NF-e); onde ele aceita (o nome na NFS-e),
   fica. O texto vai em UTF-8; o `&` e o `<` vão escapados. Acento fica como veio (o leiaute aceita até o `ÿ`).
 
-**O RNFe completa sozinho o que não vier:** o `tpAmb` do ambiente; o `nItem` de cada item, na ordem; o código numérico
+**O RNFe completa sozinho o que não vier:** o `tpAmb` do ambiente; o `tpEmis` (veja a contingência abaixo); o `nItem` de cada item, na ordem; o código numérico
 (`cNF`, `cCT`, `cMDF`), sorteado pelo gerador do sistema fora dos que a SEFAZ recusa (a regra B03-10: as sequências,
 os repetidos e o próprio número); o dígito e o `Id` com a chave de acesso (na NF-e avulsa, com o CNPJ do órgão do grupo
 `avulsa`; na DPS, o `Id` do Anexo I, com a inscrição de quem o `tpEmit` aponta); a versão do leiaute; e o campo
 obrigatório que só aceita um valor, como o `CST` do `ICMS00`, também dentro do grupo opcional que veio. Quando o
 dígito ou o `Id` vêm, eles têm de conferir com os campos do documento. O código numérico informado vai como veio.
+
+**A contingência:** com `contingencia = TRUE`, o RNFe põe a forma de emissão (o `tpEmis`, que também vai na chave)
+do tipo pedido, ou do padrão de cada documento, e, no tipo que os leva, a `justificativa` (de 15 a 256 caracteres) e a
+hora de entrada (o `dhCont`; quando não vem, a da emissão). Sem contingência, o `tpEmis` que falta é o 1.
+
+| Documento | Tipos (o primeiro é o padrão) | Leva a justificativa |
+|---|---|---|
+| NF-e | `"svc"` (6 ou 7, pela UF), `"epec"` (4), `"fs-ia"` (2), `"fs-da"` (5) | todos |
+| NFC-e | `"off-line"` (9) | sim |
+| CT-e e CT-e simplificado | `"svc"` (7 ou 8, pela UF), `"off-line"` (2), `"epec"` (4) | só a off-line |
+| CT-e OS | `"svc"`, `"off-line"` | só a off-line |
+| GTV-e | `"off-line"` (2) | sim |
+| MDF-e | a contingência (2) | não tem o campo |
+
+A SVC de cada UF vem das listas dos portais: na NF-e, a SVC-AN (6) ou a SVC-RS (7); no CT-e, quem autoriza na SVRS,
+em MG, no PR ou no RS usa a SVC-SP (8), e quem autoriza na SVSP, no MT, no MS ou em SP, a SVC-RS (7). No CT-e, só a
+off-line leva a justificativa: a SVC-SP recusou o CT-e da SVC com ela (586). Quando a lista já traz o `tpEmis` 1 (uma
+nota lida), ele dá lugar ao da contingência; outro diferente do pedido é recusado.
 
 **O vazio:** o campo com `NULL` ou `NA` fica de fora. O texto vazio (`""`) fica de fora no campo opcional e sai como
 tag vazia no obrigatório que aceita o vazio (o `cEAN`, por exemplo). Com `manter_vazios = TRUE`, o texto vazio sai

@@ -35,7 +35,8 @@ NULL
 #' a falta dela. Com `manter_vazios = TRUE`, a nota lida por
 #' [xml_para_lista()] volta exatamente como era, com os vazios dela.
 #'
-#' O RNFe completa sozinho o que não vier: o `tpAmb` do ambiente, o `nItem` de
+#' O RNFe completa sozinho o que não vier: o `tpAmb` do ambiente, o `tpEmis`
+#' (1, a emissão normal, ou o da contingência), o `nItem` de
 #' cada item (na ordem), o código numérico `cNF` (sorteado pelo gerador do
 #' sistema, fora dos que a SEFAZ recusa), o dígito `cDV`, o `Id` com a chave
 #' de acesso (na NF-e avulsa, com o CNPJ do órgão do grupo `avulsa`), a versão
@@ -49,6 +50,13 @@ NULL
 #' [xml_para_lista()] devolve, então uma nota que já existe pode servir de
 #' ponto de partida.
 #'
+#' Com `contingencia = TRUE`, a nota sai em contingência: o RNFe põe o
+#' `tpEmis` do tipo (o padrão é a SVC, que sai pela UF do `cUF`: a SVC-AN,
+#' `tpEmis` 6, ou a SVC-RS, 7; na NFC-e, a off-line, 9), a `justificativa` no
+#' `xJust` e o `dhCont` (o próprio `dhEmi`, quando não vem). A chave leva o
+#' `tpEmis`, e o [sefaz_autorizar()] manda a nota da SVC à SVC da UF. O
+#' `tpEmis` 1 da lista (o de uma nota lida) dá lugar ao da contingência.
+#'
 #' A montagem confere o XML pelo schema, mas não as regras de negócio da SEFAZ
 #' (os totais, o CFOP do destino, o texto do destinatário em homologação).
 #'
@@ -59,12 +67,21 @@ NULL
 #' @param manter_vazios `TRUE` para o texto vazio (`""`) sair como tag vazia
 #'   também no campo e no grupo opcionais.
 #' @param ambiente Por enquanto só `"homologacao"`.
+#' @param contingencia `TRUE` para emitir em contingência.
+#' @param tipo_contingencia O tipo da contingência, quando não é o padrão: na
+#'   NF-e, `"svc"` (o padrão), `"epec"` (`tpEmis` 4), `"fs-ia"` (2, o
+#'   formulário de segurança) ou `"fs-da"` (5); na NFC-e, só `"off-line"` (9).
+#' @param justificativa O motivo da entrada em contingência (de 15 a 256
+#'   caracteres), obrigatório com `contingencia = TRUE`: a SEFAZ recusa a nota
+#'   sem ele. Pode vir no `ide$xJust` em vez daqui.
 #' @return O XML da NF-e (o elemento `NFe`, ainda sem a assinatura), num
 #'   texto: pronto para [xml_assinar()].
 #' @seealso [xml_para_lista()], [xml_assinar()],
 #'   [sefaz_autorizar()], [nfce_qrcode()] para o QR-Code da NFC-e.
 #' @source Os schemas da NF-e e da NFC-e, pacote de liberação 010h, versão
-#'   1.03 (Portal Nacional da NF-e, `nfe_v4.00.xsd` e `leiauteNFe_v4.00.xsd`);
+#'   1.03 (Portal Nacional da NF-e, `nfe_v4.00.xsd` e `leiauteNFe_v4.00.xsd`,
+#'   também as formas de emissão e o `dhCont` e o `xJust` da contingência); a
+#'   SVC de cada UF pela Relação de Serviços Web do Portal da NF-e;
 #'   a composição da chave de acesso e o código numérico pelo Manual de
 #'   Orientação do Contribuinte 7.0 (Anexo I, regra B03-10, da NT 2019.001).
 #' @examples
@@ -77,13 +94,19 @@ NULL
 #' if (requireNamespace("openssl", quietly = TRUE)) {
 #'   montada = nfe_montar(nota)
 #'   substr(montada, 1, 120)
+#'   # A mesma nota em contingência: a SVC de SP é a SVC-AN (tpEmis 6).
+#'   em_contingencia = nfe_montar(nota, contingencia = TRUE, justificativa = "SEFAZ da UF fora do ar desde as 10h")
+#'   xml_para_lista(em_contingencia)$ide$tpEmis
 #' }
 #' @export
-nfe_montar = function(nota, manter_vazios = FALSE, ambiente = "homologacao") {
+nfe_montar = function(nota, manter_vazios = FALSE, ambiente = "homologacao", contingencia = FALSE,
+                      tipo_contingencia = NULL, justificativa = NULL) {
   conferir_ambiente(ambiente)
   conferir_manter_vazios(manter_vazios)
   conferir_a_lista_do_documento(nota, "a nota", "do infNFe (ide, emit, dest, det, total, transp, pag...)", "infNFe")
   nota = com_o_ambiente(nota, ambiente, "A nota")
+  documento = if (identical(texto_do_campo(nota[["ide"]][["mod"]], "ide/mod"), "65")) "NFC-e" else "NF-e"
+  nota = com_a_contingencia(nota, documento, contingencia, tipo_contingencia, justificativa, ambiente)
   nota = nfe_com_os_itens_numerados(nota)
   nota = completar_a_chave(nota, "NFe", "nNF", "cNF", cnpj_no_lugar = cnpj_da_chave_da_avulsa(nota))
   montar_o_documento("NF-e", nota, manter_vazios)

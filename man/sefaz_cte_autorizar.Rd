@@ -44,9 +44,12 @@ do autorizador da UF (da Relação de Serviços Web do CT-e), a chave e o
 ambiente; na contingência off-line e no EPEC do CT-e, do CT-e OS e do CT-e
 simplificado, também a chave assinada com o certificado (o parâmetro
 \code{sign}). Na GTV-e fora da emissão normal, cuja regra a NT não traz, o
-QR-Code tem de vir pronto. Ele fica fora do que a assinatura cobre. O
-documento autorizado pela SVC (\code{tpEmis} 7 ou 8) não é enviado: a SVC fica
-para depois.
+QR-Code tem de vir pronto. Ele fica fora do que a assinatura cobre.
+
+O documento em contingência pela SVC (\code{tpEmis} 7, a SVC-RS, ou 8, a SVC-SP;
+veja o \code{contingencia} do \code{\link[=cte_montar]{cte_montar()}}) vai à SVC da UF dele: quem
+autoriza na SVRS, em MG, no PR ou no RS usa a SVC-SP; quem autoriza na SVSP,
+no MT, no MS ou em SP, a SVC-RS. O de outra SVC é recusado antes do envio.
 
 Assine antes com \code{\link[=xml_assinar]{xml_assinar()}}. Por enquanto só o ambiente de
 \strong{homologação}: o documento com o \code{tpAmb} 1 nem é enviado.

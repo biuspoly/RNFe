@@ -25,6 +25,13 @@ RECIBO_EM_PROCESSAMENTO = 105L
 #' exigir; quando ela responde que recebeu o lote para processar depois (103),
 #' o RNFe consulta o recibo até a resposta chegar.
 #'
+#' A nota em contingência pela SVC (`tpEmis` 6, a SVC-AN, ou 7, a SVC-RS; veja
+#' o `contingencia` do [nfe_montar()]) vai à SVC da UF dela; a de outra SVC e
+#' a NFC-e com o `tpEmis` da SVC são recusadas antes do envio. A consulta
+#' ([sefaz_situacao()]) e os eventos ([sefaz_cancelar()] e os outros) da nota
+#' da SVC também vão à SVC: logo depois da autorização, a SEFAZ da UF ainda não
+#' a conhece (rejeição 494, "chave de acesso inexistente", na homologação).
+#'
 #' Por enquanto o RNFe só fala com o ambiente de **homologação**: a nota tem
 #' de vir com `tpAmb` 2, e a de produção é recusada antes de qualquer conexão.
 #' A conexão é a mesma do [sefaz_status()].
@@ -48,7 +55,8 @@ RECIBO_EM_PROCESSAMENTO = 105L
 #'   `retEnviNFe_v4.00.xsd`, `consReciNFe_v4.00.xsd` e `procNFe_v4.00.xsd`; o
 #'   WSDL do NFeAutorizacao4 (operação `nfeAutorizacaoLote`) e do
 #'   NFeRetAutorizacao4 (`nfeRetAutorizacaoLote`); a NT 2023.002 v1.02 (o fim da
-#'   autorização assíncrona).
+#'   autorização assíncrona); a SVC de cada UF pela Relação de Serviços Web do
+#'   Portal da NF-e.
 #' @examples
 #' \dontrun{
 #' assinada = xml_assinar("nota.xml", "empresa.pfx", Sys.getenv("SENHA_DO_CERTIFICADO"))
@@ -106,7 +114,12 @@ notas_para_autorizar = function(xml, ambiente) {
     linhas$modelo[posicao] = lida$modelo
     linhas$uf[posicao] = UF_PELO_CODIGO[[substr(lida$chave, 1, 2)]]
     documento = if (lida$modelo == "65") "NFC-e" else "NF-e"
-    servico = servico_da_uf(linhas$uf[posicao], "NFeAutorizacao", ambiente, documento)
+    problema = problema_da_svc(linhas$uf[posicao], lida$forma_de_emissao, documento, ambiente)
+    if (!is.na(problema)) {
+      linhas$problema[posicao] = problema
+      next
+    }
+    servico = servico_da_uf(linhas$uf[posicao], "NFeAutorizacao", ambiente, documento, lida$forma_de_emissao)
     if (is.null(servico)) {
       linhas$problema[posicao] = "a Rela\u00e7\u00e3o de Servi\u00e7os Web n\u00e3o traz a autoriza\u00e7\u00e3o para a UF"
       next
@@ -153,15 +166,16 @@ ler_a_nota_para_autorizar = function(xml, ambiente) {
     resultado$problema = "o Id do infNFe n\u00e3o traz uma chave de NF-e ou NFC-e v\u00e1lida"
     return(resultado)
   }
-  # A contingência SVC (tpEmis 6 e 7) vai para outro autorizador, que o RNFe ainda não usa.
-  if (partes$forma_emissao %in% c(6L, 7L)) {
-    resultado$problema = "a nota em conting\u00eancia SVC (tpEmis 6 ou 7) vai para a SVC, que o RNFe ainda n\u00e3o usa"
+  # A NFC-e não tem SVC (a contingência dela é a off-line, tpEmis 9); a NF-e da SVC vai à SVC da UF.
+  if (partes$modelo == "65" && partes$forma_emissao %in% c(6L, 7L)) {
+    resultado$problema = "a NFC-e n\u00e3o tem SVC: a conting\u00eancia dela \u00e9 a off-line (tpEmis 9)"
     return(resultado)
   }
   # O texto da NFe sozinha, com o namespace dela: é o que vai dentro do enviNFe.
   documento_da_nota = xml2::xml_new_root(nota)
   texto = as.character(documento_da_nota, options = "no_declaration")
-  list(problema = NA_character_, chave = chave, modelo = partes$modelo, texto = trimws(texto))
+  list(problema = NA_character_, chave = chave, modelo = partes$modelo, forma_de_emissao = partes$forma_emissao,
+       texto = trimws(texto))
 }
 
 # O lote com uma nota, no modo síncrono (indSinc 1). O número do lote só precisa ser único para quem envia: vai o
@@ -247,7 +261,8 @@ consultar_os_recibos = function(linhas, textos, conexao, ambiente) {
     pedidos = list()
     for (posicao in pendentes) {
       servico = servico_da_uf(linhas$uf[posicao], "NFeRetAutorizacao", ambiente,
-                              if (linhas$modelo[posicao] == "65") "NFC-e" else "NF-e")
+                              if (linhas$modelo[posicao] == "65") "NFC-e" else "NF-e",
+                              chave_decompor(linhas$chave[posicao])$forma_emissao)
       mensagem = paste0('<consReciNFe xmlns="', NAMESPACE_DA_NFE, '" versao="4.00"><tpAmb>',
                         AMBIENTES_LIBERADOS[[ambiente]], "</tpAmb><nRec>", linhas$recibo[posicao], "</nRec></consReciNFe>")
       pedidos[[length(pedidos) + 1]] = montar_pedido(servico$endereco, "NFeRetAutorizacao4", "nfeRetAutorizacaoLote",

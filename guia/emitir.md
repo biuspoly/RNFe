@@ -85,13 +85,23 @@ registrado (135) em 16/11/2026.
 O CT-e, o CT-e OS, a GTV-e e o CT-e simplificado vão compactados ao autorizador da UF, pelo serviço de cada um, e são
 autorizados na hora; o QR-Code entra sozinho quando falta (na contingência off-line do CT-e, do CT-e OS e do
 simplificado, com a chave assinada, o parâmetro `sign`; na GTV-e fora da emissão normal, cuja regra a NT não traz, o
-QR-Code tem de vir pronto). O documento da SVC (`tpEmis` 7 ou 8) não é enviado por enquanto. O emitente cancela o
+QR-Code tem de vir pronto). O documento da SVC (`tpEmis` 7 ou 8) vai à SVC da UF, como a NF-e (veja abaixo). O emitente cancela o
 CT-e e o CT-e OS com o `sefaz_cte_cancelar()` (o evento 110111, com o protocolo e a justificativa). Testado na SVRS de
 homologação em 16/11/2026 com o certificado de uma transportadora: um CT-e dela, montado de novo pelo `cte_montar()`
 como teste (com o IBS e a CBS, que a homologação já exige), foi autorizado (100) e cancelado (135). A consulta pela DPS
 (`nfse_situacao_da_dps()`) diz se uma DPS já gerou a NFS-e, com a chave e o XML dela: serve quando a emissão ficou sem
 resposta, antes de mandar a DPS de novo. Só o 404 diz que ela não gerou; o outro erro da Sefin (o limite de consultas,
 a Sefin fora do ar) vai para o `problema`, e aí é consultar de novo antes de reenviar.
+
+**A contingência pela SVC.** A NF-e e o CT-e montados com `contingencia = TRUE` (veja
+[Montar os documentos](montar.md)) levam no `tpEmis` a SVC da UF, e a autorização os manda a ela: a NF-e, à SVC-AN ou à
+SVC-RS; o CT-e, à SVC-SP ou à SVC-RS. A consulta e os eventos (o cancelamento, a carta de correção, o desacordo) do
+documento da SVC também vão à SVC: logo depois da autorização, a SEFAZ da UF ainda não o conhece (o cancelamento
+mandado a ela voltou 494, "Chave de Acesso inexistente"). O documento com a SVC que não é a da UF, e a NFC-e com o
+`tpEmis` da SVC, nem são enviados. Testado na homologação em 23/11/2026: uma NF-e do RN foi autorizada pela SVC-AN
+(100), consultada lá (100) e cancelada lá (135); um CT-e do MA, pela SVC-SP (100, 100 e 135). Um CT-e em contingência
+off-line foi autorizado (100) pela SVRS, mas a consulta e o cancelamento dele voltaram 236 ("Tipo de emissão
+inválido"): o serviço de consulta e de eventos da SVRS de homologação ainda não aceita a chave com o `tpEmis` 2.
 
 O MDF-e vai compactado e é autorizado na hora pela SVRS, que atende todas as UF; o QR-Code dele entra sozinho
 quando falta (no MDF-e em contingência, com a chave assinada pelo certificado, o parâmetro `sign`). Depois vêm a inclusão de condutor e o encerramento, com o `procEventoMDFe` de volta.

@@ -5,12 +5,21 @@
 \title{Montar uma NF-e ou NFC-e}
 \source{
 Os schemas da NF-e e da NFC-e, pacote de liberação 010h, versão
-1.03 (Portal Nacional da NF-e, \code{nfe_v4.00.xsd} e \code{leiauteNFe_v4.00.xsd});
+1.03 (Portal Nacional da NF-e, \code{nfe_v4.00.xsd} e \code{leiauteNFe_v4.00.xsd},
+também as formas de emissão e o \code{dhCont} e o \code{xJust} da contingência); a
+SVC de cada UF pela Relação de Serviços Web do Portal da NF-e;
 a composição da chave de acesso e o código numérico pelo Manual de
 Orientação do Contribuinte 7.0 (Anexo I, regra B03-10, da NT 2019.001).
 }
 \usage{
-nfe_montar(nota, manter_vazios = FALSE, ambiente = "homologacao")
+nfe_montar(
+  nota,
+  manter_vazios = FALSE,
+  ambiente = "homologacao",
+  contingencia = FALSE,
+  tipo_contingencia = NULL,
+  justificativa = NULL
+)
 }
 \arguments{
 \item{nota}{Uma lista com o conteúdo do \code{infNFe}, com os nomes do leiaute.}
@@ -19,6 +28,16 @@ nfe_montar(nota, manter_vazios = FALSE, ambiente = "homologacao")
 também no campo e no grupo opcionais.}
 
 \item{ambiente}{Por enquanto só \code{"homologacao"}.}
+
+\item{contingencia}{\code{TRUE} para emitir em contingência.}
+
+\item{tipo_contingencia}{O tipo da contingência, quando não é o padrão: na
+NF-e, \code{"svc"} (o padrão), \code{"epec"} (\code{tpEmis} 4), \code{"fs-ia"} (2, o
+formulário de segurança) ou \code{"fs-da"} (5); na NFC-e, só \code{"off-line"} (9).}
+
+\item{justificativa}{O motivo da entrada em contingência (de 15 a 256
+caracteres), obrigatório com \code{contingencia = TRUE}: a SEFAZ recusa a nota
+sem ele. Pode vir no \code{ide$xJust} em vez daqui.}
 }
 \value{
 O XML da NF-e (o elemento \code{NFe}, ainda sem a assinatura), num
@@ -55,7 +74,8 @@ for preciso. Assim se escolhe campo por campo: \code{""} é a tag vazia, \code{N
 a falta dela. Com \code{manter_vazios = TRUE}, a nota lida por
 \code{\link[=xml_para_lista]{xml_para_lista()}} volta exatamente como era, com os vazios dela.
 
-O RNFe completa sozinho o que não vier: o \code{tpAmb} do ambiente, o \code{nItem} de
+O RNFe completa sozinho o que não vier: o \code{tpAmb} do ambiente, o \code{tpEmis}
+(1, a emissão normal, ou o da contingência), o \code{nItem} de
 cada item (na ordem), o código numérico \code{cNF} (sorteado pelo gerador do
 sistema, fora dos que a SEFAZ recusa), o dígito \code{cDV}, o \code{Id} com a chave
 de acesso (na NF-e avulsa, com o CNPJ do órgão do grupo \code{avulsa}), a versão
@@ -68,6 +88,13 @@ vez (os itens, as duplicatas, as formas de pagamento) é uma lista de
 listas; o campo que se repete é um vetor. É a mesma forma que
 \code{\link[=xml_para_lista]{xml_para_lista()}} devolve, então uma nota que já existe pode servir de
 ponto de partida.
+
+Com \code{contingencia = TRUE}, a nota sai em contingência: o RNFe põe o
+\code{tpEmis} do tipo (o padrão é a SVC, que sai pela UF do \code{cUF}: a SVC-AN,
+\code{tpEmis} 6, ou a SVC-RS, 7; na NFC-e, a off-line, 9), a \code{justificativa} no
+\code{xJust} e o \code{dhCont} (o próprio \code{dhEmi}, quando não vem). A chave leva o
+\code{tpEmis}, e o \code{\link[=sefaz_autorizar]{sefaz_autorizar()}} manda a nota da SVC à SVC da UF. O
+\code{tpEmis} 1 da lista (o de uma nota lida) dá lugar ao da contingência.
 
 A montagem confere o XML pelo schema, mas não as regras de negócio da SEFAZ
 (os totais, o CFOP do destino, o texto do destinatário em homologação).
@@ -85,6 +112,9 @@ nota$det[[1]]$prod$vProd = 50
 if (requireNamespace("openssl", quietly = TRUE)) {
   montada = nfe_montar(nota)
   substr(montada, 1, 120)
+  # A mesma nota em contingência: a SVC de SP é a SVC-AN (tpEmis 6).
+  em_contingencia = nfe_montar(nota, contingencia = TRUE, justificativa = "SEFAZ da UF fora do ar desde as 10h")
+  xml_para_lista(em_contingencia)$ide$tpEmis
 }
 }
 \seealso{
