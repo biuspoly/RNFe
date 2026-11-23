@@ -42,6 +42,13 @@ test_that("o MDF-e com protocolo: cabe\u00e7alho, emitente, totais e autoriza\u0
   expect_identical(mdfe$motivo, "Autorizado o uso do MDF-e")
   expect_equal(as.numeric(mdfe$autorizacao), as.numeric(as.POSIXct("2026-10-15 18:00:40", tz = "UTC")))
   expect_identical(mdfe$arquivo, MDFE_SP)
+  # O QR-Code fica fora do infMDFe, no infMDFeSupl (o exemplo não tem; os MDF-e reais do acervo trazem).
+  expect_true(is.na(mdfe$qrcode))
+  endereco = paste0("https://dfe-portal.svrs.rs.gov.br/mdfe/qrCode?chMDFe=", CHAVE_SP, "&amp;tpAmb=2")
+  texto = paste(readLines(MDFE_SP, encoding = "UTF-8"), collapse = "\n")
+  com_qrcode = sub("</infMDFe>", paste0("</infMDFe><infMDFeSupl><qrCodMDFe>", endereco, "</qrCodMDFe></infMDFeSupl>"),
+                   texto, fixed = TRUE)
+  expect_identical(mdfe_ler(com_qrcode)$mdfes$qrcode, gsub("&amp;", "&", endereco, fixed = TRUE))
 })
 
 test_that("MDF-e de carga pr\u00f3pria, sem protocolo", {

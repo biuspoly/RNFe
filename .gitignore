@@ -4,3 +4,4 @@
 *.tar.gz
 *.Rcheck/
 __pycache__/
+tests/testthat/testthat-problems.rds

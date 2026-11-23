@@ -47,6 +47,7 @@ produto_gtin                 prodPred/cEAN                      texto
 produto_ncm                  prodPred/NCM                       texto
 informacoes_fisco            infAdic/infAdFisco                 texto
 informacoes_complementares   infAdic/infCpl                     texto
+qrcode                       parent::MDFe/infMDFeSupl/qrCodMDFe texto
 ")
 
 # Os municípios de carregamento, as UFs do percurso e os municípios de descarregamento, nessa ordem.

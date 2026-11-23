@@ -40,10 +40,9 @@ Cada parte futura tem um aviso no GitHub, com a etiqueta
 [planejado](https://github.com/biuspoly/RNFe/issues?q=is%3Aissue+is%3Aopen+label%3Aplanejado):
 
 - [a emissão em produção](https://github.com/biuspoly/RNFe/issues/21) (hoje, só homologação);
-- [o CT-e autorizado de ponta a ponta](https://github.com/biuspoly/RNFe/issues/22) na homologação;
 - [os códigos novos da NFS-e Nacional](https://github.com/biuspoly/RNFe/issues/23), quando o schema da NT 009 sair;
-- [o MDF-e e o CT-e simplificado conferidos com documentos reais](https://github.com/biuspoly/RNFe/issues/24): quem
-  tiver um acervo pode ajudar;
+- [o CT-e simplificado conferido com documentos reais](https://github.com/biuspoly/RNFe/issues/24): quem tiver um
+  pode ajudar;
 - [o envio ao CRAN](https://github.com/biuspoly/RNFe/issues/25).
 
 ## De onde vêm as regras
