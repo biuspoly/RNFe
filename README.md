@@ -86,6 +86,10 @@ O RNFe se apoia no trabalho de muita gente.
 O código do RNFe foi escrito do zero, a partir das especificações oficiais: nenhuma linha foi copiada desses
 projetos.
 
+## Autoria
+
+Desenvolvido por **[biuspoly](https://github.com/biuspoly)**, com ajuda do Claude (Anthropic).
+
 ## Licença
 
 MIT.
